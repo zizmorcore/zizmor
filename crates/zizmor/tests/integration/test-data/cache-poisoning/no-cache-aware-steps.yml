@@ -8,6 +8,7 @@ jobs:
   publish-crate:
     name: publish-crate
     runs-on: ubuntu-24.04
+    environment: crates.io
 
     steps:
       - name: Project Checkout

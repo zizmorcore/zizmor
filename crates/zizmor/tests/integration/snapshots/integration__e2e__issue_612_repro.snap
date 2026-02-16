@@ -2,4 +2,4 @@
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().input(input_under_test(\"issue-612-repro/action.yml\")).run()?"
 ---
-No findings to report. Good job! (2 ignored, 2 suppressed)
+No findings to report. Good job! (2 ignored)

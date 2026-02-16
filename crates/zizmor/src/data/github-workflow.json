@@ -162,6 +162,9 @@
         "actions": {
           "$ref": "#/definitions/permissions-level"
         },
+        "artifact-metadata": {
+          "$ref": "#/definitions/permissions-level"
+        },
         "attestations": {
           "$ref": "#/definitions/permissions-level"
         },

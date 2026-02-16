@@ -9,6 +9,14 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [secrets-outside-env] detects usage of the `secrets` context
+  in jobs that don't have a corresponding `environment` (#1599)
+
+* **New audit**: [superfluous-actions] detects usage of actions that perform
+  operations already provided by GitHub's own runner images (#1618)
+
 ### Enhancements 🌱
 
 * `zizmor`'s LSP mode is now configuration-aware, and will load
@@ -18,6 +26,9 @@ of `zizmor`.
   alias/equivalent for `GH_TOKEN` (#1566)
 
 * `zizmor` now supports inputs that contain duplicated anchor names (#1575)
+
+* `zizmor` now flags missing cooldowns on `opentofu` ecosystem definitions
+  in Dependabot (again) (#1586)
 
 ### Bug Fixes 🐛
 
@@ -32,6 +43,23 @@ of `zizmor`.
 
 * Fixed a bug in `yamlpath` where anchor prefixes in sequences and mapping
   were not stripped during path queries (#1562)
+
+* Fixed a bug where "merge into" autofixes would produce incorrect patches
+  in the presence of multi-byte Unicode characters (#1581)
+
+    Many thanks to @ManuelLerchnerQC for implementing this fix!
+
+* Fixed a bug where the [template-injection] audit would produce
+  duplicated pedantic-only findings (#1589)
+
+* Fixed a bug where the [obfuscation] audit would produce incorrect
+  autofixes for a subset of constant-reducible expressions (#1597)
+
+* Fixed a bug where the [obfuscation] audit would fail to apply fixes
+  to a subset of inputs with leading whitespace (#1597)
+
+* Fixed a bug where the [concurrency-limits] audit would incorrectly flag
+  reusable-only workflows as needing a `#!yaml concurrency:` key (#1620)
 
 ## 1.22.0
 
@@ -1471,5 +1499,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [archived-uses]: ./audits.md#archived-uses
 [impostor-commit]: ./audits.md#impostor-commit
 [misfeature]: ./audits.md#misfeature
+[secrets-outside-env]: ./audits.md#secrets-outside-env
 
 [exit code]: ./usage.md#exit-codes

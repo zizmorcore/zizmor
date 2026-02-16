@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
+    environment: pypi
     steps:
       # NOT OK: password present and we know the default index supports
       # trusted publishing.

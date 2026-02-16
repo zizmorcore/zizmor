@@ -78,6 +78,13 @@ Trail of Bits
 Shipfox
 </a>
 </td>
+<td align="center" valign="top" width="15%">
+<a href="https://kusari.dev">
+<img src="https://avatars.githubusercontent.com/u/105390000?s=100&v=4" width="100px">
+<br>
+Kusari
+</a>
+</td>
 </tr>
 </tbody>
 </table>

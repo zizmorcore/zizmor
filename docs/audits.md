@@ -593,9 +593,15 @@ or set broad workflow-level permissions without realizing that
 all jobs inherit those permissions.
 
 Furthermore, users often don't realize that the
-[*default* `GITHUB_TOKEN` permissions can be very broad](https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token),
-meaning that workflows that don't configure any permissions at all can *still*
-provide excessive credentials to their individual jobs.
+*default* `GITHUB_TOKEN` permissions can be very broad, meaning that
+workflows that don't configure any permissions at all can *still* provide
+excessive credentials to their individual jobs. The default permissions
+depend on [organization-][org-permissions] and repository-level settings;
+see the [`permissions` reference in the workflow syntax docs][workflow-permissions]
+for the full list of available scopes and how defaults are calculated.
+
+[workflow-permissions]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defining-access-for-the-github_token-scopes-1
+[org-permissions]: https://docs.github.com/en/organizations/managing-organization-settings/disabling-or-limiting-github-actions-for-your-organization#setting-the-permissions-of-the-github_token-for-your-organization
 
 ### Remediation
 
@@ -710,10 +716,6 @@ This is not enabled by default; you must
       and action files. In other words, in *cannot* detect
       [impostor commits](#impostor-commit) or indirect usage of actions
       via manual `git clone` and local path usage.
-    * This audit's configuration operates on patterns, just like
-      [unpinned-uses](#unpinned-uses). That means that you can't (yet)
-      define *exact* matches. For example, you can't forbid `actions/checkout@v4`,
-      you have to forbid `actions/checkout`, which forbids all versions.
 
 ### Configuration { #forbidden-uses-configuration }
 
@@ -1304,6 +1306,65 @@ that explicitly forwards each secret actually needed by the reusable workflow.
               me-too: ${{ secrets.me-too }}
         ```
 
+## `secrets-outside-env`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow  | [secrets-outside-env.yml]   | v1.23.0      | ✅             | ❌                 | ❌  |
+
+[secrets-outside-env.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/secrets-outside-env.yml
+
+Detects usage of the `secrets` context in jobs without a dedicated environment.
+
+GitHub Actions allows secrets to be configured at the organization, repository,
+or environment level. The first two of these expose the configured secrets
+to an entire repository (or repositories), while the last one allows secrets to be
+scoped to specific conditions *within* a repository, as defined by the
+environment's [protection rules].
+
+[protection rules]: https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments#creating-an-environment
+
+Consequently, configuring secrets at the environment level ensures that they're
+only exposed to jobs that meet the environment's protection rules, mitigating
+the risk of secrets being exposed to untrusted code or compromised workflows.
+
+### Remediation
+
+In general, secrets should be configured at the environment level, and only
+the job or jobs that need a secret should use the corresponding environment.
+
+!!! important
+
+    You **must** move your secrets into the environment's secrets (and remove
+    them from the repo/org-wide secrets) in order for this to be effective.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="secrets-outside-env.yml" hl_lines="7"
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            steps:
+              - run: ./deploy.sh
+                env:
+                  API_KEY: ${{ secrets.API_KEY }}
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="secrets-outside-env.yml" hl_lines="4 8"
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            environment: production
+            steps:
+              - run: ./deploy.sh
+                env:
+                  API_KEY: ${{ secrets.API_KEY }}
+        ```
+
 ## `self-hosted-runner`
 
 | Type     | Examples            | Introduced in | Works offline  | Auto-fixes available | Configurable |
@@ -1382,6 +1443,58 @@ tell which changes of the subsequent release the pinned commit includes.
 Change the `#!yaml uses:` clause to pin the action using a SHA reference
 which points to a Git tag.
 
+## `superfluous-actions`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | N/A            | v1.23.0        | ✅             | ❌                | ❌  |  
+
+
+Detects actions that are known to be "superfluous," i.e. perform an operation already provided by GitHub's own runner images.
+
+Usage of these actions is not *itself* a security concern. However, many superfluous
+actions have significant runtime dependencies that unnecessarily increase the attack surface
+and/or supply chain risk of a workflow.
+
+### Remediation
+
+Remove the superfluous action and replace it with the equivalent pre-installed runner tool.
+
+The following table lists some common superfluous actions and their recommended replacements:
+
+| Action | Recommended replacement |
+|--------|-------------------------|
+| @ncipollo/release-action | `gh release create` |
+| @softprops/action-gh-release | `gh release create` |
+| @elgohr/Github-Release-Action | `gh release create` |
+| @peter-evans/create-pull-request | `gh pr create` |
+| @peter-evans/create-or-update-comment | `gh pr comment` or `gh issue comment` |
+| @addnab/docker-run-action | `docker run` |
+| @dtolnay/rust-toolchain | `rustup` |
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="superfluous.yml" hl_lines="6"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Install Rust v1.93.1
+                uses: dtolnay/rust-toolchain@086dfa4efe372cfb6b375460a56e26a62a873d2e # 1.93.1
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="superfluous.yml" hl_lines="6"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Install Rust v1.93.1
+                run: rustup toolchain install 1.93.1
+        ```
 
 ## `template-injection`
 

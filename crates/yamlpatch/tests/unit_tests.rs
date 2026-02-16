@@ -222,6 +222,43 @@ foo:
     );
 }
 
+/// Performing a `RewriteFragment` on an empty route affects the entire document,
+/// and works even in the presence of leading and trailing whitespace.
+#[test]
+fn test_rewrite_fragment_entire_doc() {
+    let original = r#"
+
+
+foo:
+  bar: baz
+
+
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    let operations = vec![Patch {
+        route: route!(),
+        operation: Op::RewriteFragment {
+            from: subfeature::Subfeature::new(0, "foo:\n  bar: baz\n"),
+            to: "qux:\n  abc: def\n".into(),
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+
+
+    qux:
+      abc: def
+
+    --- END PATCH ---
+    ");
+}
+
 #[test]
 fn test_rewrite_fragment_single_line() {
     let original = r#"
@@ -1813,6 +1850,44 @@ fn test_merge_into_prevents_duplicate_keys() {
               NEW_VAR: new_value
 
     --- END PATCH ---
+    "#);
+}
+
+#[test]
+fn test_merge_into_with_unicode() {
+    // Test MergeInto with Unicode characters that are multiple bytes
+    let original = r#"steps:
+  - shell: bash
+    run: |
+      echo "✓ Done"
+
+  - shell: bash
+    run: echo ok"#;
+
+    let operations = vec![Patch {
+        route: route!("steps", 0),
+        operation: Op::MergeInto {
+            key: "env".to_string(),
+            updates: indexmap::IndexMap::from_iter([(
+                "TEST_VAR".to_string(),
+                serde_yaml::Value::String("new_value".to_string()),
+            )]),
+        },
+    }];
+
+    let result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+
+    insta::assert_snapshot!(result.source(), @r#"
+    steps:
+      - shell: bash
+        run: |
+          echo "✓ Done"
+        env:
+          TEST_VAR: new_value
+
+      - shell: bash
+        run: echo ok
     "#);
 }
 

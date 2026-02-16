@@ -226,14 +226,28 @@ fn apply_single_patch(
     let content = document.source();
     let mut patched_content = match &patch.operation {
         Op::RewriteFragment { from, to } => {
-            let Some(feature) = route_to_feature_exact(&patch.route, document)? else {
-                return Err(Error::InvalidOperation(format!(
-                    "no pre-existing value to patch at {route:?}",
-                    route = patch.route
-                )));
+            // HACK: If we have an empty route, we're trying to rewrite against the entire document.
+            // In an ideal world we'd use `top_feature` here (or indirectly in
+            // `route_to_feature_exact`), but we might have leading whitespace that isn't captured
+            // by the top feature, throwing off our spans. So we have this nastiness instead.
+            // TODO(ww): There are almost certainly other patch ops that have this same edge case.
+            let (extracted_feature, range) = if patch.route.is_empty() {
+                let source = document.source();
+                (source, 0..source.len())
+            } else {
+                let Some(feature) = route_to_feature_exact(&patch.route, document)? else {
+                    return Err(Error::InvalidOperation(format!(
+                        "no pre-existing value to patch at {route:?}",
+                        route = patch.route
+                    )));
+                };
+
+                (
+                    document.extract(&feature),
+                    feature.location.byte_span.0..feature.location.byte_span.1,
+                )
             };
 
-            let extracted_feature = document.extract(&feature);
             let bias = from.after;
 
             if bias > extracted_feature.len() {
@@ -253,7 +267,7 @@ fn apply_single_patch(
 
             // Finally, put our patch back into the overall content.
             let mut patched_content = content.to_string();
-            patched_content.replace_range(&feature, &patched_feature);
+            patched_content.replace_range(range, &patched_feature);
 
             patched_content
         }
@@ -866,7 +880,7 @@ fn handle_block_mapping_addition(
     // Check if we need to add a newline before the entry
     // If the content at insertion point already ends with a newline, don't add another
     let needs_leading_newline = if insertion_point > 0 {
-        doc.source().chars().nth(insertion_point - 1) != Some('\n')
+        doc.source().as_bytes().get(insertion_point - 1) != Some(&b'\n')
     } else {
         true
     };

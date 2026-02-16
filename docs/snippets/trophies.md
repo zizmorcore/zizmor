@@ -50,6 +50,14 @@
         - ansible/ansible-documentation#3188
 
 
+-   ![](https://github.com/anthropics.png?size=40){ width="40" loading=lazy align=left } anthropics
+
+    ---
+
+    ??? example "Examples"
+        - anthropics/claude-code-action#729
+
+
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
 
     ---
@@ -900,6 +908,7 @@
     ---
 
     ??? example "Examples"
+        - microsoft/azurelinux#15733
         - microsoft/component-detection#1532
         - microsoft/linux-package-repositories#208
         - microsoft/vscode-python#25047
@@ -1579,6 +1588,14 @@
         - Swatinem/rust-cache#262
 
 
+-   ![](https://github.com/target.png?size=40){ width="40" loading=lazy align=left } target
+
+    ---
+
+    ??? example "Examples"
+        - target/data-validator#223
+
+
 -   ![](https://github.com/TecharoHQ.png?size=40){ width="40" loading=lazy align=left } TecharoHQ
 
     ---
@@ -1710,6 +1727,14 @@
         - wagtail/wagtail-localize#843
 
 
+-   ![](https://github.com/wgsl-analyzer.png?size=40){ width="40" loading=lazy align=left } wgsl-analyzer
+
+    ---
+
+    ??? example "Examples"
+        - wgsl-analyzer/wgsl-analyzer#844
+
+
 -   ![](https://github.com/wntrblm.png?size=40){ width="40" loading=lazy align=left } wntrblm
 
     ---
@@ -1768,4 +1793,12 @@
     ??? example "Examples"
         - zkonduit/ezkl#907
         - zkonduit/ezkl#906
+
+
+-   ![](https://github.com/zulip.png?size=40){ width="40" loading=lazy align=left } zulip
+
+    ---
+
+    ??? example "Examples"
+        - zulip/docker-zulip#568
 

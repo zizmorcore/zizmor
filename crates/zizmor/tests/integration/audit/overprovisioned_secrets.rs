@@ -8,17 +8,17 @@ fn overprovisioned_secrets() -> anyhow::Result<()> {
             .run()?,
         @r"
     warning[overprovisioned-secrets]: excessively provisioned secrets
-      --> @@INPUT@@:15:18
+      --> @@INPUT@@:16:18
        |
-    15 |           stuff: ${{ format('{0}', toJSON(secrets)) }}
+    16 |           stuff: ${{ format('{0}', toJSON(secrets)) }}
        |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ injects the entire secrets context into the runner
        |
        = note: audit confidence → High
 
     warning[overprovisioned-secrets]: excessively provisioned secrets
-      --> @@INPUT@@:24:25
+      --> @@INPUT@@:25:25
        |
-    24 |           secrets_json: ${{ toJSON(secrets) }}
+    25 |           secrets_json: ${{ toJSON(secrets) }}
        |                         ^^^^^^^^^^^^^^^^^^^^^^ injects the entire secrets context into the runner
        |
        = note: audit confidence → High

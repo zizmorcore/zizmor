@@ -7,14 +7,15 @@ jobs:
   npm-manual-auth:
     name: npm-manual-auth
     runs-on: ubuntu-latest
-    permissions: {}  # No id-token permission
+    permissions: {} # No id-token permission
+    environment: foobar
     steps:
       # NOT OK: actions/setup-node with registry-url and always-auth
       - name: vulnerable-1
         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org"
           always-auth: true
       - name: vulnerable-1-publish
         run: npm publish
@@ -25,8 +26,8 @@ jobs:
       - name: vulnerable-2
         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org/'
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org/"
           always-auth: true
       - name: vulnerable-2-publish
         run: npm publish
@@ -36,7 +37,7 @@ jobs:
   npm-direct-commands:
     name: npm-direct-commands
     runs-on: ubuntu-latest
-    permissions: {}  # No id-token permission
+    permissions: {} # No id-token permission
     steps:
       # NOT OK: direct npm publish command
       - name: vulnerable-3
@@ -87,15 +88,15 @@ jobs:
     name: npm-trusted-publishing
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Has id-token permission
+      id-token: write # Has id-token permission
       contents: read
     steps:
       # OK: actions/setup-node with registry-url but no always-auth
       - name: safe-1
         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org"
       - name: safe-1-publish
         run: npm publish --provenance
 
@@ -103,8 +104,8 @@ jobs:
       - name: safe-2
         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org/'
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org/"
       - name: safe-2-publish
         run: npm publish --provenance
 
@@ -116,8 +117,8 @@ jobs:
       - name: safe-4
         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
         with:
-          node-version: '18'
-          registry-url: 'https://npm.example.com'
+          node-version: "18"
+          registry-url: "https://npm.example.com"
           always-auth: true
       - name: safe-4-publish
         run: npm publish
@@ -128,7 +129,7 @@ jobs:
       - name: safe-5
         uses: actions/setup-node@v4 # zizmor: ignore[unpinned-uses]
         with:
-          node-version: '18'
+          node-version: "18"
           always-auth: true
       - name: safe-5-publish
         run: npm publish

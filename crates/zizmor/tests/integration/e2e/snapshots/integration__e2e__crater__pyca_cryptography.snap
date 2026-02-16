@@ -1,0 +1,808 @@
+---
+source: crates/zizmor/tests/integration/e2e/crater.rs
+expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"pyca/cryptography@43eb178ee3aae8d0060221118437b03c23570a41\").run()?"
+---
+🌈 zizmor v@@VERSION@@
+ INFO collect_inputs: zizmor::registry::input: collected 15 inputs from pyca/cryptography
+ INFO audit: zizmor: 🌈 completed .github/actions/cache/action.yml
+ INFO audit: zizmor: 🌈 completed .github/actions/fetch-vectors/action.yml
+ INFO audit: zizmor: 🌈 completed .github/actions/upload-coverage/action.yml
+ INFO audit: zizmor: 🌈 completed .github/actions/wheel-smoketest/action.yml
+ INFO audit: zizmor: 🌈 completed .github/dependabot.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/auto-close-stale.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/benchmark.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/boring-open-awslc-bump.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/ci.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/downstream-version-bump.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/linkcheck.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/lock.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/pypi-publish.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/wheel-builder.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/x509-limbo-version-bump.yml
+error[template-injection]: code injection via template expansion
+  --> .github/actions/wheel-smoketest/action.yml:23:22
+   |
+22 |       run: |
+   |       --- this run block
+23 |         if [ -n "${{ inputs.python-path }}" ]; then
+   |                      ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[template-injection]: code injection via template expansion
+  --> .github/actions/wheel-smoketest/action.yml:24:33
+   |
+22 |       run: |
+   |       --- this run block
+23 |         if [ -n "${{ inputs.python-path }}" ]; then
+24 |           uv venv --python="${{ inputs.python-path }}"
+   |                                 ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[template-injection]: code injection via template expansion
+  --> .github/actions/wheel-smoketest/action.yml:31:52
+   |
+31 |       run: uv pip install --require-hashes -r "${{ inputs.build-requirements-path }}"
+   |       --- this run block                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[template-injection]: code injection via template expansion
+  --> .github/actions/wheel-smoketest/action.yml:56:22
+   |
+55 |       run: |
+   |       --- this run block
+56 |         if [ -n "${{ inputs.python-path }}" ]; then
+   |                      ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[template-injection]: code injection via template expansion
+  --> .github/actions/wheel-smoketest/action.yml:57:16
+   |
+55 |       run: |
+   |       --- this run block
+56 |         if [ -n "${{ inputs.python-path }}" ]; then
+57 |           "${{ inputs.python-path }}" -m venv .venv-pip-test
+   |                ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[template-injection]: code injection via template expansion
+  --> .github/actions/wheel-smoketest/action.yml:65:68
+   |
+65 |       run: .venv-pip-test/bin/pip install --require-hashes -r "${{ inputs.build-requirements-path }}"
+   |       --- this run block                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+  --> .github/dependabot.yml:17:5
+   |
+17 |   - package-ecosystem: cargo
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+  --> .github/dependabot.yml:28:5
+   |
+28 |   - package-ecosystem: uv
+   |     ^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/auto-close-stale.yml:1:1
+   |
+ 1 | / name: Auto-close stale issues
+ 2 | | on:
+ 3 | |   workflow_dispatch:
+ 4 | |   schedule:
+...  |
+22 | |           close-issue-message: "This issue has not received a reporter response and has been auto-closed. If the issue is still re...
+23 | |           close-issue-reason: completed
+   | |________________________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/auto-close-stale.yml:12:7
+   |
+12 |       issues: "write"
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+13 |       pull-requests: "write"
+   |       ^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+ --> .github/workflows/auto-close-stale.yml:8:3
+  |
+8 |   auto-close:
+  |   ^^^^^^^^^^ this job
+  |
+  = note: audit confidence → High
+  = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/auto-close-stale.yml:1:1
+   |
+ 1 | / name: Auto-close stale issues
+ 2 | | on:
+ 3 | |   workflow_dispatch:
+ 4 | |   schedule:
+...  |
+22 | |           close-issue-message: "This issue has not received a reporter response and has been auto-closed. If the issue is still re...
+23 | |           close-issue-reason: completed
+   | |________________________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/benchmark.yml:21:3
+   |
+21 |   benchmark:
+   |   ^^^^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/boring-open-awslc-bump.yml:12:3
+   |
+12 |   bump:
+   |   ^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/boring-open-awslc-bump.yml:1:1
+   |
+ 1 | / name: Bump BoringSSL, OpenSSL, AWS-LC
+ 2 | | permissions:
+ 3 | |   contents: read
+...  |
+62 | |           token: ${{ steps.generate-token.outputs.token }}
+63 | |         if: steps.bump-boringssl.outputs.HAS_UPDATES == 'true' || steps.bump-awslc.outputs.HAS_UPDATES == 'true'
+   | |_________________________________________________________________________________________________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/boring-open-awslc-bump.yml:49:23
+   |
+12 |   bump:
+   |   ---- this job
+...
+49 |           app_id: ${{ secrets.BORINGBOT_APP_ID }}
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/boring-open-awslc-bump.yml:50:28
+   |
+12 |   bump:
+   |   ---- this job
+...
+50 |           private_key: ${{ secrets.BORINGBOT_PRIVATE_KEY }}
+   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+help[superfluous-actions]: action functionality is already included by the runner
+  --> .github/workflows/boring-open-awslc-bump.yml:53:15
+   |
+52 |       - name: Create Pull Request
+   |         ------------------------- this step
+53 |         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr create` in a script step
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/ci.yml:90:36
+   |
+87 | ...   run: |
+   |       --- this run block
+...
+90 | ...     OPENSSL_HASH=$(echo "${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-$CONFIG_FLAGS" | sha1sum | sed '...
+   |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/ci.yml:90:70
+   |
+87 |         run: |
+   |         --- this run block
+...
+90 |           OPENSSL_HASH=$(echo "${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-$CONFIG_FLAGS" | sha1sum | sed...
+   |                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/ci.yml:93:31
+   |
+87 |         run: |
+   |         --- this run block
+...
+93 |           echo "OSSL_INFO=${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${CONFIG_FLAGS}" >> $GITHUB_ENV
+   |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/ci.yml:93:65
+   |
+87 |         run: |
+   |         --- this run block
+...
+93 |           echo "OSSL_INFO=${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${CONFIG_FLAGS}" >> $GITHUB_ENV
+   |                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/ci.yml:94:31
+   |
+87 | ...   run: |
+   |       --- this run block
+...
+94 | ...     echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${O...
+   |                             ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/ci.yml:94:65
+   |
+87 |         run: |
+   |         --- this run block
+...
+94 |           echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-$...
+   |                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/ci.yml:94:99
+   |
+87 | ...   run: |
+   |       --- this run block
+...
+94 | ...     echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${O...
+   |                                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/ci.yml:142:108
+    |
+141 |         run: |
+    |         --- this run block
+142 |             nox --no-install --  --color=yes --wycheproof-root=wycheproof --x509-limbo-root=x509-limbo ${{ matrix.PYTHON.NOXARGS }}
+    |                                                                                                            ^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/ci.yml:390:46
+    |
+389 |         run: |
+    |         --- this run block
+390 |             echo "OPENSSL_DIR=C:/openssl-${{ matrix.WINDOWS.WINDOWS }}" >> $GITHUB_ENV
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/ci.yml:498:70
+    |
+498 |       - run: source .venv/bin/activate && ./.github/downstream.d/${{ matrix.DOWNSTREAM }}.sh install
+    |         --- this run block                                           ^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/ci.yml:519:70
+    |
+519 |       - run: source .venv/bin/activate && ./.github/downstream.d/${{ matrix.DOWNSTREAM }}.sh run
+    |         --- this run block                                           ^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:215:7
+    |
+215 |       image: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+    |
+    = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/ci.yml:20:3
+   |
+20 |   linux:
+   |   ^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/ci.yml:150:3
+    |
+150 |   distros:
+    |   ^^^^^^^ this job
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/ci.yml:212:3
+    |
+212 |   alpine:
+    |   ^^^^^^ this job
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/ci.yml:275:3
+    |
+275 |   macos:
+    |   ^^^^^ this job
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/ci.yml:344:3
+    |
+344 |   windows:
+    |   ^^^^^^^ this job
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/ci.yml:521:3
+    |
+521 |   all-green:
+    |   ^^^^^^^^^ this job
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this job a name
+
+help[superfluous-actions]: action functionality is already included by the runner
+  --> .github/workflows/ci.yml:74:15
+   |
+73 |       - name: Setup rust
+   |         ---------------- this step
+74 |         uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `rustup` and/or `cargo` in a script step
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/downstream-version-bump.yml:12:3
+   |
+12 |   bump:
+   |   ^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/downstream-version-bump.yml:1:1
+   |
+ 1 | / name: Bump downstream dependencies
+ 2 | | permissions:
+ 3 | |   contents: read
+...  |
+38 | |           token: ${{ steps.generate-token.outputs.token }}
+39 | |         if: steps.downstream-bump.outputs.HAS_UPDATES == 'true'
+   | |________________________________________________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/downstream-version-bump.yml:26:23
+   |
+12 |   bump:
+   |   ---- this job
+...
+26 |           app_id: ${{ secrets.BORINGBOT_APP_ID }}
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/downstream-version-bump.yml:27:28
+   |
+12 |   bump:
+   |   ---- this job
+...
+27 |           private_key: ${{ secrets.BORINGBOT_PRIVATE_KEY }}
+   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+help[superfluous-actions]: action functionality is already included by the runner
+  --> .github/workflows/downstream-version-bump.yml:30:15
+   |
+29 |       - name: Create Pull Request
+   |         ------------------------- this step
+30 |         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr create` in a script step
+   |
+   = note: audit confidence → High
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/linkcheck.yml:1:1
+   |
+ 1 | / name: linkcheck
+ 2 | | on:
+ 3 | |   pull_request:
+ 4 | |     paths:
+...  |
+44 | |       - name: linkcheck
+45 | |         run: nox --no-install -s docs-linkcheck -- --color=yes
+   | |_______________________________________________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/lock.yml:1:1
+   |
+ 1 | / name: Lock Issues
+ 2 | | on:
+ 3 | |   workflow_dispatch:
+ 4 | |   schedule:
+...  |
+18 | |           issue-inactive-days: 90
+19 | |           pr-inactive-days: 90
+   | |_______________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/lock.yml:12:7
+   |
+12 |       issues: "write"
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+ --> .github/workflows/lock.yml:8:3
+  |
+8 |   lock:
+  |   ^^^^ this job
+  |
+  = note: audit confidence → High
+  = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/lock.yml:1:1
+   |
+ 1 | / name: Lock Issues
+ 2 | | on:
+ 3 | |   workflow_dispatch:
+ 4 | |   schedule:
+...  |
+18 | |           issue-inactive-days: 90
+19 | |           pr-inactive-days: 90
+   | |_______________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+  --> .github/workflows/pypi-publish.yml:3:1
+   |
+ 3 | / on:
+ 4 | |   workflow_dispatch:
+ 5 | |     inputs:
+ 6 | |       run_id:
+...  |
+15 | |     workflows: ["Wheel Builder"]
+16 | |     types: [completed]
+   | |______________________^ workflow_run is almost always used insecurely
+   |
+   = note: audit confidence → Medium
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/pypi-publish.yml:32:7
+   |
+32 |       id-token: "write"
+   |       ^^^^^^^^^^^^^^^^^ needs an explanatory comment
+33 |       attestations: "write"
+   |       ^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/pypi-publish.yml:25:3
+   |
+25 |   publish:
+   |   ^^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/pypi-publish.yml:1:1
+   |
+ 1 | / name: Publish to PyPI
+ 2 | |
+ 3 | | on:
+ 4 | |   workflow_dispatch:
+...  |
+62 | |           # PyPI.
+63 | |           attestations: ${{ env.PYPI_URL == 'https://upload.pypi.org/legacy/' }}
+   | |_________________________________________________________________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/wheel-builder.yml:143:24
+    |
+142 |         run: |
+    |         --- this run block
+143 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/wheel-builder.yml:144:85
+    |
+142 |         run: |
+    |         --- this run block
+143 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
+144 |               PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}"
+    |                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/wheel-builder.yml:152:70
+    |
+142 |         run: |
+    |         --- this run block
+...
+152 |               manylinux-entrypoint uv build --python=/opt/python/${{ matrix.PYTHON.VERSION }}/bin/python --wheel --require-hashes -...
+    |                                                                      ^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/wheel-builder.yml:155:43
+    |
+155 |       - run: auditwheel repair --plat ${{ matrix.MANYLINUX.NAME }} tmpwheelhouse/cryptography*.whl -w wheelhouse/
+    |         --- this run block                ^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/wheel-builder.yml:275:18
+    |
+275 |       - run: ${{ matrix.PYTHON.BIN_PATH }} -m pip install -r "${UV_REQUIREMENTS_PATH}"
+    |         ---      ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         |
+    |         this run block
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/wheel-builder.yml:285:24
+    |
+284 |         run: |
+    |         --- this run block
+285 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/wheel-builder.yml:286:85
+    |
+284 |         run: |
+    |         --- this run block
+285 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
+286 |               PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}"
+    |                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/wheel-builder.yml:367:46
+    |
+366 |         run: |
+    |         --- this run block
+367 |             echo "OPENSSL_DIR=C:/openssl-${{ matrix.WINDOWS.WINDOWS }}" >> $GITHUB_ENV
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/wheel-builder.yml:375:24
+    |
+374 |       - run: |
+    |         --- this run block
+375 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/wheel-builder.yml:376:85
+    |
+374 |       - run: |
+    |         --- this run block
+375 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
+376 |               PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}"
+    |                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+   |
+   = note: audit confidence → High
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+   --> .github/workflows/wheel-builder.yml:1:1
+    |
+  1 | / name: Wheel Builder
+  2 | | permissions:
+  3 | |   contents: read
+  4 | | on:
+...   |
+389 | |           name: "cryptography-${{ github.event.inputs.version }}-${{ matrix.WINDOWS.WINDOWS }}-${{ matrix.PYTHON.VERSION }}-${{ m...
+390 | |           path: wheelhouse\
+    | |____________________________^ missing concurrency setting
+    |
+    = note: audit confidence → High
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+   --> .github/workflows/wheel-builder.yml:1:1
+    |
+  1 | / name: Wheel Builder
+  2 | | permissions:
+  3 | |   contents: read
+  4 | | on:
+...   |
+389 | |           name: "cryptography-${{ github.event.inputs.version }}-${{ matrix.WINDOWS.WINDOWS }}-${{ matrix.PYTHON.VERSION }}-${{ m...
+390 | |           path: wheelhouse\
+    | |____________________________^ missing concurrency setting
+    |
+    = note: audit confidence → High
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+   --> .github/workflows/wheel-builder.yml:1:1
+    |
+  1 | / name: Wheel Builder
+  2 | | permissions:
+  3 | |   contents: read
+  4 | | on:
+...   |
+389 | |           name: "cryptography-${{ github.event.inputs.version }}-${{ matrix.WINDOWS.WINDOWS }}-${{ matrix.PYTHON.VERSION }}-${{ m...
+390 | |           path: wheelhouse\
+    | |____________________________^ missing concurrency setting
+    |
+    = note: audit confidence → High
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+   --> .github/workflows/wheel-builder.yml:1:1
+    |
+  1 | / name: Wheel Builder
+  2 | | permissions:
+  3 | |   contents: read
+  4 | | on:
+...   |
+389 | |           name: "cryptography-${{ github.event.inputs.version }}-${{ matrix.WINDOWS.WINDOWS }}-${{ matrix.PYTHON.VERSION }}-${{ m...
+390 | |           path: wheelhouse\
+    | |____________________________^ missing concurrency setting
+    |
+    = note: audit confidence → High
+
+help[superfluous-actions]: action functionality is already included by the runner
+   --> .github/workflows/wheel-builder.yml:266:15
+    |
+266 |         - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+    |           -     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `rustup` and/or `cargo` in a script step
+    |  _________|
+    | |
+267 | |         with:
+268 | |           toolchain: stable
+269 | |           # Add the x86-64 target in addition to the native arch (arm64)
+270 | |           target: x86_64-apple-darwin
+    | |_____________________________________- this step
+    |
+    = note: audit confidence → High
+
+help[superfluous-actions]: action functionality is already included by the runner
+   --> .github/workflows/wheel-builder.yml:351:15
+    |
+351 |         - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+    |           -     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `rustup` and/or `cargo` in a script step
+    |  _________|
+    | |
+352 | |         with:
+353 | |           toolchain: stable
+354 | |           target: ${{ matrix.WINDOWS.RUST_TRIPLE }}
+    | |___________________________________________________- this step
+    |
+    = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/x509-limbo-version-bump.yml:12:3
+   |
+12 |   bump:
+   |   ^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/x509-limbo-version-bump.yml:1:1
+   |
+ 1 | / name: Bump x509-limbo and/or wycheproof
+ 2 | | permissions:
+ 3 | |   contents: read
+...  |
+58 | |           token: ${{ steps.generate-token.outputs.token }}
+59 | |         if: steps.bump-x509-limbo.outputs.HAS_UPDATES == 'true' || steps.bump-wycheproof.outputs.HAS_UPDATES == 'true'
+   | |_______________________________________________________________________________________________________________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/x509-limbo-version-bump.yml:45:23
+   |
+12 |   bump:
+   |   ---- this job
+...
+45 |           app_id: ${{ secrets.BORINGBOT_APP_ID }}
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/x509-limbo-version-bump.yml:46:28
+   |
+12 |   bump:
+   |   ---- this job
+...
+46 |           private_key: ${{ secrets.BORINGBOT_PRIVATE_KEY }}
+   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+help[superfluous-actions]: action functionality is already included by the runner
+  --> .github/workflows/x509-limbo-version-bump.yml:49:15
+   |
+48 |       - name: Create Pull Request
+   |         ------------------------- this step
+49 |         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr create` in a script step
+   |
+   = note: audit confidence → High
+
+76 findings (3 suppressed): 13 informational, 41 low, 10 medium, 9 high

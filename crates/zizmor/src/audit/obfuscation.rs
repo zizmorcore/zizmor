@@ -11,7 +11,7 @@ use crate::{
         location::{Feature, Location, Routable},
     },
     models::{StepCommon, action::CompositeStep, workflow::Step},
-    utils::parse_fenced_expressions_from_input,
+    utils::parse_fenced_expressions_from_routable,
 };
 use subfeature::Subfeature;
 
@@ -124,15 +124,12 @@ impl Obfuscation {
         &self,
         expr: &SpannedExpr<'doc>,
         input: &'doc crate::audit::AuditInput,
-        expr_span: std::ops::Range<usize>,
-        origin: Origin<'doc>,
+        after: usize,
+        raw: &'doc str,
     ) -> Option<Fix<'doc>> {
         let evaluated = expr
             .consteval()
             .map(|evaluation| evaluation.sema().to_string())?;
-
-        // Calculate the absolute position in the input
-        let after = expr_span.start + origin.span.start;
 
         Some(Fix {
             title: "replace with evaluated constant".into(),
@@ -141,7 +138,7 @@ impl Obfuscation {
             patches: vec![Patch {
                 route: input.location().route,
                 operation: Op::RewriteFragment {
-                    from: Subfeature::new(after, origin.raw),
+                    from: Subfeature::new(after, raw),
                     to: evaluated.into(),
                 },
             }],
@@ -245,7 +242,7 @@ impl Audit for Obfuscation {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        for (expr, expr_span) in parse_fenced_expressions_from_input(input) {
+        for (expr, expr_span) in parse_fenced_expressions_from_routable(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
@@ -272,27 +269,23 @@ impl Audit for Obfuscation {
                             ));
                 }
 
-                // Check if we can create a fix for constant-reducible expressions
-                if parsed.constant_reducible() {
-                    // Get the main expression's origin from the first annotation
-                    if let Some((_, main_origin, _)) = obfuscated_annotations.first()
-                        && let Some(fix) = self.create_expression_fix(
-                            &parsed,
-                            input,
-                            expr_span.clone(),
-                            *main_origin,
-                        )
-                    {
-                        finding_builder = finding_builder.fix(fix);
-                    }
+                if parsed.constant_reducible()
+                    && let Some(fix) =
+                        self.create_expression_fix(&parsed, input, expr_span.start, expr.as_raw())
+                {
+                    // If the entire expression is constant reducible we need to replace the whole thing,
+                    // including its fencing, to avoid leaving behind a semantically different fenced expression.
+                    // For example, `${{ 'foo' }}` is equivalent to `foo`, but if we only replaced the inner
+                    // expression we'd end up with `${{ foo }}`, which is not.
+                    finding_builder = finding_builder.fix(fix);
                 } else {
                     // Check for constant-reducible subexpressions
                     for subexpr in parsed.constant_reducible_subexprs() {
                         if let Some(fix) = self.create_expression_fix(
                             subexpr,
                             input,
-                            expr_span.clone(),
-                            subexpr.origin,
+                            expr_span.start + subexpr.origin.span.start,
+                            subexpr.origin.raw,
                         ) {
                             finding_builder = finding_builder.fix(fix);
                             break; // Only apply one fix at a time to avoid conflicts
@@ -335,14 +328,15 @@ mod tests {
     /// Helper function to apply a fix and return the result for snapshot testing
     async fn apply_fix_for_snapshot(workflow_content: &str, _audit_name: &str) -> String {
         let key = InputKey::local("dummy".into(), "test.yml", None::<&str>);
-        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+        let workflow =
+            AuditInput::from(Workflow::from_string(workflow_content.to_string(), key).unwrap());
         let audit_state = AuditState {
             no_online_audits: false,
             gh_client: None,
         };
         let audit = Obfuscation::new(&audit_state).unwrap();
         let findings = audit
-            .audit_workflow(&workflow, &Default::default())
+            .audit(Obfuscation::ident(), &workflow, &Default::default())
             .await
             .unwrap();
 
@@ -365,6 +359,62 @@ mod tests {
         let fixed_document = fix.apply(document).unwrap();
 
         fixed_document.source().to_string()
+    }
+
+    /// Test that we correctly replace `${{ 'foo' }}` with `foo` instead of `${{ foo }}`.
+    ///
+    /// Reproducer for #1578; see: <https://github.com/zizmorcore/zizmor/issues/1578>.
+    #[tokio::test]
+    async fn test_obfuscation_fix_static_evaluation() {
+        let workflow_content = r#"
+name: Test Workflow
+on: push
+
+permissions: {}
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 # ... because release-please scans historical commits to build releases, so we need all the history.
+          persist-credentials: false
+      - id: release
+        uses: ./vendor/github.com/googleapis/release-please-action
+        with:
+          config-file: "tools/releasing/config.release-please.json"
+          manifest-file: "tools/releasing/manifest.release-please.json"
+          target-branch: "${{ inputs.rp_target_branch }}"
+    outputs:
+      iac/terraform/attribution.tfm--release_created: ${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}
+"#;
+
+        let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
+        insta::assert_snapshot!(result, @r#"
+
+        name: Test Workflow
+        on: push
+
+        permissions: {}
+
+        jobs:
+          release-please:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                with:
+                  fetch-depth: 0 # ... because release-please scans historical commits to build releases, so we need all the history.
+                  persist-credentials: false
+              - id: release
+                uses: ./vendor/github.com/googleapis/release-please-action
+                with:
+                  config-file: "tools/releasing/config.release-please.json"
+                  manifest-file: "tools/releasing/manifest.release-please.json"
+                  target-branch: "${{ inputs.rp_target_branch }}"
+            outputs:
+              iac/terraform/attribution.tfm--release_created: steps.release.outputs.iac/terraform/attribution.tfm--release_created
+        "#);
     }
 
     #[tokio::test]
