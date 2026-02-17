@@ -406,7 +406,7 @@ fn test_issue_642() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-642-repro.yml"))
             .run()?,
-        @r"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:15:9
        |
@@ -422,7 +422,7 @@ fn test_issue_642() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -438,7 +438,7 @@ fn test_issue_1081() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-1081-repro.yml"))
             .run()?,
-        @r"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:15:9
        |
@@ -466,7 +466,7 @@ fn test_issue_1081() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (2 suppressed, 2 fixable): 0 informational, 0 low, 0 medium, 2 high
+    3 findings (1 suppressed, 2 fixable): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 
@@ -482,7 +482,7 @@ fn test_issue_1152() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-1152-repro.yml"))
             .run()?,
-        @r"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:16:9
        |
@@ -519,7 +519,7 @@ fn test_issue_1152() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    6 findings (3 suppressed): 0 informational, 0 low, 0 medium, 3 high
+    4 findings (1 suppressed): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
