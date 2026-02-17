@@ -736,13 +736,7 @@ impl Evaluation {
     /// See: <https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#operators>
     pub fn as_number(&self) -> f64 {
         match self {
-            Evaluation::String(s) => {
-                if s.is_empty() {
-                    0.0
-                } else {
-                    s.parse::<f64>().unwrap_or(f64::NAN)
-                }
-            }
+            Evaluation::String(s) => parse_number_from_str(s),
             Evaluation::Number(n) => *n,
             Evaluation::Boolean(b) => {
                 if *b {
@@ -761,6 +755,37 @@ impl Evaluation {
     pub fn sema(&self) -> EvaluationSema<'_> {
         EvaluationSema(self)
     }
+}
+
+/// Parse a string into a number following GitHub Actions coercion rules.
+///
+/// The string is trimmed and then parsed as:
+/// - Empty/whitespace-only → 0.0
+/// - `0x` prefix → hexadecimal integer
+/// - `0o` prefix → octal integer
+/// - Otherwise → standard float parsing (decimal, scientific notation,
+///   Infinity, -Infinity, NaN)
+fn parse_number_from_str(s: &str) -> f64 {
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        return 0.0;
+    }
+
+    // Hex
+    if let Some(hex_digits) = trimmed.strip_prefix("0x") {
+        return u64::from_str_radix(hex_digits, 16)
+            .map(|n| n as f64)
+            .unwrap_or(f64::NAN);
+    }
+
+    // Octal
+    if let Some(oct_digits) = trimmed.strip_prefix("0o") {
+        return u64::from_str_radix(oct_digits, 8)
+            .map(|n| n as f64)
+            .unwrap_or(f64::NAN);
+    }
+
+    trimmed.parse::<f64>().unwrap_or(f64::NAN)
 }
 
 /// A wrapper around `Evaluation` that implements GitHub Actions
@@ -1506,6 +1531,70 @@ mod tests {
 
         for (result, expected) in test_cases {
             assert_eq!(result.as_boolean(), *expected);
+        }
+    }
+
+    #[test]
+    fn test_evaluation_result_to_number() {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            (Evaluation::Number(42.0), 42.0),
+            (Evaluation::Number(0.0), 0.0),
+            (Evaluation::Boolean(true), 1.0),
+            (Evaluation::Boolean(false), 0.0),
+            (Evaluation::Null, 0.0),
+            (Evaluation::String("".to_string()), 0.0),
+            (Evaluation::String("42".to_string()), 42.0),
+            (Evaluation::String("3.14".to_string()), 3.14),
+            (Evaluation::String("   ".to_string()), 0.0),
+            (Evaluation::String("   1   ".to_string()), 1.0),
+            (Evaluation::String(" 42 ".to_string()), 42.0),
+            (Evaluation::String("\t5\n".to_string()), 5.0),
+            (Evaluation::String("0xff".to_string()), 255.0),
+            (Evaluation::String("0xfF".to_string()), 255.0),
+            (Evaluation::String("0xFF".to_string()), 255.0),
+            (Evaluation::String(" 0xff ".to_string()), 255.0),
+            (Evaluation::String("0o10".to_string()), 8.0),
+            (Evaluation::String(" 0o10 ".to_string()), 8.0),
+            (Evaluation::String(" 1.2e2 ".to_string()), 120.0),
+            (Evaluation::String(" +1.2e2 ".to_string()), 120.0),
+            (Evaluation::String(" -1.2E+2 ".to_string()), -120.0),
+            (Evaluation::String(" 1.2e-2 ".to_string()), 0.012),
+            (Evaluation::String(" +123456.789 ".to_string()), 123456.789),
+            (Evaluation::String(" -123456.789 ".to_string()), -123456.789),
+        ];
+
+        for (eval, expected) in test_cases {
+            assert_eq!(eval.as_number(), *expected, "as_number() for {:?}", eval);
+        }
+
+        // Infinity cases
+        assert_eq!(
+            Evaluation::String(" Infinity ".to_string()).as_number(),
+            f64::INFINITY
+        );
+        assert_eq!(
+            Evaluation::String(" -Infinity ".to_string()).as_number(),
+            f64::NEG_INFINITY
+        );
+
+        // NaN cases
+        let nan_cases = &[
+            Evaluation::String("hello".to_string()),
+            Evaluation::String(" NaN ".to_string()),
+            Evaluation::String(" abc ".to_string()),
+            // Uppercase prefixes are not supported by GitHub Actions.
+            Evaluation::String("0XFF".to_string()),
+            Evaluation::String("0O10".to_string()),
+        ];
+
+        for eval in nan_cases {
+            assert!(
+                eval.as_number().is_nan(),
+                "as_number() for {:?} should be NaN",
+                eval
+            );
         }
     }
 
