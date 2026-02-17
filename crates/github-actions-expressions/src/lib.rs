@@ -16,7 +16,7 @@ use crate::{
 use self::parser::{ExprParser, Rule};
 use anyhow::Result;
 use itertools::Itertools;
-use pest::{Parser, iterators::Pair};
+use pest::{iterators::Pair, Parser};
 
 pub mod call;
 pub mod context;
@@ -773,7 +773,8 @@ impl PartialEq for EvaluationSema<'_> {
             (Evaluation::Null, Evaluation::Null) => true,
             (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a == b,
             (Evaluation::Number(a), Evaluation::Number(b)) => a == b,
-            (Evaluation::String(a), Evaluation::String(b)) => a == b,
+            // GitHub Actions string comparisons are case-insensitive.
+            (Evaluation::String(a), Evaluation::String(b)) => a.to_uppercase() == b.to_uppercase(),
 
             // Coercion rules: all others convert to number and compare.
             (a, b) => a.as_number() == b.as_number(),
@@ -787,7 +788,9 @@ impl PartialOrd for EvaluationSema<'_> {
             (Evaluation::Null, Evaluation::Null) => Some(std::cmp::Ordering::Equal),
             (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a.partial_cmp(b),
             (Evaluation::Number(a), Evaluation::Number(b)) => a.partial_cmp(b),
-            (Evaluation::String(a), Evaluation::String(b)) => a.partial_cmp(b),
+            (Evaluation::String(a), Evaluation::String(b)) => {
+                a.to_uppercase().partial_cmp(&b.to_uppercase())
+            }
             // Coercion rules: all others convert to number and compare.
             (a, b) => a.as_number().partial_cmp(&b.as_number()),
         }
