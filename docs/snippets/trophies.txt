@@ -37,6 +37,7 @@ aspnet-contrib/AspNet.Security.OAuth.Providers#1095
 astronomer/astronomer-cosmos#1870
 astronomer/dag-factory#482
 astropy/astropy#17315
+audreyfeldroy/cookiecutter-pypackage@40f172432f78ef920d758520b543cd69be32f80a
 autotag-dev/autotag#142
 ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
 BerkeleyLearnVerify/Scenic#320
@@ -83,6 +84,7 @@ Diaoul/subliminal#1190
 docker/compose#12737
 dubzzz/fast-check#6369
 dubzzz/fast-check#6370
+Dynatrace/dynatrace-operator#6154
 earthobservations/wetterdienst#1440
 edgelesssys/contrast#1604
 EFForg/rayhunter#711
@@ -215,6 +217,7 @@ narwhals-dev/narwhals#1567
 nedbat/coveragepy@675c2f8c6c36771c85929ac9e1190b13e0269344
 neocmakelsp/neocmakelsp#216
 NetApp/harvest#3247
+nextcloud/news#3560
 nextcloud/user_saml#947
 nextcloud/.github#477
 NixOS/infra#613
