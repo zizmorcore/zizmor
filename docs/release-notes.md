@@ -31,7 +31,7 @@ of `zizmor`.
   in Dependabot (again) (#1586)
 
 * Fixed a bug where the `pre-commit` ecosystem was not recognized in
-  Dependabot configuration files (#1452)
+  Dependabot configuration files (#1637)
 
 ### Bug Fixes 🐛
 
