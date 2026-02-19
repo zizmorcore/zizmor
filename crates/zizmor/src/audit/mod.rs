@@ -221,6 +221,12 @@ impl AuditError {
     pub(crate) fn ident(&self) -> &'static str {
         self.ident
     }
+
+    pub(crate) fn downcast_ref<T: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static>(
+        &self,
+    ) -> Option<&T> {
+        self.source.downcast_ref::<T>()
+    }
 }
 
 /// Auditing trait.

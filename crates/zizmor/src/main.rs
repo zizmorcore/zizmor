@@ -959,11 +959,11 @@ async fn main() -> ExitCode {
                 fatal = "fatal".red().bold()
             );
 
-            // Check all error paths that can carry a rate-limit error.
-            // NOTE: Error::Audit wraps errors through anyhow, making
-            // rate-limit extraction impractical without deeper refactoring.
             let rate_limit_reset = match &err {
                 Error::Client(ce) => ce.rate_limit_reset(),
+                Error::Audit { source, .. } => source
+                    .downcast_ref::<github::ClientError>()
+                    .and_then(|ce| ce.rate_limit_reset()),
                 Error::Collection(ce) => match ce.inner() {
                     CollectionError::Client(inner)
                     | CollectionError::RemoteWithoutWorkflows(inner, _) => inner.rate_limit_reset(),
@@ -987,13 +987,7 @@ async fn main() -> ExitCode {
                             Level::HELP.message(format!(
                                 "rate limit resets in {reset}; wait and try again"
                             )),
-                        )
-                        .element(Level::HELP.message(
-                            "ensure GH_TOKEN is set to a valid token for higher rate limits",
-                        ))
-                        .element(Level::HELP.message(
-                            "use --offline to audit local files without GitHub API access",
-                        ));
+                        );
 
                 let renderer = Renderer::styled();
                 renderer.render(&[group])

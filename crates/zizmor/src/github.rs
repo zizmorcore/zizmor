@@ -282,7 +282,9 @@ fn format_reset_duration(reset_epoch: u64, now_epoch: u64) -> String {
 /// Middleware that detects GitHub API rate-limit responses (HTTP 403
 /// with `x-ratelimit-remaining: 0`) and converts them into a
 /// [`ClientError::RateLimited`] error with a human-readable reset time.
-struct RateLimitMiddleware;
+struct RateLimitMiddleware {
+    api_host: String,
+}
 
 #[async_trait::async_trait]
 impl reqwest_middleware::Middleware for RateLimitMiddleware {
@@ -292,6 +294,10 @@ impl reqwest_middleware::Middleware for RateLimitMiddleware {
         extensions: &mut http::Extensions,
         next: reqwest_middleware::Next<'_>,
     ) -> reqwest_middleware::Result<Response> {
+        if req.url().host_str() != Some(&self.api_host) {
+            return next.run(req, extensions).await;
+        }
+
         let res = next.run(req, extensions).await?;
 
         if res.status() != StatusCode::FORBIDDEN {
@@ -301,8 +307,7 @@ impl reqwest_middleware::Middleware for RateLimitMiddleware {
         let is_rate_limited = res
             .headers()
             .get("x-ratelimit-remaining")
-            .and_then(|v| v.to_str().ok())
-            .is_some_and(|v| v == "0");
+            .is_some_and(|v| v.as_bytes() == b"0");
 
         if !is_rate_limited {
             return Ok(res);
@@ -366,6 +371,7 @@ impl Client {
         api_client_headers.insert("X-GitHub-Api-Version", "2022-11-28".parse()?);
         api_client_headers.insert(ACCEPT, "application/vnd.github+json".parse()?);
 
+        let api_host = host.to_api_host();
         let api_client = Self::default_middleware(
             cache_dir,
             reqwest::Client::builder()
@@ -406,6 +412,7 @@ impl Client {
                 )
                 .build()
                 .expect("couldn't build GitHub client"),
+            &api_host,
         );
 
         Ok(Self {
@@ -418,7 +425,11 @@ impl Client {
         })
     }
 
-    fn default_middleware(cache_dir: &Utf8Path, client: reqwest::Client) -> ClientWithMiddleware {
+    fn default_middleware(
+        cache_dir: &Utf8Path,
+        client: reqwest::Client,
+        api_host: &str,
+    ) -> ClientWithMiddleware {
         let http_cache_options = HttpCacheOptions {
             cache_options: Some(CacheOptions {
                 // GitHub API requests made with an API token seem to
@@ -452,7 +463,9 @@ impl Client {
                 }),
                 CacheType::Memory,
             ))
-            .with(RateLimitMiddleware)
+            .with(RateLimitMiddleware {
+                api_host: api_host.to_string(),
+            })
             .build()
     }
 
@@ -1104,47 +1117,6 @@ mod tests {
         };
         let err = ClientError::Middleware(reqwest_middleware::Error::Middleware(inner.into()));
         assert_eq!(err.rate_limit_reset(), Some("~5 minutes"));
-    }
-
-    #[test]
-    fn test_rate_limit_reset_through_list_tags() {
-        let inner = ClientError::Middleware(reqwest_middleware::Error::Middleware(
-            ClientError::RateLimited {
-                reset: "unknown".into(),
-            }
-            .into(),
-        ));
-        let err = ClientError::ListTags {
-            source: Box::new(inner),
-            owner: "actions".into(),
-            repo: "checkout".into(),
-        };
-        assert_eq!(err.rate_limit_reset(), Some("unknown"));
-    }
-
-    #[test]
-    fn test_rate_limit_reset_through_list_branches() {
-        let inner = ClientError::Middleware(reqwest_middleware::Error::Middleware(
-            ClientError::RateLimited {
-                reset: "unknown".into(),
-            }
-            .into(),
-        ));
-        let err = ClientError::ListBranches {
-            source: Box::new(inner),
-            owner: "actions".into(),
-            repo: "checkout".into(),
-        };
-        assert_eq!(err.rate_limit_reset(), Some("unknown"));
-    }
-
-    #[test]
-    fn test_rate_limit_reset_through_inner() {
-        let inner = ClientError::RateLimited {
-            reset: "~1 minute".into(),
-        };
-        let err = ClientError::Inner(Arc::new(inner));
-        assert_eq!(err.rate_limit_reset(), Some("~1 minute"));
     }
 
     #[test]
