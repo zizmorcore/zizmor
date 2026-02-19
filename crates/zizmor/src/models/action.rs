@@ -69,7 +69,7 @@ impl Action {
         let document = yamlpath::Document::new(&contents)?;
 
         let link = match key {
-            InputKey::Local(_) => None,
+            InputKey::Local(_) | InputKey::Stdin(_) => None,
             InputKey::Remote(_) => {
                 // NOTE: InputKey's Display produces a URL, hence `key.to_string()`.
                 Some(Link::new(key.presentation_path(), &key.to_string()).to_string())

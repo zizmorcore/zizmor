@@ -53,7 +53,43 @@ jobs:
     // NOTE: We use .args(["-"]) instead of .input("-") because the
     // test harness replaces all occurrences of the input string in the
     // output, and `-` would corrupt arrows, flags, etc.
-    insta::assert_snapshot!(zizmor().stdin(workflow).no_config(true).args(["-"]).run()?);
+    insta::assert_snapshot!(
+        zizmor().stdin(workflow).no_config(true).args(["-"]).run()?,
+        @r"
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+     --> <stdin>:6:9
+      |
+    6 |       - uses: actions/checkout@v3
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+      |
+      = note: audit confidence → Low
+      = note: this finding has an auto-fix
+
+    warning[excessive-permissions]: overly broad permissions
+     --> <stdin>:3:3
+      |
+    3 | /   test:
+    4 | |     runs-on: ubuntu-latest
+    5 | |     steps:
+    6 | |       - uses: actions/checkout@v3
+      | |                                  ^
+      | |                                  |
+      | |__________________________________this job
+      |                                    default permissions used due to no permissions: block
+      |
+      = note: audit confidence → Medium
+
+    error[unpinned-uses]: unpinned action reference
+     --> <stdin>:6:15
+      |
+    6 |       - uses: actions/checkout@v3
+      |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+      |
+      = note: audit confidence → High
+
+    7 findings (4 suppressed): 0 informational, 0 low, 2 medium, 1 high
+    "
+    );
 
     Ok(())
 }
@@ -69,7 +105,29 @@ runs:
   steps:
     - uses: actions/checkout@v3
 ";
-    insta::assert_snapshot!(zizmor().stdin(action).no_config(true).args(["-"]).run()?);
+    insta::assert_snapshot!(
+        zizmor().stdin(action).no_config(true).args(["-"]).run()?,
+        @r"
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+     --> <stdin>:6:7
+      |
+    6 |     - uses: actions/checkout@v3
+      |       ^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+      |
+      = note: audit confidence → Low
+      = note: this finding has an auto-fix
+
+    error[unpinned-uses]: unpinned action reference
+     --> <stdin>:6:13
+      |
+    6 |     - uses: actions/checkout@v3
+      |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+      |
+      = note: audit confidence → High
+
+    2 findings: 0 informational, 0 low, 1 medium, 1 high
+    "
+    );
 
     Ok(())
 }
@@ -90,7 +148,19 @@ updates:
             .stdin(dependabot)
             .no_config(true)
             .args(["-"])
-            .run()?
+            .run()?,
+        @r"
+    warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+     --> <stdin>:3:5
+      |
+    3 |   - package-ecosystem: github-actions
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+      |
+      = note: audit confidence → High
+      = note: this finding has an auto-fix
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    "
     );
 
     Ok(())
@@ -152,6 +222,18 @@ fn test_stdin_invalid_yaml() -> anyhow::Result<()> {
             .expects_failure(3)
             .args(["-"])
             .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     WARN collect_inputs: zizmor::registry::input: stdin: failed to load <stdin> as workflow
+    fatal: no audit was performed
+    error: no inputs collected
+      |
+      = help: collection yielded no auditable inputs
+      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+
+    Caused by:
+        no inputs collected
+    "
     );
 
     Ok(())
@@ -167,6 +249,15 @@ fn test_stdin_invalid_yaml_strict() -> anyhow::Result<()> {
             .expects_failure(1)
             .args(["--strict-collection", "-"])
             .run()?,
+        @r###"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    failed to load <stdin> as workflow
+
+    Caused by:
+        0: invalid YAML syntax: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
+        1: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
+    "###
     );
 
     Ok(())
@@ -182,6 +273,18 @@ fn test_stdin_empty() -> anyhow::Result<()> {
             .expects_failure(3)
             .args(["-"])
             .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type: failed to load <stdin> as workflow
+    fatal: no audit was performed
+    error: no inputs collected
+      |
+      = help: collection yielded no auditable inputs
+      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+
+    Caused by:
+        no inputs collected
+    "
     );
 
     Ok(())
@@ -222,6 +325,18 @@ fn test_stdin_valid_yaml_unknown_schema() -> anyhow::Result<()> {
             .expects_failure(3)
             .args(["-"])
             .run()?,
+        @r"
+    🌈 zizmor v@@VERSION@@
+     WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type: failed to load <stdin> as workflow
+    fatal: no audit was performed
+    error: no inputs collected
+      |
+      = help: collection yielded no auditable inputs
+      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+
+    Caused by:
+        no inputs collected
+    "
     );
 
     Ok(())
@@ -238,6 +353,17 @@ fn test_stdin_valid_yaml_unknown_schema_strict() -> anyhow::Result<()> {
             .expects_failure(1)
             .args(["--strict-collection", "-"])
             .run()?,
+        @r###"
+    🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    failed to load <stdin> as workflow
+
+    Caused by:
+        0: input does not match expected validation schema
+        1: "on" is a required property
+           "jobs" is a required property
+           Additional properties are not allowed ('baz', 'foo' were unexpected)
+    "###
     );
 
     Ok(())
