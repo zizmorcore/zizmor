@@ -14,6 +14,9 @@ of `zizmor`.
 * **New audit**: [secrets-outside-env] detects usage of the `secrets` context
   in jobs that don't have a corresponding `environment` (#1599)
 
+* **New audit**: [superfluous-actions] detects usage of actions that perform
+  operations already provided by GitHub's own runner images (#1618)
+
 ### Enhancements 🌱
 
 * `zizmor`'s LSP mode is now configuration-aware, and will load
@@ -54,6 +57,9 @@ of `zizmor`.
 
 * Fixed a bug where the [obfuscation] audit would fail to apply fixes
   to a subset of inputs with leading whitespace (#1597)
+
+* Fixed a bug where the [concurrency-limits] audit would incorrectly flag
+  reusable-only workflows as needing a `#!yaml concurrency:` key (#1620)
 
 ## 1.22.0
 

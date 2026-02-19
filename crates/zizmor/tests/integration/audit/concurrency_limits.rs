@@ -180,3 +180,35 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Bug #1511: reusable-only workflows were being incorrectly flagged as needing concurrency limits.
+#[test]
+fn test_issue_1511() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "concurrency-limits/issue-1511-repro.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @"
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:11:3
+       |
+    11 | /   job:
+    12 | |     name: some-job
+    13 | |     runs-on: ubuntu-latest
+    14 | |     steps:
+    15 | |       - name: 1-ok
+    16 | |         run: echo ok
+       | |_____________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}

@@ -50,6 +50,14 @@
         - ansible/ansible-documentation#3188
 
 
+-   ![](https://github.com/anthropics.png?size=40){ width="40" loading=lazy align=left } anthropics
+
+    ---
+
+    ??? example "Examples"
+        - anthropics/claude-code-action#729
+
+
 -   ![](https://github.com/apache.png?size=40){ width="40" loading=lazy align=left } apache
 
     ---
@@ -120,6 +128,14 @@
 
     ??? example "Examples"
         - astropy/astropy#17315
+
+
+-   ![](https://github.com/audreyfeldroy.png?size=40){ width="40" loading=lazy align=left } audreyfeldroy
+
+    ---
+
+    ??? example "Examples"
+        - audreyfeldroy/cookiecutter-pypackage@40f172432f78ef920d758520b543cd69be32f80a
 
 
 -   ![](https://github.com/autotag-dev.png?size=40){ width="40" loading=lazy align=left } autotag-dev
@@ -383,6 +399,14 @@
     ??? example "Examples"
         - dubzzz/fast-check#6369
         - dubzzz/fast-check#6370
+
+
+-   ![](https://github.com/Dynatrace.png?size=40){ width="40" loading=lazy align=left } Dynatrace
+
+    ---
+
+    ??? example "Examples"
+        - Dynatrace/dynatrace-operator#6154
 
 
 -   ![](https://github.com/earthobservations.png?size=40){ width="40" loading=lazy align=left } earthobservations
@@ -998,6 +1022,7 @@
     ---
 
     ??? example "Examples"
+        - nextcloud/news#3560
         - nextcloud/user_saml#947
         - nextcloud/.github#477
 

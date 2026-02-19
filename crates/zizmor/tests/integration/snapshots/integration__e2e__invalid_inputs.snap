@@ -9,5 +9,5 @@ failed to load file://@@INPUT@@ as workflow
 Caused by:
     0: input does not match expected validation schema
     1: jobs.invalid: "runs-on" is a required property
-       jobs.invalid: "uses" is a required property
        jobs.invalid: Additional properties are not allowed ('steps' was unexpected)
+       jobs.invalid: "uses" is a required property
