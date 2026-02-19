@@ -417,6 +417,28 @@ impl<'doc> Location<'doc> {
     pub(crate) fn new(symbolic: SymbolicLocation<'doc>, concrete: Feature<'doc>) -> Self {
         Self { symbolic, concrete }
     }
+
+    /// Computes a content hash for this location, used for deduplication.
+    ///
+    /// The hash includes:
+    /// - The byte offset span (concrete location)
+    /// - The annotation (symbolic description of the issue)
+    /// - The feature kind discriminant (Normal vs Subfeature)
+    ///
+    /// This ensures that two findings at the same byte location with different
+    /// annotations (e.g., two different issues on the same line) produce different hashes.
+    pub(crate) fn content_hash(&self) -> u64 {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        self.concrete.location.offset_span.start.hash(&mut hasher);
+        self.concrete.location.offset_span.end.hash(&mut hasher);
+        self.symbolic.annotation.hash(&mut hasher);
+        // Hash the feature_kind discriminant to distinguish Normal vs Subfeature
+        std::mem::discriminant(&self.symbolic.feature_kind).hash(&mut hasher);
+        hasher.finish()
+    }
 }
 
 #[cfg(test)]
