@@ -14,14 +14,14 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   = note: audit confidence → Medium
 
 warning[dangerous-triggers]: use of fundamentally insecure workflow trigger
- --> @@INPUT@@:1:1
-  |
-1 | / on:
-2 | |   pull_request_target:
-3 | |   issue_comment:
-4 | |     types: [created]
-  | |____________________^ issue_comment runs in the base repository context with access to secrets
-  |
-  = note: audit confidence → Medium
+  --> @@INPUT@@:11:3
+   |
+11 | /   build:
+12 | |     runs-on: ubuntu-latest
+13 | |     steps:
+14 | |       - run: echo "building"
+   | |_____________________________^ issue_comment job lacks an author_association guard
+   |
+   = note: audit confidence → Medium
 
 4 findings (2 suppressed): 0 informational, 0 low, 1 medium, 1 high

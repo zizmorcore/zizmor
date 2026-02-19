@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/audit/dangerous_triggers.rs
-expression: "zizmor().input(input_under_test(\"dangerous-triggers/issue-comment-bare-list.yml\",)).run()?"
+expression: "zizmor().input(input_under_test(\"dangerous-triggers/issue-comment-step-guard-only.yml\",)).run()?"
 ---
 warning[dangerous-triggers]: use of fundamentally insecure workflow trigger
   --> @@INPUT@@:8:3
@@ -8,8 +8,9 @@ warning[dangerous-triggers]: use of fundamentally insecure workflow trigger
  8 | /   respond:
  9 | |     runs-on: ubuntu-latest
 10 | |     steps:
-11 | |       - run: echo "hello"
-   | |__________________________^ issue_comment job lacks an author_association guard
+11 | |       - if: github.event.comment.author_association == 'MEMBER'
+12 | |         run: echo "comment received"
+   | |_____________________________________^ issue_comment job lacks an author_association guard
    |
    = note: audit confidence → Medium
 

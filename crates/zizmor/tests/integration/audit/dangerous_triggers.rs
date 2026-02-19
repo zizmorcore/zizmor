@@ -78,6 +78,46 @@ fn test_issue_comment_bare_list() -> Result<()> {
 }
 
 #[test]
+fn test_issue_comment_with_guard() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dangerous-triggers/issue-comment-with-guard.yml",
+            ))
+            .run()?,
+        @"No findings to report. Good job! (2 suppressed)"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_issue_comment_no_guard() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dangerous-triggers/issue-comment-no-guard.yml",
+            ))
+            .run()?,
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_issue_comment_step_guard_only() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dangerous-triggers/issue-comment-step-guard-only.yml",
+            ))
+            .run()?,
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_safe() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
