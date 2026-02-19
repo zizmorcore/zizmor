@@ -92,11 +92,11 @@ fn test_issue_comment_with_guard() -> Result<()> {
 }
 
 #[test]
-fn test_issue_comment_no_guard() -> Result<()> {
+fn test_issue_comment_weak_guard() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test(
-                "dangerous-triggers/issue-comment-no-guard.yml",
+                "dangerous-triggers/issue-comment-weak-guard.yml",
             ))
             .run()?,
     );
