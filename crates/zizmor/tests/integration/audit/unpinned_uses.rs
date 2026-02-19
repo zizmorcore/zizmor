@@ -641,7 +641,7 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings: 0 informational, 0 low, 0 medium, 2 high
+    3 findings (1 suppressed): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 

@@ -58,48 +58,73 @@ impl Audit for ConcurrencyLimits {
                 );
             }
             None => {
-                for job in workflow.jobs() {
-                    let Job::NormalJob(job) = job else {
-                        continue;
-                    };
-                    match &job.concurrency {
-                        Some(Concurrency::Bare(_)) => {
-                            findings.push(
-                                Self::finding()
-                                    .confidence(Confidence::High)
-                                    .severity(Severity::Low)
-                                    .persona(Persona::Pedantic)
-                                    .add_location(
-                                        job.location()
-                                            .primary()
-                                            .with_keys(["concurrency".into()])
-                                            .annotated(
-                                                "job concurrency is missing cancel-in-progress",
-                                            ),
-                                    )
-                                    .build(workflow)?,
-                            );
+                let all_jobs_are_reusable = workflow
+                    .jobs()
+                    .all(|job| matches!(job, Job::ReusableWorkflowCallJob(_)));
+
+                if all_jobs_are_reusable {
+                    // If all of the workflow's jobs are reusable workflow calls,
+                    // then the workflow itself should have a concurrency setting.
+                    findings.push(
+                        Self::finding()
+                            .confidence(Confidence::High)
+                            .severity(Severity::Low)
+                            .persona(Persona::Pedantic)
+                            .add_location(
+                                workflow
+                                    .location_with_grip()
+                                    .primary()
+                                    .annotated("workflow is missing a `concurrency` key"),
+                            )
+                            .add_location(workflow.location().hidden())
+                            .build(workflow)?,
+                    );
+                } else {
+                    // Otherwise, we flag each non-reusable job that lacks
+                    // a sufficient concurrency setting.
+                    for job in workflow.jobs() {
+                        let Job::NormalJob(job) = job else {
+                            continue;
+                        };
+                        match &job.concurrency {
+                            Some(Concurrency::Bare(_)) => {
+                                findings.push(
+                                    Self::finding()
+                                        .confidence(Confidence::High)
+                                        .severity(Severity::Low)
+                                        .persona(Persona::Pedantic)
+                                        .add_location(
+                                            job.location()
+                                                .primary()
+                                                .with_keys(["concurrency".into()])
+                                                .annotated(
+                                                    "job concurrency is missing cancel-in-progress",
+                                                ),
+                                        )
+                                        .build(workflow)?,
+                                );
+                            }
+                            None => {
+                                findings.push(
+                                    Self::finding()
+                                        .confidence(Confidence::High)
+                                        .severity(Severity::Low)
+                                        .persona(Persona::Pedantic)
+                                        .add_location(
+                                            workflow
+                                                .location()
+                                                .primary()
+                                                .annotated("missing a `concurrency` key"),
+                                        )
+                                        .build(workflow)?,
+                                );
+                            }
+                            // NOTE: Per #1302, we don't nag the user if they've explicitly set
+                            // `cancel-in-progress: false` or similar. This is like with the
+                            // artipacked audit, where `persist-credentials: true` is seen as
+                            // a positive signal of user intent.
+                            _ => {}
                         }
-                        None => {
-                            findings.push(
-                                Self::finding()
-                                    .confidence(Confidence::High)
-                                    .severity(Severity::Low)
-                                    .persona(Persona::Pedantic)
-                                    .add_location(
-                                        workflow
-                                            .location()
-                                            .primary()
-                                            .annotated("missing concurrency setting"),
-                                    )
-                                    .build(workflow)?,
-                            );
-                        }
-                        // NOTE: Per #1302, we don't nag the user if they've explicitly set
-                        // `cancel-in-progress: false` or similar. This is like with the
-                        // artipacked audit, where `persist-credentials: true` is seen as
-                        // a positive signal of user intent.
-                        _ => {}
                     }
                 }
             }
