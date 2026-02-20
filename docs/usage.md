@@ -125,10 +125,10 @@ zizmor --strict-collection example/example
 environment:
 
 - If `ZIZMOR_OFFLINE` is set, then `zizmor` runs in offline mode.
-- If `GH_TOKEN` or `GITHUB_TOKEN` is set, then `zizmor` runs in online mode with audits.
+- If `GH_TOKEN`, `GITHUB_TOKEN` or `ZIZMOR_GITHUB_TOKEN` is set, then `zizmor` runs in online mode with audits.
     - Additionally `ZIZMOR_NO_ONLINE_AUDITS` is set, then `zizmor` runs
       online sans audits.
-- If neither `ZIZMOR_OFFLINE` nor `GH_TOKEN`/`GITHUB_TOKEN` are set, then `zizmor` runs
+- If neither `ZIZMOR_OFFLINE` nor `GH_TOKEN`/`GITHUB_TOKEN`/`ZIZMOR_GITHUB_TOKEN` are set, then `zizmor` runs
   in offline mode.
 
 Or, as a flowchart:
@@ -136,7 +136,7 @@ Or, as a flowchart:
 ```mermaid
 flowchart TD
   B{ZIZMOR_OFFLINE set?} -- Yes --> C[Offline mode]
-  B -- No --> D{GH_TOKEN/GITHUB_TOKEN set?}
+  B -- No --> D{GH_TOKEN/GITHUB_TOKEN/`ZIZMOR_GITHUB_TOKEN set?}
   D -- No --> C
   D -- Yes --> E{ZIZMOR_NO_ONLINE_AUDITS set?}
   E -- Yes --> F[Online sans audits mode]
@@ -146,7 +146,7 @@ flowchart TD
 Each operating mode can also be made explicit through command-line flags:
 
 ```bash
-# force offline, even if GH_TOKEN/GITHUB_TOKEN is present
+# force offline, even if GH_TOKEN/GITHUB_TOKEN/ZIZMOR_GITHUB_TOKEN is present
 # this disables all online actions, including repository fetches
 zizmor --offline workflow.yml
 
