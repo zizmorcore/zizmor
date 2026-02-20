@@ -136,7 +136,7 @@ Or, as a flowchart:
 ```mermaid
 flowchart TD
   B{ZIZMOR_OFFLINE set?} -- Yes --> C[Offline mode]
-  B -- No --> D{GH_TOKEN/GITHUB_TOKEN/`ZIZMOR_GITHUB_TOKEN set?}
+  B -- No --> D{GH_TOKEN/GITHUB_TOKEN/ZIZMOR_GITHUB_TOKEN set?}
   D -- No --> C
   D -- Yes --> E{ZIZMOR_NO_ONLINE_AUDITS set?}
   E -- Yes --> F[Online sans audits mode]
