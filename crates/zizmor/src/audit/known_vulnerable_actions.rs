@@ -785,6 +785,54 @@ jobs:
         ");
     }
 
+    #[cfg(feature = "gh-token-tests")]
+    #[tokio::test]
+    async fn test_report_finding_no_commit_found() {
+        let workflow_content = r#"
+name: Test Commit Hash Not Found
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Run Trivy vulnerability scanner in repo mode
+          uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+          with:
+            scan-type: "fs"
+            scanners: "misconfig,secret"
+            format: "github"
+            exit-code: 1
+            version: "v${{ env.TRIVY_VERSION }}"
+            trivyignores: ".trivyignore"
+            token-setup-trivy: ${{ secrets.PUBLIC_GH_TOKEN }}
+"#;
+        let key = InputKey::local("fakegroup".into(), "dummy.yml", None::<&str>);
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = KnownVulnerableActions::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(KnownVulnerableActions::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+        // Finding was completed successfully, even if a fix could not be applied
+        assert_eq!(findings.len(), 1);
+    }
+
     // TODO: test_fix_commit_pin_subpath
 
     #[cfg(feature = "gh-token-tests")]
