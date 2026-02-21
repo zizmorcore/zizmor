@@ -275,13 +275,12 @@ impl KnownVulnerableActions {
             // and only apply the highest one. This would be moderately annoying
             // to do, since we'd have to decide which finding to attach that
             // fix to.
-            if let Some(first_patched_version) = first_patched_version {
-                if let Ok(fix) = self
+            if let Some(first_patched_version) = first_patched_version
+                && let Ok(fix) = self
                     .create_upgrade_fix(uses, first_patched_version, step)
                     .await
-                {
-                    finding_builder = finding_builder.fix(fix);
-                }
+            {
+                finding_builder = finding_builder.fix(fix);
             }
 
             findings.push(finding_builder.build(step).map_err(Self::err)?);
