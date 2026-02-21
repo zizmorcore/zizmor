@@ -33,6 +33,9 @@ of `zizmor`.
 * Fixed a bug where the `pre-commit` ecosystem was not recognized in
   Dependabot configuration files (#1637)
 
+* `zizmor` now reads the `ZIZMOR_GITHUB_TOKEN` environment variable as an
+  alias/equivalent for `GH_TOKEN` and `GITHUB_TOKEN` (#1641)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would crash on `uses:` clauses containing
