@@ -165,7 +165,21 @@ impl KnownVulnerableActions {
                     .commit_for_ref(uses.owner(), uses.repo(), &prefixed_version)
                     .await
                 {
-                    Ok(commit) => commit.map(|commit| (&prefixed_version, commit)),
+                    Ok(commit) => {
+                        let result = commit.map(|commit| (&prefixed_version, commit));
+                        // We first searched for a ref using the prefixed version, but that may not
+                        // find anything, returning `None`. If so, we then attempt to search
+                        // using the bare version.
+                        if result.is_none() {
+                            self.client
+                                .commit_for_ref(uses.owner(), uses.repo(), &bare_version)
+                                .await
+                                .map_err(Self::err)?
+                                .map(|commit| (&bare_version, commit))
+                        } else {
+                            result
+                        }
+                    }
                     Err(_) => self
                         .client
                         .commit_for_ref(uses.owner(), uses.repo(), &bare_version)
@@ -798,14 +812,6 @@ jobs:
     steps:
         - name: Run Trivy vulnerability scanner in repo mode
           uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
-          with:
-            scan-type: "fs"
-            scanners: "misconfig,secret"
-            format: "github"
-            exit-code: 1
-            version: "v${{ env.TRIVY_VERSION }}"
-            trivyignores: ".trivyignore"
-            token-setup-trivy: ${{ secrets.PUBLIC_GH_TOKEN }}
 "#;
         let key = InputKey::local("fakegroup".into(), "dummy.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
@@ -829,8 +835,21 @@ jobs:
             .audit(KnownVulnerableActions::ident(), &input, &Config::default())
             .await
             .unwrap();
-        // Finding was completed successfully, even if a fix could not be applied
         assert_eq!(findings.len(), 1);
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        assert_snapshot!(new_doc.source(), @"
+
+        name: Test Commit Hash Not Found
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+                - name: Run Trivy vulnerability scanner in repo mode
+                  uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
+        ");
     }
 
     // TODO: test_fix_commit_pin_subpath
