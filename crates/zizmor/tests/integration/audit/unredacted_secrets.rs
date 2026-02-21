@@ -6,7 +6,7 @@ fn test_normal_persona() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("unredacted-secrets.yml"))
             .run()?,
-        @r"
+        @"
     warning[unredacted-secrets]: leaked secret values
       --> @@INPUT@@:18:18
        |
@@ -23,7 +23,7 @@ fn test_normal_persona() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    3 findings (1 suppressed): 0 informational, 0 low, 2 medium, 0 high
+    4 findings (2 suppressed): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 

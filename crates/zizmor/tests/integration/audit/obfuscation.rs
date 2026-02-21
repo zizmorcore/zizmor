@@ -7,7 +7,7 @@ fn test_obfuscation() -> Result<()> {
         zizmor()
             .input(input_under_test("obfuscation.yml"))
             .run()?,
-        @r"
+        @"
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:13:9
        |
@@ -195,7 +195,7 @@ fn test_obfuscation() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    38 findings (1 ignored, 17 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 0 high
+    40 findings (1 ignored, 19 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 0 high
     "
     );
 
@@ -209,7 +209,7 @@ fn test_computed_indices_pedantic() -> Result<()> {
             .input(input_under_test("obfuscation/computed-indices.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @r#"
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:18:23
        |
@@ -218,8 +218,22 @@ fn test_computed_indices_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    1 finding: 0 informational, 1 low, 0 medium, 0 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:11:3
+       |
+    11 | /   computed-indices:
+    12 | |     name: computed-indices
+    13 | |     runs-on: ubuntu-latest
+    ...  |
+    19 | |         run: |
+    20 | |           echo "hello"
+       | |_______________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 2 low, 0 medium, 0 high
+    "#
     );
 
     Ok(())
@@ -232,7 +246,24 @@ fn test_issue_1177_repro_pedantic() -> Result<()> {
             .input(input_under_test("obfuscation/issue-1177-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @"No findings to report. Good job!"
+        @r#"
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:13:3
+       |
+    13 | /   issue-1177-repro:
+    14 | |     # we should not flag this as an obfuscation finding, since it's
+    15 | |     # not actually constant reducible to `!contains(Array, ...)`
+    16 | |     if: ${{ !contains(fromJSON('["push", "pull_request"]'), github.event_name) }}
+    ...  |
+    19 | |     steps:
+    20 | |       - run: true
+       | |__________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "#
     );
 
     Ok(())

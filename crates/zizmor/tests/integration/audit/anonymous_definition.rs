@@ -7,7 +7,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("anonymous-definition.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (4 suppressed)"
     );
 
     Ok(())
@@ -45,7 +45,32 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
        = note: audit confidence → High
        = tip: use 'name: ...' to give this job a name
 
-    2 findings: 1 informational, 1 low, 0 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:15:3
+       |
+    15 | /   no-trigger:
+    16 | |     name: This is a test job that will not trigger 
+    17 | |     runs-on: ubuntu-latest
+    18 | |     steps:
+    19 | |       - run: "echo this job will not trigger"
+       | |_____________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:21:3
+       |
+    21 | /   will-trigger:
+    22 | |     runs-on: ubuntu-latest
+    23 | |     steps:
+    24 | |       - run: "echo this job will trigger"
+       | |__________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    4 findings: 1 informational, 3 low, 0 medium, 0 high
     "#
     );
 

@@ -400,7 +400,7 @@ fn issue_1065() -> Result<()> {
             .output(OutputMode::Both)
             .input(input_under_test("issue-1065.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
      INFO audit: zizmor: 🌈 completed @@INPUT@@
     warning[excessive-permissions]: overly broad permissions
@@ -427,7 +427,7 @@ fn issue_1065() -> Result<()> {
        |
        = note: audit confidence → High
 
-    5 findings (3 suppressed): 0 informational, 0 low, 1 medium, 1 high
+    6 findings (4 suppressed): 0 informational, 0 low, 1 medium, 1 high
     "
     );
 
@@ -656,12 +656,13 @@ fn test_github_output() -> Result<()> {
             .input(input_under_test("several-vulnerabilities.yml"))
             .args(["--persona=auditor", "--format=github"])
             .run()?,
-        @r"
+        @"
     ::error file=@@INPUT@@,line=5,title=excessive-permissions::several-vulnerabilities.yml:5: overly broad permissions: uses write-all permissions
     ::error file=@@INPUT@@,line=11,title=excessive-permissions::several-vulnerabilities.yml:11: overly broad permissions: uses write-all permissions
     ::error file=@@INPUT@@,line=2,title=dangerous-triggers::several-vulnerabilities.yml:2: use of fundamentally insecure workflow trigger: pull_request_target is almost always used insecurely
     ::error file=@@INPUT@@,line=16,title=template-injection::several-vulnerabilities.yml:16: code injection via template expansion: may expand into attacker-controllable code
     ::warning file=@@INPUT@@,line=1,title=concurrency-limits::several-vulnerabilities.yml:1: insufficient job-level concurrency limits: missing concurrency setting
+    ::warning file=@@INPUT@@,line=8,title=missing-timeout::several-vulnerabilities.yml:8: job does not set a timeout: job is missing a timeout-minutes setting
     "
     );
 

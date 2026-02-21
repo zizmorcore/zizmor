@@ -1,0 +1,7 @@
+name: Reusable workflow call
+on: push
+permissions: {}
+
+jobs:
+  call-reusable:
+    uses: org/repo/.github/workflows/reusable.yml@main
