@@ -1,0 +1,12 @@
+on:
+  push:
+
+name: safe
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "building"
