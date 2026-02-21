@@ -225,7 +225,7 @@ fn test_cargo_publish() -> Result<()> {
        |
        = note: audit confidence → High
 
-    11 findings (3 suppressed): 6 informational, 0 low, 2 medium, 0 high
+    10 findings (2 suppressed): 6 informational, 0 low, 2 medium, 0 high
     "
     );
 
@@ -238,7 +238,7 @@ fn test_npm_publish() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing/npm-publish.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:15:9
        |
@@ -462,7 +462,7 @@ fn test_npm_publish() -> Result<()> {
         |
         = note: audit confidence → High
 
-    31 findings (6 ignored, 4 suppressed): 12 informational, 0 low, 9 medium, 0 high
+    29 findings (6 ignored, 2 suppressed): 12 informational, 0 low, 9 medium, 0 high
     "
     );
 
@@ -490,7 +490,7 @@ fn test_nuget_push() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing/nuget-push.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:12:14
        |
@@ -521,7 +521,7 @@ fn test_nuget_push() -> Result<()> {
        |
        = note: audit confidence → High
 
-    7 findings (4 suppressed): 3 informational, 0 low, 0 medium, 0 high
+    6 findings (3 suppressed): 3 informational, 0 low, 0 medium, 0 high
     "
     );
 
