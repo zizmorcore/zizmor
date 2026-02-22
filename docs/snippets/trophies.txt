@@ -22,6 +22,7 @@ apache/lucene#15216
 apache/opennlp#736
 apache/sedona#1976
 apache/sedona#2582
+aquasecurity/trivy-action#502
 artichoke/artichoke#2825
 artichoke/boba#265
 artichoke/project-infrastructure#683
@@ -169,6 +170,7 @@ intel/llvm#20437
 Instagram/LibCST#1262
 ispc/ispc#3589
 jj-vcs/jj#5076
+Julian/lean.nvim@4f9d48499b002ab361a4351142cae2f6f5403646
 junit-team/junit-framework#4838
 junit-team/junit-framework#4840
 j178/prek#947
