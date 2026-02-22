@@ -165,22 +165,8 @@ impl KnownVulnerableActions {
                     .commit_for_ref(uses.owner(), uses.repo(), &prefixed_version)
                     .await
                 {
-                    Ok(commit) => {
-                        let result = commit.map(|commit| (&prefixed_version, commit));
-                        // We first searched for a ref using the prefixed version, but that may not
-                        // find anything, returning `None`. If so, we then attempt to search
-                        // using the bare version.
-                        if result.is_none() {
-                            self.client
-                                .commit_for_ref(uses.owner(), uses.repo(), &bare_version)
-                                .await
-                                .map_err(Self::err)?
-                                .map(|commit| (&bare_version, commit))
-                        } else {
-                            result
-                        }
-                    }
-                    Err(_) => self
+                    Ok(Some(commit)) => Some((&prefixed_version, commit)),
+                    Ok(None) | Err(_) => self
                         .client
                         .commit_for_ref(uses.owner(), uses.repo(), &bare_version)
                         .await
