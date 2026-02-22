@@ -30,9 +30,6 @@ of `zizmor`.
 * `zizmor` now flags missing cooldowns on `opentofu` ecosystem definitions
   in Dependabot (again) (#1586)
 
-* Fixed a bug where the `pre-commit` ecosystem was not recognized in
-  Dependabot configuration files (#1637)
-
 * `zizmor` now reads the `ZIZMOR_GITHUB_TOKEN` environment variable as an
   alias/equivalent for `GH_TOKEN` and `GITHUB_TOKEN` (#1641)
 
@@ -66,6 +63,9 @@ of `zizmor`.
 
 * Fixed a bug where the [concurrency-limits] audit would incorrectly flag
   reusable-only workflows as needing a `#!yaml concurrency:` key (#1620)
+
+* Fixed a bug where the `pre-commit` ecosystem was not recognized in
+  Dependabot configuration files (#1637)
 
 ## 1.22.0
 
