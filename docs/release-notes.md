@@ -64,6 +64,11 @@ of `zizmor`.
 * Fixed a bug where the [concurrency-limits] audit would incorrectly flag
   reusable-only workflows as needing a `#!yaml concurrency:` key (#1620)
 
+* Fixed a bug where the [known-vulnerable-actions] audit would fail
+  when applying some fixes (#1640)
+
+    Many thanks to @reubenwong97 for implementing this fix!
+
 * Fixed a bug where the `pre-commit` ecosystem was not recognized in
   Dependabot configuration files (#1637)
 
