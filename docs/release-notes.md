@@ -30,8 +30,8 @@ of `zizmor`.
 * `zizmor` now flags missing cooldowns on `opentofu` ecosystem definitions
   in Dependabot (again) (#1586)
 
-* Fixed a bug where the `pre-commit` ecosystem was not recognized in
-  Dependabot configuration files (#1637)
+* `zizmor` now reads the `ZIZMOR_GITHUB_TOKEN` environment variable as an
+  alias/equivalent for `GH_TOKEN` and `GITHUB_TOKEN` (#1641)
 
 ### Bug Fixes 🐛
 
@@ -68,6 +68,9 @@ of `zizmor`.
   when applying some fixes (#1640)
 
     Many thanks to @reubenwong97 for implementing this fix!
+
+* Fixed a bug where the `pre-commit` ecosystem was not recognized in
+  Dependabot configuration files (#1637)
 
 ## 1.22.0
 

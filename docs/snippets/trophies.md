@@ -73,6 +73,14 @@
         - apache/sedona#2582
 
 
+-   ![](https://github.com/aquasecurity.png?size=40){ width="40" loading=lazy align=left } aquasecurity
+
+    ---
+
+    ??? example "Examples"
+        - aquasecurity/trivy-action#502
+
+
 -   ![](https://github.com/artichoke.png?size=40){ width="40" loading=lazy align=left } artichoke
 
     ---
@@ -793,6 +801,14 @@
 
     ??? example "Examples"
         - jj-vcs/jj#5076
+
+
+-   ![](https://github.com/Julian.png?size=40){ width="40" loading=lazy align=left } Julian
+
+    ---
+
+    ??? example "Examples"
+        - Julian/lean.nvim@4f9d48499b002ab361a4351142cae2f6f5403646
 
 
 -   ![](https://github.com/junit-team.png?size=40){ width="40" loading=lazy align=left } junit-team

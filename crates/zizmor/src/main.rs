@@ -94,13 +94,17 @@ struct App {
     #[arg(short, long, env = "ZIZMOR_OFFLINE")]
     offline: bool,
 
-    /// The GitHub API token to use [env: GH_TOKEN or GITHUB_TOKEN]
-    #[arg(long, env, hide_env = true, value_parser = GitHubToken::new)]
+    /// The GitHub API token to use [env: GH_TOKEN or GITHUB_TOKEN or ZIZMOR_GITHUB_TOKEN]
+    #[arg(long, env, hide_env = true, value_parser = GitHubToken::new, conflicts_with_all = ["github_token", "zizmor_github_token"])]
     gh_token: Option<GitHubToken>,
 
     /// This is an alias for `--gh-token` / `GH_TOKEN`.
-    #[arg(long, env, hide = true, value_parser = GitHubToken::new, conflicts_with = "gh_token")]
+    #[arg(long, env, hide = true, value_parser = GitHubToken::new, conflicts_with_all = ["gh_token", "zizmor_github_token"])]
     github_token: Option<GitHubToken>,
+
+    /// This is an alias for `--gh-token` / `GH_TOKEN` / `--github-token` / `GITHUB_TOKEN`
+    #[arg(long, env, hide = true, value_parser = GitHubToken::new, conflicts_with_all = ["gh_token", "github_token"])]
+    zizmor_github_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
     #[arg(long, env = "GH_HOST", default_value_t)]
@@ -737,10 +741,12 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         app.persona = Persona::Pedantic;
     }
 
-    // Merge `--github-token` into `--gh-token`, if present.
-    if let Some(token) = app.github_token.take() {
-        app.gh_token = Some(token);
-    }
+    // Merge `--github-token` or `--zizmor-github-token` into `--gh-token`, if present.
+    app.gh_token = app
+        .gh_token
+        .take()
+        .or(app.github_token.take())
+        .or(app.zizmor_github_token.take());
 
     // Unset the GitHub token if we're in offline mode.
     // We do this manually instead of with clap's `conflicts_with` because
