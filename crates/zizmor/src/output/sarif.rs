@@ -24,10 +24,9 @@ impl From<Severity> for ResultKind {
 
 impl From<Severity> for ResultLevel {
     fn from(value: Severity) -> Self {
-        // TODO: Does this mapping make sense?
         match value {
             Severity::Informational => ResultLevel::Note,
-            Severity::Low => ResultLevel::Warning,
+            Severity::Low => ResultLevel::Note,
             Severity::Medium => ResultLevel::Warning,
             Severity::High => ResultLevel::Error,
         }
@@ -122,6 +121,20 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         ))
         .level(ResultLevel::from(finding.determinations.severity))
         .kind(ResultKind::from(finding.determinations.severity))
+        .properties(
+            PropertyBag::builder()
+                .additional_properties([
+                    (
+                        "severity".into(),
+                        serde_json::Value::String(finding.determinations.severity.to_string()),
+                    ),
+                    (
+                        "confidence".into(),
+                        serde_json::Value::String(finding.determinations.confidence.to_string()),
+                    ),
+                ])
+                .build(),
+        )
         .build()
 }
 
@@ -180,7 +193,7 @@ fn build_locations<'a>(locations: impl Iterator<Item = &'a Location<'a>>) -> Vec
 
 #[cfg(test)]
 mod tests {
-    use serde_sarif::sarif::ResultKind;
+    use serde_sarif::sarif::{ResultKind, ResultLevel};
 
     use crate::finding::Severity;
 
@@ -189,6 +202,17 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&ResultKind::from(Severity::High)).unwrap(),
             "\"fail\""
+        );
+    }
+
+    #[test]
+    fn test_resultlevel_from_severity() {
+        assert_eq!(ResultLevel::from(Severity::High), ResultLevel::Error);
+        assert_eq!(ResultLevel::from(Severity::Medium), ResultLevel::Warning);
+        assert_eq!(ResultLevel::from(Severity::Low), ResultLevel::Note);
+        assert_eq!(
+            ResultLevel::from(Severity::Informational),
+            ResultLevel::Note
         );
     }
 }
