@@ -72,6 +72,10 @@ of `zizmor`.
 * Fixed a bug where the `pre-commit` ecosystem was not recognized in
   Dependabot configuration files (#1637)
 
+* Fixed a bug where the [template-injection] audit would incorrectly
+  flag `github.triggering_actor` as an injection risk in the default
+  persona (#1645)
+
 ## 1.22.0
 
 ### Changes ⚠️
@@ -1511,5 +1515,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [impostor-commit]: ./audits.md#impostor-commit
 [misfeature]: ./audits.md#misfeature
 [secrets-outside-env]: ./audits.md#secrets-outside-env
+[superfluous-actions]: ./audits.md#superfluous-actions
 
 [exit code]: ./usage.md#exit-codes
