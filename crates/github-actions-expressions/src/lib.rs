@@ -499,7 +499,7 @@ impl<'src> Expr<'src> {
                 }
                 Rule::number => Ok(SpannedExpr::new(
                     Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
-                    pair.as_str().parse::<f64>().unwrap().into(),
+                    parse_number(pair.as_str()).into(),
                 )
                 .into()),
                 Rule::string => {
@@ -736,7 +736,7 @@ impl Evaluation {
     /// See: <https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#operators>
     pub fn as_number(&self) -> f64 {
         match self {
-            Evaluation::String(s) => parse_number_from_str(s),
+            Evaluation::String(s) => parse_number(s),
             Evaluation::Number(n) => *n,
             Evaluation::Boolean(b) => {
                 if *b {
@@ -762,7 +762,7 @@ impl Evaluation {
 /// The string is trimmed and then parsed following the rules from the
 /// GitHub Action Runner:
 /// https://github.com/actions/runner/blob/9426c35fdaf2b2e00c3ef751a15c04fa8e2a9582/src/Sdk/Expressions/Sdk/ExpressionUtility.cs#L223
-fn parse_number_from_str(s: &str) -> f64 {
+fn parse_number(s: &str) -> f64 {
     let trimmed = s.trim();
     if trimmed.is_empty() {
         return 0.0;
@@ -1111,6 +1111,26 @@ mod tests {
             "1 >= 1",
             "matrix.node_version >= 20",
             "true||false",
+            // Hex literals
+            "0xFF",
+            "0xff",
+            "0x0",
+            "0xFF == 255",
+            // Octal literals
+            "0o10",
+            "0o77",
+            "0o0",
+            // Scientific notation
+            "1e2",
+            "1.5E-3",
+            "1.2e+2",
+            "5e0",
+            // Signed numbers
+            "+42",
+            "-42",
+            // Leading/trailing dot
+            ".5",
+            "123.",
             multiline2,
             "fromJSON( github.event.inputs.hmm ) [ 0 ]",
         ];
