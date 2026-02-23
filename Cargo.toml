@@ -19,7 +19,7 @@ license = "MIT"
 rust-version = "1.88.0"
 
 [workspace.dependencies]
-github-actions-expressions = { path = "crates/github-actions-expressions", version = "0.0.12" }
+github-actions-expressions = { path = "crates/github-actions-expressions", version = "0.0.13" }
 github-actions-models = { path = "crates/github-actions-models", version = "0.44.0" }
 subfeature = { path = "crates/subfeature", version = "0.0.4" }
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "0.0.3" }
