@@ -1,8 +1,13 @@
 name: zizmor binary releases for GitHub 🐙
 
 on:
-  release:
-    types: [created]
+  # NOTE(ww): this would ideally be on the 'created' subevent of a release event,
+  # but GitHub doesn't emit that event for draft releases for reasons. That in turn
+  # means we can't use it with immutable releases, since immutable releases
+  # naturally don't allow post-release uploads.
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions: {}
