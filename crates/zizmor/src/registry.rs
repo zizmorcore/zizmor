@@ -78,6 +78,7 @@ impl AuditRegistry {
         register_audit!(audit::misfeature::Misfeature);
         register_audit!(audit::secrets_outside_env::SecretsOutsideEnvironment);
         register_audit!(audit::superfluous_actions::SuperfluousActions);
+        register_audit!(audit::agentic_actions::AgenticActions);
 
         Ok(registry)
     }

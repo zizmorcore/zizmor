@@ -131,6 +131,9 @@
     "RulesConfig": {
       "type": "object",
       "properties": {
+        "agentic-actions": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "anonymous-definition": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
