@@ -23,7 +23,7 @@ github-actions-expressions = { path = "crates/github-actions-expressions", versi
 github-actions-models = { path = "crates/github-actions-models", version = "0.43.0" }
 subfeature = { path = "crates/subfeature", version = "0.0.4" }
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "0.0.3" }
-yamlpath = { path = "crates/yamlpath", version = "0.33.0" }
+yamlpath = { path = "crates/yamlpath", version = "0.34.0" }
 yamlpatch = { path = "crates/yamlpatch", version = "0.11.0" }
 
 anyhow = "1.0.101"
