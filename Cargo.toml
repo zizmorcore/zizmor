@@ -24,7 +24,7 @@ github-actions-models = { path = "crates/github-actions-models", version = "0.43
 subfeature = { path = "crates/subfeature", version = "0.0.4" }
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "0.0.3" }
 yamlpath = { path = "crates/yamlpath", version = "0.34.0" }
-yamlpatch = { path = "crates/yamlpatch", version = "0.11.0" }
+yamlpatch = { path = "crates/yamlpatch", version = "0.12.0" }
 
 anyhow = "1.0.101"
 itertools = "0.14.0"
