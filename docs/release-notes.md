@@ -38,8 +38,7 @@ of `zizmor`.
 
 ### Changes ⚠️
 
-* SARIF categories have been regraded. `Severity::Medium` is changed from `ResultLevel::Warning`
-  to `ResultLevel::Low` (#1635)
+* SARIF categories have been regraded. `zizmor`'s "medium" is changed from SARIF's "warning" to "low" (#1635)
 
 ### Bug Fixes 🐛
 
