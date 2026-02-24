@@ -24,7 +24,6 @@ impl From<Severity> for ResultKind {
 
 impl From<Severity> for ResultLevel {
     fn from(value: Severity) -> Self {
-        // TODO: Does this mapping make sense?
         match value {
             Severity::Informational => ResultLevel::Note,
             Severity::Low => ResultLevel::Note,
