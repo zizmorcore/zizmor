@@ -123,50 +123,18 @@ fn test_gemini_unrestricted_tools() -> Result<()> {
             .run()?,
         @r#"
     warning[agentic-actions]: risky AI agent action configuration
-      --> @@INPUT@@:11:9
-       |
-    11 |       - uses: google-gemini/gemini-cli-action@a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ archived; migrate to google-github-actions/run-gemini-cli
-       |
-       = note: audit confidence → High
-
-    warning[agentic-actions]: risky AI agent action configuration
       --> @@INPUT@@:12:9
        |
-    11 |         - uses: google-gemini/gemini-cli-action@a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
-       |           ------------------------------------------------------------------------------ this step
+    11 |         - uses: google-github-actions/run-gemini-cli@a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+       |           ----------------------------------------------------------------------------------- this step
     12 | /         with:
     13 | |           prompt: "Review the code"
        | |____________________________________^ missing settings with tools.core or tools.exclude restriction
        |
        = note: audit confidence → High
 
-    5 findings (3 suppressed): 0 informational, 0 low, 2 medium, 0 high
-    "#
-    );
-
-    Ok(())
-}
-
-#[test]
-fn test_gemini_archived_action() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "agentic-actions/gemini-archived-action.yml"
-            ))
-            .run()?,
-        @r"
-    warning[agentic-actions]: risky AI agent action configuration
-      --> @@INPUT@@:11:9
-       |
-    11 |       - uses: google-gemini/gemini-cli-action@a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ archived; migrate to google-github-actions/run-gemini-cli
-       |
-       = note: audit confidence → High
-
     4 findings (3 suppressed): 0 informational, 0 low, 1 medium, 0 high
-    "
+    "#
     );
 
     Ok(())

@@ -10,7 +10,6 @@
 //! - Attacker-controlled expressions flowing directly into agent prompt fields
 //! - Missing tool restrictions on Gemini actions
 //! - Dangerous sandbox, safety-strategy, or claude_args overrides
-//! - Archived actions that should be migrated to their replacements
 
 use std::sync::LazyLock;
 
@@ -36,10 +35,8 @@ struct ActionConfig {
     /// permissive.
     user_permission_keys: &'static [&'static str],
     /// Whether this action needs a tool-restriction check
-    /// (Gemini `coreTools`/`excludeTools` in `settings`).
+    /// (Gemini `tools.core`/`tools.exclude` in `settings`).
     check_tool_restriction: bool,
-    /// If set, this action is archived and should be replaced.
-    replacement: Option<&'static str>,
     /// `sandbox` values that grant unrestricted shell access.
     dangerous_sandbox_values: &'static [&'static str],
 }
@@ -54,18 +51,6 @@ static AGENTIC_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, ActionConfig)>> =
                 ActionConfig {
                     user_permission_keys: &["allowed_non_write_users", "allowed_bots"],
                     check_tool_restriction: false,
-                    replacement: None,
-                    dangerous_sandbox_values: &[],
-                },
-            ),
-            (
-                "google-gemini/gemini-cli-action"
-                    .parse()
-                    .expect("valid pattern"),
-                ActionConfig {
-                    user_permission_keys: &[],
-                    check_tool_restriction: true,
-                    replacement: Some("google-github-actions/run-gemini-cli"),
                     dangerous_sandbox_values: &[],
                 },
             ),
@@ -76,7 +61,6 @@ static AGENTIC_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, ActionConfig)>> =
                 ActionConfig {
                     user_permission_keys: &[],
                     check_tool_restriction: true,
-                    replacement: None,
                     dangerous_sandbox_values: &[],
                 },
             ),
@@ -85,7 +69,6 @@ static AGENTIC_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, ActionConfig)>> =
                 ActionConfig {
                     user_permission_keys: &["allow-users", "allow-bots"],
                     check_tool_restriction: false,
-                    replacement: None,
                     dangerous_sandbox_values: &["danger-full-access"],
                 },
             ),
@@ -94,7 +77,6 @@ static AGENTIC_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, ActionConfig)>> =
                 ActionConfig {
                     user_permission_keys: &[],
                     check_tool_restriction: false,
-                    replacement: None,
                     dangerous_sandbox_values: &[],
                 },
             ),
@@ -182,7 +164,6 @@ impl Audit for AgenticActions {
                     continue;
                 };
 
-                findings.extend(self.check_archived_action(workflow, &step, config)?);
                 findings.extend(self.check_permissive_users(workflow, &step, with, config)?);
                 findings.extend(self.check_attacker_triggers(
                     workflow,
@@ -341,29 +322,6 @@ impl AgenticActions {
         } else {
             format!("{}, ... ({} total)", items[..max].join(", "), items.len())
         }
-    }
-
-    fn check_archived_action<'doc>(
-        &self,
-        workflow: &'doc Workflow,
-        step: &Step<'doc>,
-        config: &ActionConfig,
-    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
-        let Some(replacement) = config.replacement else {
-            return Ok(vec![]);
-        };
-        Ok(vec![
-            Self::finding()
-                .severity(Severity::Medium)
-                .confidence(Confidence::High)
-                .add_location(
-                    step.location()
-                        .primary()
-                        .with_keys(["uses".into()])
-                        .annotated(format!("archived; migrate to {replacement}")),
-                )
-                .build(workflow)?,
-        ])
     }
 
     fn check_permissive_users<'doc>(
