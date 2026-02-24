@@ -795,6 +795,14 @@
         - j178/prek#947
 
 
+-   ![](https://github.com/jazzband.png?size=40){ width="40" loading=lazy align=left } jazzband
+
+    ---
+
+    ??? example "Examples"
+        - jazzband/pip-tools#2327
+
+
 -   ![](https://github.com/jj-vcs.png?size=40){ width="40" loading=lazy align=left } jj-vcs
 
     ---
