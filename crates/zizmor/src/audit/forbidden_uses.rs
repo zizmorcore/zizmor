@@ -3,7 +3,7 @@ use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
-use crate::config::{Config, ForbiddenUsesConfigInner};
+use crate::config::{Config, ForbiddenUsesConfig};
 use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
 
@@ -12,7 +12,7 @@ pub(crate) struct ForbiddenUses;
 audit_meta!(ForbiddenUses, "forbidden-uses", "forbidden action used");
 
 impl ForbiddenUses {
-    fn use_denied(&self, uses: &Uses, config: &ForbiddenUsesConfigInner) -> bool {
+    fn use_denied(&self, uses: &Uses, config: &ForbiddenUsesConfig) -> bool {
         match uses {
             // Local uses are never denied.
             Uses::Local(_) => false,
@@ -24,12 +24,10 @@ impl ForbiddenUses {
                 false
             }
             Uses::Repository(uses) => match config {
-                ForbiddenUsesConfigInner::Allow(allow) => {
+                ForbiddenUsesConfig::Allow(allow) => {
                     !allow.iter().any(|pattern| pattern.matches(uses))
                 }
-                ForbiddenUsesConfigInner::Deny(deny) => {
-                    deny.iter().any(|pattern| pattern.matches(uses))
-                }
+                ForbiddenUsesConfig::Deny(deny) => deny.iter().any(|pattern| pattern.matches(uses)),
             },
         }
     }

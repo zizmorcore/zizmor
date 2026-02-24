@@ -1,13 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/github-actions-expressions",
-    "crates/github-actions-models",
-    "crates/subfeature",
-    "crates/tree-sitter-iter",
-    "crates/yamlpatch",
-    "crates/yamlpath",
-    "crates/zizmor",
+  "crates/github-actions-expressions",
+  "crates/github-actions-models",
+  "crates/subfeature",
+  "crates/tree-sitter-iter",
+  "crates/yamlpatch",
+  "crates/yamlpath",
+  "crates/zizmor",
 ]
 
 [workspace.package]
@@ -81,6 +81,7 @@ tree-sitter-bash = "0.25.1"
 tree-sitter-powershell = "=0.25.10"
 tree-sitter-yaml = "0.7.2"
 tikv-jemallocator = "0.6"
+toml = "1"
 
 [workspace.lints.clippy]
 dbg_macro = "warn"
