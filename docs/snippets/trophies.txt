@@ -169,6 +169,7 @@ indygreg/python-zstandard@d0bf56011d85faf1c76da38f63d174b275c2cdeb
 intel/llvm#20437
 Instagram/LibCST#1262
 ispc/ispc#3589
+jazzband/pip-tools#2327
 jj-vcs/jj#5076
 Julian/lean.nvim@4f9d48499b002ab361a4351142cae2f6f5403646
 junit-team/junit-framework#4838
