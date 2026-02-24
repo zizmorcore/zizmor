@@ -200,7 +200,7 @@ impl AgenticActions {
                 BareEvent::PullRequestReviewComment => "pull_request_review_comment",
                 BareEvent::DiscussionComment => "discussion_comment",
                 BareEvent::Discussion => "discussion",
-                _ => "unknown",
+                _ => unreachable!(),
             };
 
             let gates = if let Trigger::Events(events) = &workflow.on {
