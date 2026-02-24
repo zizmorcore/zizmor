@@ -33,6 +33,9 @@ of `zizmor`.
 * `zizmor` now reads the `ZIZMOR_GITHUB_TOKEN` environment variable as an
   alias/equivalent for `GH_TOKEN` and `GITHUB_TOKEN` (#1641)
 
+* The SARIF output format now adds `zizmor/confidence`, `zizmor/persona` and `zizmor/severity`
+  to the `properties` of findings (#1656)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would crash on `uses:` clauses containing
