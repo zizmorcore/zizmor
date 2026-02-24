@@ -11,4 +11,4 @@ jobs:
       - uses: google-github-actions/run-gemini-cli@a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
         with:
           prompt: "Review the code"
-          settings: '{"sandbox": false, "coreTools": ["read_file"]}'
+          settings: '{"sandbox": false, "tools": {"core": ["read_file"]}}'

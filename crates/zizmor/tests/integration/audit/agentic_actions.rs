@@ -137,7 +137,7 @@ fn test_gemini_unrestricted_tools() -> Result<()> {
        |           ------------------------------------------------------------------------------ this step
     12 | /         with:
     13 | |           prompt: "Review the code"
-       | |____________________________________^ missing settings with coreTools or excludeTools
+       | |____________________________________^ missing settings with tools.core or tools.exclude restriction
        |
        = note: audit confidence → High
 
@@ -242,8 +242,8 @@ fn test_gemini_dangerous_coretools() -> Result<()> {
     error[agentic-actions]: risky AI agent action configuration
       --> @@INPUT@@:14:11
        |
-    14 |           settings: '{"coreTools": ["run_shell_command"]}'
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ coreTools includes unrestricted run_shell_command
+    14 |           settings: '{"tools": {"core": ["run_shell_command"]}}'
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ tools.core includes unrestricted run_shell_command
        |
        = note: audit confidence → High
 
@@ -370,8 +370,8 @@ fn test_gemini_sandbox_disabled() -> Result<()> {
     error[agentic-actions]: risky AI agent action configuration
       --> @@INPUT@@:14:11
        |
-    14 |           settings: '{"sandbox": false, "coreTools": ["read_file"]}'
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ sandbox disabled — agent has unrestricted access
+    14 |           settings: '{"sandbox": false, "tools": {"core": ["read_file"]}}'
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ sandbox disabled — agent has unrestricted access
        |
        = note: audit confidence → High
 
@@ -394,8 +394,8 @@ fn test_gemini_yolo_mode() -> Result<()> {
     error[agentic-actions]: risky AI agent action configuration
       --> @@INPUT@@:14:11
        |
-    14 |           settings: '{"coreTools": ["read_file"], "--approval-mode=yolo": true}'
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ yolo mode disables approval for all tool calls
+    14 |           settings: '{"tools": {"core": ["read_file"]}, "--approval-mode=yolo": true}'
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ yolo mode disables approval for all tool calls
        |
        = note: audit confidence → High
 
@@ -418,8 +418,8 @@ fn test_gemini_expandable_coretools() -> Result<()> {
     error[agentic-actions]: risky AI agent action configuration
       --> @@INPUT@@:14:11
        |
-    14 |           settings: '{"coreTools": ["run_shell_command(echo)"]}'
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ coreTools includes unrestricted run_shell_command
+    14 |           settings: '{"tools": {"core": ["run_shell_command(echo)"]}}'
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ tools.core includes unrestricted run_shell_command
        |
        = note: audit confidence → High
 

@@ -502,19 +502,20 @@ impl AgenticActions {
         });
 
         let has_restriction = settings.as_ref().is_some_and(|s: &serde_json::Value| {
-            s.get("coreTools").is_some() || s.get("excludeTools").is_some()
+            s.get("tools")
+                .is_some_and(|t| t.get("core").is_some() || t.get("exclude").is_some())
         });
         if !has_restriction {
             let loc = if has_settings_key {
                 step.location()
                     .primary()
                     .with_keys(["with".into(), "settings".into()])
-                    .annotated("settings missing coreTools or excludeTools restriction")
+                    .annotated("settings missing tools.core or tools.exclude restriction")
             } else {
                 step.location()
                     .primary()
                     .with_keys(["with".into()])
-                    .annotated("missing settings with coreTools or excludeTools")
+                    .annotated("missing settings with tools.core or tools.exclude restriction")
             };
             findings.push(
                 Self::finding()
@@ -527,7 +528,10 @@ impl AgenticActions {
         }
 
         if let Some(settings) = &settings {
-            if let Some(tools) = settings.get("coreTools").and_then(|v| v.as_array())
+            if let Some(tools) = settings
+                .get("tools")
+                .and_then(|t| t.get("core"))
+                .and_then(|v| v.as_array())
                 && tools
                     .iter()
                     .any(|t| t.as_str().is_some_and(Self::is_dangerous_tool_specifier))
@@ -540,7 +544,7 @@ impl AgenticActions {
                             step.location()
                                 .primary()
                                 .with_keys(["with".into(), "settings".into()])
-                                .annotated("coreTools includes unrestricted run_shell_command"),
+                                .annotated("tools.core includes unrestricted run_shell_command"),
                         )
                         .build(workflow)?,
                 );
