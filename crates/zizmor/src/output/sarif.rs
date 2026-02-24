@@ -27,7 +27,7 @@ impl From<Severity> for ResultLevel {
         // TODO: Does this mapping make sense?
         match value {
             Severity::Informational => ResultLevel::Note,
-            Severity::Low => ResultLevel::Warning,
+            Severity::Low => ResultLevel::Note,
             Severity::Medium => ResultLevel::Warning,
             Severity::High => ResultLevel::Error,
         }
