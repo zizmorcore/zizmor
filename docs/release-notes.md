@@ -36,6 +36,11 @@ of `zizmor`.
 * The SARIF output format now adds `zizmor/confidence`, `zizmor/persona` and `zizmor/severity`
   to the `properties` of findings (#1656)
 
+### Changes ⚠️
+
+* SARIF categories have been regraded. `Severity::Medium` is changed from `ResultLevel::Warning`
+  to `ResultLevel::Low` (#1635)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would crash on `uses:` clauses containing
