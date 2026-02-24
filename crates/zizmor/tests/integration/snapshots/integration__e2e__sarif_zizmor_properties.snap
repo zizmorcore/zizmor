@@ -1,0 +1,382 @@
+---
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabilities.yml\")).args([\"--format=sarif\"]).run()?"
+---
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "results": [
+        {
+          "kind": "fail",
+          "level": "error",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "properties": {
+                    "symbolic": {
+                      "annotation": "uses write-all permissions",
+                      "feature_kind": "Normal",
+                      "key": {
+                        "Local": {
+                          "given_path": "@@INPUT@@",
+                          "prefix": null
+                        }
+                      },
+                      "kind": "Primary",
+                      "route": {
+                        "route": [
+                          {
+                            "Key": "jobs"
+                          },
+                          {
+                            "Key": "hackme"
+                          },
+                          {
+                            "Key": "permissions"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ],
+              "message": {
+                "text": "uses write-all permissions"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "@@INPUT@@"
+                },
+                "region": {
+                  "endColumn": 27,
+                  "endLine": 11,
+                  "snippet": {
+                    "text": "    permissions: write-all"
+                  },
+                  "sourceLanguage": "yaml",
+                  "startColumn": 5,
+                  "startLine": 11
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "overly broad permissions"
+          },
+          "properties": {
+            "zizmor/confidence": "High",
+            "zizmor/persona": "Regular",
+            "zizmor/severity": "High"
+          },
+          "relatedLocations": [
+            {
+              "logicalLocations": [
+                {
+                  "properties": {
+                    "symbolic": {
+                      "annotation": "this job",
+                      "feature_kind": "Normal",
+                      "key": {
+                        "Local": {
+                          "given_path": "@@INPUT@@",
+                          "prefix": null
+                        }
+                      },
+                      "kind": "Related",
+                      "route": {
+                        "route": [
+                          {
+                            "Key": "jobs"
+                          },
+                          {
+                            "Key": "hackme"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ],
+              "message": {
+                "text": "this job"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "@@INPUT@@"
+                },
+                "region": {
+                  "endColumn": 1,
+                  "endLine": 17,
+                  "snippet": {
+                    "text": "  hackme:\n    name: hackme\n    runs-on: ubuntu-latest\n    permissions: write-all\n\n    steps:\n      - name: hackme\n        run: |\n          echo \"${{ github.event.pull_request.title }}\"\n"
+                  },
+                  "sourceLanguage": "yaml",
+                  "startColumn": 3,
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "ruleId": "zizmor/excessive-permissions"
+        },
+        {
+          "kind": "fail",
+          "level": "error",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "properties": {
+                    "symbolic": {
+                      "annotation": "pull_request_target is almost always used insecurely",
+                      "feature_kind": "Normal",
+                      "key": {
+                        "Local": {
+                          "given_path": "@@INPUT@@",
+                          "prefix": null
+                        }
+                      },
+                      "kind": "Primary",
+                      "route": {
+                        "route": [
+                          {
+                            "Key": "on"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ],
+              "message": {
+                "text": "pull_request_target is almost always used insecurely"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "@@INPUT@@"
+                },
+                "region": {
+                  "endColumn": 23,
+                  "endLine": 3,
+                  "snippet": {
+                    "text": "on:\n  pull_request_target:"
+                  },
+                  "sourceLanguage": "yaml",
+                  "startColumn": 1,
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "use of fundamentally insecure workflow trigger"
+          },
+          "properties": {
+            "zizmor/confidence": "Medium",
+            "zizmor/persona": "Regular",
+            "zizmor/severity": "High"
+          },
+          "relatedLocations": [],
+          "ruleId": "zizmor/dangerous-triggers"
+        },
+        {
+          "kind": "fail",
+          "level": "error",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "properties": {
+                    "symbolic": {
+                      "annotation": "may expand into attacker-controllable code",
+                      "feature_kind": {
+                        "Subfeature": {
+                          "after": 7,
+                          "fragment": {
+                            "Raw": "github.event.pull_request.title"
+                          }
+                        }
+                      },
+                      "key": {
+                        "Local": {
+                          "given_path": "@@INPUT@@",
+                          "prefix": null
+                        }
+                      },
+                      "kind": "Primary",
+                      "route": {
+                        "route": [
+                          {
+                            "Key": "jobs"
+                          },
+                          {
+                            "Key": "hackme"
+                          },
+                          {
+                            "Key": "steps"
+                          },
+                          {
+                            "Index": 0
+                          },
+                          {
+                            "Key": "run"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ],
+              "message": {
+                "text": "may expand into attacker-controllable code"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "@@INPUT@@"
+                },
+                "region": {
+                  "endColumn": 52,
+                  "endLine": 16,
+                  "snippet": {
+                    "text": "|\n          echo \"${{ github.event.pull_request.title }}\"\n"
+                  },
+                  "sourceLanguage": "yaml",
+                  "startColumn": 21,
+                  "startLine": 16
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "code injection via template expansion"
+          },
+          "properties": {
+            "zizmor/confidence": "High",
+            "zizmor/persona": "Regular",
+            "zizmor/severity": "High"
+          },
+          "relatedLocations": [
+            {
+              "logicalLocations": [
+                {
+                  "properties": {
+                    "symbolic": {
+                      "annotation": "this run block",
+                      "feature_kind": "KeyOnly",
+                      "key": {
+                        "Local": {
+                          "given_path": "@@INPUT@@",
+                          "prefix": null
+                        }
+                      },
+                      "kind": "Related",
+                      "route": {
+                        "route": [
+                          {
+                            "Key": "jobs"
+                          },
+                          {
+                            "Key": "hackme"
+                          },
+                          {
+                            "Key": "steps"
+                          },
+                          {
+                            "Index": 0
+                          },
+                          {
+                            "Key": "run"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ],
+              "message": {
+                "text": "this run block"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "@@INPUT@@"
+                },
+                "region": {
+                  "endColumn": 12,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "run"
+                  },
+                  "sourceLanguage": "yaml",
+                  "startColumn": 9,
+                  "startLine": 15
+                }
+              }
+            }
+          ],
+          "ruleId": "zizmor/template-injection"
+        }
+      ],
+      "tool": {
+        "driver": {
+          "downloadUri": "https://github.com/zizmorcore/zizmor",
+          "informationUri": "https://docs.zizmor.sh",
+          "name": "zizmor",
+          "rules": [
+            {
+              "help": {
+                "markdown": "`excessive-permissions`: overly broad permissions\n\nDocs: <https://docs.zizmor.sh/audits/#excessive-permissions>",
+                "text": "overly broad permissions"
+              },
+              "helpUri": "https://docs.zizmor.sh/audits/#excessive-permissions",
+              "id": "zizmor/excessive-permissions",
+              "name": "excessive-permissions",
+              "properties": {
+                "tags": [
+                  "security"
+                ]
+              }
+            },
+            {
+              "help": {
+                "markdown": "`dangerous-triggers`: use of fundamentally insecure workflow trigger\n\nDocs: <https://docs.zizmor.sh/audits/#dangerous-triggers>",
+                "text": "use of fundamentally insecure workflow trigger"
+              },
+              "helpUri": "https://docs.zizmor.sh/audits/#dangerous-triggers",
+              "id": "zizmor/dangerous-triggers",
+              "name": "dangerous-triggers",
+              "properties": {
+                "tags": [
+                  "security"
+                ]
+              }
+            },
+            {
+              "help": {
+                "markdown": "`template-injection`: code injection via template expansion\n\nDocs: <https://docs.zizmor.sh/audits/#template-injection>",
+                "text": "code injection via template expansion"
+              },
+              "helpUri": "https://docs.zizmor.sh/audits/#template-injection",
+              "id": "zizmor/template-injection",
+              "name": "template-injection",
+              "properties": {
+                "tags": [
+                  "security"
+                ]
+              }
+            }
+          ],
+          "semanticVersion": "@@VERSION@@",
+          "version": "@@VERSION@@"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}
