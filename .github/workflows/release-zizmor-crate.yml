@@ -8,9 +8,6 @@ on:
         description: "The tag to release (e.g., v1.0.0)"
         required: true
 
-env:
-  RELEASE_TAG: ${{ github.event.inputs.release-tag }}
-
 permissions: {}
 
 jobs:
