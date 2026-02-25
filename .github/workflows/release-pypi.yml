@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
   workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -41,7 +41,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path crates/zizmor/Cargo.toml
@@ -71,7 +71,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path crates/zizmor/Cargo.toml
@@ -97,7 +97,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path crates/zizmor/Cargo.toml
@@ -122,7 +122,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path crates/zizmor/Cargo.toml
@@ -140,7 +140,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build sdist
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           command: sdist
           args: --out dist --manifest-path crates/zizmor/Cargo.toml
@@ -163,7 +163,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       - name: Attest
-        uses: astral-sh/attest-action@2c727738cea36d6c97dd85eb133ea0e0e8fe754b # v0.0.4
+        uses: astral-sh/attest-action@f35111fb79f1e4f0150a1ee16cfd4399e3151bdb # v0.0.5
         with:
           paths: "wheels-*/*"
       - name: Publish to PyPI

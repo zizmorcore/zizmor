@@ -395,6 +395,8 @@ pub enum PackageEcosystem {
     Opentofu,
     /// `pip`
     Pip,
+    /// `pre-commit`
+    PreCommit,
     /// `pub`
     Pub,
     /// `rust-toolchain`

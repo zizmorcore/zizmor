@@ -165,8 +165,8 @@ impl KnownVulnerableActions {
                     .commit_for_ref(uses.owner(), uses.repo(), &prefixed_version)
                     .await
                 {
-                    Ok(commit) => commit.map(|commit| (&prefixed_version, commit)),
-                    Err(_) => self
+                    Ok(Some(commit)) => Some((&prefixed_version, commit)),
+                    Ok(None) | Err(_) => self
                         .client
                         .commit_for_ref(uses.owner(), uses.repo(), &bare_version)
                         .await
@@ -261,10 +261,11 @@ impl KnownVulnerableActions {
             // and only apply the highest one. This would be moderately annoying
             // to do, since we'd have to decide which finding to attach that
             // fix to.
-            if let Some(first_patched_version) = first_patched_version {
-                let fix = self
+            if let Some(first_patched_version) = first_patched_version
+                && let Ok(fix) = self
                     .create_upgrade_fix(uses, first_patched_version, step)
-                    .await?;
+                    .await
+            {
                 finding_builder = finding_builder.fix(fix);
             }
 
@@ -780,6 +781,59 @@ jobs:
             steps:
               - name: Commit pinned action
                 uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85  # v4.1.3
+        ");
+    }
+
+    #[cfg(feature = "gh-token-tests")]
+    #[tokio::test]
+    async fn test_report_finding_no_commit_found() {
+        let workflow_content = r#"
+name: Test Commit Hash Not Found
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Run Trivy vulnerability scanner in repo mode
+          uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+"#;
+        let key = InputKey::local("fakegroup".into(), "dummy.yml", None::<&str>);
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = KnownVulnerableActions::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(KnownVulnerableActions::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+        assert_eq!(findings.len(), 1);
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        assert_snapshot!(new_doc.source(), @"
+
+        name: Test Commit Hash Not Found
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+                - name: Run Trivy vulnerability scanner in repo mode
+                  uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
         ");
     }
 
