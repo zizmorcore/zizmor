@@ -1,7 +1,6 @@
 name: zizmor binary releases for GitHub 🐙
 
 on:
-  workflow_dispatch:
   workflow_call:
     inputs:
       release-tag:
@@ -92,16 +91,16 @@ jobs:
         run: ls -l distrib/
 
       - name: Attest to artifacts
-        if: github.event_name == 'release'
+        if: ${{ inputs.release-tag != '' }}
         uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
         with:
           subject-path: "distrib/*"
 
       - name: Upload to release
-        if: github.event_name == 'release'
+        if: ${{ inputs.release-tag != '' }}
         run: |
           gh release upload --repo zizmorcore/zizmor "${RELEASE_TAG}" distrib/*
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ github.event.inputs.release-tag || github.ref_name }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
         shell: bash
