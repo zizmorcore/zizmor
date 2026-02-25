@@ -73,6 +73,14 @@
         - apache/sedona#2582
 
 
+-   ![](https://github.com/aquasecurity.png?size=40){ width="40" loading=lazy align=left } aquasecurity
+
+    ---
+
+    ??? example "Examples"
+        - aquasecurity/trivy-action#502
+
+
 -   ![](https://github.com/artichoke.png?size=40){ width="40" loading=lazy align=left } artichoke
 
     ---
@@ -128,6 +136,14 @@
 
     ??? example "Examples"
         - astropy/astropy#17315
+
+
+-   ![](https://github.com/audreyfeldroy.png?size=40){ width="40" loading=lazy align=left } audreyfeldroy
+
+    ---
+
+    ??? example "Examples"
+        - audreyfeldroy/cookiecutter-pypackage@40f172432f78ef920d758520b543cd69be32f80a
 
 
 -   ![](https://github.com/autotag-dev.png?size=40){ width="40" loading=lazy align=left } autotag-dev
@@ -391,6 +407,14 @@
     ??? example "Examples"
         - dubzzz/fast-check#6369
         - dubzzz/fast-check#6370
+
+
+-   ![](https://github.com/Dynatrace.png?size=40){ width="40" loading=lazy align=left } Dynatrace
+
+    ---
+
+    ??? example "Examples"
+        - Dynatrace/dynatrace-operator#6154
 
 
 -   ![](https://github.com/earthobservations.png?size=40){ width="40" loading=lazy align=left } earthobservations
@@ -771,12 +795,28 @@
         - j178/prek#947
 
 
+-   ![](https://github.com/jazzband.png?size=40){ width="40" loading=lazy align=left } jazzband
+
+    ---
+
+    ??? example "Examples"
+        - jazzband/pip-tools#2327
+
+
 -   ![](https://github.com/jj-vcs.png?size=40){ width="40" loading=lazy align=left } jj-vcs
 
     ---
 
     ??? example "Examples"
         - jj-vcs/jj#5076
+
+
+-   ![](https://github.com/Julian.png?size=40){ width="40" loading=lazy align=left } Julian
+
+    ---
+
+    ??? example "Examples"
+        - Julian/lean.nvim@4f9d48499b002ab361a4351142cae2f6f5403646
 
 
 -   ![](https://github.com/junit-team.png?size=40){ width="40" loading=lazy align=left } junit-team
@@ -1006,6 +1046,7 @@
     ---
 
     ??? example "Examples"
+        - nextcloud/news#3560
         - nextcloud/user_saml#947
         - nextcloud/.github#477
 

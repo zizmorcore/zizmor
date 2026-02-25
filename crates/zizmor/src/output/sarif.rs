@@ -24,10 +24,9 @@ impl From<Severity> for ResultKind {
 
 impl From<Severity> for ResultLevel {
     fn from(value: Severity) -> Self {
-        // TODO: Does this mapping make sense?
         match value {
             Severity::Informational => ResultLevel::Note,
-            Severity::Low => ResultLevel::Warning,
+            Severity::Low => ResultLevel::Note,
             Severity::Medium => ResultLevel::Warning,
             Severity::High => ResultLevel::Error,
         }
@@ -122,6 +121,27 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         ))
         .level(ResultLevel::from(finding.determinations.severity))
         .kind(ResultKind::from(finding.determinations.severity))
+        .properties(
+            PropertyBag::builder()
+                .additional_properties([
+                    (
+                        "zizmor/confidence".into(),
+                        serde_json::value::to_value(finding.determinations.confidence)
+                            .expect("failed to serialize confidence"),
+                    ),
+                    (
+                        "zizmor/severity".into(),
+                        serde_json::value::to_value(finding.determinations.severity)
+                            .expect("failed to serialize severity"),
+                    ),
+                    (
+                        "zizmor/persona".into(),
+                        serde_json::value::to_value(finding.determinations.persona)
+                            .expect("failed to serialize persona"),
+                    ),
+                ])
+                .build(),
+        )
         .build()
 }
 

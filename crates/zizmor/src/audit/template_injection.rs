@@ -1597,6 +1597,7 @@ jobs:
                     "replace expression with environment variable",
                 );
                 insta::assert_snapshot!(fixed_content.source(), @r#"
+
                 name: Repro issue #1580
                 on:
                   issue_comment:
