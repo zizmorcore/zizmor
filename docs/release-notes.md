@@ -83,6 +83,9 @@ of `zizmor`.
   flag `github.triggering_actor` as an injection risk in the default
   persona (#1645)
 
+* Fixed a bug where the [concurrency-limits] audit reported findings
+  at the job level instead of the workflow level (#1627)
+
 ## 1.22.0
 
 ### Changes ⚠️
