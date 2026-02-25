@@ -1,16 +1,17 @@
 name: zizmor binary releases for GitHub 🐙
 
 on:
-  # NOTE(ww): this would ideally be on the 'created' subevent of a release event,
-  # but GitHub doesn't emit that event for draft releases for reasons. That in turn
-  # means we can't use it with immutable releases, since immutable releases
-  # naturally don't allow post-release uploads.
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: "The tag to release (e.g., v1.0.0)"
+        required: true
 
 permissions: {}
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.release-tag || github.ref_name }}
 
 jobs:
   build:
@@ -101,7 +102,7 @@ jobs:
       - name: Upload to release
         if: github.event_name == 'release'
         run: |
-          gh release upload --repo zizmorcore/zizmor "${GITHUB_REF_NAME}" distrib/*
+          gh release upload --repo zizmorcore/zizmor "${RELEASE_TAG}" distrib/*
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash

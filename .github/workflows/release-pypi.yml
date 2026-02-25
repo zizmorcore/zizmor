@@ -4,12 +4,17 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      release-tag:
+        description: "The tag to release (e.g., v1.0.0)"
+        required: true
 
-permissions:
-  contents: read
+env:
+  # This will be empty for push events, which is fine.
+  RELEASE_TAG: ${{ github.event.inputs.release-tag }}
+
+permissions: {}
 
 jobs:
   linux:
@@ -156,7 +161,7 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/zizmor
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ env.RELEASE_TAG != '' }}
     needs: [linux, musllinux, windows, macos, sdist]
     permissions:
       id-token: write # Trusted Publishing + PEP 740 attestations
@@ -167,5 +172,5 @@ jobs:
         with:
           paths: "wheels-*/*"
       - name: Publish to PyPI
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        if: ${{ env.RELEASE_TAG != '' }}
         run: uv publish --trusted-publishing=always wheels-*/*
