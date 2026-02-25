@@ -169,6 +169,7 @@ jobs:
       #   uses: astral-sh/attest-action@f35111fb79f1e4f0150a1ee16cfd4399e3151bdb # v0.0.5
       #   with:
       #     paths: "wheels-*/*"
+      - uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
       - name: Publish to PyPI
         if: ${{ inputs.release-tag != '' }}
         run: uv publish --trusted-publishing=always wheels-*/*

@@ -4401,7 +4401,7 @@ dependencies = [
 
 [[package]]
 name = "zizmor"
-version = "1.23.0-rc4"
+version = "1.23.0-rc5"
 dependencies = [
  "annotate-snippets",
  "anstream",
