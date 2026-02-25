@@ -661,7 +661,7 @@ fn test_github_output() -> Result<()> {
     ::error file=@@INPUT@@,line=11,title=excessive-permissions::several-vulnerabilities.yml:11: overly broad permissions: uses write-all permissions
     ::error file=@@INPUT@@,line=2,title=dangerous-triggers::several-vulnerabilities.yml:2: use of fundamentally insecure workflow trigger: pull_request_target is almost always used insecurely
     ::error file=@@INPUT@@,line=16,title=template-injection::several-vulnerabilities.yml:16: code injection via template expansion: may expand into attacker-controllable code
-    ::warning file=@@INPUT@@,line=1,title=concurrency-limits::several-vulnerabilities.yml:1: insufficient job-level concurrency limits: workflow is missing concurrency setting
+    ::warning file=@@INPUT@@,line=2,title=concurrency-limits::several-vulnerabilities.yml:2: insufficient job-level concurrency limits: workflow is missing concurrency setting
     "
     );
 
