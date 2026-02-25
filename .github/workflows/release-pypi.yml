@@ -11,10 +11,6 @@ on:
         description: "The tag to release (e.g., v1.0.0)"
         required: true
 
-env:
-  # This will be empty for push events, which is fine.
-  RELEASE_TAG: ${{ github.event.inputs.release-tag }}
-
 permissions: {}
 
 jobs:
@@ -162,7 +158,7 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/zizmor
-    if: ${{ env.RELEASE_TAG != '' }}
+    if: ${{ github.event.inputs.release-tag != '' }}
     needs: [linux, musllinux, windows, macos, sdist]
     permissions:
       id-token: write # Trusted Publishing + PEP 740 attestations
@@ -173,5 +169,5 @@ jobs:
         with:
           paths: "wheels-*/*"
       - name: Publish to PyPI
-        if: ${{ env.RELEASE_TAG != '' }}
+        if: ${{ github.event.inputs.release-tag != '' }}
         run: uv publish --trusted-publishing=always wheels-*/*

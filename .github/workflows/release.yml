@@ -22,7 +22,6 @@ on:
 
 env:
   RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
-  IS_PRERELEASE: ${{ contains(env.RELEASE_TAG, '-rc') }}
 
 permissions: {}
 
@@ -43,7 +42,7 @@ jobs:
           gh release create --repo zizmorcore/zizmor --draft --verify-tag ${PRERELEASE_FLAG} "${RELEASE_TAG}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PRERELEASE_FLAG: ${{ env.IS_PRERELEASE && '--prerelease' || '' }}
+          PRERELEASE_FLAG: ${{ contains(env.RELEASE_TAG, '-rc') && '--prerelease' || '' }}
 
   release-binaries:
     name: Build and attach binaries for ${{ env.RELEASE_TAG }}

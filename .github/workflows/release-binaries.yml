@@ -11,9 +11,6 @@ on:
 
 permissions: {}
 
-env:
-  RELEASE_TAG: ${{ github.event.inputs.release-tag || github.ref_name }}
-
 jobs:
   build:
     name: Build for ${{ matrix.target }} on ${{ matrix.runner }}
@@ -106,4 +103,5 @@ jobs:
           gh release upload --repo zizmorcore/zizmor "${RELEASE_TAG}" distrib/*
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.inputs.release-tag || github.ref_name }}
         shell: bash
