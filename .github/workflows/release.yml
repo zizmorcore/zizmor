@@ -62,7 +62,7 @@ jobs:
 
   release-binaries:
     name: Build and attach binaries for ${{ needs.plan-release.outputs.release-tag }}
-    needs: draft-release
+    needs: [plan-release, draft-release]
 
     permissions:
       id-token: write # for attestations
@@ -75,7 +75,7 @@ jobs:
 
   release-pypi:
     name: Build and publish to PyPI for ${{ needs.plan-release.outputs.release-tag }}
-    needs: draft-release
+    needs: [plan-release, draft-release]
 
     permissions:
       id-token: write # for Trusted Publishing + PEP 740 attestations
@@ -86,7 +86,7 @@ jobs:
 
   release-zizmor-crate:
     name: Publish zizmor crate to crates.io for ${{ needs.plan-release.outputs.release-tag }}
-    needs: draft-release
+    needs: [plan-release, draft-release]
 
     permissions:
       id-token: write # for Trusted Publishing to crates.io
