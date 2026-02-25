@@ -83,6 +83,9 @@ of `zizmor`.
   flag `github.triggering_actor` as an injection risk in the default
   persona (#1645)
 
+* Fixed a bug where `zizmor`'s expression parser did not correctly handle
+  number literals in GitHub Actions expressions (#1625)
+
 ## 1.22.0
 
 ### Changes ⚠️

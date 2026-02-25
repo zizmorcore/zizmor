@@ -62,6 +62,11 @@ mod tests {
             ("true", Evaluation::Boolean(true)),
             ("false", Evaluation::Boolean(false)),
             ("null", Evaluation::Null),
+            ("0xFF", Evaluation::Number(255.0)),
+            ("0o10", Evaluation::Number(8.0)),
+            ("1.5e2", Evaluation::Number(150.0)),
+            ("+42", Evaluation::Number(42.0)),
+            (".5", Evaluation::Number(0.5)),
         ];
 
         for (expr_str, expected) in test_cases {

@@ -77,4 +77,28 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_cross_type_comparison_with_whitespace() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Strings with whitespace should be trimmed before number coercion.
+            ("'   1   ' == 1", Evaluation::Boolean(true)),
+            ("' 42 ' == 42", Evaluation::Boolean(true)),
+            ("'  0  ' == 0", Evaluation::Boolean(true)),
+            ("'  3.14  ' == 3.14", Evaluation::Boolean(true)),
+            ("'   1   ' != 1", Evaluation::Boolean(false)),
+            ("' 2 ' < 3", Evaluation::Boolean(true)),
+            ("' 5 ' > 3", Evaluation::Boolean(true)),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
 }
