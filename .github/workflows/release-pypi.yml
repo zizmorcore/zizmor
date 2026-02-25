@@ -164,10 +164,11 @@ jobs:
       id-token: write # Trusted Publishing + PEP 740 attestations
     steps:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-      - name: Attest
-        uses: astral-sh/attest-action@f35111fb79f1e4f0150a1ee16cfd4399e3151bdb # v0.0.5
-        with:
-          paths: "wheels-*/*"
+      # TODO: Re-enable attestations once reusable workflows work.
+      # - name: Attest
+      #   uses: astral-sh/attest-action@f35111fb79f1e4f0150a1ee16cfd4399e3151bdb # v0.0.5
+      #   with:
+      #     paths: "wheels-*/*"
       - name: Publish to PyPI
         if: ${{ inputs.release-tag != '' }}
         run: uv publish --trusted-publishing=always wheels-*/*

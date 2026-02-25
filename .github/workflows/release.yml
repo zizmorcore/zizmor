@@ -56,7 +56,7 @@ jobs:
         run: |
           # NOTE: No quotes around PRERELEASE_FLAG so that it expands to either `--prerelease` or an empty string,
           # rather than an empty argument.
-          gh release create --repo zizmorcore/zizmor --draft --verify-tag ${PRERELEASE_FLAG} "${RELEASE_TAG}"
+          gh release create --repo zizmorcore/zizmor --draft --verify-tag ${PRERELEASE_FLAG} "${RELEASE_TAG}" --title "${RELEASE_TAG}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ needs.plan-release.outputs.release-tag }}
