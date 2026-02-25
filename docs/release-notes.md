@@ -61,6 +61,9 @@ of `zizmor`.
 * Fixed a bug where the [concurrency-limits] audit would incorrectly flag
   reusable-only workflows as needing a `#!yaml concurrency:` key (#1620)
 
+* Fixed a bug where `zizmor`'s expression parser did not correctly handle
+  number literals in GitHub Actions expressions (#1625)
+
 ## 1.22.0
 
 ### Changes ⚠️
@@ -123,7 +126,7 @@ of `zizmor`.
 
     Users who with to retain the old (permissive policy) for first-party
     actions may configure it explicitly in their `zizmor.yml`:
-  
+
     ```yaml title="zizmor.yml"
     rules:
       unpinned-uses:
@@ -165,21 +168,21 @@ of `zizmor`.
 * The [use-trusted-publishing] audit now detects additional publishing command
   patterns, including common "wrapped" patterns like `bundle exec gem publish`
   (#1394)
-  
+
 * zizmor now produces better error messages on a handful of error cases involving
   invalid input files. Specifically, a subset of syntax and schema errors now
   produce more detailed and actionable error messages (#1396)
-  
+
 * The [use-trusted-publishing] audit now detects additional publishing command
   patterns, including `uv run ...`, `uvx ...`, and `poetry publish`
   (#1402)
-  
+
 * zizmor now produces more useful and less ambiguous spans for many findings,
   particularly those from the [anonymous-definition] audit (#1416)
-  
+
 * zizmor now discovers configuration files named `zizmor.yaml`, in addition
   to `zizmor.yml` (#1431)
-  
+
 * zizmor now produces a more useful error message when input collection
   yields no inputs (#1439)
 
@@ -187,7 +190,7 @@ of `zizmor`.
   link rendering behavior. This is particularly useful in environments that
   advertise themselves as terminals but fail to correctly render or ignore
   OSC 8 links (#1454)
- 
+
 ### Performance Improvements 🚄
 
 * The [impostor-commit] audit is now significantly faster on true positives,
@@ -198,9 +201,9 @@ of `zizmor`.
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [obfuscation] audit would crash if it encountered
-  a CMD shell that was defined outside of the current step block (i.e. 
+  a CMD shell that was defined outside of the current step block (i.e.
   as a job or workflow default) (#1418)
-  
+
 * Fixed a bug where the `opentofu` ecosystem was not recognized in
   Dependabot configuration files (#1452)
 
@@ -214,14 +217,14 @@ of `zizmor`.
 
 * The [use-trusted-publishing] audit now detects NuGet publishing commands
   (#1369)
-  
+
 * The [dependabot-cooldown] audit now flags cooldown periods of less than 7
   days by default (#1375)
-  
+
 * The [dependabot-cooldown] audit can now be configured with a custom
   minimum cooldown period via `rules.dependabot-cooldown.config.days`
   (#1377)
-  
+
 * `zizmor` now produces slightly more useful error messages when the user supplies
   an invalid configuration for the [forbidden-uses] audit (#1381)
 
@@ -236,10 +239,10 @@ of `zizmor`.
 
 * `zizmor` now produces a more useful error message when asked to
   collect only workflows from a remote input that contains no workflows (#1324)
-  
+
 * `zizmor` now produces more precise severities on @actions/checkout versions
   that have more misuse-resistant credentials persistence behavior (#1353)
-  
+
     Many thanks to @ManuelLerchnerQC for proposing and implementing this improvement!
 
 * The [use-trusted-publishing] audit now correctly detecting more "dry-run"
@@ -266,7 +269,7 @@ of `zizmor`.
 
 * The [github-env] audit now falls back to assuming bash-like shell syntax in
   `run:` blocks if it can't infer the shell being used (#1336)
-  
+
 * The [concurrency-limits] audit now correctly detects job-level `concurrency`
   settings, in addition to workflow-level settings (#1338)
 
