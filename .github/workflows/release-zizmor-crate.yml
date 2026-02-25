@@ -4,6 +4,7 @@ on:
   workflow_call:
     inputs:
       release-tag:
+        type: string
         description: "The tag to release (e.g., v1.0.0)"
         required: true
 
