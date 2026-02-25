@@ -499,7 +499,7 @@ impl<'src> Expr<'src> {
                 }
                 Rule::number => Ok(SpannedExpr::new(
                     Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
-                    pair.as_str().parse::<f64>().unwrap().into(),
+                    parse_number(pair.as_str()).into(),
                 )
                 .into()),
                 Rule::string => {
@@ -736,13 +736,7 @@ impl Evaluation {
     /// See: <https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#operators>
     pub fn as_number(&self) -> f64 {
         match self {
-            Evaluation::String(s) => {
-                if s.is_empty() {
-                    0.0
-                } else {
-                    s.parse::<f64>().unwrap_or(f64::NAN)
-                }
-            }
+            Evaluation::String(s) => parse_number(s),
             Evaluation::Number(n) => *n,
             Evaluation::Boolean(b) => {
                 if *b {
@@ -761,6 +755,56 @@ impl Evaluation {
     pub fn sema(&self) -> EvaluationSema<'_> {
         EvaluationSema(self)
     }
+}
+
+/// Parse a string into a number following GitHub Actions coercion rules.
+///
+/// The string is trimmed and then parsed following the rules from the
+/// GitHub Action Runner:
+/// https://github.com/actions/runner/blob/9426c35fdaf2b2e00c3ef751a15c04fa8e2a9582/src/Sdk/Expressions/Sdk/ExpressionUtility.cs#L223
+fn parse_number(s: &str) -> f64 {
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        return 0.0;
+    }
+
+    // Decimal / scientific notation first
+    // Only accept finite results; infinity/NaN literals fall through.
+    if let Ok(value) = trimmed.parse::<f64>()
+        && value.is_finite()
+    {
+        return value;
+    }
+
+    // Hex: signed 32-bit.
+    // Values 0x80000000–0xFFFFFFFF wrap negative via two's complement.
+    if let Some(hex_digits) = trimmed.strip_prefix("0x") {
+        return u32::from_str_radix(hex_digits, 16)
+            .map(|n| (n as i32) as f64)
+            .unwrap_or(f64::NAN);
+    }
+
+    // Octal: signed 32-bit.
+    if let Some(oct_digits) = trimmed.strip_prefix("0o") {
+        return u32::from_str_radix(oct_digits, 8)
+            .map(|n| (n as i32) as f64)
+            .unwrap_or(f64::NAN);
+    }
+
+    // Explicit Infinity check — GH runner accepts full "infinity"
+    // (case-insensitive) but NOT the "inf" abbreviation.
+    let after_sign = trimmed
+        .strip_prefix(['+', '-'].as_slice())
+        .unwrap_or(trimmed);
+    if after_sign.eq_ignore_ascii_case("infinity") {
+        return if trimmed.starts_with('-') {
+            f64::NEG_INFINITY
+        } else {
+            f64::INFINITY
+        };
+    }
+
+    f64::NAN
 }
 
 /// A wrapper around `Evaluation` that implements GitHub Actions
@@ -1067,6 +1111,26 @@ mod tests {
             "1 >= 1",
             "matrix.node_version >= 20",
             "true||false",
+            // Hex literals
+            "0xFF",
+            "0xff",
+            "0x0",
+            "0xFF == 255",
+            // Octal literals
+            "0o10",
+            "0o77",
+            "0o0",
+            // Scientific notation
+            "1e2",
+            "1.5E-3",
+            "1.2e+2",
+            "5e0",
+            // Signed numbers
+            "+42",
+            "-42",
+            // Leading/trailing dot
+            ".5",
+            "123.",
             multiline2,
             "fromJSON( github.event.inputs.hmm ) [ 0 ]",
         ];
@@ -1506,6 +1570,168 @@ mod tests {
 
         for (result, expected) in test_cases {
             assert_eq!(result.as_boolean(), *expected);
+        }
+    }
+
+    #[test]
+    fn test_evaluation_result_to_number() {
+        use crate::Evaluation;
+
+        // Non-string types
+        let test_cases = &[
+            (Evaluation::Number(42.0), 42.0),
+            (Evaluation::Number(0.0), 0.0),
+            (Evaluation::Boolean(true), 1.0),
+            (Evaluation::Boolean(false), 0.0),
+            (Evaluation::Null, 0.0),
+        ];
+
+        for (eval, expected) in test_cases {
+            assert_eq!(eval.as_number(), *expected, "as_number() for {:?}", eval);
+        }
+
+        let string_cases: &[(&str, f64)] = &[
+            // Empty / whitespace-only
+            ("", 0.0),
+            ("   ", 0.0),
+            ("\t", 0.0),
+            // Whitespace trimming
+            ("   123   ", 123.0),
+            (" 42 ", 42.0),
+            ("   1   ", 1.0),
+            ("\t5\n", 5.0),
+            ("  \t123\t  ", 123.0),
+            // Basic decimal
+            ("42", 42.0),
+            ("3.14", 3.14),
+            // Hex
+            ("0xff", 255.0),
+            ("0xfF", 255.0),
+            ("0xFF", 255.0),
+            (" 0xff ", 255.0),
+            ("0x0", 0.0),
+            ("0x11", 17.0),
+            // Hex: signed 32-bit two's complement wrapping
+            ("0x7FFFFFFF", 2147483647.0),
+            ("0x80000000", -2147483648.0),
+            ("0xFFFFFFFF", -1.0),
+            // Octal
+            ("0o10", 8.0),
+            (" 0o10 ", 8.0),
+            ("0o0", 0.0),
+            ("0o11", 9.0),
+            // Octal: signed 32-bit two's complement wrapping
+            ("0o17777777777", 2147483647.0),
+            ("0o20000000000", -2147483648.0),
+            // Scientific notation
+            ("1.2e2", 120.0),
+            ("1.2E2", 120.0),
+            ("1.2e-2", 0.012),
+            (" 1.2e2 ", 120.0),
+            ("1.2e+2", 120.0),
+            ("5e0", 5.0),
+            ("1e3", 1000.0),
+            ("123e-1", 12.3),
+            (" +1.2e2 ", 120.0),
+            (" -1.2E+2 ", -120.0),
+            // Signs
+            ("+42", 42.0),
+            ("  -42  ", -42.0),
+            ("  3.14  ", 3.14),
+            ("+0", 0.0),
+            ("-0", 0.0),
+            (" +123456.789 ", 123456.789),
+            (" -123456.789 ", -123456.789),
+            // Leading zeros -> decimal
+            ("0123", 123.0),
+            ("00", 0.0),
+            ("007", 7.0),
+            ("010", 10.0),
+            // Trailing/leading dot
+            ("123.", 123.0),
+            (".5", 0.5),
+        ];
+
+        for (input, expected) in string_cases {
+            let eval = Evaluation::String(input.to_string());
+            assert_eq!(eval.as_number(), *expected, "as_number() for {:?}", input);
+        }
+
+        // Infinity cases
+        let infinity_cases: &[(&str, f64)] = &[
+            ("Infinity", f64::INFINITY),
+            (" Infinity ", f64::INFINITY),
+            ("+Infinity", f64::INFINITY),
+            ("-Infinity", f64::NEG_INFINITY),
+            (" -Infinity ", f64::NEG_INFINITY),
+        ];
+
+        for (input, expected) in infinity_cases {
+            let eval = Evaluation::String(input.to_string());
+            assert_eq!(eval.as_number(), *expected, "as_number() for {:?}", input);
+        }
+
+        // NaN cases: all verified against GitHub Actions CI.
+        let nan_cases: &[&str] = &[
+            // Invalid strings
+            "hello",
+            "abc",
+            " abc ",
+            " NaN ",
+            // Partial/malformed numerics
+            "123abc",
+            "abc123",
+            "100a",
+            "12.3.4",
+            "1e2e3",
+            "1 2",
+            "1_000",
+            "+",
+            "-",
+            ".",
+            // Binary notation
+            "0b1010",
+            "0B1010",
+            "0b0",
+            "0b1",
+            "0b11",
+            " 0b11 ",
+            // Uppercase prefixes are NOT supported
+            "0XFF",
+            "0O10",
+            // Signed prefixed numbers are NOT supported
+            "-0xff",
+            "+0xff",
+            "-0o10",
+            "+0o10",
+            "-0b11",
+            // Empty prefixes (no digits after prefix)
+            "0x",
+            "0o",
+            "0b",
+            // Invalid digits for the base
+            "0xZZ",
+            "0o89",
+            "0b23",
+            // Hex/octal values exceeding 32-bit
+            "0x100000000",
+            "0o40000000000",
+            // "inf" abbreviation rejected by GH runner
+            "inf",
+            "Inf",
+            "INF",
+            "+inf",
+            "-inf",
+            " inf ",
+        ];
+
+        for input in nan_cases {
+            let eval = Evaluation::String(input.to_string());
+            assert!(
+                eval.as_number().is_nan(),
+                "as_number() for {:?} should be NaN",
+                input
+            );
         }
     }
 
