@@ -20,14 +20,29 @@ on:
         description: "The tag to release (e.g., v1.0.0)"
         required: true
 
-env:
-  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
-
 permissions: {}
 
 jobs:
+  plan-release:
+    name: Plan release
+
+    runs-on: ubuntu-slim
+
+    permissions: {}
+
+    outputs:
+      release-tag: ${{ steps.determine-tag.outputs.RELEASE_TAG }}
+
+    steps:
+      - name: Determine release tag
+        id: determine-tag
+        run: echo "RELEASE_TAG=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
   draft-release:
-    name: Draft GitHub release for ${{ env.RELEASE_TAG }}
+    needs: plan-release
+    name: Draft GitHub release for ${{ needs.plan-release.outputs.release-tag }}
 
     runs-on: ubuntu-slim
 
@@ -42,10 +57,11 @@ jobs:
           gh release create --repo zizmorcore/zizmor --draft --verify-tag ${PRERELEASE_FLAG} "${RELEASE_TAG}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PRERELEASE_FLAG: ${{ contains(env.RELEASE_TAG, '-rc') && '--prerelease' || '' }}
+          RELEASE_TAG: ${{ needs.plan-release.outputs.release-tag }}
+          PRERELEASE_FLAG: ${{ contains(needs.plan-release.outputs.release-tag, '-rc') && '--prerelease' || '' }}
 
   release-binaries:
-    name: Build and attach binaries for ${{ env.RELEASE_TAG }}
+    name: Build and attach binaries for ${{ needs.plan-release.outputs.release-tag }}
     needs: draft-release
 
     permissions:
@@ -55,10 +71,10 @@ jobs:
 
     uses: ./.github/workflows/release-binaries.yml
     with:
-      release-tag: ${{ env.RELEASE_TAG }}
+      release-tag: ${{ needs.plan-release.outputs.release-tag }}
 
   release-pypi:
-    name: Build and publish to PyPI for ${{ env.RELEASE_TAG }}
+    name: Build and publish to PyPI for ${{ needs.plan-release.outputs.release-tag }}
     needs: draft-release
 
     permissions:
@@ -66,10 +82,10 @@ jobs:
 
     uses: ./.github/workflows/release-pypi.yml
     with:
-      release-tag: ${{ env.RELEASE_TAG }}
+      release-tag: ${{ needs.plan-release.outputs.release-tag }}
 
   release-zizmor-crate:
-    name: Publish zizmor crate to crates.io for ${{ env.RELEASE_TAG }}
+    name: Publish zizmor crate to crates.io for ${{ needs.plan-release.outputs.release-tag }}
     needs: draft-release
 
     permissions:
@@ -77,4 +93,4 @@ jobs:
 
     uses: ./.github/workflows/release-zizmor-crate.yml
     with:
-      release-tag: ${{ env.RELEASE_TAG }}
+      release-tag: ${{ needs.plan-release.outputs.release-tag }}
