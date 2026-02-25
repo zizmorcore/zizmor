@@ -1,0 +1,81 @@
+# zizmor's release workflow.
+#
+# This workflow is really just a thin orchestrator for the individual release
+# workflows:
+#
+# - `release-binaries.yml`: build and attach binaries to the new release on GitHub
+# - `release-pypi.yml`: build and publish distributions of zizmor to PyPI
+# - `release-zizmor-crate.yml`: publish the zizmor crate to crates.io
+#
+# To enable those child workflows, this workflow creates the release
+# and then invokes each as a reusable workflow, passing the tag as an input.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The tag to release (e.g., v1.0.0)"
+        required: true
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  IS_PRERELEASE: ${{ contains(env.RELEASE_TAG, '-rc') }}
+
+permissions: {}
+
+jobs:
+  draft-release:
+    name: Draft GitHub release for ${{ env.RELEASE_TAG }}
+
+    runs-on: ubuntu-slim
+
+    permissions:
+      contents: write # to create the release
+
+    steps:
+      - name: Create draft release
+        run: |
+          # NOTE: No quotes around PRERELEASE_FLAG so that it expands to either `--prerelease` or an empty string,
+          # rather than an empty argument.
+          gh release create --repo zizmorcore/zizmor --draft --verify-tag ${PRERELEASE_FLAG} "${RELEASE_TAG}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRERELEASE_FLAG: ${{ env.IS_PRERELEASE && '--prerelease' || '' }}
+
+  release-binaries:
+    name: Build and attach binaries for ${{ env.RELEASE_TAG }}
+    needs: draft-release
+
+    permissions:
+      id-token: write # for attestations
+      attestations: write # for attestations
+      contents: write # for release artifacts
+
+    uses: ./.github/workflows/release-binaries.yml
+    with:
+      release-tag: ${{ env.RELEASE_TAG }}
+
+  release-pypi:
+    name: Build and publish to PyPI for ${{ env.RELEASE_TAG }}
+    needs: draft-release
+
+    permissions:
+      id-token: write # for Trusted Publishing + PEP 740 attestations
+
+    uses: ./.github/workflows/release-pypi.yml
+    with:
+      release-tag: ${{ env.RELEASE_TAG }}
+
+  release-zizmor-crate:
+    name: Publish zizmor crate to crates.io for ${{ env.RELEASE_TAG }}
+    needs: draft-release
+
+    permissions:
+      id-token: write # for Trusted Publishing to crates.io
+
+    uses: ./.github/workflows/release-zizmor-crate.yml
+    with:
+      release-tag: ${{ env.RELEASE_TAG }}
