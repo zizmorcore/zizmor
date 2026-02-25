@@ -10,6 +10,8 @@
 # To enable those child workflows, this workflow creates the release
 # and then invokes each as a reusable workflow, passing the tag as an input.
 
+name: Release zizmor 🌈
+
 on:
   push:
     tags:

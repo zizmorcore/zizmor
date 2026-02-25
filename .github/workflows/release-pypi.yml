@@ -158,7 +158,7 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/zizmor
-    if: ${{ github.event.inputs.release-tag != '' }}
+    if: ${{ inputs.release-tag != '' }}
     needs: [linux, musllinux, windows, macos, sdist]
     permissions:
       id-token: write # Trusted Publishing + PEP 740 attestations
@@ -169,5 +169,5 @@ jobs:
         with:
           paths: "wheels-*/*"
       - name: Publish to PyPI
-        if: ${{ github.event.inputs.release-tag != '' }}
+        if: ${{ inputs.release-tag != '' }}
         run: uv publish --trusted-publishing=always wheels-*/*
