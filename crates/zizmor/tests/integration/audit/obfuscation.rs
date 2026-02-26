@@ -7,7 +7,7 @@ fn test_obfuscation() -> Result<()> {
         zizmor()
             .input(input_under_test("obfuscation.yml"))
             .run()?,
-        @r"
+        @"
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:13:9
        |
@@ -195,7 +195,7 @@ fn test_obfuscation() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    38 findings (1 ignored, 17 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 0 high
+    37 findings (1 ignored, 16 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 0 high
     "
     );
 

@@ -95,7 +95,7 @@ fn test_workflow_read_all() -> Result<()> {
                 "excessive-permissions/workflow-read-all.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:5:1
       |
@@ -104,7 +104,7 @@ fn test_workflow_read_all() -> Result<()> {
       |
       = note: audit confidence → High
 
-    3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    2 findings (1 suppressed): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -119,7 +119,7 @@ fn test_workflow_write_all() -> Result<()> {
                 "excessive-permissions/workflow-write-all.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:5:1
       |
@@ -128,7 +128,7 @@ fn test_workflow_write_all() -> Result<()> {
       |
       = note: audit confidence → High
 
-    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -143,7 +143,7 @@ fn test_workflow_empty_perms() -> Result<()> {
                 "excessive-permissions/workflow-empty-perms.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())
@@ -157,7 +157,7 @@ fn test_jobs_broaden_permissions() -> Result<()> {
                 "excessive-permissions/jobs-broaden-permissions.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:11:5
        |
@@ -188,7 +188,7 @@ fn test_jobs_broaden_permissions() -> Result<()> {
        |
        = note: audit confidence → High
 
-    4 findings (2 suppressed): 0 informational, 0 low, 1 medium, 1 high
+    3 findings (1 suppressed): 0 informational, 0 low, 1 medium, 1 high
     "
     );
 
@@ -203,7 +203,7 @@ fn test_workflow_write_explicit() -> Result<()> {
                 "excessive-permissions/workflow-write-explicit.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:7:3
       |
@@ -228,7 +228,7 @@ fn test_workflow_write_explicit() -> Result<()> {
       |
       = note: audit confidence → High
 
-    7 findings (4 suppressed): 0 informational, 0 low, 1 medium, 2 high
+    6 findings (3 suppressed): 0 informational, 0 low, 1 medium, 2 high
     "
     );
 
@@ -243,7 +243,7 @@ fn test_workflow_default_perms_all_jobs_explicit() -> Result<()> {
                 "excessive-permissions/workflow-default-perms-all-jobs-explicit.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (5 suppressed)"
+        @"No findings to report. Good job! (4 suppressed)"
     );
 
     Ok(())

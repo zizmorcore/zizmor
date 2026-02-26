@@ -58,42 +58,20 @@ impl Audit for ConcurrencyLimits {
                 );
             }
             None => {
+                // Collect all jobs that are missing concurrency or have incomplete settings
+                let mut jobs_missing_concurrency = vec![];
+                let mut jobs_missing_cancel_in_progress = vec![];
+
                 for job in workflow.jobs() {
                     let Job::NormalJob(job) = job else {
                         continue;
                     };
                     match &job.concurrency {
                         Some(Concurrency::Bare(_)) => {
-                            findings.push(
-                                Self::finding()
-                                    .confidence(Confidence::High)
-                                    .severity(Severity::Low)
-                                    .persona(Persona::Pedantic)
-                                    .add_location(
-                                        job.location()
-                                            .primary()
-                                            .with_keys(["concurrency".into()])
-                                            .annotated(
-                                                "job concurrency is missing cancel-in-progress",
-                                            ),
-                                    )
-                                    .build(workflow)?,
-                            );
+                            jobs_missing_cancel_in_progress.push(job);
                         }
                         None => {
-                            findings.push(
-                                Self::finding()
-                                    .confidence(Confidence::High)
-                                    .severity(Severity::Low)
-                                    .persona(Persona::Pedantic)
-                                    .add_location(
-                                        workflow
-                                            .location()
-                                            .primary()
-                                            .annotated("missing concurrency setting"),
-                                    )
-                                    .build(workflow)?,
-                            );
+                            jobs_missing_concurrency.push(job);
                         }
                         // NOTE: Per #1302, we don't nag the user if they've explicitly set
                         // `cancel-in-progress: false` or similar. This is like with the
@@ -101,6 +79,55 @@ impl Audit for ConcurrencyLimits {
                         // a positive signal of user intent.
                         _ => {}
                     }
+                }
+
+                // Create a single finding for jobs missing cancel-in-progress
+                if !jobs_missing_cancel_in_progress.is_empty() {
+                    let mut finding_builder = Self::finding()
+                        .confidence(Confidence::High)
+                        .severity(Severity::Low)
+                        .persona(Persona::Pedantic)
+                        .add_location(
+                            workflow
+                                .location()
+                                .primary()
+                                .with_keys(["on".into()])
+                                .annotated("workflow is missing concurrency setting"),
+                        );
+
+                    for job in &jobs_missing_cancel_in_progress {
+                        finding_builder = finding_builder.add_location(
+                            job.location()
+                                .with_keys(["concurrency".into()])
+                                .annotated("job concurrency is missing cancel-in-progress"),
+                        );
+                    }
+
+                    findings.push(finding_builder.build(workflow)?);
+                }
+
+                // Create a single finding for jobs missing concurrency entirely
+                if !jobs_missing_concurrency.is_empty() {
+                    let mut finding_builder = Self::finding()
+                        .confidence(Confidence::High)
+                        .severity(Severity::Low)
+                        .persona(Persona::Pedantic)
+                        .add_location(
+                            workflow
+                                .location()
+                                .primary()
+                                .with_keys(["on".into()])
+                                .annotated("workflow is missing concurrency setting"),
+                        );
+
+                    for job in &jobs_missing_concurrency {
+                        finding_builder = finding_builder.add_location(
+                            job.location()
+                                .annotated("job affected by missing workflow concurrency"),
+                        );
+                    }
+
+                    findings.push(finding_builder.build(workflow)?);
                 }
             }
             // NOTE: Per #1302, we don't nag the user if they've explicitly set
