@@ -89,6 +89,9 @@ of `zizmor`.
 * Fixed a bug where the [template-injection] audit would crash on some
   forms of multi-line expressions (#1669)
 
+* Fixed a bug where deserialization of a workflow containing fractional
+  minutes would fail (#1675)
+
 ## 1.22.0
 
 ### Changes ⚠️
