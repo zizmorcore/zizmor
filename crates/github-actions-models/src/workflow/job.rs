@@ -98,6 +98,7 @@ pub struct Step {
     pub name: Option<String>,
 
     /// An optional timeout for this step, in minutes.
+    /// GitHub takes the floor of any non-whole numeric value provided.
     pub timeout_minutes: Option<LoE<f64>>,
 
     /// An optional boolean or expression that, if `true`, prevents the job from failing when
