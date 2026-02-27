@@ -1932,12 +1932,12 @@ mod tests {
     fn test_fragment_from_expr() {
         for (expr, expected) in &[
             ("foo==bar", "foo==bar"),
-            ("foo    ==   bar", "foo    ==   bar"),
-            ("foo == bar", r"foo == bar"),
+            ("foo    ==   bar", r"foo\s+==\s+bar"),
+            ("foo == bar", r"foo\s+==\s+bar"),
             ("foo(bar)", "foo(bar)"),
-            ("foo(bar, baz)", "foo(bar, baz)"),
-            ("foo (bar, baz)", "foo (bar, baz)"),
-            ("a . b . c . d", "a . b . c . d"),
+            ("foo(bar, baz)", r"foo\(bar,\s+baz\)"),
+            ("foo (bar, baz)", r"foo\s+\(bar,\s+baz\)"),
+            ("a . b . c . d", r"a\s+\.\s+b\s+\.\s+c\s+\.\s+d"),
             ("true \n && \n false", r"true\s+\&\&\s+false"),
         ] {
             let expr = Expr::parse(expr).unwrap();

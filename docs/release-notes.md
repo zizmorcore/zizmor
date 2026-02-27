@@ -86,6 +86,9 @@ of `zizmor`.
 * Fixed a bug where `zizmor`'s expression parser did not correctly handle
   number literals in GitHub Actions expressions (#1625)
 
+* Fixed a bug where the [template-injection] audit would crash on some
+  forms of multi-line expressions (#1669)
+
 ## 1.22.0
 
 ### Changes ⚠️
