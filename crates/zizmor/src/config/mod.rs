@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, num::NonZeroUsize, ops::Deref, str::FromStr};
+use std::{collections::HashMap, fs, num::NonZeroUsize, str::FromStr};
 
 use anyhow::{Context as _, anyhow};
 use camino::Utf8Path;
@@ -25,11 +25,33 @@ use crate::{
 };
 
 const CONFIG_CANDIDATES: &[&str] = &[
+    ".github/zizmor.toml",
+    "zizmor.toml",
     ".github/zizmor.yml",
     ".github/zizmor.yaml",
     "zizmor.yml",
     "zizmor.yaml",
 ];
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum ConfigFormat {
+    /// For configuration files ending with ".toml"
+    Toml,
+    /// For configuration files ending with ".yml" or ".yaml"
+    Yaml,
+}
+
+impl ConfigFormat {
+    fn from_path(path: &str) -> Result<Self, ConfigErrorInner> {
+        if path.ends_with(".toml") {
+            Ok(Self::Toml)
+        } else if path.ends_with(".yml") || path.ends_with(".yaml") {
+            Ok(Self::Yaml)
+        } else {
+            Err(ConfigErrorInner::UnsupportedFormat)
+        }
+    }
+}
 
 #[derive(Error, Debug)]
 #[error("configuration error in {path}")]
@@ -46,13 +68,17 @@ pub(crate) enum ConfigErrorInner {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    /// The overall configuration file is syntactically invalid.
+    /// The overall configuration file is syntactically invalid toml.
     #[error("invalid configuration syntax")]
-    Syntax(#[source] serde_yaml::Error),
+    TomlSyntax(#[source] toml::de::Error),
+
+    /// The overall configuration file is syntactically invalid yaml.
+    #[error("invalid configuration syntax")]
+    YamlSyntax(#[source] serde_yaml::Error),
 
     /// A specific audit's configuration is syntactically invalid.
     #[error("invalid syntax for audit `{1}`")]
-    AuditSyntax(#[source] serde_yaml::Error, &'static str),
+    AuditSyntax(#[source] serde_json::Error, &'static str),
 
     /// The `unpinned-uses` config is semantically invalid.
     #[error("invalid `unpinned-uses` config")]
@@ -61,6 +87,10 @@ pub(crate) enum ConfigErrorInner {
     /// A GitHub API error occurred while fetching a remote config.
     #[error("GitHub API error while fetching remote config")]
     Client(#[from] ClientError),
+
+    /// A configuration file that is not TOML or YAML was passed in.
+    #[error("unsupported config file format")]
+    UnsupportedFormat,
 }
 
 /// # A workflow ignore rule.
@@ -141,7 +171,7 @@ pub(crate) struct AuditRuleConfig {
     ignore: Vec<WorkflowRule>,
     /// Rule-specific configuration.
     #[serde(default)]
-    config: Option<serde_yaml::Mapping>,
+    config: Option<serde_json::Value>,
 }
 
 /// Data model for zizmor's configuration file.
@@ -155,8 +185,13 @@ struct RawConfig {
 }
 
 impl RawConfig {
-    fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
-        serde_yaml::from_str(contents).map_err(ConfigErrorInner::Syntax)
+    fn load(contents: &str, format: ConfigFormat) -> Result<Self, ConfigErrorInner> {
+        match format {
+            ConfigFormat::Toml => toml::from_str(contents).map_err(ConfigErrorInner::TomlSyntax),
+            ConfigFormat::Yaml => {
+                serde_yaml::from_str(contents).map_err(ConfigErrorInner::YamlSyntax)
+            }
+        }
     }
 
     fn rule_config<T>(&self, ident: &'static str) -> Result<Option<T>, ConfigErrorInner>
@@ -166,7 +201,7 @@ impl RawConfig {
         self.rules
             .get(ident)
             .and_then(|rule_config| rule_config.config.as_ref())
-            .map(|policy| serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(policy.clone())))
+            .map(|policy| serde_json::from_value::<T>(policy.clone()))
             .transpose()
             .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))
     }
@@ -192,38 +227,10 @@ impl Default for DependabotCooldownConfig {
     }
 }
 
-/// An `allow` or `deny` list of `uses:` patterns for the `forbidden-uses` audit.
-#[derive(Clone, Debug, Deserialize)]
-#[cfg_attr(
-    feature = "schema",
-    derive(schemars::JsonSchema),
-    schemars(with = "ForbiddenUsesConfigInner")
-)]
-#[serde(transparent)]
-pub(crate) struct ForbiddenUsesConfig(
-    // Slightly annoying wrapper for [`ForbiddenUsesConfigInner`], which is our
-    // real configuration type for the `forbidden-uses` rule.
-    //
-    // We need this wrapper type so that we can apply the `singleton_map`
-    // deserializer to the inner type, ensuring that we deserialize from a
-    // mapping with an explicit key discriminant (i.e. `allow:` or `deny:`)
-    // rather than a YAML tag. We could work around this by using serde's
-    // `untagged` instead, but this produces suboptimal user-facing error messages.
-    #[serde(with = "serde_yaml::with::singleton_map")] pub(crate) ForbiddenUsesConfigInner,
-);
-
-impl Deref for ForbiddenUsesConfig {
-    type Target = ForbiddenUsesConfigInner;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
-pub(crate) enum ForbiddenUsesConfigInner {
+pub(crate) enum ForbiddenUsesConfig {
     Allow(Vec<RepositoryUsesPattern>),
     Deny(Vec<RepositoryUsesPattern>),
 }
@@ -401,8 +408,8 @@ pub(crate) struct Config {
 
 impl Config {
     /// Loads a [`Config`] from the given contents.
-    fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
-        let raw = RawConfig::load(contents)?;
+    fn load(contents: &str, format: ConfigFormat) -> Result<Self, ConfigErrorInner> {
+        let raw = RawConfig::load(contents, format)?;
 
         let dependabot_cooldown_config = raw
             .rule_config(DependabotCooldown::ident())?
@@ -494,7 +501,11 @@ impl Config {
                 let candidate_path = candidate_path.join(candidate);
                 if candidate_path.is_file() {
                     tracing::debug!("found config candidate at `{candidate_path}`");
-                    return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
+                    let format = ConfigFormat::from_path(candidate)?;
+                    return Ok(Some(Self::load(
+                        &fs::read_to_string(&candidate_path)?,
+                        format,
+                    )?));
                 }
             }
 
@@ -562,7 +573,11 @@ impl Config {
                 Ok(Some(contents)) => {
                     tracing::debug!("retrieved config candidate `{candidate}` for {slug}");
 
-                    return Some(Self::load(&contents).map_err(|err| ConfigError {
+                    let format = ConfigFormat::from_path(candidate).map_err(|err| ConfigError {
+                        path: candidate.to_string(),
+                        source: err,
+                    })?;
+                    return Some(Self::load(&contents, format).map_err(|err| ConfigError {
                         path: candidate.to_string(),
                         source: err,
                     }))
@@ -598,9 +613,15 @@ impl Config {
                 source: ConfigErrorInner::Io(err),
             })?;
 
-            Ok(Some(Self::load(&contents).map_err(|err| ConfigError {
+            let format = ConfigFormat::from_path(path).map_err(|err| ConfigError {
                 path: path.to_string(),
                 source: err,
+            })?;
+            Ok(Some(Self::load(&contents, format).map_err(|err| {
+                ConfigError {
+                    path: path.to_string(),
+                    source: err,
+                }
             })?))
         } else {
             Ok(None)

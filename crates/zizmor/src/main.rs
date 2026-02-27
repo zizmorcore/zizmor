@@ -972,7 +972,7 @@ async fn main() -> ExitCode {
                     let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
 
                     match err.source {
-                        ConfigErrorInner::Syntax(_) => {
+                        ConfigErrorInner::TomlSyntax(_) | ConfigErrorInner::YamlSyntax(_) => {
                             group = group.elements([
                                 Level::HELP
                                     .message("check your configuration file for syntax errors"),
