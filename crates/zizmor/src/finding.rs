@@ -67,7 +67,7 @@ pub(crate) enum Severity {
 }
 
 /// A finding's "determination," i.e. its various classifications.
-#[derive(Copy, Clone, Serialize)]
+#[derive(Copy, Clone, Serialize, Hash, Eq, PartialEq)]
 pub(crate) struct Determinations {
     pub(crate) confidence: Confidence,
     pub(crate) severity: Severity,
