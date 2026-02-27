@@ -29,7 +29,7 @@ pub struct NormalJob {
     pub env: LoE<Env>,
     pub defaults: Option<Defaults>,
     pub steps: Vec<Step>,
-    pub timeout_minutes: Option<LoE<u64>>,
+    pub timeout_minutes: Option<LoE<f64>>,
     pub strategy: Option<Strategy>,
     #[serde(default)]
     pub continue_on_error: BoE,
@@ -96,7 +96,7 @@ pub struct Step {
     pub name: Option<String>,
 
     /// An optional timeout for this step, in minutes.
-    pub timeout_minutes: Option<LoE<u64>>,
+    pub timeout_minutes: Option<LoE<f64>>,
 
     /// An optional boolean or expression that, if `true`, prevents the job from failing when
     /// this step fails.

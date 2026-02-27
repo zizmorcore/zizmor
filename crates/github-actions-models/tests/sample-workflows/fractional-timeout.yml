@@ -1,0 +1,8 @@
+name: Test Fractional Timeout
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+        timeout-minutes: 0.5
