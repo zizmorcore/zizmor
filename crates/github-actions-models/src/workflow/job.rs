@@ -29,6 +29,8 @@ pub struct NormalJob {
     pub env: LoE<Env>,
     pub defaults: Option<Defaults>,
     pub steps: Vec<Step>,
+    /// An optional timeout for this job, in minutes.
+    /// GitHub takes the floor of any non-whole numeric value provided.
     pub timeout_minutes: Option<LoE<f64>>,
     pub strategy: Option<Strategy>,
     #[serde(default)]
