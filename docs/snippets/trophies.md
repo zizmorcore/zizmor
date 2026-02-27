@@ -1139,6 +1139,14 @@
         - open-edge-platform/geti-sdk#603
 
 
+-   ![](https://github.com/open-policy-agent.png?size=40){ width="40" loading=lazy align=left } open-policy-agent
+
+    ---
+
+    ??? example "Examples"
+        - open-policy-agent/opa#8356
+
+
 -   ![](https://github.com/openbao.png?size=40){ width="40" loading=lazy align=left } openbao
 
     ---

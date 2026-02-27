@@ -242,6 +242,7 @@ onyx-dot-app/onyx#6344
 openbao/openbao#924
 open-edge-platform/geti#162
 open-edge-platform/geti-sdk#603
+open-policy-agent/opa#8356
 openpubkey/opkssh#198
 openpubkey/opkssh#247
 Ouranosinc/xclim#2023
