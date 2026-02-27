@@ -450,6 +450,14 @@
         - Electric-Coin-Company/zcash-light-client-ffi#186
 
 
+-   ![](https://github.com/elixir-lang.png?size=40){ width="40" loading=lazy align=left } elixir-lang
+
+    ---
+
+    ??? example "Examples"
+        - elixir-lang/elixir#15114
+
+
 -   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl
 
     ---
@@ -597,6 +605,14 @@
         - gitbutlerapp/gitbutler#5946
 
 
+-   ![](https://github.com/github.png?size=40){ width="40" loading=lazy align=left } github
+
+    ---
+
+    ??? example "Examples"
+        - github/docs@1b4a2ba9469efdb412736afdc7499f608b69faa1
+
+
 -   ![](https://github.com/github-aws-runners.png?size=40){ width="40" loading=lazy align=left } github-aws-runners
 
     ---
@@ -681,6 +697,15 @@
 
     ??? example "Examples"
         - hellux/jotdown#76
+
+
+-   ![](https://github.com/hexpm.png?size=40){ width="40" loading=lazy align=left } hexpm
+
+    ---
+
+    ??? example "Examples"
+        - hexpm/hex#1110
+        - hexpm/hexpm#1383
 
 
 -   ![](https://github.com/Homebrew.png?size=40){ width="40" loading=lazy align=left } Homebrew

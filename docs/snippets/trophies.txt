@@ -91,6 +91,7 @@ earthobservations/wetterdienst#1440
 edgelesssys/contrast#1604
 EFForg/rayhunter#711
 Electric-Coin-Company/zcash-light-client-ffi#186
+elixir-lang/elixir#15114
 esl/MongooseIM#4435
 ethereum/hevm#615
 external-secrets/external-secrets#5368
@@ -111,6 +112,7 @@ getsops/sops#1704
 GenericMappingTools/pygmt#3861
 git-lfs/git-lfs#5930
 gitbutlerapp/gitbutler#5946
+github/docs@1b4a2ba9469efdb412736afdc7499f608b69faa1
 github-aws-runners/terraform-aws-github-runner#4808
 GitoxideLabs/gitoxide#2337
 grafana/agent#7148
@@ -134,6 +136,8 @@ guacsec/guac#2276
 GreptimeTeam/greptimedb#5491
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 hellux/jotdown#76
+hexpm/hex#1110
+hexpm/hexpm#1383
 h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
 Homebrew/actions#630
 Homebrew/actions#631
