@@ -1,0 +1,19 @@
+---
+name: issue-1664-repro # zizmor: ignore[concurrency-limits]
+"on":
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  repro: # zizmor: ignore[secrets-outside-env]
+    name: Repro
+    runs-on: ubuntu-latest
+    steps:
+      - name: Multiline expression in folded block scalar crashes zizmor
+        run: >
+          ${{ secrets.MY_SECRET
+          && 'true'
+          || 'echo "fallback"' }}
