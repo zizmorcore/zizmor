@@ -558,7 +558,7 @@ fn test_invalid_policy_syntax_4() -> Result<()> {
     Caused by:
         0: configuration error in @@CONFIG@@
         1: invalid syntax for audit `unpinned-uses`
-        2: invalid pattern: foo/b*r
+        2: invalid pattern: foo/b*r*
     "
     );
 

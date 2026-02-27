@@ -182,7 +182,9 @@ common syntaxes, and are described here.
 
 Repository patterns are used to match `#!yaml uses:` clauses.
 
-The following patterns are supported, in order of specificity:
+The following patterns are supported, in order of specificity (most specific first).
+When multiple patterns match a `#!yaml uses:` clause, the most specific pattern
+takes precedence.
 
 * `owner/repo/subpath@ref`: matches the exact repository, including
   subpath (if given) and ref. The subpath is optional.
@@ -212,6 +214,51 @@ The following patterns are supported, in order of specificity:
         but **not** `#!yaml uses: actions/cache/save@v3` or
         `#!yaml uses: actions/cache/restore@v3`.
 
+* `owner/prefix-*`, `owner/*-suffix`, `owner/prefix-*-suffix`: match repos where
+  the repo name matches the given prefix and/or suffix. A single `*` acts as a
+  wildcard matching any characters. No subpath is matched.
+
+    !!! example
+
+        `myorg/action-*` matches `#!yaml uses: myorg/action-checkout@v1`
+        and `#!yaml uses: myorg/action-setup@v2`, but **not**
+        `#!yaml uses: myorg/action-checkout/subdir@v1` (which has a subpath).
+
+        `myorg/*-action` matches `#!yaml uses: myorg/checkout-action@v1`
+        and `#!yaml uses: myorg/setup-action@v2`.
+
+* `owner/prefix-*/*`: match repos where the repo name matches the prefix,
+  including any subpath.
+
+    !!! example
+
+        `myorg/action-*/*` matches `#!yaml uses: myorg/action-checkout@v1`,
+        `#!yaml uses: myorg/action-checkout/subdir@v1`, and
+        `#!yaml uses: myorg/action-setup/init@v2`.
+
+* `owner/prefix-*/subpath`, `owner/repo/subpath-*`, `owner/prefix-*/subpath-*`:
+  match using wildcards in the repo name, subpath, or both.
+
+    !!! example
+
+        `github/codeql-*/init` matches `#!yaml uses: github/codeql-action/init@v3`
+        and `#!yaml uses: github/codeql-bundle/init@v2`.
+
+        `github/codeql-action/init-*` matches
+        `#!yaml uses: github/codeql-action/init-db@v3` but **not**
+        `#!yaml uses: github/codeql-action/upload@v3`.
+
+        `myorg/action-*/init-*` matches `#!yaml uses: myorg/action-db/init-schema@v1`
+        and `#!yaml uses: myorg/action-cache/init-store@v2`.
+
+* `owner/prefix-*@ref`: match repos where the repo name matches the prefix,
+  with an exact ref.
+
+    !!! example
+
+        `myorg/action-*@v1` matches `#!yaml uses: myorg/action-checkout@v1`
+        but **not** `#!yaml uses: myorg/action-checkout@v2`.
+
 * `owner/repo/*`: match all `#!yaml uses:` clauses that come from the given
   `owner/repo`. Any subpath or ref is matched.
 
@@ -237,3 +284,8 @@ The following patterns are supported, in order of specificity:
 
         `*` matches `#!yaml uses: actions/checkout` and
         `#!yaml uses: pypa/gh-action-pypi-publish@release/v1`.
+
+!!! warning
+
+    Multiple wildcards within a single segment are **not** supported.
+    For example, `owner/foo-*-*` is invalid (two `*` characters in the repo segment).

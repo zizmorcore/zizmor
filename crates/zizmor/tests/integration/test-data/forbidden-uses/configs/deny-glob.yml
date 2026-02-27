@@ -1,0 +1,12 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # just to make unrelated findings go away
+        "*": ref-pin
+
+  forbidden-uses:
+    config:
+      deny:
+        # Deny all repos ending with "-pypi-publish"
+        - "pypa/*-pypi-publish"
