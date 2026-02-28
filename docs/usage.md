@@ -8,13 +8,14 @@ description: Usage tips and recipes for running zizmor locally and in CI/CD.
 
 Before auditing, `zizmor` performs an input collection phase.
 
-There are three input sources that `zizmor` knows about:
+There are four input sources that `zizmor` knows about:
 
 1. Individual workflow and composite action files, e.g. `foo.yml` and
    `my-action/action.yml`;
 2. "Local" GitHub repositories in the form of a directory, e.g. `my-repo/`;
 3. "Remote" GitHub repositories in the form of a "slug", e.g.
-   `pypa/sampleproject`.
+   `pypa/sampleproject`;
+4. Standard input, via `-`.
 
     !!! tip
 
@@ -39,6 +40,31 @@ There are three input sources that `zizmor` knows about:
         See [Operating Modes](#operating-modes) and
         [GitHub API token permissions](#github-api-token-permissions) for more
         information.
+
+`zizmor` also supports reading a single input from standard input using `-`:
+
+```bash
+# pipe a workflow from stdin
+cat workflow.yml | zizmor -
+
+# or use a heredoc
+zizmor - <<'EOF'
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+EOF
+```
+
+When reading from stdin, `zizmor` automatically infers the input type
+(workflow, action, or Dependabot config) by trying each parser in order.
+
+!!! note
+
+    `-` cannot be combined with other inputs, and `--fix` is not
+    supported with stdin input.
 
 `zizmor` can audit multiple inputs in the same run, and different input
 sources can be mixed and matched:

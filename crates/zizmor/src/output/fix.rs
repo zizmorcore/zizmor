@@ -70,7 +70,7 @@ pub fn apply_fixes(
         let InputKey::Local(local) = input_key else {
             // NOTE: fixable_findings should only return local inputs,
             // so this case should never happen.
-            panic!("can't apply fixes to remote inputs");
+            panic!("can't apply fixes to non-local inputs");
         };
 
         let input = registry.get_input(input_key);
