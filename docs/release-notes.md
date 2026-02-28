@@ -92,6 +92,9 @@ of `zizmor`.
 * Fixed a bug where deserialization of a workflow containing fractional
   minutes would fail (#1675)
 
+* Fixed a bug where deserialization of a workflow where `workflow_run`
+  had a scalar type would fail (#1676)
+
 ## 1.22.0
 
 ### Changes ⚠️
