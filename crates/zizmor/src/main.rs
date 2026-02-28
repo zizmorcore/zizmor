@@ -965,11 +965,46 @@ async fn main() -> ExitCode {
                 fatal = "fatal".red().bold()
             );
 
-            let report = match &err {
+            let rate_limit_reset = match &err {
+                Error::Client(ce) => ce.rate_limit_reset(),
+                Error::Audit { source, .. } => source
+                    .downcast_ref::<github::ClientError>()
+                    .and_then(|ce| ce.rate_limit_reset()),
+                Error::Collection(ce) => match ce.inner() {
+                    CollectionError::Client(inner)
+                    | CollectionError::RemoteWithoutWorkflows(inner, _) => inner.rate_limit_reset(),
+                    CollectionError::Config(config_err) => match &config_err.source {
+                        ConfigErrorInner::Client(inner) => inner.rate_limit_reset(),
+                        _ => None,
+                    },
+                    _ => None,
+                },
+                Error::GlobalConfig(ce) => match &ce.source {
+                    ConfigErrorInner::Client(inner) => inner.rate_limit_reset(),
+                    _ => None,
+                },
+                _ => None,
+            };
+
+            let report = rate_limit_reset.map(|reset| {
+                let group =
+                    Group::with_title(Level::ERROR.primary_title("GitHub API rate limit exceeded"))
+                        .element(
+                            Level::HELP.message(format!(
+                                "rate limit resets in {reset}; wait and try again"
+                            )),
+                        );
+
+                let renderer = Renderer::styled();
+                renderer.render(&[group])
+            });
+
+            let report = report.or_else(|| match &err {
                 // NOTE(ww): Slightly annoying that we have two different config error
                 // wrapper states, but oh well.
                 Error::GlobalConfig(err) | Error::Collection(CollectionError::Config(err)) => {
-                    let mut group = Group::with_title(Level::ERROR.primary_title(err.to_string()));
+                    let mut group =
+                        Group::with_title(Level::ERROR.primary_title(err.to_string()));
 
                     match err.source {
                         ConfigErrorInner::Syntax(_) => {
@@ -1078,7 +1113,7 @@ async fn main() -> ExitCode {
                     _ => None,
                 },
                 _ => None,
-            };
+            });
 
             let exit = if matches!(err, Error::Collection(CollectionError::NoInputs)) {
                 ExitCode::from(3)

@@ -3,7 +3,15 @@
 //! The [`Client`] type uses a mixture of GitHub's REST API and
 //! direct Git access, depending on the operation being performed.
 
-use std::{collections::HashSet, fmt::Display, io::Read, ops::Deref, str::FromStr, sync::Arc};
+use std::{
+    collections::HashSet,
+    fmt::Display,
+    io::Read,
+    ops::Deref,
+    str::FromStr,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
@@ -154,9 +162,38 @@ pub(crate) enum ClientError {
     /// An accessed repository is missing or private.
     #[error("can't access {owner}/{repo}: missing or you have no access")]
     RepoMissingOrPrivate { owner: String, repo: String },
+    /// The GitHub API rate limit has been exceeded.
+    #[error("GitHub API rate limit exceeded (resets in {reset})")]
+    RateLimited { reset: String },
     /// Any of the errors above, wrapped from concurrent contexts.
     #[error(transparent)]
     Inner(#[from] Arc<ClientError>),
+}
+
+impl ClientError {
+    /// If this error (or any error in the chain) is a rate-limit error,
+    /// returns the human-readable reset time (e.g. `"~5 minutes"`).
+    pub(crate) fn rate_limit_reset(&self) -> Option<&str> {
+        match self {
+            ClientError::RateLimited { reset } => Some(reset),
+            ClientError::Middleware(reqwest_middleware::Error::Middleware(anyhow_err)) => {
+                anyhow_err
+                    .downcast_ref::<ClientError>()
+                    .and_then(Self::rate_limit_reset)
+            }
+            ClientError::ListBranches { source, .. } | ClientError::ListTags { source, .. } => {
+                source.rate_limit_reset()
+            }
+            ClientError::Inner(inner) => inner.rate_limit_reset(),
+            ClientError::Request(_)
+            | ClientError::Middleware(_)
+            | ClientError::InvalidTokenHeader(_)
+            | ClientError::PktLint(_)
+            | ClientError::ListRefs(_)
+            | ClientError::FileTOCTOU { .. }
+            | ClientError::RepoMissingOrPrivate { .. } => None,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -228,6 +265,74 @@ impl<T: CacheManager> reqwest_middleware::Middleware for ChainedCache<T> {
     }
 }
 
+/// Formats a rate-limit reset timestamp as a human-readable duration
+/// relative to `now_epoch` (both in seconds since the Unix epoch).
+fn format_reset_duration(reset_epoch: u64, now_epoch: u64) -> String {
+    let wait_mins = reset_epoch.saturating_sub(now_epoch) / 60;
+    if wait_mins == 0 {
+        "less than a minute".to_string()
+    } else {
+        format!(
+            "~{wait_mins} minute{}",
+            if wait_mins == 1 { "" } else { "s" }
+        )
+    }
+}
+
+/// Middleware that detects GitHub API rate-limit responses (HTTP 403
+/// with `x-ratelimit-remaining: 0`) and converts them into a
+/// [`ClientError::RateLimited`] error with a human-readable reset time.
+struct RateLimitMiddleware {
+    api_host: String,
+}
+
+#[async_trait::async_trait]
+impl reqwest_middleware::Middleware for RateLimitMiddleware {
+    async fn handle(
+        &self,
+        req: reqwest::Request,
+        extensions: &mut http::Extensions,
+        next: reqwest_middleware::Next<'_>,
+    ) -> reqwest_middleware::Result<Response> {
+        if req.url().host_str() != Some(&self.api_host) {
+            return next.run(req, extensions).await;
+        }
+
+        let res = next.run(req, extensions).await?;
+
+        if res.status() != StatusCode::FORBIDDEN {
+            return Ok(res);
+        }
+
+        let is_rate_limited = res
+            .headers()
+            .get("x-ratelimit-remaining")
+            .is_some_and(|v| v.as_bytes() == b"0");
+
+        if !is_rate_limited {
+            return Ok(res);
+        }
+
+        let reset = res
+            .headers()
+            .get("x-ratelimit-reset")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<u64>().ok())
+            .and_then(|ts| {
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .ok()?;
+                Some(format_reset_duration(ts, now))
+            })
+            .unwrap_or_else(|| "unknown".into());
+
+        Err(reqwest_middleware::Error::Middleware(
+            ClientError::RateLimited { reset }.into(),
+        ))
+    }
+}
+
 #[derive(Clone)]
 struct RemoteHead {
     name: String,
@@ -251,7 +356,9 @@ impl Client {
         cache_dir: &Utf8Path,
     ) -> Result<Self, ClientError> {
         // Base HTTP client for non-API requests, e.g. direct Git access.
-        // This client currently has no middleware.
+        // This client has no middleware (no caching, no rate-limit detection).
+        // Rate limits on git-upload-pack are unlikely but would surface as
+        // generic HTTP errors rather than actionable rate-limit messages.
         let base_client = reqwest::Client::builder()
             .user_agent(ZIZMOR_AGENT)
             .build()
@@ -264,6 +371,7 @@ impl Client {
         api_client_headers.insert("X-GitHub-Api-Version", "2022-11-28".parse()?);
         api_client_headers.insert(ACCEPT, "application/vnd.github+json".parse()?);
 
+        let api_host = host.to_api_host();
         let api_client = Self::default_middleware(
             cache_dir,
             reqwest::Client::builder()
@@ -283,7 +391,17 @@ impl Client {
                             // NOTE(ww): In the context of the retry classifier,
                             // "success" means "don't retry".
                             Some(status) => {
-                                if status.is_client_error() || status.is_server_error() {
+                                // Don't retry 403s: primary rate limits are
+                                // caught by RateLimitMiddleware and turned into
+                                // errors. The classifier has no access to
+                                // response headers, so we can't distinguish
+                                // other 403s (secondary rate limits, permission
+                                // errors) here. This is an acceptable tradeoff:
+                                // secondary rate limits are rare, and retrying
+                                // them without respecting Retry-After is wrong.
+                                if status == StatusCode::FORBIDDEN {
+                                    req_rep.success()
+                                } else if status.is_client_error() || status.is_server_error() {
                                     req_rep.retryable()
                                 } else {
                                     req_rep.success()
@@ -294,6 +412,7 @@ impl Client {
                 )
                 .build()
                 .expect("couldn't build GitHub client"),
+            &api_host,
         );
 
         Ok(Self {
@@ -306,7 +425,11 @@ impl Client {
         })
     }
 
-    fn default_middleware(cache_dir: &Utf8Path, client: reqwest::Client) -> ClientWithMiddleware {
+    fn default_middleware(
+        cache_dir: &Utf8Path,
+        client: reqwest::Client,
+        api_host: &str,
+    ) -> ClientWithMiddleware {
         let http_cache_options = HttpCacheOptions {
             cache_options: Some(CacheOptions {
                 // GitHub API requests made with an API token seem to
@@ -340,6 +463,9 @@ impl Client {
                 }),
                 CacheType::Memory,
             ))
+            .with(RateLimitMiddleware {
+                api_host: api_host.to_string(),
+            })
             .build()
     }
 
@@ -939,7 +1065,9 @@ pub(crate) struct File {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::{GitHubHost, GitHubToken};
+    use std::sync::Arc;
+
+    use crate::github::{ClientError, GitHubHost, GitHubToken};
 
     #[test]
     fn test_github_host() {
@@ -972,5 +1100,97 @@ mod tests {
         for token in ["", " ", "\r", "\n", "\t", "     "] {
             assert!(GitHubToken::new(token).is_err());
         }
+    }
+
+    #[test]
+    fn test_rate_limit_reset_direct() {
+        let err = ClientError::RateLimited {
+            reset: "~5 minutes".into(),
+        };
+        assert_eq!(err.rate_limit_reset(), Some("~5 minutes"));
+    }
+
+    #[test]
+    fn test_rate_limit_reset_through_middleware() {
+        let inner = ClientError::RateLimited {
+            reset: "~5 minutes".into(),
+        };
+        let err = ClientError::Middleware(reqwest_middleware::Error::Middleware(inner.into()));
+        assert_eq!(err.rate_limit_reset(), Some("~5 minutes"));
+    }
+
+    #[test]
+    fn test_rate_limit_reset_none_for_other_errors() {
+        let err = ClientError::RepoMissingOrPrivate {
+            owner: "foo".into(),
+            repo: "bar".into(),
+        };
+        assert_eq!(err.rate_limit_reset(), None);
+    }
+
+    #[test]
+    fn test_rate_limit_reset_none_for_non_client_middleware_error() {
+        let err = ClientError::Middleware(reqwest_middleware::Error::Middleware(anyhow::anyhow!(
+            "some other middleware error"
+        )));
+        assert_eq!(err.rate_limit_reset(), None);
+    }
+
+    #[test]
+    fn test_format_reset_duration_minutes() {
+        assert_eq!(
+            super::format_reset_duration(1000, 700),
+            "~5 minutes".to_string()
+        );
+    }
+
+    #[test]
+    fn test_format_reset_duration_one_minute() {
+        assert_eq!(
+            super::format_reset_duration(1000, 940),
+            "~1 minute".to_string()
+        );
+    }
+
+    #[test]
+    fn test_format_reset_duration_less_than_a_minute() {
+        assert_eq!(
+            super::format_reset_duration(1000, 990),
+            "less than a minute".to_string()
+        );
+    }
+
+    #[test]
+    fn test_format_reset_duration_already_past() {
+        assert_eq!(
+            super::format_reset_duration(500, 1000),
+            "less than a minute".to_string()
+        );
+    }
+
+    #[test]
+    fn test_format_reset_duration_boundary_59_seconds() {
+        assert_eq!(
+            super::format_reset_duration(1000, 941),
+            "less than a minute".to_string()
+        );
+    }
+
+    #[test]
+    fn test_format_reset_duration_equal_timestamps() {
+        assert_eq!(
+            super::format_reset_duration(1000, 1000),
+            "less than a minute".to_string()
+        );
+    }
+
+    #[test]
+    fn test_rate_limit_reset_through_nested_inner() {
+        let rate_limited = ClientError::RateLimited {
+            reset: "~2 minutes".into(),
+        };
+        let inner = ClientError::Inner(Arc::new(rate_limited));
+        let outer = ClientError::Inner(Arc::new(inner));
+        assert_eq!(outer.rate_limit_reset(), Some("~2 minutes"));
     }
 }

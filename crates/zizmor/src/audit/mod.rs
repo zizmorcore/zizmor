@@ -222,6 +222,12 @@ impl AuditError {
     pub(crate) fn ident(&self) -> &'static str {
         self.ident
     }
+
+    pub(crate) fn downcast_ref<T: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static>(
+        &self,
+    ) -> Option<&T> {
+        self.source.downcast_ref::<T>()
+    }
 }
 
 /// Auditing trait.
@@ -381,5 +387,25 @@ pub(crate) trait Audit: AuditCore {
         results.extend(self.audit_raw(input, config).await?);
 
         Ok(results)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::audit::AuditError;
+    use crate::github::ClientError;
+
+    #[test]
+    fn test_downcast_ref_recovers_rate_limit_error() {
+        let client_error = ClientError::RateLimited {
+            reset: "~5 minutes".into(),
+        };
+        let audit_error = AuditError::new("test-audit", client_error);
+        let downcasted = audit_error.downcast_ref::<ClientError>();
+        assert!(downcasted.is_some());
+        assert_eq!(
+            downcasted.unwrap().rate_limit_reset(),
+            Some("~5 minutes"),
+        );
     }
 }
