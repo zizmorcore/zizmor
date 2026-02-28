@@ -1,0 +1,12 @@
+on: issue_comment
+
+name: issue-comment-step-guard-only
+
+permissions: {}
+
+jobs:
+  respond:
+    runs-on: ubuntu-latest
+    steps:
+      - if: github.event.comment.author_association == 'MEMBER'
+        run: echo "comment received"
