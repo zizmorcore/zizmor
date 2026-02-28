@@ -318,7 +318,7 @@ pub enum WorkflowDispatchInputType {
 #[serde(rename_all = "kebab-case")]
 pub struct WorkflowRun {
     pub workflows: Vec<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::common::scalar_or_vector")]
     pub types: Vec<String>,
     #[serde(flatten)]
     pub branch_filters: Option<BranchFilters>,
