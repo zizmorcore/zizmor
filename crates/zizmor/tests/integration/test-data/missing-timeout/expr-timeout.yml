@@ -1,0 +1,20 @@
+name: Expression timeout
+on:
+  workflow_dispatch:
+    inputs:
+      timeout:
+        type: number
+        default: 30
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout }}
+    steps:
+      - run: echo "hello"

@@ -27,7 +27,7 @@ fn test_superfluous_actions() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings: 0 informational, 2 low, 0 medium, 0 high
+    3 findings (1 suppressed): 0 informational, 2 low, 0 medium, 0 high
     ");
 
     Ok(())

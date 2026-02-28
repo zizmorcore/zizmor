@@ -8,7 +8,7 @@ fn test_self_hosted_auditor() -> Result<()> {
             .input(input_under_test("self-hosted.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @r#"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:17:5
        |
@@ -17,8 +17,21 @@ fn test_self_hosted_auditor() -> Result<()> {
        |
        = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 1 medium, 0 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:15:3
+       |
+    15 | /   whops:
+    16 | |     name: whops
+    17 | |     runs-on: [self-hosted, my-ubuntu-box]
+    ...  |
+    20 | |       - run: echo "hello from a self-hosted runner"
+       | |____________________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 1 low, 1 medium, 0 high
+    "#
     );
 
     Ok(())
@@ -30,7 +43,7 @@ fn test_self_hosted_default() -> Result<()> {
         zizmor()
             .input(input_under_test("self-hosted.yml"))
             .run()?,
-        @"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())
@@ -43,7 +56,7 @@ fn test_self_hosted_runner_label() -> Result<()> {
             .input(input_under_test("self-hosted/self-hosted-runner-label.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @r#"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:15:5
        |
@@ -52,8 +65,21 @@ fn test_self_hosted_runner_label() -> Result<()> {
        |
        = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 1 medium, 0 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:13:3
+       |
+    13 | /   whops:
+    14 | |     name: whops
+    15 | |     runs-on: [self-hosted, linux, arm64]
+    ...  |
+    18 | |       - run: echo \"hello from a self-hosted runner\"
+       | |______________________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 1 low, 1 medium, 0 high
+    "#
     );
 
     Ok(())
@@ -66,7 +92,7 @@ fn test_self_hosted_runner_group() -> Result<()> {
             .input(input_under_test("self-hosted/self-hosted-runner-group.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @r#"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:15:5
        |
@@ -76,8 +102,23 @@ fn test_self_hosted_runner_group() -> Result<()> {
        |
        = note: audit confidence → Low
 
-    1 finding: 0 informational, 0 low, 1 medium, 0 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:13:3
+       |
+    13 | /   whops:
+    14 | |     name: whops
+    15 | |     runs-on:
+    16 | |       group: ubuntu-runners
+    17 | |
+    18 | |     steps:
+    19 | |       - run: echo \"hello from a self-hosted runner\"
+       | |______________________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 1 low, 1 medium, 0 high
+    "#
     );
 
     Ok(())
@@ -92,7 +133,7 @@ fn test_self_hosted_matrix_dimension() -> Result<()> {
             ))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @r#"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:15:5
        |
@@ -106,8 +147,22 @@ fn test_self_hosted_matrix_dimension() -> Result<()> {
        |
        = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 1 medium, 0 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:13:3
+       |
+    13 | /   whops:
+    14 | |     name: whops
+    15 | |     runs-on: ${{ matrix.os }}
+    ...  |
+    20 | |     steps:
+    21 | |       - run: echo \"hello from a self-hosted runner\"
+       | |______________________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 1 low, 1 medium, 0 high
+    "#
     );
 
     Ok(())
@@ -122,7 +177,7 @@ fn test_self_hosted_matrix_inclusion() -> Result<()> {
             ))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @r#"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:15:5
        |
@@ -138,8 +193,22 @@ fn test_self_hosted_matrix_inclusion() -> Result<()> {
        |
        = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 1 medium, 0 high
-    "
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:13:3
+       |
+    13 | /   whops:
+    14 | |     name: whops
+    15 | |     runs-on: ${{ matrix.os }}
+    ...  |
+    22 | |     steps:
+    23 | |       - run: echo \"hello from a self-hosted runner\"
+       | |______________________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings: 0 informational, 1 low, 1 medium, 0 high
+    "#
     );
 
     Ok(())
@@ -154,7 +223,23 @@ fn test_self_hosted_matrix_exclusion() -> Result<()> {
             ))
             .args(["--persona=auditor"])
             .run()?,
-        @"No findings to report. Good job!"
+        @r#"
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:15:3
+       |
+    15 | /   ok:
+    16 | |     name: ok
+    17 | |     runs-on: ${{ matrix.os }}
+    ...  |
+    24 | |     steps:
+    25 | |       - run: echo \"hello from a Github runner\"
+       | |_________________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "#
     );
 
     Ok(())
@@ -168,7 +253,22 @@ fn test_issue_283_repro() -> Result<()> {
             .input(input_under_test("self-hosted/issue-283-repro.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @"No findings to report. Good job!"
+        @r#"
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:16:3
+       |
+    16 | /   deploy:
+    17 | |     name: deploy
+    18 | |     runs-on: ${{inputs.os}}
+    19 | |     steps:
+    20 | |       - run: echo "Hello world"
+       | |________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "#
     );
 
     Ok(())

@@ -106,6 +106,7 @@ define_audit_rules! {
     concurrency_limits,
     archived_uses,
     misfeature,
+    missing_timeout,
     secrets_outside_env,
     superfluous_actions;
 

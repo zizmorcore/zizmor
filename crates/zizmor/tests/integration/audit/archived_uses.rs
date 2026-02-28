@@ -4,7 +4,7 @@ use crate::common::{input_under_test, zizmor};
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor().input(input_under_test("archived-uses.yml")).run()?,
-        @r"
+        @"
     warning[archived-uses]: action or reusable workflow from archived repository
       --> @@INPUT@@:17:15
        |
@@ -35,7 +35,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    3 findings: 0 informational, 0 low, 3 medium, 0 high
+    4 findings (1 suppressed): 0 informational, 0 low, 3 medium, 0 high
     "
     );
 

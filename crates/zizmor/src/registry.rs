@@ -76,6 +76,7 @@ impl AuditRegistry {
         register_audit!(audit::concurrency_limits::ConcurrencyLimits);
         register_audit!(audit::archived_uses::ArchivedUses);
         register_audit!(audit::misfeature::Misfeature);
+        register_audit!(audit::missing_timeout::MissingTimeout);
         register_audit!(audit::secrets_outside_env::SecretsOutsideEnvironment);
         register_audit!(audit::superfluous_actions::SuperfluousActions);
 

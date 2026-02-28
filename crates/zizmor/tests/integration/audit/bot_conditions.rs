@@ -6,7 +6,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("bot-conditions.yml"))
             .run()?,
-        @r"
+        @"
     error[dangerous-triggers]: use of fundamentally insecure workflow trigger
      --> @@INPUT@@:1:1
       |
@@ -147,7 +147,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    13 findings (1 suppressed, 11 fixable): 0 informational, 0 low, 0 medium, 12 high
+    14 findings (2 suppressed, 11 fixable): 0 informational, 0 low, 0 medium, 12 high
     "
     );
 

@@ -4,7 +4,7 @@ use crate::common::{input_under_test, zizmor};
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor().input(input_under_test("artipacked.yml")).run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:22:9
        |
@@ -14,7 +14,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    4 findings (3 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -28,7 +28,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
             .input(input_under_test("artipacked.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:22:9
        |
@@ -38,7 +38,35 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:18:3
+       |
+    18 | /   artipacked:
+    19 | |     name: artipacked
+    20 | |     runs-on: ubuntu-latest
+    21 | |     steps:
+    22 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+       | |____________________________________________________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:24:3
+       |
+    24 | /   pedantic:
+    25 | |     name: pedantic
+    26 | |     runs-on: ubuntu-latest
+    27 | |     steps:
+    28 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    29 | |         with:
+    30 | |           persist-credentials: true
+       | |____________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    4 findings (1 suppressed, 1 fixable): 0 informational, 2 low, 1 medium, 0 high
     "
     );
 
@@ -52,7 +80,7 @@ fn test_auditor_persona() -> anyhow::Result<()> {
             .input(input_under_test("artipacked.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:22:9
        |
@@ -74,7 +102,35 @@ fn test_auditor_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (2 fixable): 0 informational, 0 low, 2 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:18:3
+       |
+    18 | /   artipacked:
+    19 | |     name: artipacked
+    20 | |     runs-on: ubuntu-latest
+    21 | |     steps:
+    22 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+       | |____________________________________________________________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:24:3
+       |
+    24 | /   pedantic:
+    25 | |     name: pedantic
+    26 | |     runs-on: ubuntu-latest
+    27 | |     steps:
+    28 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    29 | |         with:
+    30 | |           persist-credentials: true
+       | |____________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    4 findings (2 fixable): 0 informational, 2 low, 2 medium, 0 high
     "
     );
 
@@ -107,7 +163,21 @@ fn test_issue_447() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    help[missing-timeout]: job does not set a timeout
+      --> @@INPUT@@:13:3
+       |
+    13 | /   issue-447-repro:
+    14 | |     name: issue-447-repro
+    15 | |     runs-on: ubuntu-latest
+    ...  |
+    27 | |           # finding in auditor mode only
+    28 | |           persist-credentials: "true"
+       | |______________________________________^ job is missing a timeout-minutes setting
+       |
+       = note: audit confidence → High
+       = tip: set 'timeout-minutes: <N>' to prevent hung jobs from consuming runner minutes
+
+    2 findings (1 fixable): 0 informational, 1 low, 1 medium, 0 high
     "#
     );
 
