@@ -177,3 +177,28 @@ fn test_matrix_in_image_regular() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_run_docker_pedantic() -> anyhow::Result<()> {
+    // pedantic persona: all unpinned docker commands in run: steps
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-images/run-docker.yml"))
+            .args(["--persona=pedantic"])
+            .run()?,
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_run_docker_regular() -> anyhow::Result<()> {
+    // regular persona: tag-only findings suppressed
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-images/run-docker.yml"))
+            .run()?,
+    );
+
+    Ok(())
+}
