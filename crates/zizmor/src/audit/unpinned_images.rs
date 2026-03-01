@@ -121,11 +121,7 @@ impl UnpinnedImages {
             .map_err(Self::err)?;
 
         let mut cursor = QueryCursor::new();
-        let matches = cursor.matches(
-            &self.docker_cmd_query,
-            tree.root_node(),
-            script.as_bytes(),
-        );
+        let matches = cursor.matches(&self.docker_cmd_query, tree.root_node(), script.as_bytes());
 
         let args_idx = self
             .docker_cmd_query
@@ -226,11 +222,7 @@ impl UnpinnedImages {
     }
 
     /// Detect docker/podman image references in a run: step script body.
-    fn docker_images_in_run(
-        &self,
-        script: &str,
-        shell: &str,
-    ) -> Result<Vec<String>, AuditError> {
+    fn docker_images_in_run(&self, script: &str, shell: &str) -> Result<Vec<String>, AuditError> {
         let normalized = utils::normalize_shell(shell);
         match normalized {
             // NOTE: zsh is close enough to bash for docker invocations.
@@ -278,9 +270,7 @@ impl UnpinnedImages {
                 Self::finding()
                     .severity(Severity::High)
                     .confidence(Confidence::High)
-                    .add_location(
-                        location.annotated("docker image is not pinned to a SHA256 hash"),
-                    )
+                    .add_location(location.annotated("docker image is not pinned to a SHA256 hash"))
                     .persona(Persona::Pedantic)
                     .build(target)?,
             )),
@@ -583,17 +573,11 @@ mod tests {
             Some("ubuntu:22.04")
         );
         assert_eq!(
-            UnpinnedImages::extract_docker_image(&[
-                "pull",
-                "ubuntu@sha256:abcdef1234567890"
-            ]),
+            UnpinnedImages::extract_docker_image(&["pull", "ubuntu@sha256:abcdef1234567890"]),
             Some("ubuntu@sha256:abcdef1234567890")
         );
         assert_eq!(
-            UnpinnedImages::extract_docker_image(&[
-                "pull",
-                "ghcr.io/org/image:tag"
-            ]),
+            UnpinnedImages::extract_docker_image(&["pull", "ghcr.io/org/image:tag"]),
             Some("ghcr.io/org/image:tag")
         );
 
@@ -616,10 +600,7 @@ mod tests {
         // value-consuming globally to avoid false positives with
         // docker run -a STDERR. For pull, this means -a skips the
         // next arg — a false negative, but safer than a false positive.
-        assert_eq!(
-            UnpinnedImages::extract_docker_image(&["pull", "-a"]),
-            None
-        );
+        assert_eq!(UnpinnedImages::extract_docker_image(&["pull", "-a"]), None);
     }
 
     #[test]
@@ -641,7 +622,14 @@ mod tests {
         // Run with value-consuming flags
         assert_eq!(
             UnpinnedImages::extract_docker_image(&[
-                "run", "-d", "--rm", "-v", "/tmp:/tmp", "-e", "FOO=bar", "redis:7"
+                "run",
+                "-d",
+                "--rm",
+                "-v",
+                "/tmp:/tmp",
+                "-e",
+                "FOO=bar",
+                "redis:7",
             ]),
             Some("redis:7")
         );
@@ -688,33 +676,29 @@ mod tests {
             Some("alpine")
         );
         assert_eq!(
-            UnpinnedImages::extract_docker_image(&[
-                "--log-level=debug",
-                "pull",
-                "nginx:latest"
-            ]),
+            UnpinnedImages::extract_docker_image(&["--log-level=debug", "pull", "nginx:latest"]),
             Some("nginx:latest")
         );
         assert_eq!(
-            UnpinnedImages::extract_docker_image(&["--host", "tcp://localhost:2375", "run", "-d", "redis:7"]),
+            UnpinnedImages::extract_docker_image(&[
+                "--host",
+                "tcp://localhost:2375",
+                "run",
+                "-d",
+                "redis:7",
+            ]),
             Some("redis:7")
         );
     }
 
     #[test]
     fn test_extract_ignores_unknown_subcommands() {
-        assert_eq!(
-            UnpinnedImages::extract_docker_image(&["build", "."]),
-            None
-        );
+        assert_eq!(UnpinnedImages::extract_docker_image(&["build", "."]), None);
         assert_eq!(
             UnpinnedImages::extract_docker_image(&["push", "myimage"]),
             None
         );
-        assert_eq!(
-            UnpinnedImages::extract_docker_image(&["images"]),
-            None
-        );
+        assert_eq!(UnpinnedImages::extract_docker_image(&["images"]), None);
     }
 
     #[test]
@@ -771,9 +755,7 @@ mod tests {
         assert!(images.is_empty());
 
         // Podman support
-        let images = sut
-            .bash_docker_images("podman pull alpine:3.18")
-            .unwrap();
+        let images = sut.bash_docker_images("podman pull alpine:3.18").unwrap();
         assert_eq!(images, vec!["alpine:3.18"]);
 
         // Registry-prefixed images
@@ -801,9 +783,7 @@ mod tests {
         assert_eq!(images, vec!["ubuntu:latest"]);
 
         // Single-quoted image argument
-        let images = sut
-            .bash_docker_images("docker pull 'alpine:3.18'")
-            .unwrap();
+        let images = sut.bash_docker_images("docker pull 'alpine:3.18'").unwrap();
         assert_eq!(images, vec!["alpine:3.18"]);
 
         // Global flags before subcommand

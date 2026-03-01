@@ -8,6 +8,10 @@ name: unpinned-images-run-docker
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   docker-pull-unpinned:
     name: docker-pull-unpinned
