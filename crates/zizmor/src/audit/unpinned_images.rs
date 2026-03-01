@@ -19,6 +19,9 @@ use crate::utils;
 use super::{Audit, AuditLoadError, audit_meta};
 
 /// Tree-sitter query matching `docker` and `podman` command invocations in bash.
+///
+/// NOTE: `@span` is required by [`utils::SpannedQuery`] and can be used in the
+/// future to produce more precise finding locations within multiline scripts.
 const BASH_DOCKER_CMD_QUERY: &str = r#"
 (command
   name: (command_name) @cmd
@@ -28,7 +31,11 @@ const BASH_DOCKER_CMD_QUERY: &str = r#"
 "#;
 
 /// Boolean short flags for docker pull/run/create that do NOT consume the next argument.
-const BOOLEAN_SHORT_FLAGS: &[&str] = &["-d", "-i", "-t", "-P", "-q", "-a"];
+///
+/// NOTE: `-a` is intentionally excluded — it means `--all-tags` for `pull`
+/// (boolean) but `--attach` for `run`/`create` (value-consuming). Treating it
+/// as value-consuming is the safer default to avoid false positives.
+const BOOLEAN_SHORT_FLAGS: &[&str] = &["-d", "-i", "-t", "-P", "-q"];
 
 /// Boolean long flags for docker pull/run/create that do NOT consume the next argument.
 const BOOLEAN_LONG_FLAGS: &[&str] = &[
@@ -71,6 +78,34 @@ impl UnpinnedImages {
             .build(job)
     }
 
+    /// Extract the text content of a tree-sitter bash argument node,
+    /// stripping surrounding quotes for `string` and `raw_string` nodes.
+    ///
+    /// In tree-sitter-bash:
+    /// - `word` nodes contain bare text (no quotes)
+    /// - `string` nodes are double-quoted — `utf8_text()` includes the `"`s
+    /// - `raw_string` nodes are single-quoted — `utf8_text()` includes the `'`s
+    fn arg_text<'a>(node: &tree_sitter::Node, source: &'a [u8]) -> Option<&'a str> {
+        match node.kind() {
+            "string" => {
+                // For double-quoted strings, extract the string_content child
+                // to avoid the surrounding quotes.
+                if node.named_child_count() == 1 {
+                    node.named_child(0)?.utf8_text(source).ok()
+                } else {
+                    // Multiple children means interpolation — skip these.
+                    None
+                }
+            }
+            "raw_string" => {
+                // Single-quoted: strip the surrounding quotes.
+                let text = node.utf8_text(source).ok()?;
+                text.strip_prefix('\'')?.strip_suffix('\'')
+            }
+            _ => node.utf8_text(source).ok(),
+        }
+    }
+
     /// Extract image references from docker/podman commands in a bash script
     /// using tree-sitter AST parsing.
     fn bash_docker_images(&self, script: &str) -> Result<Vec<String>, AuditError> {
@@ -104,7 +139,7 @@ impl UnpinnedImages {
                 .captures
                 .iter()
                 .filter(|cap| cap.index == args_idx)
-                .filter_map(|cap| cap.node.utf8_text(script.as_bytes()).ok())
+                .filter_map(|cap| Self::arg_text(&cap.node, script.as_bytes()))
                 .collect();
 
             if let Some(image_ref) = Self::extract_docker_image(&args) {
@@ -121,13 +156,31 @@ impl UnpinnedImages {
 
     /// Extract the image reference from docker/podman command arguments.
     ///
-    /// `args` contains all arguments after the command name (docker/podman),
-    /// starting with the subcommand (pull/run/create).
+    /// `args` contains all arguments after the command name (docker/podman).
+    /// Handles global flags before the subcommand (e.g. `docker --context foo run alpine`).
     fn extract_docker_image<'a>(args: &[&'a str]) -> Option<&'a str> {
-        let subcommand = args.first()?;
+        // Skip global flags (e.g. --context, --host, --log-level) to find the subcommand.
+        let mut i = 0;
+        while i < args.len() {
+            let arg = args[i];
+            if arg.starts_with('-') {
+                if arg.contains('=') {
+                    // Self-contained --flag=value
+                    i += 1;
+                } else {
+                    // Assume global flag consumes next arg as value
+                    i += 2;
+                }
+            } else {
+                // First positional arg is the subcommand.
+                break;
+            }
+        }
+
+        let subcommand = args.get(i)?;
         match *subcommand {
             "pull" | "run" | "create" => {
-                let rest = &args[1..];
+                let rest = &args[i + 1..];
                 Self::first_positional_arg(rest)
             }
             _ => None,
@@ -558,6 +611,15 @@ mod tests {
             UnpinnedImages::extract_docker_image(&["pull", "-q", "nginx"]),
             Some("nginx")
         );
+
+        // -a is --all-tags for pull (boolean), but we treat it as
+        // value-consuming globally to avoid false positives with
+        // docker run -a STDERR. For pull, this means -a skips the
+        // next arg — a false negative, but safer than a false positive.
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["pull", "-a"]),
+            None
+        );
     }
 
     #[test]
@@ -598,6 +660,16 @@ mod tests {
             UnpinnedImages::extract_docker_image(&["run", "-dit", "ubuntu:22.04"]),
             Some("ubuntu:22.04")
         );
+
+        // -a/--attach consumes a value — should NOT treat STDERR as the image
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "-a", "STDERR", "ubuntu"]),
+            Some("ubuntu")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--attach", "STDOUT", "alpine"]),
+            Some("alpine")
+        );
     }
 
     #[test]
@@ -605,6 +677,27 @@ mod tests {
         assert_eq!(
             UnpinnedImages::extract_docker_image(&["create", "--name", "myapp", "node:20"]),
             Some("node:20")
+        );
+    }
+
+    #[test]
+    fn test_extract_with_global_flags() {
+        // Global flags before subcommand
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["--context", "foo", "run", "alpine"]),
+            Some("alpine")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&[
+                "--log-level=debug",
+                "pull",
+                "nginx:latest"
+            ]),
+            Some("nginx:latest")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["--host", "tcp://localhost:2375", "run", "-d", "redis:7"]),
+            Some("redis:7")
         );
     }
 
@@ -700,5 +793,23 @@ mod tests {
             .bash_docker_images("docker build -t myimage . && docker push myimage")
             .unwrap();
         assert!(images.is_empty());
+
+        // Double-quoted image argument — quotes should be stripped
+        let images = sut
+            .bash_docker_images(r#"docker pull "ubuntu:latest""#)
+            .unwrap();
+        assert_eq!(images, vec!["ubuntu:latest"]);
+
+        // Single-quoted image argument
+        let images = sut
+            .bash_docker_images("docker pull 'alpine:3.18'")
+            .unwrap();
+        assert_eq!(images, vec!["alpine:3.18"]);
+
+        // Global flags before subcommand
+        let images = sut
+            .bash_docker_images("docker --context foo pull nginx:latest")
+            .unwrap();
+        assert_eq!(images, vec!["nginx:latest"]);
     }
 }
