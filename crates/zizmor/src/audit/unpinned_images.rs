@@ -30,29 +30,50 @@ const BASH_DOCKER_CMD_QUERY: &str = r#"
 ) @span
 "#;
 
-/// Boolean short flags for docker pull/run/create that do NOT consume the next argument.
+/// Boolean short flags for docker/podman pull/run/create that do NOT consume
+/// the next argument.
 ///
 /// NOTE: `-a` is intentionally excluded — it means `--all-tags` for `pull`
 /// (boolean) but `--attach` for `run`/`create` (value-consuming). Treating it
-/// as value-consuming is the safer default to avoid false positives.
+/// as value-consuming is the safer default to avoid false negatives.
 const BOOLEAN_SHORT_FLAGS: &[&str] = &["-d", "-i", "-t", "-P", "-q"];
 
-/// Boolean long flags for docker pull/run/create that do NOT consume the next argument.
+/// Boolean long flags for docker/podman pull/run/create that do NOT consume
+/// the next argument.
+///
+/// This is the union of boolean flags across all three subcommands for both
+/// Docker and Podman. Unknown flags default to value-consuming, which is the
+/// safe choice for a security tool (may miss findings, but won't produce false
+/// positives).
 const BOOLEAN_LONG_FLAGS: &[&str] = &[
-    "--detach",
-    "--interactive",
-    "--tty",
-    "--rm",
-    "--privileged",
-    "--init",
-    "--read-only",
-    "--publish-all",
-    "--oom-kill-disable",
-    "--no-healthcheck",
-    "--sig-proxy",
-    "--quiet",
+    // docker pull/run/create
     "--all-tags",
+    "--detach",
     "--disable-content-trust",
+    "--init",
+    "--interactive",
+    "--no-healthcheck",
+    "--oom-kill-disable",
+    "--privileged",
+    "--publish-all",
+    "--quiet",
+    "--read-only",
+    "--rm",
+    "--sig-proxy",
+    "--tty",
+    "--use-api-socket",
+    // podman-only booleans (pull)
+    "--tls-verify",
+    // podman-only booleans (run/create)
+    "--env-host",
+    "--http-proxy",
+    "--no-hostname",
+    "--no-hosts",
+    "--passwd",
+    "--read-only-tmpfs",
+    "--replace",
+    "--rmi",
+    "--rootfs",
 ];
 
 pub(crate) struct UnpinnedImages {
@@ -156,7 +177,19 @@ impl UnpinnedImages {
     /// Handles global flags before the subcommand (e.g. `docker --context foo run alpine`).
     fn extract_docker_image<'a>(args: &[&'a str]) -> Option<&'a str> {
         /// Boolean global flags that do NOT consume the next argument.
-        const GLOBAL_BOOLEAN_FLAGS: &[&str] = &["-D", "--debug", "--tls", "--tlsverify"];
+        /// Includes both Docker and Podman global booleans.
+        const GLOBAL_BOOLEAN_FLAGS: &[&str] = &[
+            // Docker global booleans
+            "-D",
+            "--debug",
+            "--tls",
+            "--tlsverify",
+            // Podman global booleans
+            "-r",
+            "--remote",
+            "--syslog",
+            "--transient-store",
+        ];
 
         // Skip global flags (e.g. --context, --host, --log-level) to find the subcommand.
         let mut i = 0;
@@ -208,7 +241,9 @@ impl UnpinnedImages {
                 }
             } else if arg.starts_with('-') {
                 if arg.len() > 2 {
-                    // Combined short flags like `-dit`, `-it` — all boolean.
+                    // Either combined booleans (`-dit`) or a value-consuming flag
+                    // with its value attached (`-eFOO=bar`). In both cases the
+                    // entire token is self-contained — safe to skip.
                     i += 1;
                 } else if BOOLEAN_SHORT_FLAGS.contains(&arg) {
                     i += 1;
@@ -661,6 +696,59 @@ mod tests {
             UnpinnedImages::extract_docker_image(&["run", "--attach", "STDOUT", "alpine"]),
             Some("alpine")
         );
+
+        // Security-critical value-consuming flags that could eat the image
+        // if misclassified as boolean
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--pull", "always", "ubuntu"]),
+            Some("ubuntu")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--network", "host", "ubuntu"]),
+            Some("ubuntu")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--restart", "always", "nginx"]),
+            Some("nginx")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--pid", "host", "alpine"]),
+            Some("alpine")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--ipc", "host", "redis"]),
+            Some("redis")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--platform", "linux/amd64", "ubuntu"]),
+            Some("ubuntu")
+        );
+
+        // Hidden flag aliases (--net for --network, etc.)
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--net", "bridge", "nginx"]),
+            Some("nginx")
+        );
+
+        // Podman-only boolean flags should not consume the next argument
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--replace", "--rm", "ubuntu"]),
+            Some("ubuntu")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--env-host", "alpine"]),
+            Some("alpine")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "--read-only-tmpfs", "nginx"]),
+            Some("nginx")
+        );
+
+        // Embedded short flag value (-eFOO=bar is one token, not combined booleans)
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["run", "-eFOO=bar", "ubuntu"]),
+            Some("ubuntu")
+        );
     }
 
     #[test]
@@ -668,6 +756,23 @@ mod tests {
         assert_eq!(
             UnpinnedImages::extract_docker_image(&["create", "--name", "myapp", "node:20"]),
             Some("node:20")
+        );
+    }
+
+    #[test]
+    fn test_extract_docker_pull_platform() {
+        // --platform is value-consuming for pull too
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["pull", "--platform", "linux/amd64", "ubuntu"]),
+            Some("ubuntu")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&[
+                "pull",
+                "--platform=linux/arm64",
+                "nginx:latest"
+            ]),
+            Some("nginx:latest")
         );
     }
 
@@ -692,13 +797,26 @@ mod tests {
             ]),
             Some("redis:7")
         );
-        // Boolean global flags should not consume the next argument
+        // Docker boolean global flags should not consume the next argument
         assert_eq!(
             UnpinnedImages::extract_docker_image(&["--debug", "pull", "ubuntu"]),
             Some("ubuntu")
         );
         assert_eq!(
             UnpinnedImages::extract_docker_image(&["-D", "--tls", "run", "nginx"]),
+            Some("nginx")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["--tlsverify", "pull", "alpine:3.18"]),
+            Some("alpine:3.18")
+        );
+        // Podman boolean global flags
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["--remote", "pull", "ubuntu"]),
+            Some("ubuntu")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["-r", "--syslog", "run", "nginx"]),
             Some("nginx")
         );
     }
