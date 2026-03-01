@@ -312,7 +312,7 @@ impl Audit for UnpinnedImages {
         };
 
         let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
-            tracing::warn!(
+            tracing::debug!(
                 "unpinned-images: couldn't determine shell type for {workflow}:{job} step {stepno}; assuming bash",
                 workflow = step.workflow().key.presentation_path(),
                 job = step.parent.id(),
@@ -533,7 +533,7 @@ impl Audit for UnpinnedImages {
         };
 
         let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
-            tracing::warn!(
+            tracing::debug!(
                 "unpinned-images: couldn't determine shell type for {action} step {stepno}; assuming bash",
                 action = step.action().key.presentation_path(),
                 stepno = step.index

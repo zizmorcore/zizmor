@@ -186,6 +186,97 @@ fn test_run_docker_pedantic() -> anyhow::Result<()> {
             .input(input_under_test("unpinned-images/run-docker.yml"))
             .args(["--persona=pedantic"])
             .run()?,
+        @r#"
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:9
+       |
+    20 |       - run: docker pull ubuntu:latest
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is pinned to latest
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:21:9
+       |
+    21 |       - run: docker pull ubuntu
+       |         ^^^^^^^^^^^^^^^^^^^^^^^ docker image is unpinned
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:22:9
+       |
+    22 |       - run: docker pull ubuntu:22.04
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:29:9
+       |
+    29 |       - run: docker run -d --rm nginx:latest
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is pinned to latest
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:30:9
+       |
+    30 |       - run: docker run -it alpine
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is unpinned
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:37:9
+       |
+    37 |       - run: docker create --name myapp node:20
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:43:9
+       |
+    43 |         - run: |
+       |  _________^
+    44 | |           echo "Setting up"
+    45 | |           docker pull redis:7
+    46 | |           docker run -d redis:7
+       | |_______________________________^ docker image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:43:9
+       |
+    43 |         - run: |
+       |  _________^
+    44 | |           echo "Setting up"
+    45 | |           docker pull redis:7
+    46 | |           docker run -d redis:7
+       | |_______________________________^ docker image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:58:9
+       |
+    58 |       - run: podman pull alpine
+       |         ^^^^^^^^^^^^^^^^^^^^^^^ docker image is unpinned
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:64:9
+       |
+    64 |       - run: docker run -d --rm -v /tmp:/tmp -e FOO=bar --name mycontainer postgres:15
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    10 findings: 0 informational, 0 low, 0 medium, 10 high
+    "#
     );
 
     Ok(())
@@ -198,6 +289,49 @@ fn test_run_docker_regular() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("unpinned-images/run-docker.yml"))
             .run()?,
+        @r"
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:20:9
+       |
+    20 |       - run: docker pull ubuntu:latest
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is pinned to latest
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:21:9
+       |
+    21 |       - run: docker pull ubuntu
+       |         ^^^^^^^^^^^^^^^^^^^^^^^ docker image is unpinned
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:29:9
+       |
+    29 |       - run: docker run -d --rm nginx:latest
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is pinned to latest
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:30:9
+       |
+    30 |       - run: docker run -it alpine
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is unpinned
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:58:9
+       |
+    58 |       - run: podman pull alpine
+       |         ^^^^^^^^^^^^^^^^^^^^^^^ docker image is unpinned
+       |
+       = note: audit confidence → High
+
+    10 findings (5 suppressed): 0 informational, 0 low, 0 medium, 5 high
+    "
     );
 
     Ok(())
