@@ -182,8 +182,6 @@ impl UnpinnedImages {
         match normalized {
             // NOTE: zsh is close enough to bash for docker invocations.
             "bash" | "sh" | "zsh" => self.bash_docker_images(script),
-            // TODO: PowerShell docker command detection.
-            // TODO: cmd.exe docker command detection (regex fallback).
             _ => {
                 tracing::debug!(
                     "unpinned-images: shell '{shell}' ({normalized}) not supported for docker command detection"
