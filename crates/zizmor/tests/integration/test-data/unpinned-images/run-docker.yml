@@ -62,3 +62,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: docker run -d --rm -v /tmp:/tmp -e FOO=bar --name mycontainer postgres:15
+
+  docker-global-flags:
+    name: docker-global-flags
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker --debug pull ubuntu
+      - run: docker -D --tls run nginx

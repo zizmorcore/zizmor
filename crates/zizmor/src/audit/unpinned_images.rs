@@ -155,13 +155,16 @@ impl UnpinnedImages {
     /// `args` contains all arguments after the command name (docker/podman).
     /// Handles global flags before the subcommand (e.g. `docker --context foo run alpine`).
     fn extract_docker_image<'a>(args: &[&'a str]) -> Option<&'a str> {
+        /// Boolean global flags that do NOT consume the next argument.
+        const GLOBAL_BOOLEAN_FLAGS: &[&str] = &["-D", "--debug", "--tls", "--tlsverify"];
+
         // Skip global flags (e.g. --context, --host, --log-level) to find the subcommand.
         let mut i = 0;
         while i < args.len() {
             let arg = args[i];
             if arg.starts_with('-') {
-                if arg.contains('=') {
-                    // Self-contained --flag=value
+                if arg.contains('=') || GLOBAL_BOOLEAN_FLAGS.contains(&arg) {
+                    // Self-contained --flag=value or known boolean flag
                     i += 1;
                 } else {
                     // Assume global flag consumes next arg as value
@@ -689,6 +692,15 @@ mod tests {
             ]),
             Some("redis:7")
         );
+        // Boolean global flags should not consume the next argument
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["--debug", "pull", "ubuntu"]),
+            Some("ubuntu")
+        );
+        assert_eq!(
+            UnpinnedImages::extract_docker_image(&["-D", "--tls", "run", "nginx"]),
+            Some("nginx")
+        );
     }
 
     #[test]
@@ -786,10 +798,28 @@ mod tests {
         let images = sut.bash_docker_images("docker pull 'alpine:3.18'").unwrap();
         assert_eq!(images, vec!["alpine:3.18"]);
 
-        // Global flags before subcommand
+        // Global value-consuming flags before subcommand
         let images = sut
             .bash_docker_images("docker --context foo pull nginx:latest")
             .unwrap();
         assert_eq!(images, vec!["nginx:latest"]);
+
+        // Global boolean flags should not swallow the subcommand
+        let images = sut
+            .bash_docker_images("docker --debug pull ubuntu")
+            .unwrap();
+        assert_eq!(images, vec!["ubuntu"]);
+
+        // Multiple global boolean flags
+        let images = sut
+            .bash_docker_images("docker -D --tls pull alpine:3.18")
+            .unwrap();
+        assert_eq!(images, vec!["alpine:3.18"]);
+
+        // Mix of boolean and value-consuming global flags
+        let images = sut
+            .bash_docker_images("docker --debug --host tcp://localhost:2375 run -d redis:7")
+            .unwrap();
+        assert_eq!(images, vec!["redis:7"]);
     }
 }

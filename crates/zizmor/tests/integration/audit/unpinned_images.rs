@@ -275,7 +275,23 @@ fn test_run_docker_pedantic() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    10 findings: 0 informational, 0 low, 0 medium, 10 high
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:70:9
+       |
+    70 |       - run: docker --debug pull ubuntu
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is unpinned
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:71:9
+       |
+    71 |       - run: docker -D --tls run nginx
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is unpinned
+       |
+       = note: audit confidence → High
+
+    12 findings: 0 informational, 0 low, 0 medium, 12 high
     "#
     );
 
@@ -330,7 +346,23 @@ fn test_run_docker_regular() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    10 findings (5 suppressed): 0 informational, 0 low, 0 medium, 5 high
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:70:9
+       |
+    70 |       - run: docker --debug pull ubuntu
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is unpinned
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:71:9
+       |
+    71 |       - run: docker -D --tls run nginx
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ docker image is unpinned
+       |
+       = note: audit confidence → High
+
+    12 findings (5 suppressed): 0 informational, 0 low, 0 medium, 7 high
     "
     );
 
