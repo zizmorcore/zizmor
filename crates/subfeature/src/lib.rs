@@ -43,15 +43,19 @@ impl<'a> Fragment<'a> {
     /// Create a new [`Fragment`] from the given string.
     ///
     /// The created fragment's behavior depends on whether the input
-    /// contains newlines or not: if there are no newlines then the fragment
-    /// is a "raw" fragment that gets matched verbatim. If there are newlines,
+    /// contains whitespace or not: if there are no whitespace then the fragment
+    /// is a "raw" fragment that gets matched verbatim. If there are whitespace,
     /// then the fragment is a "regex" fragment that allows a degree of
     /// whitespace malleability to allow for matching against a YAML feature
     /// with its own syntactically relevant whitespace.
     pub fn new(fragment: &'a str) -> Self {
-        if !fragment.contains('\n') {
+        // NOTE: A previous version of this check was for `\n` only, which
+        // was incorrect in the presence of folded multiline YAML strings
+        // (i.e. `>`). We need to pessimize whenever there's *any* whitespace.
+        // See: <https://github.com/zizmorcore/zizmor/issues/1664>
+        if !fragment.bytes().any(|c| c.is_ascii_whitespace()) {
             // Silly optimization: we don't need to build up a pattern for this
-            // expression if it doesn't have any newlines.
+            // expression if it doesn't have any whitespace.
             Fragment::Raw(fragment)
         } else {
             // We turn a spanned expression into a regular expression by
@@ -184,7 +188,7 @@ mod tests {
     fn test_fragment_from_context() {
         for (ctx, expected) in &[
             ("foo.bar", "foo.bar"),
-            ("foo . bar", "foo . bar"),
+            ("foo . bar", r"foo\s+\.\s+bar"),
             ("foo['bar']", "foo['bar']"),
             ("foo [\n'bar'\n]", r"foo\s+\[\s+'bar'\s+\]"),
         ] {

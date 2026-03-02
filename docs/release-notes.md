@@ -86,6 +86,12 @@ of `zizmor`.
 * Fixed a bug where `zizmor`'s expression parser did not correctly handle
   number literals in GitHub Actions expressions (#1625)
 
+* Fixed a bug where the [template-injection] audit would crash on some
+  forms of multi-line expressions (#1669)
+
+* Fixed a bug where deserialization of a workflow containing fractional
+  minutes would fail (#1675)
+
 * Fixed a bug where the [concurrency-limits] audit reported findings
   at the job level instead of the workflow level (#1627)
 
