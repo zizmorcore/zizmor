@@ -1,0 +1,12 @@
+name: cross-key-scalar
+on: [push]
+permissions: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: &title "Update dependencies"
+          title: *title
+          body: "Automated update"

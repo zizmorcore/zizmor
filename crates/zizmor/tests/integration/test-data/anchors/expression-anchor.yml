@@ -1,0 +1,9 @@
+name: expression-anchor
+on: [pull_request]
+permissions: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: &cmd echo "${{ github.event.issue.title }}"
+      - run: *cmd

@@ -1,0 +1,17 @@
+name: multi-scalar-anchors
+on: [push]
+permissions: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/cache@v4
+        with:
+          path: &cache-path ~/.cache/build
+          key: &cache-key build-${{ runner.os }}
+          restore-keys: &cache-restore build-
+      - uses: actions/cache@v4
+        with:
+          path: *cache-path
+          key: *cache-key
+          restore-keys: *cache-restore

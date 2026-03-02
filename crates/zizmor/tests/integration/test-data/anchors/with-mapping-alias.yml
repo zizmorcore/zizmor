@@ -1,0 +1,13 @@
+name: with-mapping-alias
+on: [push]
+permissions: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with: &checkout-opts
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/checkout@v6
+        with: *checkout-opts

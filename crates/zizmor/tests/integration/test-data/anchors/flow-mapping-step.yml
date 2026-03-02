@@ -1,0 +1,10 @@
+name: flow-mapping-step
+on: [push]
+permissions: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - &checkout { uses: "actions/checkout@v4" }
+      - *checkout
+      - run: echo "built"

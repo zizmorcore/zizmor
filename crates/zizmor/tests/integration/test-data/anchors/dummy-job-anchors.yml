@@ -1,0 +1,17 @@
+name: dummy-job-anchors
+on: [pull_request]
+permissions: {}
+jobs:
+  _anchors:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - &checkout
+        uses: actions/checkout@v4
+      - &dangerous-step
+        run: echo "${{ github.event.issue.title }}"
+  real:
+    runs-on: ubuntu-latest
+    steps:
+      - *checkout
+      - *dangerous-step

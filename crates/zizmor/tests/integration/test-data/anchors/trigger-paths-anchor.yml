@@ -1,0 +1,14 @@
+name: trigger-paths-anchor
+on:
+  push:
+    paths-ignore: &ignore
+      - "docs/**"
+      - "**.md"
+  pull_request:
+    paths-ignore: *ignore
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"

@@ -1,0 +1,13 @@
+name: trigger-block-alias
+on:
+  push: &trigger
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+  pull_request: *trigger
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"

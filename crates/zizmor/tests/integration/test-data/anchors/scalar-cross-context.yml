@@ -1,0 +1,10 @@
+name: scalar-cross-context
+on: [push]
+permissions: {}
+env:
+  RUNNER: &runner ubuntu-latest
+jobs:
+  build:
+    runs-on: *runner
+    steps:
+      - run: echo "hello"
