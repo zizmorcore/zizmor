@@ -109,12 +109,17 @@ impl UnpinnedImages {
     fn arg_text<'a>(node: &tree_sitter::Node, source: &'a [u8]) -> Option<&'a str> {
         match node.kind() {
             "string" => {
-                // For double-quoted strings, extract the string_content child
-                // to avoid the surrounding quotes.
-                if node.named_child_count() == 1 {
-                    node.named_child(0)?.utf8_text(source).ok()
+                // For double-quoted strings, extract the `string_content`
+                // child to get text without surrounding quotes.
+                //
+                // We explicitly match `string_content` because other child
+                // types (e.g. `command_substitution` for `"$(cmd)"`,
+                // `simple_expansion` for `"$VAR"`) contain dynamic content
+                // we can't resolve statically.
+                let child = node.named_child(0)?;
+                if node.named_child_count() == 1 && child.kind() == "string_content" {
+                    child.utf8_text(source).ok()
                 } else {
-                    // Multiple children means interpolation — skip these.
                     None
                 }
             }
@@ -911,6 +916,18 @@ mod tests {
             .bash_docker_images(r#"docker pull "ubuntu:latest""#)
             .unwrap();
         assert_eq!(images, vec!["ubuntu:latest"]);
+
+        // Double-quoted with command substitution — not statically resolvable
+        let images = sut
+            .bash_docker_images(r#"docker pull "$(get_image)""#)
+            .unwrap();
+        assert!(images.is_empty());
+
+        // Double-quoted with variable expansion — not statically resolvable
+        let images = sut
+            .bash_docker_images(r#"docker pull "$IMAGE""#)
+            .unwrap();
+        assert!(images.is_empty());
 
         // Single-quoted image argument
         let images = sut.bash_docker_images("docker pull 'alpine:3.18'").unwrap();
