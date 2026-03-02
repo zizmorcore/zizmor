@@ -128,7 +128,12 @@ impl UnpinnedImages {
                 let text = node.utf8_text(source).ok()?;
                 text.strip_prefix('\'')?.strip_suffix('\'')
             }
-            _ => node.utf8_text(source).ok(),
+            // Bare words contain plain text with no quoting or expansion.
+            "word" => node.utf8_text(source).ok(),
+            // Unknown node types (e.g. `simple_expansion`, `expansion`,
+            // `command_substitution`, `concatenation`) contain dynamic
+            // content — reject them.
+            _ => None,
         }
     }
 
@@ -885,8 +890,18 @@ mod tests {
             .unwrap();
         assert!(images.is_empty());
 
-        // Variable expansion should be skipped
+        // Variable expansion should be skipped (simple_expansion node)
         let images = sut.bash_docker_images("docker pull $IMAGE_NAME").unwrap();
+        assert!(images.is_empty());
+
+        // Brace variable expansion should be skipped (expansion node)
+        let images = sut.bash_docker_images("docker pull ${IMAGE_NAME}").unwrap();
+        assert!(images.is_empty());
+
+        // Concatenation of word + expansion should be skipped
+        let images = sut
+            .bash_docker_images("docker pull myregistry/${IMAGE_NAME}:latest")
+            .unwrap();
         assert!(images.is_empty());
 
         // Podman support
