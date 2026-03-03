@@ -1153,8 +1153,7 @@ dependencies = [
 [[package]]
 name = "http-cache"
 version = "1.0.0-alpha.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a4323fbf07a4c72dbf3a5909494443109797529102b1a1637597854c0468d7e"
+source = "git+https://github.com/06chaynes/http-cache?branch=compat-tests#ec20bbce133dbd3d50eff6309d18c511f33d38ac"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1178,8 +1177,7 @@ dependencies = [
 [[package]]
 name = "http-cache-reqwest"
 version = "1.0.0-alpha.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2adcbeffc1b74be1e8e43739c71082c17320f382349db1fbbf4f8734157aabf1"
+source = "git+https://github.com/06chaynes/http-cache?branch=compat-tests#ec20bbce133dbd3d50eff6309d18c511f33d38ac"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1196,9 +1194,9 @@ dependencies = [
 
 [[package]]
 name = "http-cache-semantics"
-version = "2.1.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92baf25cf0b8c9246baecf3a444546360a97b569168fdf92563ee6a47829920c"
+checksum = "0603b99309a1e404c2c0945650c0f775b50bb72ac90ae570cb93f9ff05d9efe7"
 dependencies = [
  "http",
  "http-serde",
