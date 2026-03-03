@@ -82,6 +82,14 @@
         - aquasecurity/trivy-action#502
 
 
+-   ![](https://github.com/ariel-os.png?size=40){ width="40" loading=lazy align=left } ariel-os
+
+    ---
+
+    ??? example "Examples"
+        - ariel-os/ariel-os#1738
+
+
 -   ![](https://github.com/artichoke.png?size=40){ width="40" loading=lazy align=left } artichoke
 
     ---
@@ -1255,6 +1263,16 @@
         - prometheus/prometheus#16530
 
 
+-   ![](https://github.com/prowler-cloud.png?size=40){ width="40" loading=lazy align=left } prowler-cloud
+
+    ---
+
+    ??? example "Examples"
+        - prowler-cloud/prowler#10200
+        - prowler-cloud/prowler#10207
+        - prowler-cloud/prowler#10208
+
+
 -   ![](https://github.com/psf.png?size=40){ width="40" loading=lazy align=left } psf
 
     ---
@@ -1485,6 +1503,14 @@
 
     ??? example "Examples"
         - rolldown/rolldown#3861
+
+
+-   ![](https://github.com/ruby.png?size=40){ width="40" loading=lazy align=left } ruby
+
+    ---
+
+    ??? example "Examples"
+        - ruby/ruby#16273
 
 
 -   ![](https://github.com/rubygems.png?size=40){ width="40" loading=lazy align=left } rubygems
@@ -1736,6 +1762,15 @@
     ??? example "Examples"
         - trailofbits/fickling#144
         - trailofbits/fickling#177
+
+
+-   ![](https://github.com/trifectatechfoundation.png?size=40){ width="40" loading=lazy align=left } trifectatechfoundation
+
+    ---
+
+    ??? example "Examples"
+        - trifectatechfoundation/sudo-rs#1488
+        - trifectatechfoundation/sudo-rs#1490
 
 
 -   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser
