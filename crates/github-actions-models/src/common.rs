@@ -178,22 +178,22 @@ pub enum If {
     Expr(String),
 }
 
-/// Internal helper for deserializing `If` conditions.
-/// Coerces YAML numeric values to booleans.
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum RawIf {
-    Bool(bool),
-    Int(i64),
-    Float(f64),
-    Expr(String),
-}
-
 impl<'de> Deserialize<'de> for If {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
+        /// Internal helper for deserializing `If` conditions.
+        /// Coerces YAML numeric values to booleans.
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum RawIf {
+            Bool(bool),
+            Int(i64),
+            Float(f64),
+            Expr(String),
+        }
+
         match RawIf::deserialize(deserializer)? {
             RawIf::Bool(b) => Ok(If::Bool(b)),
             RawIf::Int(n) => Ok(If::Bool(n != 0)),
