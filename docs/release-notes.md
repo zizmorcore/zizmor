@@ -95,6 +95,9 @@ of `zizmor`.
 * Fixed a bug where deserialization of a workflow where a `workflow_run`
   with a scalar `types` would fail (#1676)
 
+* Fixed a bug where `zizmor` would crash on workflows containing bare
+  numeric values in `if:` conditions (#1683)
+
 ## 1.22.0
 
 ### Changes ⚠️
