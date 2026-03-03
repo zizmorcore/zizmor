@@ -165,13 +165,42 @@ impl From<BoS> for String {
 /// An `if:` condition in a job or action definition.
 ///
 /// These are either booleans or bare (i.e. non-curly) expressions.
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
-#[serde(untagged)]
+///
+/// GitHub Actions also accepts bare numeric values in `if:` conditions
+/// (e.g. `if: 0`, `if: 0xf`, `if: 1.5`). These are coerced to booleans
+/// during deserialization following Actions' truthiness rules:
+/// 0, 0.0, and NaN are falsy; everything else is truthy.
+#[derive(Serialize, Debug, PartialEq)]
 pub enum If {
     Bool(bool),
     // NOTE: condition expressions can be either "bare" or "curly", so we can't
     // use `BoE` or anything else that assumes curly-only here.
     Expr(String),
+}
+
+/// Internal helper for deserializing `If` conditions.
+/// Coerces YAML numeric values to booleans.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum RawIf {
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    Expr(String),
+}
+
+impl<'de> Deserialize<'de> for If {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        match RawIf::deserialize(deserializer)? {
+            RawIf::Bool(b) => Ok(If::Bool(b)),
+            RawIf::Int(n) => Ok(If::Bool(n != 0)),
+            RawIf::Float(f) => Ok(If::Bool(f != 0.0 && !f.is_nan())),
+            RawIf::Expr(s) => Ok(If::Expr(s)),
+        }
+    }
 }
 
 pub(crate) fn bool_is_string<'de, D>(de: D) -> Result<String, D::Error>
