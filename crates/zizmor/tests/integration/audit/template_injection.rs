@@ -533,3 +533,71 @@ fn test_issue_988_repro_pedantic() -> Result<()> {
 
     Ok(())
 }
+
+/// Repro case for #1638: `github.triggering_actor` should not be considered an
+/// injection risk in the default persona.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/1638>
+#[test]
+fn test_issue_1638() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("template-injection/issue-1638-repro.yml"))
+            .run()?,
+        @"No findings to report. Good job! (1 suppressed)"
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("template-injection/issue-1638-repro.yml"))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r#"
+    help[template-injection]: code injection via template expansion
+      --> @@INPUT@@:19:24
+       |
+    19 |         run: echo "${{ github.triggering_actor }}"
+       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         |
+       |         this run block
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "#
+    );
+
+    Ok(())
+}
+
+/// Repro case for #1664: expressions that span mulitiple lines within a folded YAML
+/// block should have their subfeatures extracted correctly, without crashing.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/1664>
+#[test]
+fn test_issue_1664() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("template-injection/issue-1664-repro.yml"))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r#"
+    help[template-injection]: code injection via template expansion
+      --> @@INPUT@@:17:15
+       |
+    16 |           run: >
+       |           --- this run block
+    17 |             ${{ secrets.MY_SECRET
+       |  _______________^
+    18 | |           && 'true'
+    19 | |           || 'echo "fallback"' }}
+       | |______________________________^ may expand into attacker-controllable code
+       |
+       = note: audit confidence → High
+
+    3 findings (2 ignored): 0 informational, 1 low, 0 medium, 0 high
+    "#
+    );
+
+    Ok(())
+}

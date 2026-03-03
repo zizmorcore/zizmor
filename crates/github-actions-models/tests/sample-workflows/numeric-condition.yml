@@ -1,0 +1,33 @@
+# https://github.com/zizmorcore/zizmor/issues/1670
+# Verified against GitHub Actions:
+# https://github.com/trail-of-forks/zizmor/actions/runs/22616945450/job/65532085224
+name: test
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: if 0 (falsy int)
+        if: 0
+        run: echo hello
+      - name: if 1 (truthy int)
+        if: 1
+        run: echo hello
+      - name: if -1 (negative int)
+        if: -1
+        run: echo hello
+      - name: if 0xf (hex int)
+        if: 0xf
+        run: echo hello
+      - name: if 1.5 (float)
+        if: 1.5
+        run: echo hello
+      - name: if 0.0 (falsy float)
+        if: 0.0
+        run: echo hello
+      - name: if .inf (infinity)
+        if: .inf
+        run: echo hello
+      - name: if .nan (NaN)
+        if: .nan
+        run: echo hello

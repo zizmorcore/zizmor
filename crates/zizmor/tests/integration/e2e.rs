@@ -668,6 +668,19 @@ fn test_github_output() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn test_sarif_zizmor_properties() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(true)
+            .input(input_under_test("several-vulnerabilities.yml"))
+            .args(["--format=sarif"])
+            .run()?
+    );
+
+    Ok(())
+}
+
 /// Ensures that the `--show-audit-urls` flag works as expected.
 #[test]
 fn test_show_urls() -> Result<()> {

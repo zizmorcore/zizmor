@@ -4074,6 +4074,7 @@ github.run_number,fixed
 github.server_url,fixed
 github.sha,fixed
 github.token,fixed
+github.triggering_actor,fixed
 github.workspace,fixed
 runner.arch,fixed
 runner.debug,fixed
