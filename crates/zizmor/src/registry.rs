@@ -139,6 +139,7 @@ pub(crate) struct FindingRegistry<'a> {
     highest_seen_severity: Option<Severity>,
     // Tracks seen findings to avoid duplicates from YAML anchors.
     seen_findings: HashSet<FindingKey>,
+    dedup: bool,
 }
 
 impl<'a> FindingRegistry<'a> {
@@ -147,6 +148,7 @@ impl<'a> FindingRegistry<'a> {
         minimum_severity: Option<Severity>,
         minimum_confidence: Option<Confidence>,
         persona: Persona,
+        dedup: bool,
     ) -> Self {
         Self {
             input_registry,
@@ -158,6 +160,7 @@ impl<'a> FindingRegistry<'a> {
             findings: Default::default(),
             highest_seen_severity: None,
             seen_findings: Default::default(),
+            dedup,
         }
     }
 
@@ -176,17 +179,19 @@ impl<'a> FindingRegistry<'a> {
             // The location hash includes the byte range, annotation, feature text, and feature kind.
             // This ensures two findings at the same location with different annotations
             // (e.g., two different vulnerabilities on the same line) are NOT deduplicated.
-            let primary_loc = finding.primary_location();
-            let dedup_key = FindingKey {
-                audit_ident: finding.ident,
-                input_key: primary_loc.symbolic.key.clone(),
-                location_hash: primary_loc.content_hash(),
-                determinations: finding.determinations,
-            };
+            if self.dedup {
+                let primary_loc = finding.primary_location();
+                let dedup_key = FindingKey {
+                    audit_ident: finding.ident,
+                    input_key: primary_loc.symbolic.key.clone(),
+                    location_hash: primary_loc.content_hash(),
+                    determinations: finding.determinations,
+                };
 
-            if !self.seen_findings.insert(dedup_key) {
-                // This is a duplicate finding, skip it
-                continue;
+                if !self.seen_findings.insert(dedup_key) {
+                    // This is a duplicate finding, skip it
+                    continue;
+                }
             }
 
             if self.persona > finding.determinations.persona {

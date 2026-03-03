@@ -12,6 +12,7 @@ use crate::common::{input_under_test, zizmor};
 fn test_basic() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
+            .with_dedup()
             .input(input_under_test(
                 "anchors/basic.yml"
             ))
@@ -28,7 +29,7 @@ fn test_basic() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    3 findings (2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
