@@ -50,7 +50,7 @@ http-cache-reqwest = { version = "1.0.0-alpha.4", features = ["manager-moka"] }
 human-panic = "2.0.5"
 ignore = "0.4.25"
 indexmap = { version = "2.13.0", features = ["serde"] }
-indicatif = "=0.18.3"
+indicatif = "0.18"
 insta = "1.46.3"
 jsonschema = "0.42.1"
 line-index = "0.1.2"
