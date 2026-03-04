@@ -43,6 +43,11 @@ fn to_evaluation(result: &TestResult) -> Result<Evaluation, String> {
             result.value.as_str().unwrap().to_string(),
         )),
         "Null" => Ok(Evaluation::Null),
+        "Array" | "Object" => {
+            Evaluation::try_from(result.value.clone()).map_err(|()| {
+                format!("failed to convert {:?} value to Evaluation", result.kind)
+            })
+        }
         other => Err(format!("unknown result kind {other:?}")),
     }
 }
@@ -50,7 +55,6 @@ fn to_evaluation(result: &TestResult) -> Result<Evaluation, String> {
 fn eval_eq(a: &Evaluation, b: &Evaluation) -> bool {
     match (a, b) {
         (Evaluation::Number(x), Evaluation::Number(y)) => (x.is_nan() && y.is_nan()) || x == y,
-        (Evaluation::String(a), Evaluation::String(b)) => a == b,
         _ => a == b,
     }
 }
