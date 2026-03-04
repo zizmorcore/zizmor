@@ -98,6 +98,9 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would crash on workflows containing bare
   numeric values in `if:` conditions (#1683)
 
+* Fixed a bug where GitHub Actions expression string comparisons were
+  not case-insensitive (#1687)
+
 ## 1.22.0
 
 ### Changes ⚠️
