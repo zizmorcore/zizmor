@@ -11,7 +11,7 @@ use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stderr, stream::IsTerminal};
 use anyhow::anyhow;
 use camino::Utf8PathBuf;
-use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
+use clap::{Args, ArgAction, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
 
 use etcetera::AppStrategy as _;
@@ -119,12 +119,16 @@ struct App {
     no_online_audits: bool,
 
     /// Print diagnostics, but nothing else.
-    #[arg(short, long, conflicts_with = "silent")]
+    #[arg(short, long, conflicts_with_all = ["silent", "verbose"])]
     quiet: bool,
 
     /// Disable all output (but still exit with status code "1" upon detecting diagnostics).
-    #[arg(short, long, conflicts_with = "quiet")]
+    #[arg(short, long, conflicts_with_all = ["quiet", "verbose"])]
     silent: bool,
+
+    /// Increase logging verbosity.
+    #[arg(short, long, action = ArgAction::Count, conflicts_with_all = ["quiet", "silent"])]
+    verbose: u8,
 
     /// Don't show progress bars, even if the terminal supports them.
     #[arg(long)]
@@ -778,7 +782,11 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     } else if app.quiet {
         tracing_subscriber::filter::LevelFilter::WARN
     } else {
-        tracing_subscriber::filter::LevelFilter::INFO
+        match app.verbose {
+            0 => tracing_subscriber::filter::LevelFilter::INFO,
+            1 => tracing_subscriber::filter::LevelFilter::DEBUG,
+            _ => tracing_subscriber::filter::LevelFilter::TRACE,
+        }
     };
 
     let filter = EnvFilter::builder()

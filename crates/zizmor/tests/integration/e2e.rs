@@ -247,6 +247,51 @@ fn silent_flag() -> Result<()> {
 }
 
 #[test]
+fn verbose_flag() -> Result<()> {
+    // Default (no flags): INFO level — no DEBUG messages.
+    let default_output = zizmor()
+        .output(OutputMode::Both)
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(!default_output.contains("DEBUG"));
+
+    // -v: DEBUG level — DEBUG messages appear.
+    let verbose_output = zizmor()
+        .output(OutputMode::Both)
+        .args(["-v"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(verbose_output.contains("DEBUG"));
+    assert!(verbose_output.contains("🌈 zizmor"));
+
+    Ok(())
+}
+
+#[test]
+fn verbose_quiet_conflict() -> Result<()> {
+    let output = zizmor()
+        .expects_failure(2)
+        .args(["--verbose", "--quiet"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(output.contains("cannot be used with"));
+
+    Ok(())
+}
+
+#[test]
+fn verbose_silent_conflict() -> Result<()> {
+    let output = zizmor()
+        .expects_failure(2)
+        .args(["--verbose", "--silent"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(output.contains("cannot be used with"));
+
+    Ok(())
+}
+
+#[test]
 fn quiet_silent_conflict() -> Result<()> {
     // --quiet and --silent are mutually exclusive.
     let output = zizmor()
