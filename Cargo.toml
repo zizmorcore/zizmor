@@ -21,7 +21,7 @@ rust-version = "1.88.0"
 [workspace.dependencies]
 github-actions-expressions = { path = "crates/github-actions-expressions", version = "0.0.13" }
 github-actions-models = { path = "crates/github-actions-models", version = "0.44.0" }
-subfeature = { path = "crates/subfeature", version = "0.0.4" }
+subfeature = { path = "crates/subfeature", version = "0.0.5" }
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "0.0.3" }
 yamlpath = { path = "crates/yamlpath", version = "0.34.0" }
 yamlpatch = { path = "crates/yamlpatch", version = "0.12.0" }
