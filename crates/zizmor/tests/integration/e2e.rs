@@ -143,6 +143,12 @@ fn color_control_tty() -> Result<()> {
     let color_default_output = zizmor()
         .output(OutputMode::Both)
         .unbuffer(true)
+        // indicatif 0.18.4+ hides progress bars when `TERM` is unset or `dumb`.
+        // GitHub Actions runners have `TERM=dumb`, so we explicitly set a
+        // color-capable value here to ensure the TTY tests can assert on
+        // progress bar output.
+        // TODO: Should probably do something more general here.
+        .setenv("TERM", "xterm-256color")
         .input(input_under_test("e2e-menagerie"))
         .run()?;
     assert!(color_default_output.contains("\x1b["));
@@ -184,6 +190,12 @@ fn progress_bar_tty() -> Result<()> {
     let progress_bar_default_output = zizmor()
         .output(OutputMode::Both)
         .unbuffer(true)
+        // indicatif 0.18.4+ hides progress bars when `TERM` is unset or `dumb`.
+        // GitHub Actions runners have `TERM=dumb`, so we explicitly set a
+        // color-capable value here to ensure the TTY tests can assert on
+        // progress bar output.
+        // TODO: Should probably do something more general here.
+        .setenv("TERM", "xterm-256color")
         .input(input_under_test("e2e-menagerie"))
         .run()?;
     assert!(progress_bar_default_output.contains("collect_inputs{}"));
