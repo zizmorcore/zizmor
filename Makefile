@@ -42,6 +42,10 @@ codeql-injection-sinks: crates/zizmor/data/codeql-injection-sinks.json
 crates/zizmor/data/codeql-injection-sinks.json: support/codeql-injection-sinks.py
 	$< > $@
 
+.PHONY: sync-expression-tests
+sync-expression-tests:
+	support/sync-expression-tests.py
+
 .PHONY: archived-repos
 archived-repos:
 	support/archived-repos.py
