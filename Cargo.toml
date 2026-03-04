@@ -52,7 +52,7 @@ ignore = "0.4.25"
 indexmap = { version = "2.13.0", features = ["serde"] }
 indicatif = "0.18"
 insta = "1.46.3"
-jsonschema = "0.42.1"
+jsonschema = { version = "0.42.1", default-features = false }
 line-index = "0.1.2"
 memchr = "2.8.0"
 owo-colors = "4.3.0"
