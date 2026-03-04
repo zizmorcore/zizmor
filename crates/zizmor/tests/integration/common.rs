@@ -209,8 +209,7 @@ impl Zizmor {
                 }
             }
 
-            // indicatif 0.18.4+ hides progress bars when `TERM` is unset or
-            // `dumb` (via `colors_supported()` in `ProgressDrawTarget::term()`).
+            // indicatif 0.18.4+ hides progress bars when `TERM` is unset or `dumb`.
             // GitHub Actions runners have `TERM=dumb`, so we explicitly set a
             // color-capable value here to ensure the TTY tests can assert on
             // progress bar output.
