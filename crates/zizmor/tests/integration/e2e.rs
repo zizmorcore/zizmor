@@ -201,6 +201,73 @@ fn progress_bar_tty() -> Result<()> {
 }
 
 #[test]
+fn quiet_flag() -> Result<()> {
+    // --quiet: shows findings but suppresses banner, INFO logs, and summary.
+    let quiet_with_findings = zizmor()
+        .output(OutputMode::Both)
+        .args(["--quiet"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(!quiet_with_findings.contains("🌈 zizmor"));
+    assert!(!quiet_with_findings.contains(" INFO "));
+    assert!(quiet_with_findings.contains("warning[artipacked]"));
+    assert!(!quiet_with_findings.contains("findings"));
+    assert!(!quiet_with_findings.contains("No findings"));
+
+    // --quiet with no findings: produces no output at all.
+    let quiet_no_findings = zizmor()
+        .output(OutputMode::Both)
+        .args(["--quiet", "--min-severity=high"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(quiet_no_findings.is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn silent_flag() -> Result<()> {
+    // --silent: suppresses all output, but preserves exit code.
+    let silent_with_findings = zizmor()
+        .output(OutputMode::Both)
+        .args(["--silent"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(silent_with_findings.is_empty());
+
+    // --silent with no findings: also produces no output.
+    let silent_no_findings = zizmor()
+        .output(OutputMode::Both)
+        .args(["--silent", "--min-severity=high"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(silent_no_findings.is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn quiet_silent_conflict() -> Result<()> {
+    // --quiet and --silent are mutually exclusive.
+    insta::assert_snapshot!(
+        zizmor()
+            .expects_failure(2)
+            .args(["--quiet", "--silent"])
+            .input(input_under_test("artipacked.yml"))
+            .run()?,
+        @r"
+    error: the argument '--quiet' cannot be used with '--silent'
+
+    Usage: zizmor --quiet --offline --no-progress --show-audit-urls <SHOW_AUDIT_URLS> <INPUTS>...
+
+    For more information, try '--help'.
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
 fn issue_612_repro() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()

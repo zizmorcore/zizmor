@@ -104,10 +104,15 @@ pub(crate) fn render_findings(
     show_urls_mode: &ShowAuditUrls,
     render_links_mode: &RenderLinks,
     naches_mode: bool,
+    quiet: bool,
 ) {
     for finding in findings.findings() {
         render_finding(registry, finding, show_urls_mode, render_links_mode);
         println!();
+    }
+
+    if quiet {
+        return;
     }
 
     let mut qualifiers = vec![];

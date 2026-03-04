@@ -13,7 +13,7 @@ use anyhow::anyhow;
 use camino::Utf8PathBuf;
 use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
 use clap_complete::Generator;
-use clap_verbosity_flag::InfoLevel;
+
 use etcetera::AppStrategy as _;
 use finding::{Confidence, Persona, Severity};
 use futures::stream::{FuturesOrdered, StreamExt};
@@ -118,8 +118,13 @@ struct App {
     #[arg(long, env = "ZIZMOR_NO_ONLINE_AUDITS")]
     no_online_audits: bool,
 
-    #[command(flatten)]
-    verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
+    /// Print diagnostics, but nothing else.
+    #[arg(short, long, conflicts_with = "silent")]
+    quiet: bool,
+
+    /// Disable all output (but still exit with status code "1" upon detecting diagnostics).
+    #[arg(short, long, conflicts_with = "quiet")]
+    silent: bool,
 
     /// Don't show progress bars, even if the terminal supports them.
     #[arg(long)]
@@ -721,6 +726,11 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     anstream::ColorChoice::write_global(color_mode.into());
 
+    // Disable progress bars in quiet and silent modes.
+    if app.quiet || app.silent {
+        app.no_progress = true;
+    }
+
     // Disable progress bars if colorized output is disabled.
     // We do this because `anstream` and `tracing_indicatif` don't
     // compose perfectly: `anstream` wants to strip all ANSI escapes,
@@ -763,8 +773,16 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         color_mode.color_choice_for_terminal(std::io::stderr()),
     ));
 
+    let level = if app.silent {
+        tracing_subscriber::filter::LevelFilter::OFF
+    } else if app.quiet {
+        tracing_subscriber::filter::LevelFilter::WARN
+    } else {
+        tracing_subscriber::filter::LevelFilter::INFO
+    };
+
     let filter = EnvFilter::builder()
-        .with_default_directive(app.verbose.tracing_level_filter().into())
+        .with_default_directive(level.into())
         .from_env()
         .expect("failed to parse RUST_LOG");
 
@@ -784,7 +802,9 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         reg.with(indicatif_layer).init();
     }
 
-    eprintln!("🌈 zizmor v{version}", version = env!("CARGO_PKG_VERSION"));
+    if !app.quiet && !app.silent {
+        eprintln!("🌈 zizmor v{version}", version = env!("CARGO_PKG_VERSION"));
+    }
 
     let collection_mode_set = CollectionModeSet::from(app.collect.as_slice());
 
@@ -888,25 +908,28 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         }
     }
 
-    match app.format {
-        OutputFormat::Plain => output::plain::render_findings(
-            &registry,
-            &results,
-            &app.show_audit_urls.into(),
-            &app.render_links.into(),
-            app.naches,
-        ),
-        OutputFormat::Json | OutputFormat::JsonV1 => {
-            output::json::v1::output(stdout(), results.findings()).map_err(Error::Output)?
-        }
-        OutputFormat::Sarif => {
-            serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))
-                .map_err(|err| Error::Output(anyhow!(err)))?
-        }
-        OutputFormat::Github => {
-            output::github::output(stdout(), results.findings()).map_err(Error::Output)?
-        }
-    };
+    if !app.silent {
+        match app.format {
+            OutputFormat::Plain => output::plain::render_findings(
+                &registry,
+                &results,
+                &app.show_audit_urls.into(),
+                &app.render_links.into(),
+                app.naches,
+                app.quiet,
+            ),
+            OutputFormat::Json | OutputFormat::JsonV1 => {
+                output::json::v1::output(stdout(), results.findings()).map_err(Error::Output)?
+            }
+            OutputFormat::Sarif => {
+                serde_json::to_writer_pretty(stdout(), &output::sarif::build(results.findings()))
+                    .map_err(|err| Error::Output(anyhow!(err)))?
+            }
+            OutputFormat::Github => {
+                output::github::output(stdout(), results.findings()).map_err(Error::Output)?
+            }
+        };
+    }
 
     let all_fixed = if let Some(fix_mode) = app.fix {
         let fix_result =
