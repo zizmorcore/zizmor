@@ -209,6 +209,13 @@ impl Zizmor {
                 }
             }
 
+            // indicatif 0.18.4+ hides progress bars when `TERM` is unset or
+            // `dumb` (via `colors_supported()` in `ProgressDrawTarget::term()`).
+            // GitHub Actions runners have `TERM=dumb`, so we explicitly set a
+            // color-capable value here to ensure the TTY tests can assert on
+            // progress bar output.
+            cmd.env("TERM", "xterm-256color");
+
             match cmd.output() {
                 Ok(output) => output,
                 Err(err) => match err.kind() {
