@@ -111,96 +111,94 @@ pub(crate) fn render_findings(
         println!();
     }
 
-    if quiet {
-        return;
-    }
+    if !quiet {
+        let mut qualifiers = vec![];
 
-    let mut qualifiers = vec![];
+        if !findings.ignored().is_empty() {
+            qualifiers.push(format!(
+                "{nignored} ignored",
+                nignored = findings.ignored().len().bright_yellow()
+            ));
+        }
 
-    if !findings.ignored().is_empty() {
-        qualifiers.push(format!(
-            "{nignored} ignored",
-            nignored = findings.ignored().len().bright_yellow()
-        ));
-    }
+        if !findings.suppressed().is_empty() {
+            qualifiers.push(format!(
+                "{nsuppressed} suppressed",
+                nsuppressed = findings.suppressed().len().bright_yellow()
+            ));
+        }
 
-    if !findings.suppressed().is_empty() {
-        qualifiers.push(format!(
-            "{nsuppressed} suppressed",
-            nsuppressed = findings.suppressed().len().bright_yellow()
-        ));
-    }
+        let nfixable = findings.fixable_findings().count();
+        if nfixable > 0 {
+            qualifiers.push(format!(
+                "{nfixable} fixable",
+                nfixable = nfixable.bright_green()
+            ));
+        }
 
-    let nfixable = findings.fixable_findings().count();
-    if nfixable > 0 {
-        qualifiers.push(format!(
-            "{nfixable} fixable",
-            nfixable = nfixable.bright_green()
-        ));
-    }
+        if findings.findings().is_empty() {
+            if qualifiers.is_empty() {
+                println!("{}", "No findings to report. Good job!".green());
+            } else {
+                println!(
+                    "{no_findings} ({qualifiers})",
+                    no_findings = "No findings to report. Good job!".green(),
+                    qualifiers = qualifiers.join(", ").bold(),
+                );
+            }
 
-    if findings.findings().is_empty() {
-        if qualifiers.is_empty() {
-            println!("{}", "No findings to report. Good job!".green());
+            if naches_mode {
+                naches();
+            }
         } else {
-            println!(
-                "{no_findings} ({qualifiers})",
-                no_findings = "No findings to report. Good job!".green(),
-                qualifiers = qualifiers.join(", ").bold(),
-            );
-        }
+            let mut findings_by_severity = HashMap::new();
 
-        if naches_mode {
-            naches();
-        }
-    } else {
-        let mut findings_by_severity = HashMap::new();
-
-        for finding in findings.findings() {
-            match findings_by_severity.entry(&finding.determinations.severity) {
-                Entry::Occupied(mut e) => {
-                    *e.get_mut() += 1;
-                }
-                Entry::Vacant(e) => {
-                    e.insert(1);
+            for finding in findings.findings() {
+                match findings_by_severity.entry(&finding.determinations.severity) {
+                    Entry::Occupied(mut e) => {
+                        *e.get_mut() += 1;
+                    }
+                    Entry::Vacant(e) => {
+                        e.insert(1);
+                    }
                 }
             }
-        }
 
-        if qualifiers.is_empty() {
-            let nfindings = findings.count();
-            print!(
-                "{nfindings} finding{s}: ",
-                nfindings = nfindings.green(),
-                s = if nfindings == 1 { "" } else { "s" },
-            );
-        } else {
-            print!(
-                "{nfindings} findings ({qualifiers}): ",
-                nfindings = findings.count().green(),
-                qualifiers = qualifiers.join(", ").bold(),
+            if qualifiers.is_empty() {
+                let nfindings = findings.count();
+                print!(
+                    "{nfindings} finding{s}: ",
+                    nfindings = nfindings.green(),
+                    s = if nfindings == 1 { "" } else { "s" },
+                );
+            } else {
+                print!(
+                    "{nfindings} findings ({qualifiers}): ",
+                    nfindings = findings.count().green(),
+                    qualifiers = qualifiers.join(", ").bold(),
+                );
+            }
+
+            println!(
+                "{ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
+                ninformational = findings_by_severity
+                    .get(&Severity::Informational)
+                    .unwrap_or(&0)
+                    .purple(),
+                nlow = findings_by_severity
+                    .get(&Severity::Low)
+                    .unwrap_or(&0)
+                    .cyan(),
+                nmedium = findings_by_severity
+                    .get(&Severity::Medium)
+                    .unwrap_or(&0)
+                    .yellow(),
+                nhigh = findings_by_severity
+                    .get(&Severity::High)
+                    .unwrap_or(&0)
+                    .red(),
             );
         }
-
-        println!(
-            "{ninformational} informational, {nlow} low, {nmedium} medium, {nhigh} high",
-            ninformational = findings_by_severity
-                .get(&Severity::Informational)
-                .unwrap_or(&0)
-                .purple(),
-            nlow = findings_by_severity
-                .get(&Severity::Low)
-                .unwrap_or(&0)
-                .cyan(),
-            nmedium = findings_by_severity
-                .get(&Severity::Medium)
-                .unwrap_or(&0)
-                .yellow(),
-            nhigh = findings_by_severity
-                .get(&Severity::High)
-                .unwrap_or(&0)
-                .red(),
-        );
     }
 }
 
