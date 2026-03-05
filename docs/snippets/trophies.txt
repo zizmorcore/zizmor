@@ -56,11 +56,14 @@ brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 bw2/ConfigArgParse#336
 cachix/git-hooks.nix#606
 cakephp/cakephp#18081
+Calysto/metakernel#344
+Calysto/octave_kernel#263
 canonical/operator#1656
 canonical/operator#1721
 canonical/testflinger#630
 cerbos/cerbos#3002
 certbot/josepy#193
+chatmail/core#7942
 coder/coder#19459
 conda/conda-lock#814
 containers/podman#27642
@@ -94,6 +97,7 @@ edgelesssys/contrast#1604
 EFForg/rayhunter#711
 Electric-Coin-Company/zcash-light-client-ffi#186
 element-hq/element-desktop#2877
+element-hq/element-x-ios#5161
 elixir-lang/elixir#15114
 emberjs/ember.js#21185
 esl/MongooseIM#4435
@@ -134,6 +138,8 @@ grafana/rollout-operator#218
 grafana/synthetic-monitoring-app#1126
 grafana/tanka#1441
 great-expectations/airflow-provider-great-expectations#209
+google/osv.dev#4969
+google/osv-scanner#2591
 google/zerocop#2810
 google/zx#1067
 google/zx#1126

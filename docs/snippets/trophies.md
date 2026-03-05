@@ -247,6 +247,15 @@
         - cakephp/cakephp#18081
 
 
+-   ![](https://github.com/Calysto.png?size=40){ width="40" loading=lazy align=left } Calysto
+
+    ---
+
+    ??? example "Examples"
+        - Calysto/metakernel#344
+        - Calysto/octave_kernel#263
+
+
 -   ![](https://github.com/canonical.png?size=40){ width="40" loading=lazy align=left } canonical
 
     ---
@@ -271,6 +280,14 @@
 
     ??? example "Examples"
         - certbot/josepy#193
+
+
+-   ![](https://github.com/chatmail.png?size=40){ width="40" loading=lazy align=left } chatmail
+
+    ---
+
+    ??? example "Examples"
+        - chatmail/core#7942
 
 
 -   ![](https://github.com/coder.png?size=40){ width="40" loading=lazy align=left } coder
@@ -472,6 +489,7 @@
 
     ??? example "Examples"
         - element-hq/element-desktop#2877
+        - element-hq/element-x-ios#5161
 
 
 -   ![](https://github.com/elixir-lang.png?size=40){ width="40" loading=lazy align=left } elixir-lang
@@ -674,6 +692,8 @@
     ---
 
     ??? example "Examples"
+        - google/osv.dev#4969
+        - google/osv-scanner#2591
         - google/zerocop#2810
         - google/zx#1067
         - google/zx#1126
