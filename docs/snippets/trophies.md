@@ -257,6 +257,14 @@
         - canonical/testflinger#630
 
 
+-   ![](https://github.com/cerbos.png?size=40){ width="40" loading=lazy align=left } cerbos
+
+    ---
+
+    ??? example "Examples"
+        - cerbos/cerbos#3002
+
+
 -   ![](https://github.com/certbot.png?size=40){ width="40" loading=lazy align=left } certbot
 
     ---
@@ -458,12 +466,28 @@
         - Electric-Coin-Company/zcash-light-client-ffi#186
 
 
+-   ![](https://github.com/element-hq.png?size=40){ width="40" loading=lazy align=left } element-hq
+
+    ---
+
+    ??? example "Examples"
+        - element-hq/element-desktop#2877
+
+
 -   ![](https://github.com/elixir-lang.png?size=40){ width="40" loading=lazy align=left } elixir-lang
 
     ---
 
     ??? example "Examples"
         - elixir-lang/elixir#15114
+
+
+-   ![](https://github.com/emberjs.png?size=40){ width="40" loading=lazy align=left } emberjs
+
+    ---
+
+    ??? example "Examples"
+        - emberjs/ember.js#21185
 
 
 -   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl
@@ -496,6 +520,14 @@
 
     ??? example "Examples"
         - fatiando/harmonica#550
+
+
+-   ![](https://github.com/flatironinstitute.png?size=40){ width="40" loading=lazy align=left } flatironinstitute
+
+    ---
+
+    ??? example "Examples"
+        - flatironinstitute/nemos#520
 
 
 -   ![](https://github.com/Flexget.png?size=40){ width="40" loading=lazy align=left } Flexget
@@ -941,6 +973,14 @@
 
     ??? example "Examples"
         - matplotlib/matplotlib#29251
+
+
+-   ![](https://github.com/matrix-org.png?size=40){ width="40" loading=lazy align=left } matrix-org
+
+    ---
+
+    ??? example "Examples"
+        - matrix-org/matrix-js-sdk#5212
 
 
 -   ![](https://github.com/maxmind.png?size=40){ width="40" loading=lazy align=left } maxmind
@@ -1795,6 +1835,14 @@
 
     ??? example "Examples"
         - Unidata/MetPy#3710
+
+
+-   ![](https://github.com/updatecli.png?size=40){ width="40" loading=lazy align=left } updatecli
+
+    ---
+
+    ??? example "Examples"
+        - updatecli/updatecli#7865
 
 
 -   ![](https://github.com/urllib3.png?size=40){ width="40" loading=lazy align=left } urllib3
