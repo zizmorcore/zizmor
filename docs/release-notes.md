@@ -36,6 +36,9 @@ of `zizmor`.
 * The SARIF output format now adds `zizmor/confidence`, `zizmor/persona` and `zizmor/severity`
   to the `properties` of findings (#1656)
 
+* Added [awalsh128/cache-apt-pkgs-action](https://github.com/awalsh128/cache-apt-pkgs-action)
+  as a cache-aware action to the cache-poisoning audit (#1708)
+
 ### Changes ⚠️
 
 * SARIF categories have been regraded. `zizmor`'s "medium" is changed from SARIF's "warning" to "low" (#1635)
@@ -92,6 +95,15 @@ of `zizmor`.
 * Fixed a bug where deserialization of a workflow containing fractional
   minutes would fail (#1675)
 
+* Fixed a bug where deserialization of a workflow where a `workflow_run`
+  with a scalar `types` would fail (#1676)
+
+* Fixed a bug where `zizmor` would crash on workflows containing bare
+  numeric values in `if:` conditions (#1683)
+
+* Fixed a bug where GitHub Actions expression string comparisons were
+  not case-insensitive (#1687)
+  
 * Fixed a bug where the [concurrency-limits] audit reported findings
   at the job level instead of the workflow level (#1627)
 

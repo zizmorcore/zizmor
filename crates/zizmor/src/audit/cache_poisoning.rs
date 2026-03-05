@@ -17,7 +17,7 @@ use yamlpatch::{Op, Patch};
 
 use super::AuditLoadError;
 
-/// The list of know cache-aware actions
+/// The list of known cache-aware actions
 /// In the future we can easily retrieve this list from the static API,
 /// since it should be easily serializable
 #[allow(clippy::unwrap_used)]
@@ -215,6 +215,8 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 satisfied_by_default: true,
             },
         },
+        // https://github.com/awalsh128/cache-apt-pkgs-action/blob/master/action.yml
+        ActionCoordinate::NotConfigurable("awalsh128/cache-apt-pkgs-action".parse().unwrap()),
     ]
 });
 

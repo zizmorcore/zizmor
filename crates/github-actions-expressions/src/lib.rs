@@ -817,7 +817,8 @@ impl PartialEq for EvaluationSema<'_> {
             (Evaluation::Null, Evaluation::Null) => true,
             (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a == b,
             (Evaluation::Number(a), Evaluation::Number(b)) => a == b,
-            (Evaluation::String(a), Evaluation::String(b)) => a == b,
+            // GitHub Actions string comparisons are case-insensitive.
+            (Evaluation::String(a), Evaluation::String(b)) => a.to_uppercase() == b.to_uppercase(),
 
             // Coercion rules: all others convert to number and compare.
             (a, b) => a.as_number() == b.as_number(),
@@ -831,7 +832,9 @@ impl PartialOrd for EvaluationSema<'_> {
             (Evaluation::Null, Evaluation::Null) => Some(std::cmp::Ordering::Equal),
             (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a.partial_cmp(b),
             (Evaluation::Number(a), Evaluation::Number(b)) => a.partial_cmp(b),
-            (Evaluation::String(a), Evaluation::String(b)) => a.partial_cmp(b),
+            (Evaluation::String(a), Evaluation::String(b)) => {
+                a.to_uppercase().partial_cmp(&b.to_uppercase())
+            }
             // Coercion rules: all others convert to number and compare.
             (a, b) => a.as_number().partial_cmp(&b.as_number()),
         }
@@ -1521,6 +1524,57 @@ mod tests {
             (
                 "startsWith(format('prefix_{0}', 'test'), 'prefix')",
                 Evaluation::Boolean(true),
+            ),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_case_insensitive_string_comparison() -> Result<()> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // == is case-insensitive for strings
+            ("'hello' == 'hello'", Evaluation::Boolean(true)),
+            ("'hello' == 'HELLO'", Evaluation::Boolean(true)),
+            ("'Hello' == 'hELLO'", Evaluation::Boolean(true)),
+            ("'abc' == 'def'", Evaluation::Boolean(false)),
+            // != is case-insensitive for strings
+            ("'hello' != 'HELLO'", Evaluation::Boolean(false)),
+            ("'abc' != 'def'", Evaluation::Boolean(true)),
+            // Comparison operators are case-insensitive for strings
+            ("'abc' < 'DEF'", Evaluation::Boolean(true)),
+            ("'ABC' < 'def'", Evaluation::Boolean(true)),
+            ("'abc' >= 'ABC'", Evaluation::Boolean(true)),
+            ("'ABC' <= 'abc'", Evaluation::Boolean(true)),
+            // Greek sigma: ς (final) and σ (non-final) both uppercase to Σ.
+            // This is why we use to_uppercase() instead of to_lowercase().
+            ("'\u{03C3}' == '\u{03C2}'", Evaluation::Boolean(true)), // σ == ς
+            ("'\u{03A3}' == '\u{03C3}'", Evaluation::Boolean(true)), // Σ == σ
+            ("'\u{03A3}' == '\u{03C2}'", Evaluation::Boolean(true)), // Σ == ς
+            // Array contains with case-insensitive string matching
+            (
+                "contains(fromJSON('[\"Hello\", \"World\"]'), 'hello')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "contains(fromJSON('[\"hello\", \"world\"]'), 'WORLD')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "contains(fromJSON('[\"ABC\"]'), 'abc')",
+                Evaluation::Boolean(true),
+            ),
+            (
+                "contains(fromJSON('[\"abc\"]'), 'def')",
+                Evaluation::Boolean(false),
             ),
         ];
 
