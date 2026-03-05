@@ -273,7 +273,7 @@ by GitHub come with built-in caching functionality, like @actions/setup-node,
 Furthermore, there are many examples of community-driven Actions with built-in
 caching functionality, like @ruby/setup-ruby, @astral-sh/setup-uv,
 @Swatinem/rust-cache. In general, most of them build on top of @actions/toolkit
-for the sake of easily integrate with GitHub cache server at Workflow runtime.
+for the sake of easily integrating with GitHub cache server at Workflow runtime.
 
 This vulnerability happens when release workflows leverage build state cached
 from previous workflow executions, in general on top of the aforementioned
