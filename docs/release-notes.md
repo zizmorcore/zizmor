@@ -36,6 +36,9 @@ of `zizmor`.
 * The SARIF output format now adds `zizmor/confidence`, `zizmor/persona` and `zizmor/severity`
   to the `properties` of findings (#1656)
 
+* Added [awalsh128/cache-apt-pkgs-action](https://github.com/awalsh128/cache-apt-pkgs-action)
+  as a cache-aware action to the cache-poisoning audit (#1708)
+
 ### Changes ⚠️
 
 * SARIF categories have been regraded. `zizmor`'s "medium" is changed from SARIF's "warning" to "low" (#1635)
