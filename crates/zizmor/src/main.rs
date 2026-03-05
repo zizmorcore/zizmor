@@ -768,6 +768,12 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         .from_env()
         .expect("failed to parse RUST_LOG");
 
+    // HACK: The current alpha release of http-cache (via http-cache-reqwest)
+    // emits a lot of noisy WARN-level logs about invalid cache entries
+    // due to their bincode -> postcard migration. These aren't actionable for us.
+    #[allow(clippy::unwrap_used)]
+    let filter = filter.add_directive("http_cache::managers::cacache=error".parse().unwrap());
+
     let reg = tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
