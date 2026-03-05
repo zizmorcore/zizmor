@@ -59,6 +59,7 @@ cakephp/cakephp#18081
 canonical/operator#1656
 canonical/operator#1721
 canonical/testflinger#630
+cerbos/cerbos#3002
 certbot/josepy#193
 coder/coder#19459
 conda/conda-lock#814
@@ -92,11 +93,14 @@ earthobservations/wetterdienst#1440
 edgelesssys/contrast#1604
 EFForg/rayhunter#711
 Electric-Coin-Company/zcash-light-client-ffi#186
+element-hq/element-desktop#2877
 elixir-lang/elixir#15114
+emberjs/ember.js#21185
 esl/MongooseIM#4435
 ethereum/hevm#615
 external-secrets/external-secrets#5368
 fatiando/harmonica#550
+flatironinstitute/nemos#520
 Flexget/Flexget#4299
 foyer-rs/foyer#859
 fpgmaas/deptry#972
@@ -191,6 +195,7 @@ lmstudio-ai/venvstacks#51
 louislam/uptime-kuma#6575
 maplibre/martin#2440
 matplotlib/matplotlib#29251
+matrix-org/matrix-js-sdk#5212
 marcusvolz/strava_py#53
 maxmind/mmdbinspect#82
 maxmind/MaxMind-DB-Reader-python#178
@@ -374,6 +379,7 @@ trifectatechfoundation/sudo-rs#1490
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710
+updatecli/updatecli#7865
 urllib3/urllib3#3528
 uutils/coreutils#6973
 ViaVersion/ViaVersion#4315
