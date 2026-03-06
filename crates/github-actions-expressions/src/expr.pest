@@ -51,9 +51,13 @@ primary_expr = {
 }
 
 /// Numbers
-// TODO: Support hex numbers and exponent forms?
-// Unclear whether these are supported by Actions itself.
-number = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT+)? }
+/// Supports decimal (with optional sign and scientific notation), hex (0x), and octal (0o).
+/// See: <https://github.com/actions/runner/blob/main/src/Sdk/DTExpressions2/Expressions2/Sdk/ExpressionUtility.cs>
+number = @{
+    "0x" ~ ASCII_HEX_DIGIT+
+  | "0o" ~ ('0'..'7')+
+  | ("+" | "-")? ~ (ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT*)? | "." ~ ASCII_DIGIT+) ~ (("e" | "E") ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+}
 
 /// Strings
 string       = ${ "'" ~ string_inner ~ "'" }
