@@ -122,7 +122,7 @@ impl Audit for ConcurrencyLimits {
 
                     for job in &jobs_missing_concurrency {
                         finding_builder = finding_builder.add_location(
-                            job.location()
+                            job.location_with_grip()
                                 .annotated("job affected by missing workflow concurrency"),
                         );
                     }

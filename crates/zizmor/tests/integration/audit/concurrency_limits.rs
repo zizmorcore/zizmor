@@ -27,20 +27,15 @@ fn test_missing() -> anyhow::Result<()> {
                 .run()?,
     @"
     help[concurrency-limits]: insufficient job-level concurrency limits
-      --> @@INPUT@@:2:1
-       |
-     2 |   on: push
-       |   ^^^^^^^^ workflow is missing concurrency setting
+     --> @@INPUT@@:2:1
+      |
+    2 | on: push
+      | ^^^^^^^^ workflow is missing concurrency setting
     ...
-     6 | /   job:
-     7 | |     name: some-job
-     8 | |     runs-on: ubuntu-latest
-     9 | |     steps:
-    10 | |     - name: 1-ok
-    11 | |       run: echo ok
-       | |___________________- job affected by missing workflow concurrency
-       |
-       = note: audit confidence → High
+    7 |     name: some-job
+      |     -------------- job affected by missing workflow concurrency
+      |
+      = note: audit confidence → High
 
     1 finding: 0 informational, 1 low, 0 medium, 0 high
     "
@@ -97,16 +92,11 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
     help[concurrency-limits]: insufficient job-level concurrency limits
       --> @@INPUT@@:2:1
        |
-     2 |   on: push
-       |   ^^^^^^^^ workflow is missing concurrency setting
+     2 | on: push
+       | ^^^^^^^^ workflow is missing concurrency setting
     ...
-    13 | /   job2:
-    14 | |     name: job-2
-    15 | |     runs-on: ubuntu-latest
-    16 | |     steps:
-    17 | |     - name: 2-ok
-    18 | |       run: echo ok
-       | |___________________- job affected by missing workflow concurrency
+    14 |     name: job-2
+       |     ----------- job affected by missing workflow concurrency
        |
        = note: audit confidence → High
 
