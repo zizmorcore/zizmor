@@ -501,22 +501,26 @@ sensitive `zizmor`'s analyses are:
     security decision by the workflow/action author).
 
     For example, using the pedantic persona will flag the following
-    with an `unpinned-uses` finding, since it uses a symbolic reference
-    as its pin instead of a hashed pin:
+    with a `template-injection` finding, since it uses a template
+    expansion in a `#!yaml run:` block, even though the expansion
+    itself is not attacker-controllable:
 
     ```yaml
-    uses: actions/checkout@v3
+    run: |
+      echo "running with ${{ github.event_name }}"
     ```
 
     produces:
 
     ```console
-    $ zizmor --pedantic tests/test-data/unpinned-uses.yml
-    help[unpinned-uses]: unpinned action reference
-      --> tests/test-data/unpinned-uses.yml:14:9
+    $ zizmor --pedantic example.yml
+     help[template-injection]: code injection via template expansion
+       --> crates/zizmor/tests/integration/test-data/neutral.yml:22:34
        |
-    14 |       - uses: actions/checkout@v3
-       |         ------------------------- help: action is not pinned to a hash ref
+    21 |       - run: |
+       |         --- this run block
+    22 |           echo "running with ${{ github.event_name }}"
+       |                                  ^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
        |
        = note: audit confidence → High
     ```
