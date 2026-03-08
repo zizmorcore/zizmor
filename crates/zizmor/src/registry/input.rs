@@ -2,6 +2,7 @@
 
 use std::{
     collections::{BTreeMap, btree_map},
+    io::Read as _,
     path::PathBuf,
     str::FromStr as _,
 };
@@ -196,15 +197,25 @@ pub(crate) struct RemoteKey {
     path: Utf8PathBuf,
 }
 
+/// A key for input read from standard input.
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
+pub(crate) struct StdinKey {
+    /// The group this input belongs to.
+    #[serde(skip)]
+    group: Group,
+}
+
 /// A unique identifying "key" for an input in a given run of zizmor.
 ///
-/// zizmor currently knows two different kinds of keys: local keys
-/// are just canonical paths to files on disk, while remote keys are
-/// relative paths within a referenced GitHub repository.
+/// zizmor currently knows three different kinds of keys: local keys
+/// are canonical paths to files on disk, remote keys are relative
+/// paths within a referenced GitHub repository, and stdin keys
+/// represent input read from standard input.
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) enum InputKey {
     Local(LocalKey),
     Remote(RemoteKey),
+    Stdin(StdinKey),
 }
 
 impl std::fmt::Display for InputKey {
@@ -222,6 +233,7 @@ impl std::fmt::Display for InputKey {
                     path = remote.path
                 )
             }
+            InputKey::Stdin(_) => write!(f, "<stdin>"),
         }
     }
 }
@@ -232,6 +244,12 @@ impl InputKey {
             group,
             prefix: prefix.map(|p| p.as_ref().to_path_buf()),
             given_path: path.as_ref().to_path_buf(),
+        })
+    }
+
+    pub(crate) fn stdin() -> Self {
+        Self::Stdin(StdinKey {
+            group: Group::from("-"),
         })
     }
 
@@ -266,6 +284,7 @@ impl InputKey {
                 .unwrap_or_else(|| &local.given_path)
                 .as_str(),
             InputKey::Remote(remote) => remote.path.as_str(),
+            InputKey::Stdin(_) => "<stdin>",
         }
     }
 
@@ -277,6 +296,7 @@ impl InputKey {
         match self {
             InputKey::Local(local) => local.given_path.as_str(),
             InputKey::Remote(remote) => remote.path.as_str(),
+            InputKey::Stdin(_) => "<stdin>",
         }
     }
 
@@ -293,6 +313,7 @@ impl InputKey {
                 .path
                 .file_name()
                 .expect("expected input key to have a filename component"),
+            InputKey::Stdin(_) => "<stdin>",
         }
     }
 
@@ -301,6 +322,7 @@ impl InputKey {
         match self {
             InputKey::Local(local) => &local.group,
             InputKey::Remote(remote) => &remote.group,
+            InputKey::Stdin(stdin) => &stdin.group,
         }
     }
 }
@@ -549,11 +571,74 @@ impl InputGroup {
         Ok(group)
     }
 
+    async fn collect_from_stdin(options: &CollectionOptions) -> Result<Self, CollectionError> {
+        let mut contents = String::new();
+        std::io::stdin()
+            .read_to_string(&mut contents)
+            .map_err(CollectionError::Io)?;
+
+        let mut group = Self::new(Config::default());
+        let key = InputKey::stdin();
+
+        // Infer the input type by trying each parser in order.
+        // We try workflow first since it's the most common stdin use case,
+        // followed by action and then dependabot.
+        //
+        // We collect errors from all attempted types so that, if none
+        // succeed, the user gets context about every failed attempt
+        // rather than a single misleading error.
+        let mut errors: Vec<(InputKind, CollectionError)> = Vec::new();
+
+        for kind in [
+            InputKind::Workflow,
+            InputKind::Action,
+            InputKind::Dependabot,
+        ] {
+            match group.register(kind, contents.clone(), key.clone(), true) {
+                Ok(()) => return Ok(group),
+                Err(e) if matches!(e.inner(), CollectionError::Syntax(_)) => {
+                    // YAML itself is invalid; no point trying other types.
+                    if options.strict {
+                        return Err(e);
+                    }
+                    tracing::warn!("stdin: {e}");
+                    return Ok(group);
+                }
+                Err(e) => {
+                    tracing::debug!("stdin: failed to parse as {kind}: {e}");
+                    errors.push((kind, e));
+                }
+            }
+        }
+
+        // All types failed. Log all errors so the user can see why
+        // each type failed, rather than getting a single misleading error.
+        for (kind, err) in &errors {
+            tracing::warn!("stdin: failed to parse as {kind}: {err}");
+        }
+
+        if options.strict {
+            // In strict mode, return the workflow error as the primary error
+            // since it's the most common stdin use case.
+            let (_kind, first_err) = errors
+                .into_iter()
+                .next()
+                .expect("at least one parse was attempted");
+            return Err(first_err);
+        }
+
+        Ok(group)
+    }
+
     pub(crate) async fn collect(
         request: &str,
         options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
+        if request == "-" {
+            return Self::collect_from_stdin(options).await;
+        }
+
         let path = Utf8Path::new(request);
 
         if path.is_file() {
