@@ -757,7 +757,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1152,9 +1152,9 @@ dependencies = [
 
 [[package]]
 name = "http-cache"
-version = "1.0.0-alpha.4"
+version = "1.0.0-alpha.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a4323fbf07a4c72dbf3a5909494443109797529102b1a1637597854c0468d7e"
+checksum = "3ebe156dd658fb9031e773f54eed6ae2b5bd12b3ddfb71e456bbc10ae63f4012"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1177,9 +1177,9 @@ dependencies = [
 
 [[package]]
 name = "http-cache-reqwest"
-version = "1.0.0-alpha.4"
+version = "1.0.0-alpha.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2adcbeffc1b74be1e8e43739c71082c17320f382349db1fbbf4f8734157aabf1"
+checksum = "42fed00fde0c81a9e473920a04aeaf879c1abb8a5435769bea707c7d776e8d1c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1196,9 +1196,9 @@ dependencies = [
 
 [[package]]
 name = "http-cache-semantics"
-version = "2.1.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92baf25cf0b8c9246baecf3a444546360a97b569168fdf92563ee6a47829920c"
+checksum = "0603b99309a1e404c2c0945650c0f775b50bb72ac90ae570cb93f9ff05d9efe7"
 dependencies = [
  "http",
  "http-serde",
@@ -1795,7 +1795,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2418,7 +2418,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3032,7 +3032,7 @@ dependencies = [
  "getrandom 0.3.4",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3801,7 +3801,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
