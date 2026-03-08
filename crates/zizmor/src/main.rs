@@ -95,15 +95,15 @@ struct App {
     offline: bool,
 
     /// The GitHub API token to use [env: GH_TOKEN or GITHUB_TOKEN or ZIZMOR_GITHUB_TOKEN]
-    #[arg(long, env, hide_env = true, value_parser = GitHubToken::new, conflicts_with_all = ["github_token", "zizmor_github_token"])]
+    #[arg(long, env, hide_env = true, value_parser = GitHubToken::new)]
     gh_token: Option<GitHubToken>,
 
     /// This is an alias for `--gh-token` / `GH_TOKEN`.
-    #[arg(long, env, hide = true, value_parser = GitHubToken::new, conflicts_with_all = ["gh_token", "zizmor_github_token"])]
+    #[arg(long, env, hide = true, value_parser = GitHubToken::new)]
     github_token: Option<GitHubToken>,
 
     /// This is an alias for `--gh-token` / `GH_TOKEN` / `--github-token` / `GITHUB_TOKEN`
-    #[arg(long, env, hide = true, value_parser = GitHubToken::new, conflicts_with_all = ["gh_token", "github_token"])]
+    #[arg(long, env, hide = true, value_parser = GitHubToken::new)]
     zizmor_github_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com

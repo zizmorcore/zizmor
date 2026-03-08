@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would error if given both a `GH_TOKEN` and
+  a `GITHUB_TOKEN` (or `ZIZMOR_GITHUB_TOKEN`) via the environment (#1724)
+
 ### New Features 🌈
 
 * **New audit**: [secrets-outside-env] detects usage of the `secrets` context
