@@ -9,10 +9,14 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.23.1
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would error if given both a `GH_TOKEN` and
   a `GITHUB_TOKEN` (or `ZIZMOR_GITHUB_TOKEN`) via the environment (#1724)
+
+## 1.23.0
 
 ### New Features 🌈
 
