@@ -583,30 +583,24 @@ impl InputGroup {
         // Workflow is tried first since it's the most common stdin use case.
         // We always use strict=true so schema mismatches surface as errors,
         // letting us fall through to the next type.
-        let workflow_err = match group.register(
-            InputKind::Workflow,
-            contents.clone(),
-            key.clone(),
-            true,
-        ) {
-            Ok(()) => return Ok(group),
-            Err(e) if matches!(e.inner(), CollectionError::Syntax(_)) => {
-                // YAML itself is invalid; no point trying other types.
-                if options.strict {
-                    return Err(e);
+        let workflow_err =
+            match group.register(InputKind::Workflow, contents.clone(), key.clone(), true) {
+                Ok(()) => return Ok(group),
+                Err(e) if matches!(e.inner(), CollectionError::Syntax(_)) => {
+                    // YAML itself is invalid; no point trying other types.
+                    if options.strict {
+                        return Err(e);
+                    }
+                    tracing::warn!("stdin: {e}");
+                    return Ok(group);
                 }
-                tracing::warn!("stdin: {e}");
-                return Ok(group);
-            }
-            Err(e) => {
-                tracing::debug!("stdin: failed to parse as workflow: {e}");
-                e
-            }
-        };
+                Err(e) => {
+                    tracing::debug!("stdin: failed to parse as workflow: {e}");
+                    e
+                }
+            };
 
-        if let Ok(()) =
-            group.register(InputKind::Action, contents.clone(), key.clone(), true)
-        {
+        if let Ok(()) = group.register(InputKind::Action, contents.clone(), key.clone(), true) {
             return Ok(group);
         }
 
@@ -620,9 +614,7 @@ impl InputGroup {
             return Err(workflow_err);
         }
 
-        tracing::warn!(
-            "stdin: could not parse as any known input type: {workflow_err}"
-        );
+        tracing::warn!("stdin: could not parse as any known input type: {workflow_err}");
         Ok(group)
     }
 
