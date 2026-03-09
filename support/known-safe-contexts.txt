@@ -27,6 +27,7 @@ github.repositoryurl
 # Information about the GitHub repository owner (account/org or ID)
 github.repository_owner
 github.repository_owner_id
+github.triggering_actor
 
 # Unique numbers assigned by GitHub for workflow runs
 github.run_attempt

@@ -11,6 +11,19 @@ of `zizmor`.
 
 ### New Features 🌈
 
+* `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
+
+## 1.23.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would error if given both a `GH_TOKEN` and
+  a `GITHUB_TOKEN` (or `ZIZMOR_GITHUB_TOKEN`) via the environment (#1724)
+
+## 1.23.0
+
+### New Features 🌈
+
 * **New audit**: [secrets-outside-env] detects usage of the `secrets` context
   in jobs that don't have a corresponding `environment` (#1599)
 
@@ -29,6 +42,19 @@ of `zizmor`.
 
 * `zizmor` now flags missing cooldowns on `opentofu` ecosystem definitions
   in Dependabot (again) (#1586)
+
+* `zizmor` now reads the `ZIZMOR_GITHUB_TOKEN` environment variable as an
+  alias/equivalent for `GH_TOKEN` and `GITHUB_TOKEN` (#1641)
+
+* The SARIF output format now adds `zizmor/confidence`, `zizmor/persona` and `zizmor/severity`
+  to the `properties` of findings (#1656)
+
+* Added [awalsh128/cache-apt-pkgs-action](https://github.com/awalsh128/cache-apt-pkgs-action)
+  as a cache-aware action to the cache-poisoning audit (#1708)
+
+### Changes ⚠️
+
+* SARIF categories have been regraded. `zizmor`'s "medium" is changed from SARIF's "warning" to "low" (#1635)
 
 ### Bug Fixes 🐛
 
@@ -60,6 +86,36 @@ of `zizmor`.
 
 * Fixed a bug where the [concurrency-limits] audit would incorrectly flag
   reusable-only workflows as needing a `#!yaml concurrency:` key (#1620)
+
+* Fixed a bug where the [known-vulnerable-actions] audit would fail
+  when applying some fixes (#1640)
+
+    Many thanks to @reubenwong97 for implementing this fix!
+
+* Fixed a bug where the `pre-commit` ecosystem was not recognized in
+  Dependabot configuration files (#1637)
+
+* Fixed a bug where the [template-injection] audit would incorrectly
+  flag `github.triggering_actor` as an injection risk in the default
+  persona (#1645)
+
+* Fixed a bug where `zizmor`'s expression parser did not correctly handle
+  number literals in GitHub Actions expressions (#1625)
+
+* Fixed a bug where the [template-injection] audit would crash on some
+  forms of multi-line expressions (#1669)
+
+* Fixed a bug where deserialization of a workflow containing fractional
+  minutes would fail (#1675)
+
+* Fixed a bug where deserialization of a workflow where a `workflow_run`
+  with a scalar `types` would fail (#1676)
+
+* Fixed a bug where `zizmor` would crash on workflows containing bare
+  numeric values in `if:` conditions (#1683)
+
+* Fixed a bug where GitHub Actions expression string comparisons were
+  not case-insensitive (#1687)
 
 ## 1.22.0
 
@@ -1500,5 +1556,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [impostor-commit]: ./audits.md#impostor-commit
 [misfeature]: ./audits.md#misfeature
 [secrets-outside-env]: ./audits.md#secrets-outside-env
+[superfluous-actions]: ./audits.md#superfluous-actions
 
 [exit code]: ./usage.md#exit-codes

@@ -273,7 +273,7 @@ by GitHub come with built-in caching functionality, like @actions/setup-node,
 Furthermore, there are many examples of community-driven Actions with built-in
 caching functionality, like @ruby/setup-ruby, @astral-sh/setup-uv,
 @Swatinem/rust-cache. In general, most of them build on top of @actions/toolkit
-for the sake of easily integrate with GitHub cache server at Workflow runtime.
+for the sake of easily integrating with GitHub cache server at Workflow runtime.
 
 This vulnerability happens when release workflows leverage build state cached
 from previous workflow executions, in general on top of the aforementioned
@@ -1327,6 +1327,12 @@ environment's [protection rules].
 Consequently, configuring secrets at the environment level ensures that they're
 only exposed to jobs that meet the environment's protection rules, mitigating
 the risk of secrets being exposed to untrusted code or compromised workflows.
+
+!!! tip
+
+    The `secrets.GITHUB_TOKEN` secret is a special case, and is not flagged
+    by this audit. This is because the permissions of the `GITHUB_TOKEN`
+    secret are entirely determined by the workflow and job-level permissions.
 
 ### Remediation
 

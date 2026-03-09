@@ -4,12 +4,14 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      release-tag:
+        type: string
+        description: "The tag to release (e.g., v1.0.0)"
+        required: true
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   linux:
@@ -41,7 +43,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path crates/zizmor/Cargo.toml
@@ -71,7 +73,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path crates/zizmor/Cargo.toml
@@ -97,7 +99,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path crates/zizmor/Cargo.toml
@@ -122,7 +124,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build wheels
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path crates/zizmor/Cargo.toml
@@ -140,7 +142,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build sdist
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
+        uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           command: sdist
           args: --out dist --manifest-path crates/zizmor/Cargo.toml
@@ -156,16 +158,18 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/zizmor
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ inputs.release-tag != '' }}
     needs: [linux, musllinux, windows, macos, sdist]
     permissions:
       id-token: write # Trusted Publishing + PEP 740 attestations
     steps:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-      - name: Attest
-        uses: astral-sh/attest-action@2c727738cea36d6c97dd85eb133ea0e0e8fe754b # v0.0.4
-        with:
-          paths: "wheels-*/*"
+      # TODO: Re-enable attestations once reusable workflows work.
+      # - name: Attest
+      #   uses: astral-sh/attest-action@f35111fb79f1e4f0150a1ee16cfd4399e3151bdb # v0.0.5
+      #   with:
+      #     paths: "wheels-*/*"
+      - uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
       - name: Publish to PyPI
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        if: ${{ inputs.release-tag != '' }}
         run: uv publish --trusted-publishing=always wheels-*/*

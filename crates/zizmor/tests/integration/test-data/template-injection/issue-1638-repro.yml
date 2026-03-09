@@ -1,0 +1,19 @@
+# See: https://github.com/zizmorcore/zizmor/issues/1638
+
+name: issue-1638-repro
+
+on: issues
+
+permissions: {}
+
+concurrency:
+  group: issue-1638-repro
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: test
+        run: echo "${{ github.triggering_actor }}"

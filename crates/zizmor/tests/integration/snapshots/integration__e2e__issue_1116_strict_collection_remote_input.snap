@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
-expression: "zizmor().offline(false).expects_failure(true).output(OutputMode::Stderr).args([\"--strict-collection\"]).input(\"woodruffw-experiments/zizmor-issue-1116@f41c414\").run()?"
+expression: "zizmor().offline(false).expects_failure(1).output(OutputMode::Stderr).args([\"--strict-collection\"]).input(\"woodruffw-experiments/zizmor-issue-1116@f41c414\").run()?"
 ---
 🌈 zizmor v@@VERSION@@
 fatal: no audit was performed
