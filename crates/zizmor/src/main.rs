@@ -1083,6 +1083,36 @@ async fn main() -> ExitCode {
                     }
                     _ => None,
                 },
+                Error::Audit { source, .. } => {
+                    let source_text = source.to_string().to_lowercase();
+                    let is_github_rate_limit = source_text.contains("403 forbidden")
+                        || source_text.contains("rate limit")
+                        || source_text.contains("couldn't list tags");
+
+                    if is_github_rate_limit {
+                        let group = Group::with_title(Level::ERROR.primary_title(
+                            "GitHub API request failed while running an audit".to_string(),
+                        ))
+                        .elements([
+                            Level::HELP.message(
+                                "this usually means your GitHub token is missing scopes or has hit a rate limit",
+                            ),
+                            Level::HELP.message(
+                                "set a token with --gh-token (or GH_TOKEN) that can read the target repository",
+                            ),
+                            Level::HELP.message(
+                                "retry after the rate limit resets, or rerun with --offline to skip GitHub API-dependent checks",
+                            ),
+                        ]);
+
+                        let renderer = Renderer::styled();
+                        let report = renderer.render(&[group]);
+
+                        Some(report)
+                    } else {
+                        None
+                    }
+                }
                 _ => None,
             };
 
