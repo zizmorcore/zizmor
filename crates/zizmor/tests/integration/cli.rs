@@ -268,9 +268,323 @@ jobs:
         .args(["--format=sarif", "-"])
         .run()?;
 
-    // Verify the output is valid JSON and contains <stdin> as the artifact.
-    assert!(output.contains("\"artifactLocation\""));
-    assert!(output.contains("<stdin>"));
+    insta::assert_snapshot!(output, @r#"
+    {
+      "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json",
+      "runs": [
+        {
+          "invocations": [
+            {
+              "executionSuccessful": true
+            }
+          ],
+          "results": [
+            {
+              "kind": "fail",
+              "level": "warning",
+              "locations": [
+                {
+                  "logicalLocations": [
+                    {
+                      "properties": {
+                        "symbolic": {
+                          "annotation": "does not set persist-credentials: false",
+                          "feature_kind": "Normal",
+                          "key": {
+                            "Stdin": {}
+                          },
+                          "kind": "Primary",
+                          "route": {
+                            "route": [
+                              {
+                                "Key": "jobs"
+                              },
+                              {
+                                "Key": "test"
+                              },
+                              {
+                                "Key": "steps"
+                              },
+                              {
+                                "Index": 0
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "message": {
+                    "text": "does not set persist-credentials: false"
+                  },
+                  "physicalLocation": {
+                    "artifactLocation": {
+                      "uri": "<stdin>"
+                    },
+                    "region": {
+                      "endColumn": 1,
+                      "endLine": 7,
+                      "snippet": {
+                        "text": "uses: actions/checkout@v3\n"
+                      },
+                      "sourceLanguage": "yaml",
+                      "startColumn": 9,
+                      "startLine": 6
+                    }
+                  }
+                }
+              ],
+              "message": {
+                "text": "credential persistence through GitHub Actions artifacts"
+              },
+              "properties": {
+                "zizmor/confidence": "Low",
+                "zizmor/persona": "Regular",
+                "zizmor/severity": "Medium"
+              },
+              "relatedLocations": [],
+              "ruleId": "zizmor/artipacked"
+            },
+            {
+              "kind": "fail",
+              "level": "warning",
+              "locations": [
+                {
+                  "logicalLocations": [
+                    {
+                      "properties": {
+                        "symbolic": {
+                          "annotation": "default permissions used due to no permissions: block",
+                          "feature_kind": "Normal",
+                          "key": {
+                            "Stdin": {}
+                          },
+                          "kind": "Primary",
+                          "route": {
+                            "route": [
+                              {
+                                "Key": "jobs"
+                              },
+                              {
+                                "Key": "test"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "message": {
+                    "text": "default permissions used due to no permissions: block"
+                  },
+                  "physicalLocation": {
+                    "artifactLocation": {
+                      "uri": "<stdin>"
+                    },
+                    "region": {
+                      "endColumn": 1,
+                      "endLine": 7,
+                      "snippet": {
+                        "text": "  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n"
+                      },
+                      "sourceLanguage": "yaml",
+                      "startColumn": 3,
+                      "startLine": 3
+                    }
+                  }
+                }
+              ],
+              "message": {
+                "text": "overly broad permissions"
+              },
+              "properties": {
+                "zizmor/confidence": "Medium",
+                "zizmor/persona": "Regular",
+                "zizmor/severity": "Medium"
+              },
+              "relatedLocations": [
+                {
+                  "logicalLocations": [
+                    {
+                      "properties": {
+                        "symbolic": {
+                          "annotation": "this job",
+                          "feature_kind": "Normal",
+                          "key": {
+                            "Stdin": {}
+                          },
+                          "kind": "Related",
+                          "route": {
+                            "route": [
+                              {
+                                "Key": "jobs"
+                              },
+                              {
+                                "Key": "test"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "message": {
+                    "text": "this job"
+                  },
+                  "physicalLocation": {
+                    "artifactLocation": {
+                      "uri": "<stdin>"
+                    },
+                    "region": {
+                      "endColumn": 1,
+                      "endLine": 7,
+                      "snippet": {
+                        "text": "  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n"
+                      },
+                      "sourceLanguage": "yaml",
+                      "startColumn": 3,
+                      "startLine": 3
+                    }
+                  }
+                }
+              ],
+              "ruleId": "zizmor/excessive-permissions"
+            },
+            {
+              "kind": "fail",
+              "level": "error",
+              "locations": [
+                {
+                  "logicalLocations": [
+                    {
+                      "properties": {
+                        "symbolic": {
+                          "annotation": "action is not pinned to a hash (required by blanket policy)",
+                          "feature_kind": {
+                            "Subfeature": {
+                              "after": 0,
+                              "fragment": {
+                                "Raw": "actions/checkout@v3"
+                              }
+                            }
+                          },
+                          "key": {
+                            "Stdin": {}
+                          },
+                          "kind": "Primary",
+                          "route": {
+                            "route": [
+                              {
+                                "Key": "jobs"
+                              },
+                              {
+                                "Key": "test"
+                              },
+                              {
+                                "Key": "steps"
+                              },
+                              {
+                                "Index": 0
+                              },
+                              {
+                                "Key": "uses"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "message": {
+                    "text": "action is not pinned to a hash (required by blanket policy)"
+                  },
+                  "physicalLocation": {
+                    "artifactLocation": {
+                      "uri": "<stdin>"
+                    },
+                    "region": {
+                      "endColumn": 34,
+                      "endLine": 6,
+                      "snippet": {
+                        "text": "actions/checkout@v3"
+                      },
+                      "sourceLanguage": "yaml",
+                      "startColumn": 15,
+                      "startLine": 6
+                    }
+                  }
+                }
+              ],
+              "message": {
+                "text": "unpinned action reference"
+              },
+              "properties": {
+                "zizmor/confidence": "High",
+                "zizmor/persona": "Regular",
+                "zizmor/severity": "High"
+              },
+              "relatedLocations": [],
+              "ruleId": "zizmor/unpinned-uses"
+            }
+          ],
+          "tool": {
+            "driver": {
+              "downloadUri": "https://github.com/zizmorcore/zizmor",
+              "informationUri": "https://docs.zizmor.sh",
+              "name": "zizmor",
+              "rules": [
+                {
+                  "help": {
+                    "markdown": "`artipacked`: credential persistence through GitHub Actions artifacts\n\nDocs: <https://docs.zizmor.sh/audits/#artipacked>",
+                    "text": "credential persistence through GitHub Actions artifacts"
+                  },
+                  "helpUri": "https://docs.zizmor.sh/audits/#artipacked",
+                  "id": "zizmor/artipacked",
+                  "name": "artipacked",
+                  "properties": {
+                    "tags": [
+                      "security"
+                    ]
+                  }
+                },
+                {
+                  "help": {
+                    "markdown": "`excessive-permissions`: overly broad permissions\n\nDocs: <https://docs.zizmor.sh/audits/#excessive-permissions>",
+                    "text": "overly broad permissions"
+                  },
+                  "helpUri": "https://docs.zizmor.sh/audits/#excessive-permissions",
+                  "id": "zizmor/excessive-permissions",
+                  "name": "excessive-permissions",
+                  "properties": {
+                    "tags": [
+                      "security"
+                    ]
+                  }
+                },
+                {
+                  "help": {
+                    "markdown": "`unpinned-uses`: unpinned action reference\n\nDocs: <https://docs.zizmor.sh/audits/#unpinned-uses>",
+                    "text": "unpinned action reference"
+                  },
+                  "helpUri": "https://docs.zizmor.sh/audits/#unpinned-uses",
+                  "id": "zizmor/unpinned-uses",
+                  "name": "unpinned-uses",
+                  "properties": {
+                    "tags": [
+                      "security"
+                    ]
+                  }
+                }
+              ],
+              "semanticVersion": "@@VERSION@@",
+              "version": "@@VERSION@@"
+            }
+          }
+        }
+      ],
+      "version": "2.1.0"
+    }
+    "#);
 
     Ok(())
 }
