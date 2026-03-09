@@ -61,6 +61,10 @@ impl Zizmor {
         // and `GH_TOKEN`.
         cmd.env_clear();
 
+        // Disable finding deduplication by default in tests, so that
+        // dedup doesn't silently mask distinct findings from audits.
+        cmd.env("ZIZMOR_NO_DEDUP", "1");
+
         Self {
             cmd,
             stdin: None,
@@ -134,6 +138,11 @@ impl Zizmor {
 
     pub fn show_audit_urls(mut self, flag: bool) -> Self {
         self.show_audit_urls = flag;
+        self
+    }
+
+    pub fn with_dedup(mut self) -> Self {
+        self.cmd.env_remove("ZIZMOR_NO_DEDUP");
         self
     }
 
