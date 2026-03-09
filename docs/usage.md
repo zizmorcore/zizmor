@@ -15,7 +15,6 @@ There are four input sources that `zizmor` knows about:
 2. "Local" GitHub repositories in the form of a directory, e.g. `my-repo/`;
 3. "Remote" GitHub repositories in the form of a "slug", e.g.
    `pypa/sampleproject`;
-4. Standard input, via `-`.
 
     !!! tip
 
@@ -41,6 +40,13 @@ There are four input sources that `zizmor` knows about:
         [GitHub API token permissions](#github-api-token-permissions) for more
         information.
 
+4. Standard input, via `-`.
+
+    !!! tip
+
+        Support for auditing from standard input is available in `v1.24.0`
+        and later.
+
 `zizmor` also supports reading a single input from standard input using `-`:
 
 ```bash
@@ -59,7 +65,7 @@ EOF
 ```
 
 When reading from stdin, `zizmor` automatically infers the input type
-(workflow, action, or Dependabot config) by trying each parser in order.
+(workflow, action, or Dependabot config).
 
 !!! note
 
