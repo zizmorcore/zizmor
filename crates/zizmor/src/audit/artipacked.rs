@@ -123,8 +123,9 @@ impl Artipacked {
                         // they probably mean it. Only report if in auditor mode.
                         vulnerable_checkouts.push((step, Persona::Auditor, is_v6_or_higher))
                     }
-                    // TODO: handle expressions here.
-                    // persist-credentials is true by default.
+                    Some(v) if ExplicitExpr::from_curly(v).is_some() => {
+                        vulnerable_checkouts.push((step, Persona::Pedantic, is_v6_or_higher));
+                    }
                     _ => vulnerable_checkouts.push((step, Persona::default(), is_v6_or_higher)),
                 }
             } else if uses.matches("actions/upload-artifact") {
@@ -589,6 +590,31 @@ jobs:
                           name: my-artifact
                           path: .
                 ");
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn test_persist_credentials_expression_pedantic() {
+        let workflow_content = r#"
+name: Test Expression
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: ${{ github.event_name == 'pull_request' }}
+"#;
+
+        test_workflow_audit!(
+            Artipacked,
+            "test_expression_pedantic.yml",
+            workflow_content,
+            |_workflow: &Workflow, findings: Vec<Finding>| {
+                assert_eq!(findings.len(), 1);
+                assert_eq!(findings[0].determinations.persona, Persona::Pedantic);
             }
         );
     }
