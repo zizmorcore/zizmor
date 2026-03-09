@@ -117,6 +117,9 @@ of `zizmor`.
 * Fixed a bug where GitHub Actions expression string comparisons were
   not case-insensitive (#1687)
 
+* Fixed a bug in `yamlpath` where resolving an alias to an anchored
+  scalar would navigate the wrong parent tree (#1732)
+
 ## 1.22.0
 
 ### Changes ⚠️

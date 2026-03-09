@@ -31,15 +31,37 @@ fn test_basic() -> Result<()> {
     error[template-injection]: code injection via template expansion
       --> @@INPUT@@:13:31
        |
-    12 |       - run: &run |
-       |         --- this run block
     13 |           "doing a thing: ${{ github.event.issue.title }}"
        |                               ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    14 |
+    15 |       - run: *run
+       |         --- this run block
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    3 findings (1 suppressed, 2 fixable): 0 informational, 0 low, 0 medium, 2 high
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:18:49
+       |
+    18 |         run: &print-info echo "Building ref ${{ github.ref }}"
+       |         --- this run block                      ^^^^^^^^^^ may expand into attacker-controllable code
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:18:49
+       |
+    18 |         run: &print-info echo "Building ref ${{ github.ref }}"
+       |                                                 ^^^^^^^^^^ may expand into attacker-controllable code
+    ...
+    21 |         run: *print-info
+       |         --- this run block
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    5 findings (1 suppressed, 4 fixable): 0 informational, 0 low, 0 medium, 4 high
     "#
     );
 
