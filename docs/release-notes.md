@@ -11,6 +11,19 @@ of `zizmor`.
 
 ### New Features 🌈
 
+* `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
+
+## 1.23.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would error if given both a `GH_TOKEN` and
+  a `GITHUB_TOKEN` (or `ZIZMOR_GITHUB_TOKEN`) via the environment (#1724)
+
+## 1.23.0
+
+### New Features 🌈
+
 * **New audit**: [secrets-outside-env] detects usage of the `secrets` context
   in jobs that don't have a corresponding `environment` (#1599)
 
@@ -35,6 +48,9 @@ of `zizmor`.
 
 * The SARIF output format now adds `zizmor/confidence`, `zizmor/persona` and `zizmor/severity`
   to the `properties` of findings (#1656)
+
+* Added [awalsh128/cache-apt-pkgs-action](https://github.com/awalsh128/cache-apt-pkgs-action)
+  as a cache-aware action to the cache-poisoning audit (#1708)
 
 ### Changes ⚠️
 
@@ -91,6 +107,18 @@ of `zizmor`.
 
 * Fixed a bug where deserialization of a workflow containing fractional
   minutes would fail (#1675)
+
+* Fixed a bug where deserialization of a workflow where a `workflow_run`
+  with a scalar `types` would fail (#1676)
+
+* Fixed a bug where `zizmor` would crash on workflows containing bare
+  numeric values in `if:` conditions (#1683)
+
+* Fixed a bug where GitHub Actions expression string comparisons were
+  not case-insensitive (#1687)
+
+* Fixed a bug in `yamlpath` where resolving an alias to an anchored
+  scalar would navigate the wrong parent tree (#1732)
 
 ## 1.22.0
 

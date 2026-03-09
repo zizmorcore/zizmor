@@ -24,6 +24,7 @@ apache/opennlp#736
 apache/sedona#1976
 apache/sedona#2582
 aquasecurity/trivy-action#502
+ariel-os/ariel-os#1738
 artichoke/artichoke#2825
 artichoke/boba#265
 artichoke/project-infrastructure#683
@@ -55,10 +56,14 @@ brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 bw2/ConfigArgParse#336
 cachix/git-hooks.nix#606
 cakephp/cakephp#18081
+Calysto/metakernel#344
+Calysto/octave_kernel#263
 canonical/operator#1656
 canonical/operator#1721
 canonical/testflinger#630
+cerbos/cerbos#3002
 certbot/josepy#193
+chatmail/core#7942
 coder/coder#19459
 conda/conda-lock#814
 containers/podman#27642
@@ -91,11 +96,15 @@ earthobservations/wetterdienst#1440
 edgelesssys/contrast#1604
 EFForg/rayhunter#711
 Electric-Coin-Company/zcash-light-client-ffi#186
+element-hq/element-desktop#2877
+element-hq/element-x-ios#5161
 elixir-lang/elixir#15114
+emberjs/ember.js#21185
 esl/MongooseIM#4435
 ethereum/hevm#615
 external-secrets/external-secrets#5368
 fatiando/harmonica#550
+flatironinstitute/nemos#520
 Flexget/Flexget#4299
 foyer-rs/foyer#859
 fpgmaas/deptry#972
@@ -129,6 +138,8 @@ grafana/rollout-operator#218
 grafana/synthetic-monitoring-app#1126
 grafana/tanka#1441
 great-expectations/airflow-provider-great-expectations#209
+google/osv.dev#4969
+google/osv-scanner#2591
 google/zerocop#2810
 google/zx#1067
 google/zx#1126
@@ -190,6 +201,7 @@ lmstudio-ai/venvstacks#51
 louislam/uptime-kuma#6575
 maplibre/martin#2440
 matplotlib/matplotlib#29251
+matrix-org/matrix-js-sdk#5212
 marcusvolz/strava_py#53
 maxmind/mmdbinspect#82
 maxmind/MaxMind-DB-Reader-python#178
@@ -259,6 +271,9 @@ praetorian-inc/noseyparker#228
 prettytable/prettytable#339
 privacyidea/privacyidea#4854
 prometheus/prometheus#16530
+prowler-cloud/prowler#10200
+prowler-cloud/prowler#10207
+prowler-cloud/prowler#10208
 psf/black#4901
 psf/black#4905
 psf/black#4906
@@ -309,6 +324,7 @@ reubeno/brush#534
 reubeno/brush#535
 rkyv/rkyv#611
 rolldown/rolldown#3861
+ruby/ruby#16273
 rubygems/rubygems.org#5350
 rubygems/rubygems#8702
 rustsec/advisory-db#2444
@@ -364,9 +380,12 @@ tornadoweb/tornado#3438
 tornadoweb/tornado#3463
 trailofbits/fickling#144
 trailofbits/fickling#177
+trifectatechfoundation/sudo-rs#1488
+trifectatechfoundation/sudo-rs#1490
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710
+updatecli/updatecli#7865
 urllib3/urllib3#3528
 uutils/coreutils#6973
 ViaVersion/ViaVersion#4315
@@ -376,6 +395,7 @@ wntrblm/nox#925
 WordPress/gutenberg#69126
 WordPress/wordpress-develop#8007
 wgsl-analyzer/wgsl-analyzer#844
+yamadashy/repomix#1212
 yt-dlp/yt-dlp#15324
 yt-dlp/yt-dlp#15387
 zama-ai/tfhe-rs#2292

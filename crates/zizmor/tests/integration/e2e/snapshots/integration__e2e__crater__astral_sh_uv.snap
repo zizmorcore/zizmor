@@ -1,0 +1,1339 @@
+---
+source: crates/zizmor/tests/integration/e2e/crater.rs
+expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"astral-sh/uv@8ed803e507f41937d55865ae88c8c806573b3b9e\").run()?"
+---
+🌈 zizmor v@@VERSION@@
+ INFO collect_inputs: zizmor::registry::input: collected 25 inputs from astral-sh/uv
+ INFO audit: zizmor: 🌈 completed .github/workflows/bench.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/build-dev-binaries.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/build-docker.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/build-release-binaries.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/check-docs.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/check-fmt.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/check-generated-files.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/check-lint.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/check-publish.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/check-release.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/check-zizmor.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/ci.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/publish-crates.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/publish-docs.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/publish-mirror.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/publish-pypi.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/publish-versions.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/release.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/sync-python-releases.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/test-ecosystem.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/test-integration.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/test-smoke.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/test-system.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/test-windows-trampolines.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/test.yml
+help[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/bench.yml:1:1
+    |
+  1 | / on:
+  2 | |   workflow_call:
+  3 | |     inputs:
+  4 | |       save-rust-cache:
+...   |
+135 | |           mode: simulation
+136 | |           token: ${{ secrets.CODSPEED_TOKEN }}
+    | |_______________________________________________^ this workflow
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this workflow a name
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/bench.yml:95:22
+   |
+63 |   benchmarks-walltime-run:
+   |   ----------------------- this job
+...
+95 |           token: ${{ secrets.CODSPEED_TOKEN }}
+   |                      ^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+   --> .github/workflows/bench.yml:136:22
+    |
+ 97 |   benchmarks-simulated:
+    |   -------------------- this job
+...
+136 |           token: ${{ secrets.CODSPEED_TOKEN }}
+    |                      ^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/build-dev-binaries.yml:165:18
+    |
+165 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
+    |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         |
+    |         this run block
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/build-dev-binaries.yml:170:32
+    |
+169 |         run: |
+    |         --- this run block
+170 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
+    |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/build-dev-binaries.yml:200:18
+    |
+200 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
+    |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         |
+    |         this run block
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/build-dev-binaries.yml:205:32
+    |
+204 |         run: |
+    |         --- this run block
+205 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
+    |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/build-dev-binaries.yml:1:1
+    |
+  1 | / on:
+  2 | |   workflow_call:
+  3 | |     inputs:
+  4 | |       save-rust-cache:
+...   |
+296 | |             chmod +x uv
+297 | |             ./uv --version
+    | |___________________________^ this workflow
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this workflow a name
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/build-docker.yml:253:57
+    |
+249 |         run: |
+    |         --- this run block
+...
+253 |           IFS=',' read -r BASE_IMAGE BASE_TAGS <<< "${{ matrix.image-mapping }}"
+    |                                                         ^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/build-release-binaries.yml:878:34
+    |
+877 |         run: |
+    |         --- this run block
+878 |           docker run --rm -v ${{ github.workspace }}:/io -w /io --env MODULE_NAME --env PACKAGE_NAME alpine:3.12 sh -c "
+    |                                  ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/build-release-binaries.yml:925:34
+    |
+924 |         run: |
+    |         --- this run block
+925 |           docker run --rm -v ${{ github.workspace }}:/io -w /io --env MODULE_NAME --env PACKAGE_NAME alpine:3.12 sh -c "
+    |                                  ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-docs.yml:1:1
+   |
+ 1 | / on:
+ 2 | |   workflow_call:
+ 3 | |
+ 4 | | permissions: {}
+...  |
+30 | |       - name: "Build docs"
+31 | |         run: uv run --only-group docs mkdocs build --strict -f mkdocs.yml
+   | |__________________________________________________________________________^ this workflow
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this workflow a name
+
+help[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-fmt.yml:1:1
+   |
+ 1 | / on:
+ 2 | |   workflow_call:
+ 3 | |
+ 4 | | permissions: {}
+...  |
+37 | |           version: "0.10.7"
+38 | |       - run: uvx ruff format --diff .
+   | |______________________________________^ this workflow
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this workflow a name
+
+info[anonymous-definition]: workflow or action definition without a name
+ --> .github/workflows/check-fmt.yml:7:3
+  |
+7 |   rust:
+  |   ^^^^ this job
+  |
+  = note: audit confidence → High
+  = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-fmt.yml:18:3
+   |
+18 |   prettier:
+   |   ^^^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-fmt.yml:27:3
+   |
+27 |   python:
+   |   ^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+help[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-generated-files.yml:1:1
+   |
+ 1 | / on:
+ 2 | |   workflow_call:
+ 3 | |     inputs:
+ 4 | |       schema-changed:
+...  |
+37 | |         if: ${{ inputs.schema-changed == 'true' }}
+38 | |         run: cargo dev generate-json-schema --mode check
+   | |_________________________________________________________^ this workflow
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this workflow a name
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/check-lint.yml:126:18
+    |
+126 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
+    |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         |
+    |         this run block
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/check-lint.yml:131:32
+    |
+130 |         run: |
+    |         --- this run block
+131 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
+    |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/check-lint.yml:1:1
+    |
+  1 | / on:
+  2 | |   workflow_call:
+  3 | |     inputs:
+  4 | |       code-changed:
+...   |
+164 | |           persist-credentials: false
+165 | |       - uses: crate-ci/typos@57b11c6b7e54c402ccd9cda953f1072ec4f78e33 # v1.43.5
+    | |________________________________________________________________________________^ this workflow
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this workflow a name
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-lint.yml:21:3
+   |
+21 |   ruff:
+   |   ^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-lint.yml:34:3
+   |
+34 |   ty:
+   |   ^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-lint.yml:52:3
+   |
+52 |   shellcheck:
+   |   ^^^^^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-lint.yml:68:3
+   |
+68 |   validate-pyproject:
+   |   ^^^^^^^^^^^^^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-lint.yml:81:3
+   |
+81 |   readme:
+   |   ^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/check-lint.yml:159:3
+    |
+159 |   typos:
+    |   ^^^^^ this job
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this job a name
+
+help[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-publish.yml:1:1
+   |
+ 1 | / on:
+ 2 | |   workflow_call:
+ 3 | |
+ 4 | | permissions: {}
+...  |
+24 | |       - name: "cargo publish dry-run"
+25 | |         run: cargo publish --workspace --dry-run
+   | |_________________________________________________^ this workflow
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this workflow a name
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/check-release.yml:1:1
+   |
+ 1 | / on:
+ 2 | |   workflow_call:
+ 3 | |
+ 4 | | jobs:
+...  |
+23 | |           echo "dist plan completed successfully"
+24 | |           cat plan-dist-manifest.json
+   | |______________________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/check-release.yml:5:3
+   |
+ 5 | /   dist-plan:
+ 6 | |     name: "dist plan"
+ 7 | |     runs-on: ubuntu-latest
+ 8 | |     env:
+...  |
+23 | |           echo "dist plan completed successfully"
+24 | |           cat plan-dist-manifest.json
+   | |                                      ^
+   | |                                      |
+   | |______________________________________this job
+   |                                        default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+help[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-release.yml:1:1
+   |
+ 1 | / on:
+ 2 | |   workflow_call:
+ 3 | |
+ 4 | | jobs:
+...  |
+23 | |           echo "dist plan completed successfully"
+24 | |           cat plan-dist-manifest.json
+   | |______________________________________^ this workflow
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this workflow a name
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/check-zizmor.yml:10:7
+   |
+10 |       security-events: write
+   |       ^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+help[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/check-zizmor.yml:1:1
+   |
+ 1 | / on:
+ 2 | |   workflow_call:
+ 3 | |
+ 4 | | permissions: {}
+...  |
+16 | |       - uses: zizmorcore/zizmor-action@0dce2577a4760a2749d8cfb7a84b7d5585ebcb7d # v0.5.0
+   | |_________________________________________________________________________________________^ this workflow
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this workflow a name
+
+info[anonymous-definition]: workflow or action definition without a name
+ --> .github/workflows/check-zizmor.yml:7:3
+  |
+7 |   zizmor:
+  |   ^^^^^^ this job
+  |
+  = note: audit confidence → High
+  = tip: use 'name: ...' to give this job a name
+
+help[undocumented-permissions]: permissions without explanatory comments
+   --> .github/workflows/ci.yml:160:7
+    |
+160 |       security-events: write
+    |       ^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+    |
+    = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+   --> .github/workflows/ci.yml:217:7
+    |
+217 |       id-token: write
+    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+    |
+    = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+   --> .github/workflows/ci.yml:254:7
+    |
+254 |       id-token: write
+    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+255 |       packages: write
+    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+256 |       attestations: write
+    |       ^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+    |
+    = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+   --> .github/workflows/ci.yml:284:7
+    |
+284 |       id-token: write
+    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/ci.yml:151:11
+    |
+151 |     uses: ./.github/workflows/check-docs.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+152 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/ci.yml:214:11
+    |
+214 |     uses: ./.github/workflows/test-integration.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+215 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/ci.yml:242:11
+    |
+242 |     uses: ./.github/workflows/build-release-binaries.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+243 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/ci.yml:248:11
+    |
+248 |     uses: ./.github/workflows/build-docker.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+...
+251 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/ci.yml:261:11
+    |
+261 |     uses: ./.github/workflows/bench.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+262 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/ci.yml:16:3
+   |
+16 |   plan:
+   |   ^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/publish-crates.yml:5:1
+   |
+ 5 | / name: "Publish to crates.io"
+ 6 | |
+ 7 | | on:
+ 8 | |   workflow_call:
+...  |
+32 | |         env:
+33 | |           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
+   | |____________________________________________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+info[use-trusted-publishing]: prefer trusted publishing for authentication
+  --> .github/workflows/publish-crates.yml:31:14
+   |
+31 |         run: cargo publish --workspace --no-verify
+   |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+   |         |
+   |         this step
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/publish-docs.yml:23:3
+   |
+23 |   mkdocs:
+   |   ^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+   --> .github/workflows/publish-docs.yml:5:1
+    |
+  5 | / name: mkdocs
+  6 | |
+  7 | | on:
+  8 | |   workflow_dispatch:
+...   |
+140 | |           sleep 10
+141 | |           gh pr merge --squash $branch_name
+    | |____________________________________________^ missing concurrency setting
+    |
+    = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/publish-docs.yml:86:32
+   |
+23 |   mkdocs:
+   |   ------ this job
+...
+86 |           ASTRAL_DOCS_PAT: ${{ secrets.ASTRAL_DOCS_PAT }}
+   |                                ^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+   --> .github/workflows/publish-docs.yml:106:29
+    |
+ 23 |   mkdocs:
+    |   ------ this job
+...
+106 |           GITHUB_TOKEN: ${{ secrets.ASTRAL_DOCS_PAT }}
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+    |
+    = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+   --> .github/workflows/publish-docs.yml:134:29
+    |
+ 23 |   mkdocs:
+    |   ------ this job
+...
+134 |           GITHUB_TOKEN: ${{ secrets.ASTRAL_DOCS_PAT }}
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+    |
+    = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/publish-mirror.yml:16:3
+   |
+16 |   publish-mirror:
+   |   ^^^^^^^^^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+warning[excessive-permissions]: overly broad permissions
+  --> .github/workflows/publish-pypi.yml:5:1
+   |
+ 5 | / name: "Publish to PyPI"
+ 6 | |
+ 7 | | on:
+ 8 | |   workflow_call:
+...  |
+48 | |       - name: Publish to PyPI
+49 | |         run: uv publish -v wheels_uv_build/*
+   | |_____________________________________________^ default permissions used due to no permissions: block
+   |
+   = note: audit confidence → Medium
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/publish-versions.yml:30:36
+   |
+30 |         run: git clone https://${{ secrets.ASTRAL_VERSIONS_PAT }}@github.com/astral-sh/versions.git astral-versions
+   |         --- this run block         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/publish-versions.yml:17:3
+   |
+17 |   publish-versions:
+   |   ^^^^^^^^^^^^^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/publish-versions.yml:30:36
+   |
+17 |   publish-versions:
+   |   ---------------- this job
+...
+30 |         run: git clone https://${{ secrets.ASTRAL_VERSIONS_PAT }}@github.com/astral-sh/versions.git astral-versions
+   |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/publish-versions.yml:53:29
+   |
+17 |   publish-versions:
+   |   ---------------- this job
+...
+53 |           GITHUB_TOKEN: ${{ secrets.ASTRAL_VERSIONS_PAT }}
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> .github/workflows/publish-versions.yml:71:29
+   |
+17 |   publish-versions:
+   |   ---------------- this job
+...
+71 |           GITHUB_TOKEN: ${{ secrets.ASTRAL_VERSIONS_PAT }}
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+error[excessive-permissions]: overly broad permissions
+  --> .github/workflows/release.yml:18:3
+   |
+18 |   "contents": "write"
+   |   ^^^^^^^^^^^^^^^^^^^ contents: write is overly broad at the workflow level
+   |
+   = note: audit confidence → High
+
+error[template-injection]: code injection via template expansion
+  --> .github/workflows/release.yml:83:102
+   |
+82 |         run: |
+   |         --- this run block
+83 |           dist ${{ (inputs.tag && inputs.tag != 'dry-run' && format('host --steps=create --tag={0}', inputs.tag)) || 'plan' }} --out...
+   |                                                                                                      ^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+info[template-injection]: code injection via template expansion
+   --> .github/workflows/release.yml:147:26
+    |
+146 |         run: |
+    |         --- this run block
+147 |           dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json "--artifacts=global" > dist-manifest.json
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → Low
+    = note: this finding has an auto-fix
+
+info[template-injection]: code injection via template expansion
+   --> .github/workflows/release.yml:199:25
+    |
+198 |         run: |
+    |         --- this run block
+199 |           dist host ${{ needs.plan.outputs.tag-flag }} --steps=upload --steps=release --output-format=json > dist-manifest.json
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → Low
+    = note: this finding has an auto-fix
+
+info[template-injection]: code injection via template expansion
+   --> .github/workflows/release.yml:291:34
+    |
+287 | ...   run: |
+    |       --- this run block
+...
+291 | ...     gh release create "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE"...
+    |                                ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → Low
+    = note: this finding has an auto-fix
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/release.yml:18:3
+   |
+18 |   "contents": "write"
+   |   ^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+   --> .github/workflows/release.yml:111:7
+    |
+111 |       "attestations": "write"
+    |       ^^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+112 |       "contents": "read"
+113 |       "id-token": "write"
+    |       ^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+114 |       "packages": "write"
+    |       ^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+    |
+    = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+   --> .github/workflows/release.yml:221:7
+    |
+221 |       "id-token": "write"
+    |       ^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+222 |       "packages": "write"
+    |       ^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+    |
+    = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+   --> .github/workflows/release.yml:251:7
+    |
+251 |       "attestations": "write"
+    |       ^^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+252 |       "contents": "write"
+    |       ^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+253 |       "id-token": "write"
+    |       ^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/release.yml:97:11
+    |
+ 97 |     uses: ./.github/workflows/build-release-binaries.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+...
+100 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/release.yml:106:11
+    |
+106 |     uses: ./.github/workflows/build-docker.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+...
+109 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/release.yml:215:11
+    |
+215 |     uses: ./.github/workflows/publish-pypi.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+...
+218 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/release.yml:230:11
+    |
+230 |     uses: ./.github/workflows/publish-crates.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+...
+233 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/release.yml:297:11
+    |
+297 |     uses: ./.github/workflows/publish-docs.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+...
+300 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/release.yml:306:11
+    |
+306 |     uses: ./.github/workflows/publish-versions.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+...
+309 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+   --> .github/workflows/release.yml:315:11
+    |
+315 |     uses: ./.github/workflows/publish-mirror.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this reusable workflow
+...
+318 |     secrets: inherit
+    |     ---------------- inherits all parent secrets
+    |
+    = note: audit confidence → High
+
+help[stale-action-refs]: commit hash does not point to a Git tag
+  --> .github/workflows/release.yml:72:15
+   |
+72 |         uses: actions/upload-artifact@6027e3dd177782cd8ab9af838c04fd81a07f1d47
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+   |
+   = note: audit confidence → High
+
+help[stale-action-refs]: commit hash does not point to a Git tag
+  --> .github/workflows/release.yml:88:15
+   |
+88 |         uses: actions/upload-artifact@6027e3dd177782cd8ab9af838c04fd81a07f1d47
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+   |
+   = note: audit confidence → High
+
+help[stale-action-refs]: commit hash does not point to a Git tag
+   --> .github/workflows/release.yml:157:15
+    |
+157 |         uses: actions/upload-artifact@6027e3dd177782cd8ab9af838c04fd81a07f1d47
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    |
+    = note: audit confidence → High
+
+help[stale-action-refs]: commit hash does not point to a Git tag
+   --> .github/workflows/release.yml:204:15
+    |
+204 |         uses: actions/upload-artifact@6027e3dd177782cd8ab9af838c04fd81a07f1d47
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    |
+    = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/release.yml:52:3
+   |
+52 |   plan:
+   |   ^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/release.yml:117:3
+    |
+117 |   build-global-artifacts:
+    |   ^^^^^^^^^^^^^^^^^^^^^^ this job
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/release.yml:164:3
+    |
+164 |   host:
+    |   ^^^^ this job
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this job a name
+
+info[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/release.yml:239:3
+    |
+239 |   announce:
+    |   ^^^^^^^^ this job
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+   --> .github/workflows/release.yml:16:1
+    |
+ 16 | / name: Release
+ 17 | | permissions:
+ 18 | |   "contents": "write"
+...   |
+319 | |     permissions:
+320 | |       "contents": "read"
+    | |_________________________^ missing concurrency setting
+    |
+    = note: audit confidence → High
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+   --> .github/workflows/release.yml:16:1
+    |
+ 16 | / name: Release
+ 17 | | permissions:
+ 18 | |   "contents": "write"
+...   |
+319 | |     permissions:
+320 | |       "contents": "read"
+    | |_________________________^ missing concurrency setting
+    |
+    = note: audit confidence → High
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+   --> .github/workflows/release.yml:16:1
+    |
+ 16 | / name: Release
+ 17 | | permissions:
+ 18 | |   "contents": "write"
+...   |
+319 | |     permissions:
+320 | |       "contents": "read"
+    | |_________________________^ missing concurrency setting
+    |
+    = note: audit confidence → High
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+   --> .github/workflows/release.yml:16:1
+    |
+ 16 | / name: Release
+ 17 | | permissions:
+ 18 | |   "contents": "write"
+...   |
+319 | |     permissions:
+320 | |       "contents": "read"
+    | |_________________________^ missing concurrency setting
+    |
+    = note: audit confidence → High
+
+help[undocumented-permissions]: permissions without explanatory comments
+  --> .github/workflows/sync-python-releases.yml:17:7
+   |
+17 |       contents: write
+   |       ^^^^^^^^^^^^^^^ needs an explanatory comment
+18 |       pull-requests: write
+   |       ^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
+   |
+   = note: audit confidence → High
+
+info[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/sync-python-releases.yml:13:3
+   |
+13 |   sync:
+   |   ^^^^ this job
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this job a name
+
+help[concurrency-limits]: insufficient job-level concurrency limits
+  --> .github/workflows/sync-python-releases.yml:4:1
+   |
+ 4 | / name: "Sync Python downloads"
+ 5 | | on:
+ 6 | |   workflow_dispatch:
+ 7 | |   schedule:
+...  |
+58 | |           base: "main"
+59 | |           draft: true
+   | |______________________^ missing concurrency setting
+   |
+   = note: audit confidence → High
+
+help[superfluous-actions]: action functionality is already included by the runner
+  --> .github/workflows/sync-python-releases.yml:47:15
+   |
+46 |       - name: "Create Pull Request"
+   |         --------------------------- this step
+47 |         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr create` in a script step
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/test-ecosystem.yml:58:21
+   |
+57 |         run: |
+   |         --- this run block
+58 |           echo '${{ toJSON(matrix.commands) }}' | jq -r '.[]' | while read cmd; do
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[anonymous-definition]: workflow or action definition without a name
+  --> .github/workflows/test-ecosystem.yml:1:1
+   |
+ 1 | / on:
+ 2 | |   workflow_call:
+ 3 | |     inputs:
+ 4 | |       sha:
+...  |
+64 | |             fi
+65 | |           done
+   | |_______________^ this workflow
+   |
+   = note: audit confidence → High
+   = tip: use 'name: ...' to give this workflow a name
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/test-integration.yml:47:21
+   |
+33 |         run: |-
+   |         --- this run block
+...
+47 |           echo "${{ github.workspace }}/nu-${nu_tag}-x86_64-unknown-linux-gnu" >> "${GITHUB_PATH}"
+   |                     ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/test-integration.yml:64:30
+   |
+64 |         run: overlay use ${{ github.workspace }}/.venv/bin/activate.nu
+   |         --- this run block   ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-integration.yml:838:32
+    |
+835 |         run: |
+    |         --- this run block
+...
+838 |             --domain-owner ${{ secrets.AWS_ACCOUNT_ID }} \
+    |                                ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[stale-action-refs]: commit hash does not point to a Git tag
+   --> .github/workflows/test-integration.yml:847:16
+    |
+847 |         uses: "google-github-actions/auth@fc2174804b84f912b1f6d334e9463f484f1c552d"
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    |
+    = note: audit confidence → High
+
+help[anonymous-definition]: workflow or action definition without a name
+    --> .github/workflows/test-integration.yml:1:1
+     |
+   1 | / on:
+   2 | |   workflow_call:
+   3 | |     inputs:
+   4 | |       sha:
+...    |
+1005 | |       - name: "Check cache compatibility"
+1006 | |         run: python scripts/check_cache_compat.py --uv-current ./uv --uv-previous ./uv-aarch64-apple-darwin/uv
+     | |_______________________________________________________________________________________________________________^ this workflow
+     |
+     = note: audit confidence → High
+     = tip: use 'name: ...' to give this workflow a name
+
+help[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/test-smoke.yml:1:1
+    |
+  1 | / on:
+  2 | |   workflow_call:
+  3 | |     inputs:
+  4 | |       sha:
+...   |
+181 | |         run: |
+182 | |           (& ./uvx --generate-shell-completion powershell) | Out-String | Invoke-Expression
+    | |____________________________________________________________________________________________^ this workflow
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this workflow a name
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-system.yml:741:24
+    |
+741 |         run: echo "${{ github.workspace }}\embedded-python" >> $env:GITHUB_PATH
+    |         ---            ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         |
+    |         this run block
+    |
+    = note: audit confidence → High
+
+help[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/test-system.yml:1:1
+    |
+  1 | / on:
+  2 | |   workflow_call:
+  3 | |     inputs:
+  4 | |       sha:
+...   |
+746 | |       - name: "Validate embedded Python install"
+747 | |         run: python ./scripts/check_embedded_python.py --uv ./uv.exe
+    | |_____________________________________________________________________^ this workflow
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this workflow a name
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/test-windows-trampolines.yml:43:18
+   |
+43 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
+   |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |         |
+   |         this run block
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/test-windows-trampolines.yml:48:32
+   |
+47 |         run: |
+   |         --- this run block
+48 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
+   |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/test-windows-trampolines.yml:57:33
+   |
+56 |         run: |
+   |         --- this run block
+57 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
+   |                                 ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/test-windows-trampolines.yml:58:54
+   |
+56 |         run: |
+   |         --- this run block
+57 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
+58 |           rustup component add rust-src --target ${{ matrix.target-arch }}-pc-windows-msvc
+   |                                                      ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:103:18
+    |
+103 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
+    |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         |
+    |         this run block
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:107:32
+    |
+106 |         run: |
+    |         --- this run block
+107 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
+    |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:114:33
+    |
+113 |         run: |
+    |         --- this run block
+114 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
+    |                                 ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:115:54
+    |
+113 |         run: |
+    |         --- this run block
+114 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
+115 |           rustup component add rust-src --target ${{ matrix.target-arch }}-pc-windows-msvc
+    |                                                      ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:119:33
+    |
+118 |         run: |
+    |         --- this run block
+119 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
+    |                                 ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:120:60
+    |
+118 |         run: |
+    |         --- this run block
+119 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
+120 |           cargo test -p uv-trampoline-builder --target ${{ matrix.target-arch }}-pc-windows-msvc
+    |                                                            ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:125:36
+    |
+124 |         run: |
+    |         --- this run block
+125 |           cargo build --target ${{ matrix.target-arch }}-pc-windows-msvc
+    |                                    ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:126:25
+    |
+124 | ...   run: |
+    |       --- this run block
+125 | ...     cargo build --target ${{ matrix.target-arch }}-pc-windows-msvc
+126 | ...     cp target/${{ matrix.target-arch }}-pc-windows-msvc/debug/uv-trampoline-console.exe ../uv-trampoline-builder/trampolines/uv...
+    |                       ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:126:150
+    |
+124 | ...   run: |
+    |       --- this run block
+125 | ...     cargo build --target ${{ matrix.target-arch }}-pc-windows-msvc
+126 | ...     cp target/${{ matrix.target-arch }}-pc-windows-msvc/debug/uv-trampoline-console.exe ../uv-trampoline-builder/trampolines/uv-trampoline-${{ matrix.target-arch }}...
+    |                                                                                                                                                    ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:127:25
+    |
+124 | ...   run: |
+    |       --- this run block
+...
+127 | ...     cp target/${{ matrix.target-arch }}-pc-windows-msvc/debug/uv-trampoline-gui.exe ../uv-trampoline-builder/trampolines/uv-tra...
+    |                       ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:127:146
+    |
+124 | ...   run: |
+    |       --- this run block
+...
+127 | ...     cp target/${{ matrix.target-arch }}-pc-windows-msvc/debug/uv-trampoline-gui.exe ../uv-trampoline-builder/trampolines/uv-trampoline-${{ matrix.target-arch }}...
+    |                                                                                                                                                ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test-windows-trampolines.yml:132:60
+    |
+130 |         run: |
+    |         --- this run block
+131 |           # We turn off the default "production" test feature since these are debug binaries
+132 |           cargo test -p uv-trampoline-builder --target ${{ matrix.target-arch }}-pc-windows-msvc --no-default-features
+    |                                                            ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/test-windows-trampolines.yml:1:1
+    |
+  1 | / on:
+  2 | |   workflow_call:
+  3 | |
+  4 | | permissions: {}
+...   |
+131 | |           # We turn off the default "production" test feature since these are debug binaries
+132 | |           cargo test -p uv-trampoline-builder --target ${{ matrix.target-arch }}-pc-windows-msvc --no-default-features
+    | |_______________________________________________________________________________________________________________________^ this workflow
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this workflow a name
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test.yml:167:18
+    |
+167 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
+    |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         |
+    |         this run block
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test.yml:172:32
+    |
+171 |         run: |
+    |         --- this run block
+172 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
+    |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[template-injection]: code injection via template expansion
+   --> .github/workflows/test.yml:214:34
+    |
+207 |         run: |
+    |         --- this run block
+...
+214 |             --partition hash:${{ matrix.partition }}/3
+    |                                  ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+
+help[anonymous-definition]: workflow or action definition without a name
+   --> .github/workflows/test.yml:1:1
+    |
+  1 | / on:
+  2 | |   workflow_call:
+  3 | |     inputs:
+  4 | |       save-rust-cache:
+...   |
+213 | |             --profile ci-windows \
+214 | |             --partition hash:${{ matrix.partition }}/3
+    | |_______________________________________________________^ this workflow
+    |
+    = note: audit confidence → High
+    = tip: use 'name: ...' to give this workflow a name
+
+122 findings (2 suppressed): 23 informational, 71 low, 24 medium, 2 high
