@@ -180,20 +180,17 @@ fn test_stdin_invalid_yaml() -> anyhow::Result<()> {
         zizmor()
             .stdin("{[invalid")
             .no_config(true)
-            .expects_failure(3)
+            .expects_failure(1)
             .args(["-"])
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
-     WARN collect_inputs: zizmor::registry::input: stdin: failed to load <stdin> as workflow
     fatal: no audit was performed
-    error: no inputs collected
-      |
-      = help: collection yielded no auditable inputs
-      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+    failed to load <stdin> as workflow
 
     Caused by:
-        no inputs collected
+        0: invalid YAML syntax: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
+        1: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
     "
     );
 
@@ -234,9 +231,9 @@ fn test_stdin_empty() -> anyhow::Result<()> {
             .expects_failure(3)
             .args(["-"])
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
-     WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type: failed to load <stdin> as workflow
+     WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected
       |
@@ -600,9 +597,9 @@ fn test_stdin_valid_yaml_unknown_schema() -> anyhow::Result<()> {
             .expects_failure(3)
             .args(["-"])
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
-     WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type: failed to load <stdin> as workflow
+     WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected
       |
@@ -625,20 +622,21 @@ fn test_stdin_valid_yaml_unknown_schema_strict() -> anyhow::Result<()> {
         zizmor()
             .stdin(unknown)
             .no_config(true)
-            .expects_failure(1)
+            .expects_failure(3)
             .args(["--strict-collection", "-"])
             .run()?,
-        @r###"
+        @"
     🌈 zizmor v@@VERSION@@
+     WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
     fatal: no audit was performed
-    failed to load <stdin> as workflow
+    error: no inputs collected
+      |
+      = help: collection yielded no auditable inputs
+      = help: inputs must contain at least one valid workflow, action, or Dependabot config
 
     Caused by:
-        0: input does not match expected validation schema
-        1: "on" is a required property
-           "jobs" is a required property
-           Additional properties are not allowed ('baz', 'foo' were unexpected)
-    "###
+        no inputs collected
+    "
     );
 
     Ok(())

@@ -570,7 +570,7 @@ impl InputGroup {
         Ok(group)
     }
 
-    async fn collect_from_stdin(options: &CollectionOptions) -> Result<Self, CollectionError> {
+    async fn collect_from_stdin() -> Result<Self, CollectionError> {
         let mut contents = String::new();
         std::io::stdin()
             .read_to_string(&mut contents)
@@ -581,24 +581,13 @@ impl InputGroup {
 
         // Infer the input type by trying each parser in order.
         // Workflow is tried first since it's the most common stdin use case.
-        // We always use strict=true so schema mismatches surface as errors,
-        // letting us fall through to the next type.
-        let workflow_err =
-            match group.register(InputKind::Workflow, contents.clone(), key.clone(), true) {
-                Ok(()) => return Ok(group),
-                Err(e) if matches!(e.inner(), CollectionError::Syntax(_)) => {
-                    // YAML itself is invalid; no point trying other types.
-                    if options.strict {
-                        return Err(e);
-                    }
-                    tracing::warn!("stdin: {e}");
-                    return Ok(group);
-                }
-                Err(e) => {
-                    tracing::debug!("stdin: failed to parse as workflow: {e}");
-                    e
-                }
-            };
+        match group.register(InputKind::Workflow, contents.clone(), key.clone(), true) {
+            Ok(()) => return Ok(group),
+            // YAML itself is invalid; no point trying other types.
+            Err(e) if matches!(e.inner(), CollectionError::Syntax(_)) => return Err(e),
+            // Valid YAML but not a valid workflow; fall through to the next type.
+            Err(_) => (),
+        };
 
         if let Ok(()) = group.register(InputKind::Action, contents.clone(), key.clone(), true) {
             return Ok(group);
@@ -608,13 +597,10 @@ impl InputGroup {
             return Ok(group);
         }
 
-        // All types failed. In strict mode, report the workflow error
-        // (the most common stdin use case) so users get relevant diagnostics.
-        if options.strict {
-            return Err(workflow_err);
-        }
-
-        tracing::warn!("stdin: could not parse as any known input type: {workflow_err}");
+        // If we get here, then the input isn't in the right shape for any of our
+        // known types. We return an empty group; the CLI will subsequently
+        // produce an error since no inputs were collected.
+        tracing::warn!("stdin: could not parse as any known input type");
         Ok(group)
     }
 
@@ -624,7 +610,7 @@ impl InputGroup {
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
         if request == "-" {
-            return Self::collect_from_stdin(options).await;
+            return Self::collect_from_stdin().await;
         }
 
         let path = Utf8Path::new(request);
