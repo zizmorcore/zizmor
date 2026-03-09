@@ -7,7 +7,7 @@ fn test_use_trusted_publishing() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:19:9
        |
@@ -96,7 +96,7 @@ fn test_use_trusted_publishing() -> Result<()> {
        |
        = note: audit confidence → High
 
-    27 findings (16 ignored, 3 suppressed): 8 informational, 0 low, 0 medium, 0 high
+    28 findings (16 ignored, 4 suppressed): 8 informational, 0 low, 0 medium, 0 high
     "
     );
 
@@ -225,7 +225,7 @@ fn test_cargo_publish() -> Result<()> {
        |
        = note: audit confidence → High
 
-    11 findings (3 suppressed): 6 informational, 0 low, 2 medium, 0 high
+    13 findings (5 suppressed): 6 informational, 0 low, 2 medium, 0 high
     "
     );
 
@@ -238,7 +238,7 @@ fn test_npm_publish() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing/npm-publish.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:15:9
        |
@@ -462,7 +462,7 @@ fn test_npm_publish() -> Result<()> {
         |
         = note: audit confidence → High
 
-    31 findings (6 ignored, 4 suppressed): 12 informational, 0 low, 9 medium, 0 high
+    34 findings (6 ignored, 7 suppressed): 12 informational, 0 low, 9 medium, 0 high
     "
     );
 
@@ -478,7 +478,7 @@ fn test_issue_1191_repro() -> Result<()> {
                 "use-trusted-publishing/issue-1191-repro.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (3 suppressed)"
     );
 
     Ok(())
@@ -490,7 +490,7 @@ fn test_nuget_push() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing/nuget-push.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:12:14
        |
@@ -521,7 +521,7 @@ fn test_nuget_push() -> Result<()> {
        |
        = note: audit confidence → High
 
-    7 findings (4 suppressed): 3 informational, 0 low, 0 medium, 0 high
+    9 findings (6 suppressed): 3 informational, 0 low, 0 medium, 0 high
     "
     );
 
@@ -567,7 +567,7 @@ fn test_gem_push() -> Result<()> {
        |
        = note: audit confidence → High
 
-    5 findings (2 suppressed): 3 informational, 0 low, 0 medium, 0 high
+    6 findings (3 suppressed): 3 informational, 0 low, 0 medium, 0 high
     "
     );
 
@@ -624,7 +624,7 @@ fn test_twine_upload() -> Result<()> {
        |
        = note: audit confidence → High
 
-    6 findings (2 suppressed): 4 informational, 0 low, 0 medium, 0 high
+    7 findings (3 suppressed): 4 informational, 0 low, 0 medium, 0 high
     "
     );
 

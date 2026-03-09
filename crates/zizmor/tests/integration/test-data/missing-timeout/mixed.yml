@@ -1,0 +1,21 @@
+name: Mixed jobs
+on: push
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  with-timeout:
+    name: has-timeout
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - run: echo "ok"
+
+  without-timeout:
+    name: no-timeout
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "missing"
