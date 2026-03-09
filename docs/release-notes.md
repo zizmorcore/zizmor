@@ -11,6 +11,19 @@ of `zizmor`.
 
 ### New Features 🌈
 
+* `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
+
+## 1.23.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would error if given both a `GH_TOKEN` and
+  a `GITHUB_TOKEN` (or `ZIZMOR_GITHUB_TOKEN`) via the environment (#1724)
+
+## 1.23.0
+
+### New Features 🌈
+
 * **New audit**: [secrets-outside-env] detects usage of the `secrets` context
   in jobs that don't have a corresponding `environment` (#1599)
 
@@ -35,6 +48,9 @@ of `zizmor`.
 
 * The SARIF output format now adds `zizmor/confidence`, `zizmor/persona` and `zizmor/severity`
   to the `properties` of findings (#1656)
+
+* Added [awalsh128/cache-apt-pkgs-action](https://github.com/awalsh128/cache-apt-pkgs-action)
+  as a cache-aware action to the cache-poisoning audit (#1708)
 
 ### Changes ⚠️
 
@@ -98,7 +114,11 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would crash on workflows containing bare
   numeric values in `if:` conditions (#1683)
 
-* Fixed a bug in `yamlpath` where resolving an alias to an anchored scalar would navigate the wrong parent tree (#1732)
+* Fixed a bug where GitHub Actions expression string comparisons were
+  not case-insensitive (#1687)
+
+* Fixed a bug in `yamlpath` where resolving an alias to an anchored
+  scalar would navigate the wrong parent tree (#1732)
 
 ## 1.22.0
 
@@ -162,7 +182,7 @@ of `zizmor`.
 
     Users who with to retain the old (permissive policy) for first-party
     actions may configure it explicitly in their `zizmor.yml`:
-
+  
     ```yaml title="zizmor.yml"
     rules:
       unpinned-uses:
@@ -204,21 +224,21 @@ of `zizmor`.
 * The [use-trusted-publishing] audit now detects additional publishing command
   patterns, including common "wrapped" patterns like `bundle exec gem publish`
   (#1394)
-
+  
 * zizmor now produces better error messages on a handful of error cases involving
   invalid input files. Specifically, a subset of syntax and schema errors now
   produce more detailed and actionable error messages (#1396)
-
+  
 * The [use-trusted-publishing] audit now detects additional publishing command
   patterns, including `uv run ...`, `uvx ...`, and `poetry publish`
   (#1402)
-
+  
 * zizmor now produces more useful and less ambiguous spans for many findings,
   particularly those from the [anonymous-definition] audit (#1416)
-
+  
 * zizmor now discovers configuration files named `zizmor.yaml`, in addition
   to `zizmor.yml` (#1431)
-
+  
 * zizmor now produces a more useful error message when input collection
   yields no inputs (#1439)
 
@@ -226,7 +246,7 @@ of `zizmor`.
   link rendering behavior. This is particularly useful in environments that
   advertise themselves as terminals but fail to correctly render or ignore
   OSC 8 links (#1454)
-
+ 
 ### Performance Improvements 🚄
 
 * The [impostor-commit] audit is now significantly faster on true positives,
@@ -237,9 +257,9 @@ of `zizmor`.
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [obfuscation] audit would crash if it encountered
-  a CMD shell that was defined outside of the current step block (i.e.
+  a CMD shell that was defined outside of the current step block (i.e. 
   as a job or workflow default) (#1418)
-
+  
 * Fixed a bug where the `opentofu` ecosystem was not recognized in
   Dependabot configuration files (#1452)
 
@@ -253,14 +273,14 @@ of `zizmor`.
 
 * The [use-trusted-publishing] audit now detects NuGet publishing commands
   (#1369)
-
+  
 * The [dependabot-cooldown] audit now flags cooldown periods of less than 7
   days by default (#1375)
-
+  
 * The [dependabot-cooldown] audit can now be configured with a custom
   minimum cooldown period via `rules.dependabot-cooldown.config.days`
   (#1377)
-
+  
 * `zizmor` now produces slightly more useful error messages when the user supplies
   an invalid configuration for the [forbidden-uses] audit (#1381)
 
@@ -275,10 +295,10 @@ of `zizmor`.
 
 * `zizmor` now produces a more useful error message when asked to
   collect only workflows from a remote input that contains no workflows (#1324)
-
+  
 * `zizmor` now produces more precise severities on @actions/checkout versions
   that have more misuse-resistant credentials persistence behavior (#1353)
-
+  
     Many thanks to @ManuelLerchnerQC for proposing and implementing this improvement!
 
 * The [use-trusted-publishing] audit now correctly detecting more "dry-run"
@@ -305,7 +325,7 @@ of `zizmor`.
 
 * The [github-env] audit now falls back to assuming bash-like shell syntax in
   `run:` blocks if it can't infer the shell being used (#1336)
-
+  
 * The [concurrency-limits] audit now correctly detects job-level `concurrency`
   settings, in addition to workflow-level settings (#1338)
 

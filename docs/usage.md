@@ -8,13 +8,13 @@ description: Usage tips and recipes for running zizmor locally and in CI/CD.
 
 Before auditing, `zizmor` performs an input collection phase.
 
-There are three input sources that `zizmor` knows about:
+There are four input sources that `zizmor` knows about:
 
 1. Individual workflow and composite action files, e.g. `foo.yml` and
    `my-action/action.yml`;
 2. "Local" GitHub repositories in the form of a directory, e.g. `my-repo/`;
 3. "Remote" GitHub repositories in the form of a "slug", e.g.
-   `pypa/sampleproject`.
+   `pypa/sampleproject`;
 
     !!! tip
 
@@ -39,6 +39,38 @@ There are three input sources that `zizmor` knows about:
         See [Operating Modes](#operating-modes) and
         [GitHub API token permissions](#github-api-token-permissions) for more
         information.
+
+4. Standard input, via `-`.
+
+    !!! tip
+
+        Support for auditing from standard input is available in `v1.24.0`
+        and later.
+
+`zizmor` also supports reading a single input from standard input using `-`:
+
+```bash
+# pipe a workflow from stdin
+cat workflow.yml | zizmor -
+
+# or use a heredoc
+zizmor - <<'EOF'
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+EOF
+```
+
+When reading from stdin, `zizmor` automatically infers the input type
+(workflow, action, or Dependabot config).
+
+!!! note
+
+    `-` cannot be combined with other inputs, and `--fix` is not
+    supported with stdin input.
 
 `zizmor` can audit multiple inputs in the same run, and different input
 sources can be mixed and matched:
@@ -501,22 +533,26 @@ sensitive `zizmor`'s analyses are:
     security decision by the workflow/action author).
 
     For example, using the pedantic persona will flag the following
-    with an `unpinned-uses` finding, since it uses a symbolic reference
-    as its pin instead of a hashed pin:
+    with a `template-injection` finding, since it uses a template
+    expansion in a `#!yaml run:` block, even though the expansion
+    itself is not attacker-controllable:
 
     ```yaml
-    uses: actions/checkout@v3
+    run: |
+      echo "running with ${{ github.event_name }}"
     ```
 
     produces:
 
     ```console
-    $ zizmor --pedantic tests/test-data/unpinned-uses.yml
-    help[unpinned-uses]: unpinned action reference
-      --> tests/test-data/unpinned-uses.yml:14:9
+    $ zizmor --pedantic example.yml
+     help[template-injection]: code injection via template expansion
+       --> crates/zizmor/tests/integration/test-data/neutral.yml:22:34
        |
-    14 |       - uses: actions/checkout@v3
-       |         ------------------------- help: action is not pinned to a hash ref
+    21 |       - run: |
+       |         --- this run block
+    22 |           echo "running with ${{ github.event_name }}"
+       |                                  ^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
        |
        = note: audit confidence → High
     ```

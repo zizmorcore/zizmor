@@ -95,15 +95,15 @@ struct App {
     offline: bool,
 
     /// The GitHub API token to use [env: GH_TOKEN or GITHUB_TOKEN or ZIZMOR_GITHUB_TOKEN]
-    #[arg(long, env, hide_env = true, value_parser = GitHubToken::new, conflicts_with_all = ["github_token", "zizmor_github_token"])]
+    #[arg(long, env, hide_env = true, value_parser = GitHubToken::new)]
     gh_token: Option<GitHubToken>,
 
     /// This is an alias for `--gh-token` / `GH_TOKEN`.
-    #[arg(long, env, hide = true, value_parser = GitHubToken::new, conflicts_with_all = ["gh_token", "zizmor_github_token"])]
+    #[arg(long, env, hide = true, value_parser = GitHubToken::new)]
     github_token: Option<GitHubToken>,
 
     /// This is an alias for `--gh-token` / `GH_TOKEN` / `--github-token` / `GITHUB_TOKEN`
-    #[arg(long, env, hide = true, value_parser = GitHubToken::new, conflicts_with_all = ["gh_token", "github_token"])]
+    #[arg(long, env, hide = true, value_parser = GitHubToken::new)]
     zizmor_github_token: Option<GitHubToken>,
 
     /// The GitHub Server Hostname. Defaults to github.com
@@ -231,6 +231,8 @@ struct App {
     /// (typically `action.yml`), entire directories, or a `user/repo` slug
     /// for a GitHub repository. In the latter case, a `@ref` can be appended
     /// to audit the repository at a particular git reference state.
+    ///
+    /// Use `-` to read a single input from stdin.
     #[arg(required = true)]
     inputs: Vec<String>,
 }
@@ -768,6 +770,12 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         .from_env()
         .expect("failed to parse RUST_LOG");
 
+    // HACK: The current alpha release of http-cache (via http-cache-reqwest)
+    // emits a lot of noisy WARN-level logs about invalid cache entries
+    // due to their bincode -> postcard migration. These aren't actionable for us.
+    #[allow(clippy::unwrap_used)]
+    let filter = filter.add_directive("http_cache::managers::cacache=error".parse().unwrap());
+
     let reg = tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
@@ -785,6 +793,28 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     }
 
     eprintln!("🌈 zizmor v{version}", version = env!("CARGO_PKG_VERSION"));
+
+    // Validate stdin input constraints: `-` must be the only input,
+    // and cannot be combined with `--fix`.
+    if app.inputs.iter().any(|i| i == "-") {
+        if app.inputs.len() > 1 {
+            let mut cmd = App::command();
+            cmd.error(
+                clap::error::ErrorKind::ArgumentConflict,
+                "`-` (stdin) cannot be combined with other inputs",
+            )
+            .exit();
+        }
+
+        if app.fix.is_some() {
+            let mut cmd = App::command();
+            cmd.error(
+                clap::error::ErrorKind::ArgumentConflict,
+                "`--fix` cannot be used with `-` (stdin)",
+            )
+            .exit();
+        }
+    }
 
     let collection_mode_set = CollectionModeSet::from(app.collect.as_slice());
 
@@ -1011,15 +1041,17 @@ async fn main() -> ExitCode {
                     CollectionError::DuplicateInput(..) => {
                         let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
                             .element(Level::HELP.message(format!(
-                                "valid inputs are files, directories, or GitHub {slug} slugs",
-                                slug = "user/repo[@ref]".green()
+                                "valid inputs are files, directories, GitHub {slug} slugs, or {stdin} for stdin",
+                                slug = "user/repo[@ref]".green(),
+                                stdin = "-".green()
                             )))
                             .element(Level::HELP.message(format!(
-                                "examples: {ex1}, {ex2}, {ex3}, or {ex4}",
+                                "examples: {ex1}, {ex2}, {ex3}, {ex4}, or {ex5}",
                                 ex1 = "path/to/workflow.yml".green(),
                                 ex2 = ".github/".green(),
                                 ex3 = "example/example".green(),
-                                ex4 = "example/example@v1.2.3".green()
+                                ex4 = "example/example@v1.2.3".green(),
+                                ex5 = "-".green()
                             )));
 
                         let renderer = Renderer::styled();

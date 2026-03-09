@@ -101,9 +101,11 @@
         "America/Cayman",
         "America/Chicago",
         "America/Chihuahua",
+        "America/Ciudad_Juarez",
         "America/Coral_Harbour",
         "America/Cordoba",
         "America/Costa_Rica",
+        "America/Coyhaique",
         "America/Creston",
         "America/Cuiaba",
         "America/Curacao",
@@ -364,8 +366,8 @@
         "Australia/Lindeman",
         "Australia/Lord_Howe",
         "Australia/Melbourne",
-        "Australia/North",
         "Australia/NSW",
+        "Australia/North",
         "Australia/Perth",
         "Australia/Queensland",
         "Australia/South",
@@ -378,6 +380,8 @@
         "Brazil/DeNoronha",
         "Brazil/East",
         "Brazil/West",
+        "CET",
+        "CST6CDT",
         "Canada/Atlantic",
         "Canada/Central",
         "Canada/Eastern",
@@ -389,6 +393,9 @@
         "Chile/Continental",
         "Chile/EasterIsland",
         "Cuba",
+        "EET",
+        "EST",
+        "EST5EDT",
         "Egypt",
         "Eire",
         "Etc/GMT",
@@ -423,8 +430,8 @@
         "Etc/GMT0",
         "Etc/Greenwich",
         "Etc/UCT",
-        "Etc/Universal",
         "Etc/UTC",
+        "Etc/Universal",
         "Etc/Zulu",
         "Europe/Amsterdam",
         "Europe/Andorra",
@@ -492,6 +499,12 @@
         "Europe/Zurich",
         "GB",
         "GB-Eire",
+        "GMT",
+        "GMT+0",
+        "GMT-0",
+        "GMT0",
+        "Greenwich",
+        "HST",
         "Hongkong",
         "Iceland",
         "Indian/Antananarivo",
@@ -511,12 +524,17 @@
         "Japan",
         "Kwajalein",
         "Libya",
+        "MET",
+        "MST",
+        "MST7MDT",
         "Mexico/BajaNorte",
         "Mexico/BajaSur",
         "Mexico/General",
-        "Navajo",
         "NZ",
         "NZ-CHAT",
+        "Navajo",
+        "PRC",
+        "PST8PDT",
         "Pacific/Apia",
         "Pacific/Auckland",
         "Pacific/Bougainville",
@@ -563,9 +581,11 @@
         "Pacific/Yap",
         "Poland",
         "Portugal",
-        "PRC",
         "ROC",
+        "ROK",
         "Singapore",
+        "Turkey",
+        "UCT",
         "US/Alaska",
         "US/Aleutian",
         "US/Arizona",
@@ -577,7 +597,12 @@
         "US/Michigan",
         "US/Mountain",
         "US/Pacific",
-        "US/Samoa"
+        "US/Samoa",
+        "UTC",
+        "Universal",
+        "W-SU",
+        "WET",
+        "Zulu"
       ]
     },
     "dependency-type": {
@@ -670,6 +695,7 @@
         "nuget",
         "opentofu",
         "pip",
+        "pre-commit",
         "pub",
         "rust-toolchain",
         "swift",
@@ -720,8 +746,12 @@
               }
             },
             "anyOf": [
-              { "required": ["dependency-name"] },
-              { "required": ["dependency-type"] }
+              {
+                "required": ["dependency-name"]
+              },
+              {
+                "required": ["dependency-type"]
+              }
             ],
             "additionalProperties": false
           }
@@ -758,9 +788,15 @@
             }
           },
           "anyOf": [
-            { "required": ["prefix"] },
-            { "required": ["prefix-development"] },
-            { "required": ["include"] }
+            {
+              "required": ["prefix"]
+            },
+            {
+              "required": ["prefix-development"]
+            },
+            {
+              "required": ["include"]
+            }
           ],
           "additionalProperties": false
         },
@@ -771,38 +807,42 @@
             "default-days": {
               "description": "Default cooldown period for dependencies without specific rules (optional).",
               "type": "integer",
-              "minimum": 0
+              "minimum": 1,
+              "maximum": 90
             },
             "semver-major-days": {
               "description": "Cooldown period for major version updates (optional, applies only to package managers supporting SemVer).",
               "type": "integer",
-              "minimum": 0
+              "minimum": 1,
+              "maximum": 90
             },
             "semver-minor-days": {
               "description": "Cooldown period for minor version updates (optional, applies only to package managers supporting SemVer).",
               "type": "integer",
-              "minimum": 0
+              "minimum": 1,
+              "maximum": 90
             },
             "semver-patch-days": {
               "description": "Cooldown period for patch version updates (optional, applies only to package managers supporting SemVer).",
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "maximum": 90
             },
             "include": {
-              "description": "List of dependencies to apply cooldown (up to 150 items). Supports wildcards (`*`).",
+              "description": "List of dependencies to apply cooldown. Supports wildcards (`*`).",
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "maxItems": 150
+              "maxItems": 100
             },
             "exclude": {
-              "description": "List of dependencies excluded from cooldown (up to 150 items). Supports wildcards (`*`).",
+              "description": "List of dependencies excluded from cooldown. Supports wildcards (`*`).",
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "maxItems": 150
+              "maxItems": 100
             }
           },
           "additionalProperties": false
@@ -876,13 +916,29 @@
                 },
                 "minItems": 1,
                 "uniqueItems": true
+              },
+              "group-by": {
+                "description": "Configure how dependencies are grouped within this group.",
+                "type": "string",
+                "enum": ["dependency-name"]
               }
             },
             "anyOf": [
-              { "required": ["dependency-type"] },
-              { "required": ["patterns"] },
-              { "required": ["exclude-patterns"] },
-              { "required": ["update-types"] }
+              {
+                "required": ["dependency-type"]
+              },
+              {
+                "required": ["patterns"]
+              },
+              {
+                "required": ["exclude-patterns"]
+              },
+              {
+                "required": ["update-types"]
+              },
+              {
+                "required": ["group-by"]
+              }
             ],
             "additionalProperties": false
           },
@@ -904,18 +960,31 @@
               },
               "versions": {
                 "description": "Use to ignore specific versions or ranges of versions. If you want to define a range, use the standard pattern for the package manager.",
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "minItems": 1,
-                "uniqueItems": true
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  }
+                ]
               }
             },
             "anyOf": [
-              { "required": ["dependency-name"] },
-              { "required": ["update-types"] },
-              { "required": ["versions"] }
+              {
+                "required": ["dependency-name"]
+              },
+              {
+                "required": ["update-types"]
+              },
+              {
+                "required": ["versions"]
+              }
             ],
             "additionalProperties": false
           }
@@ -940,6 +1009,12 @@
           "type": "integer",
           "minimum": 1
         },
+        "name": {
+          "description": "A name for the update configuration.",
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 100
+        },
         "open-pull-requests-limit": {
           "description": "Limit number of open pull requests for version updates",
           "type": "integer",
@@ -951,8 +1026,12 @@
           "description": "Package manager to use",
           "type": "string",
           "anyOf": [
-            { "$ref": "#/definitions/package-ecosystem-values" },
-            { "minLength": 1 }
+            {
+              "$ref": "#/definitions/package-ecosystem-values"
+            },
+            {
+              "minLength": 1
+            }
           ]
         },
         "pull-request-branch-name": {
@@ -1081,8 +1160,12 @@
         },
         {
           "oneOf": [
-            { "required": ["directories"] },
-            { "required": ["directory"] }
+            {
+              "required": ["directories"]
+            },
+            {
+              "required": ["directory"]
+            }
           ]
         },
         {
@@ -1112,6 +1195,7 @@
                 "composer-repository",
                 "docker-registry",
                 "git",
+                "goproxy-server",
                 "hex-organization",
                 "hex-repository",
                 "helm-registry",
@@ -1162,6 +1246,50 @@
             },
             "public-key-fingerprint": {
               "description": "",
+              "type": "string"
+            },
+            "registry": {
+              "description": "The name of the cargo registry.",
+              "type": "string"
+            },
+            "tenant-id": {
+              "description": "The tenant ID for Azure OIDC authentication.",
+              "type": "string"
+            },
+            "client-id": {
+              "description": "The client ID for Azure OIDC authentication.",
+              "type": "string"
+            },
+            "jfrog-oidc-provider-name": {
+              "description": "The JFrog OIDC provider name for authentication.",
+              "type": "string"
+            },
+            "identity-mapping-name": {
+              "description": "The identity mapping name for JFrog OIDC authentication.",
+              "type": "string"
+            },
+            "audience": {
+              "description": "The audience for OIDC or AWS authentication.",
+              "type": "string"
+            },
+            "aws-region": {
+              "description": "The AWS region for AWS CodeArtifact authentication.",
+              "type": "string"
+            },
+            "account-id": {
+              "description": "The AWS account ID for AWS CodeArtifact authentication.",
+              "type": "string"
+            },
+            "role-name": {
+              "description": "The AWS role name for AWS CodeArtifact authentication.",
+              "type": "string"
+            },
+            "domain": {
+              "description": "The domain for AWS CodeArtifact authentication.",
+              "type": "string"
+            },
+            "domain-owner": {
+              "description": "The domain owner for AWS CodeArtifact authentication.",
               "type": "string"
             }
           },
@@ -1270,9 +1398,15 @@
             }
           },
           "anyOf": [
-            { "required": ["prefix"] },
-            { "required": ["prefix-development"] },
-            { "required": ["include"] }
+            {
+              "required": ["prefix"]
+            },
+            {
+              "required": ["prefix-development"]
+            },
+            {
+              "required": ["include"]
+            }
           ],
           "additionalProperties": false
         },
@@ -1289,6 +1423,37 @@
           },
           "required": ["separator"],
           "additionalProperties": false
+        },
+        "open-pull-requests-limit": {
+          "description": "Limit number of open pull requests for version updates.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 5
+        },
+        "update-types": {
+          "description": "Specify the semantic versioning update types for the group.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["major", "minor", "patch"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "dependency-type": {
+          "description": "Specify a dependency type to be included in the group.",
+          "type": "string",
+          "enum": ["production", "development"]
+        },
+        "exclude-patterns": {
+          "description": "Exclude certain dependencies from the group.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
         }
       },
       "required": ["schedule"]
