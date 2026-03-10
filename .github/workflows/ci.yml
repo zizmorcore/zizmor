@@ -107,7 +107,7 @@ jobs:
     name: All tests pass
     if: always()
     needs: [lint, test, test-site, test-schema]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
 
     steps:
       - name: check test jobs
