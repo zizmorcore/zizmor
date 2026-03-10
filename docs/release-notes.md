@@ -29,6 +29,11 @@ of `zizmor`.
   `docker/build-push-action` was incorrectly considered a code injection sink
   (#1705)
 
+### Changes ⚠️
+
+* `artipacked` audit emits a pedantic finding if `persist-credentials`
+  is an expression (#1735)
+
 ## 1.23.0
 
 ### New Features 🌈
