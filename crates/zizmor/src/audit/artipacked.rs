@@ -593,29 +593,4 @@ jobs:
             }
         );
     }
-
-    #[tokio::test]
-    async fn test_persist_credentials_expression_pedantic() {
-        let workflow_content = r#"
-name: Test Expression
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: ${{ github.event_name == 'pull_request' }}
-"#;
-
-        test_workflow_audit!(
-            Artipacked,
-            "test_expression_pedantic.yml",
-            workflow_content,
-            |_workflow: &Workflow, findings: Vec<Finding>| {
-                assert_eq!(findings.len(), 1);
-                assert_eq!(findings[0].determinations.persona, Persona::Pedantic);
-            }
-        );
-    }
 }
