@@ -1341,9 +1341,13 @@ the job or jobs that need a secret should use the corresponding environment.
 
 !!! important
 
+    zizmor will assume that referenced secrets are environment secrets if
+    the job has an associated environment. zizmor cannot actually see
+    where secrets are stored on GitHub's side.
+
     You **must** move your secrets into the environment's secrets (and remove
     them from the repo/org-wide secrets) in order for this to be effective.
-
+    
 !!! example
 
     === "Before :warning:"
