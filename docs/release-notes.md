@@ -13,6 +13,11 @@ of `zizmor`.
 
 * `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
 
+* The [use-trusted-publishing] audit now detects `bun publish` and `bunx npm publish`
+  patterns (#1737)
+
+    Many thanks to @shaanmajid for proposing and implementing this improvement!
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
