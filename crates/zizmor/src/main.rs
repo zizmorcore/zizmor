@@ -11,7 +11,13 @@ use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stderr, stream::IsTerminal};
 use anyhow::anyhow;
 use camino::Utf8PathBuf;
-use clap::{Args, CommandFactory, Parser, ValueEnum, builder::NonEmptyStringValueParser};
+use clap::{
+    Args, CommandFactory, Parser, ValueEnum,
+    builder::{
+        NonEmptyStringValueParser,
+        styling::{AnsiColor, Effects, Styles},
+    },
+};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use etcetera::AppStrategy as _;
@@ -69,9 +75,15 @@ const THANKS: &[(&str, &str)] = &[
     ("Kusari", "https://kusari.dev"),
 ];
 
+const STYLES: Styles = Styles::styled()
+    .header(AnsiColor::Green.on_default().effects(Effects::BOLD))
+    .usage(AnsiColor::Green.on_default().effects(Effects::BOLD))
+    .literal(AnsiColor::Cyan.on_default().effects(Effects::BOLD))
+    .placeholder(AnsiColor::Cyan.on_default());
+
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
-#[command(about, version)]
+#[command(about, version, styles = STYLES)]
 struct App {
     #[cfg(feature = "lsp")]
     #[command(flatten)]
