@@ -20,6 +20,10 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would error if given both a `GH_TOKEN` and
   a `GITHUB_TOKEN` (or `ZIZMOR_GITHUB_TOKEN`) via the environment (#1724)
 
+* Fixed a bug in [template-injection] where the `context` input of
+  `docker/build-push-action` was incorrectly considered a code injection sink
+  (#1705)
+
 ## 1.23.0
 
 ### New Features 🌈
