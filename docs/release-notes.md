@@ -18,6 +18,11 @@ of `zizmor`.
 
     Many thanks to @shaanmajid for proposing and implementing this improvement!
 
+### Bug Fixes 🐛
+
+* Fixed a bug in `build.rs` causing `zizmor` to recompile on every build even without
+  code changes (#1742)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
