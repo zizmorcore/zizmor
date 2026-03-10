@@ -273,6 +273,21 @@ impl UseTrustedPublishing {
                 // Looking for `pnpm ... publish` without `--dry-run`.
                 args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
             }
+            "bunx" => {
+                // Looking for `bunx npm ... publish` without `--dry-run`.
+                // We loosely match `npm` to allow for version specifiers
+                // (e.g. `npm@11`).
+                match args.find(|arg| *arg == "npm" || arg.starts_with("npm@")) {
+                    Some(_) => {
+                        args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
+                    }
+                    None => false,
+                }
+            }
+            "bun" => {
+                // Looking for `bun ... publish` without `--dry-run`.
+                args.any(|arg| arg == "publish") && args.all(|arg| arg != "--dry-run")
+            }
             "nuget" | "nuget.exe" => {
                 // Looking for `nuget ... push`.
                 args.any(|arg| arg == "push")
@@ -535,6 +550,14 @@ mod tests {
             (&["yarn", "npm", "publish", "--dry-run"][..], false),
             (&["pnpm", "publish"][..], true),
             (&["pnpm", "publish", "--dry-run"][..], false),
+            (&["bunx", "npm", "publish"][..], true),
+            (&["bunx", "npm@11", "publish"][..], true),
+            (&["bunx", "npm", "publish", "--dry-run"][..], false),
+            (&["bunx", "npm", "view", "lodash"][..], false),
+            (&["bun", "publish"][..], true),
+            (&["bun", "publish", "--access", "public"][..], true),
+            (&["bun", "publish", "--dry-run"][..], false),
+            (&["bun", "install"][..], false),
             (&["nuget", "push", "MyPackage.nupkg"][..], true),
             (&["nuget.exe", "push", "MyPackage.nupkg"][..], true),
             (&["dotnet", "nuget", "push", "MyPackage.nupkg"][..], true),

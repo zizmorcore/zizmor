@@ -11,6 +11,28 @@ of `zizmor`.
 
 ### New Features 🌈
 
+* `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
+
+* The [use-trusted-publishing] audit now detects `bun publish` and `bunx npm publish`
+  patterns (#1737)
+
+    Many thanks to @shaanmajid for proposing and implementing this improvement!
+
+## 1.23.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would error if given both a `GH_TOKEN` and
+  a `GITHUB_TOKEN` (or `ZIZMOR_GITHUB_TOKEN`) via the environment (#1724)
+
+* Fixed a bug in [template-injection] where the `context` input of
+  `docker/build-push-action` was incorrectly considered a code injection sink
+  (#1705)
+
+## 1.23.0
+
+### New Features 🌈
+
 * **New audit**: [secrets-outside-env] detects usage of the `secrets` context
   in jobs that don't have a corresponding `environment` (#1599)
 
@@ -106,6 +128,9 @@ of `zizmor`.
   
 * Fixed a bug where the [concurrency-limits] audit reported findings
   at the job level instead of the workflow level (#1627)
+
+* Fixed a bug in `yamlpath` where resolving an alias to an anchored
+  scalar would navigate the wrong parent tree (#1732)
 
 ## 1.22.0
 

@@ -247,6 +247,15 @@
         - cakephp/cakephp#18081
 
 
+-   ![](https://github.com/Calysto.png?size=40){ width="40" loading=lazy align=left } Calysto
+
+    ---
+
+    ??? example "Examples"
+        - Calysto/metakernel#344
+        - Calysto/octave_kernel#263
+
+
 -   ![](https://github.com/canonical.png?size=40){ width="40" loading=lazy align=left } canonical
 
     ---
@@ -273,6 +282,14 @@
         - certbot/josepy#193
 
 
+-   ![](https://github.com/chatmail.png?size=40){ width="40" loading=lazy align=left } chatmail
+
+    ---
+
+    ??? example "Examples"
+        - chatmail/core#7942
+
+
 -   ![](https://github.com/coder.png?size=40){ width="40" loading=lazy align=left } coder
 
     ---
@@ -295,6 +312,14 @@
 
     ??? example "Examples"
         - containers/podman#27642
+
+
+-   ![](https://github.com/cortex.png?size=40){ width="40" loading=lazy align=left } cortex
+
+    ---
+
+    ??? example "Examples"
+        - cortex/ripasso#411
 
 
 -   ![](https://github.com/cunla.png?size=40){ width="40" loading=lazy align=left } cunla
@@ -472,6 +497,8 @@
 
     ??? example "Examples"
         - element-hq/element-desktop#2877
+        - element-hq/element-web#32717
+        - element-hq/element-x-ios#5161
 
 
 -   ![](https://github.com/elixir-lang.png?size=40){ width="40" loading=lazy align=left } elixir-lang
@@ -674,6 +701,8 @@
     ---
 
     ??? example "Examples"
+        - google/osv.dev#4969
+        - google/osv-scanner#2591
         - google/zerocop#2810
         - google/zx#1067
         - google/zx#1126
@@ -1195,6 +1224,14 @@
         - open-policy-agent/opa#8356
 
 
+-   ![](https://github.com/open-telemetry.png?size=40){ width="40" loading=lazy align=left } open-telemetry
+
+    ---
+
+    ??? example "Examples"
+        - open-telemetry/opentelemetry-ebpf-instrumentation#1511
+
+
 -   ![](https://github.com/openbao.png?size=40){ width="40" loading=lazy align=left } openbao
 
     ---
@@ -1245,6 +1282,14 @@
         - oxc-project/oxc#7844
         - oxc-project/oxc-resolver#370
         - oxc-project/oxc-resolver#373
+
+
+-   ![](https://github.com/pallets.png?size=40){ width="40" loading=lazy align=left } pallets
+
+    ---
+
+    ??? example "Examples"
+        - pallets/flask#5945
 
 
 -   ![](https://github.com/philips-software.png?size=40){ width="40" loading=lazy align=left } philips-software
@@ -1908,6 +1953,14 @@
     ??? example "Examples"
         - WordPress/gutenberg#69126
         - WordPress/wordpress-develop#8007
+
+
+-   ![](https://github.com/yamadashy.png?size=40){ width="40" loading=lazy align=left } yamadashy
+
+    ---
+
+    ??? example "Examples"
+        - yamadashy/repomix#1212
 
 
 -   ![](https://github.com/yt-dlp.png?size=40){ width="40" loading=lazy align=left } yt-dlp

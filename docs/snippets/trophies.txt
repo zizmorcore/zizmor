@@ -56,14 +56,18 @@ brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 bw2/ConfigArgParse#336
 cachix/git-hooks.nix#606
 cakephp/cakephp#18081
+Calysto/metakernel#344
+Calysto/octave_kernel#263
 canonical/operator#1656
 canonical/operator#1721
 canonical/testflinger#630
 cerbos/cerbos#3002
 certbot/josepy#193
+chatmail/core#7942
 coder/coder#19459
 conda/conda-lock#814
 containers/podman#27642
+cortex/ripasso#411
 cunla/fakeredis-py#391
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
@@ -94,6 +98,8 @@ edgelesssys/contrast#1604
 EFForg/rayhunter#711
 Electric-Coin-Company/zcash-light-client-ffi#186
 element-hq/element-desktop#2877
+element-hq/element-web#32717
+element-hq/element-x-ios#5161
 elixir-lang/elixir#15114
 emberjs/ember.js#21185
 esl/MongooseIM#4435
@@ -134,6 +140,8 @@ grafana/rollout-operator#218
 grafana/synthetic-monitoring-app#1126
 grafana/tanka#1441
 great-expectations/airflow-provider-great-expectations#209
+google/osv.dev#4969
+google/osv-scanner#2591
 google/zerocop#2810
 google/zx#1067
 google/zx#1126
@@ -249,6 +257,7 @@ openbao/openbao#924
 open-edge-platform/geti#162
 open-edge-platform/geti-sdk#603
 open-policy-agent/opa#8356
+open-telemetry/opentelemetry-ebpf-instrumentation#1511
 openpubkey/opkssh#198
 openpubkey/opkssh#247
 Ouranosinc/xclim#2023
@@ -258,6 +267,7 @@ orion-rs/orion#490
 oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
+pallets/flask#5945
 philips-software/amp-devcontainer#830
 PlasmaPy/PlasmaPy#2975
 PowerDNS/pdns#15600
@@ -389,6 +399,7 @@ wntrblm/nox#925
 WordPress/gutenberg#69126
 WordPress/wordpress-develop#8007
 wgsl-analyzer/wgsl-analyzer#844
+yamadashy/repomix#1212
 yt-dlp/yt-dlp#15324
 yt-dlp/yt-dlp#15387
 zama-ai/tfhe-rs#2292

@@ -1328,6 +1328,12 @@ Consequently, configuring secrets at the environment level ensures that they're
 only exposed to jobs that meet the environment's protection rules, mitigating
 the risk of secrets being exposed to untrusted code or compromised workflows.
 
+!!! tip
+
+    The `secrets.GITHUB_TOKEN` secret is a special case, and is not flagged
+    by this audit. This is because the permissions of the `GITHUB_TOKEN`
+    secret are entirely determined by the workflow and job-level permissions.
+
 ### Remediation
 
 In general, secrets should be configured at the environment level, and only
@@ -1335,9 +1341,13 @@ the job or jobs that need a secret should use the corresponding environment.
 
 !!! important
 
+    zizmor will assume that referenced secrets are environment secrets if
+    the job has an associated environment. zizmor cannot actually see
+    where secrets are stored on GitHub's side.
+
     You **must** move your secrets into the environment's secrets (and remove
     them from the repo/org-wide secrets) in order for this to be effective.
-
+    
 !!! example
 
     === "Before :warning:"

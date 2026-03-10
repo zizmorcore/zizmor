@@ -854,7 +854,11 @@ impl Document {
 
         // Our focus node might be an alias, in which case we need to
         // do one last leap to get our "real" final focus node.
-        // TODO(ww): What about nested aliases?
+        //
+        // We save the pre-resolution node so that KeyOnly and Pretty modes
+        // can navigate the alias reference's tree structure rather than the
+        // anchor definition's tree structure.
+        let pre_resolution_node = focus_node;
         focus_node = match focus_node.child(0) {
             Some(child) if child.is_alias() => {
                 let alias_name = child
@@ -874,6 +878,17 @@ impl Document {
             }
             _ => focus_node,
         };
+        let was_alias = pre_resolution_node.id() != focus_node.id();
+
+        // For Pretty and KeyOnly modes, we need the structural position
+        // in the tree. When an alias was resolved, use the pre-resolution
+        // node so we navigate the alias reference site, not the anchor
+        // definition site.
+        let structural_node = if was_alias {
+            pre_resolution_node
+        } else {
+            focus_node
+        };
 
         focus_node = match mode {
             QueryMode::Pretty => {
@@ -884,10 +899,14 @@ impl Document {
                 //
                 // NOTE: We might already be on the block/flow pair if we terminated
                 // with an absent value, in which case we don't need to do this cleanup.
-                if matches!(route.route.last(), Some(Component::Key(_))) && !focus_node.is_pair() {
-                    focus_node.parent().expect("missing parent of focus node")
+                if matches!(route.route.last(), Some(Component::Key(_)))
+                    && !structural_node.is_pair()
+                {
+                    structural_node
+                        .parent()
+                        .expect("missing parent of focus node")
                 } else {
-                    focus_node
+                    structural_node
                 }
             }
             QueryMode::KeyOnly => {
@@ -895,15 +914,15 @@ impl Document {
                 // the parent block/flow pair node that contains the key,
                 // and isolate on the key child instead.
 
-                let parent_node = if focus_node.is_pair() {
+                let parent_node = if structural_node.is_pair() {
                     // If we're already on block/flow pair, then we're already
                     // the key's parent.
-                    focus_node
-                } else if focus_node.is_block_scalar() {
+                    structural_node
+                } else if structural_node.is_block_scalar() {
                     // We might be on the internal `block_scalar` node, if
                     // we got here via an alias. We need to go up two levels
                     // to get to the mapping pair.
-                    focus_node
+                    structural_node
                         .parent()
                         .expect("missing parent of focus node")
                         .parent()
@@ -911,7 +930,9 @@ impl Document {
                 } else {
                     // Otherwise, we expect to be on the `block_node`
                     // or `flow_node`, so we go up one level.
-                    focus_node.parent().expect("missing parent of focus node")
+                    structural_node
+                        .parent()
+                        .expect("missing parent of focus node")
                 };
 
                 if parent_node.is_flow_mapping() {
