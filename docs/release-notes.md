@@ -13,12 +13,21 @@ of `zizmor`.
 
 * `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
 
+* The [use-trusted-publishing] audit now detects `bun publish` and `bunx npm publish`
+  patterns (#1737)
+
+    Many thanks to @shaanmajid for proposing and implementing this improvement!
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would error if given both a `GH_TOKEN` and
   a `GITHUB_TOKEN` (or `ZIZMOR_GITHUB_TOKEN`) via the environment (#1724)
+
+* Fixed a bug in [template-injection] where the `context` input of
+  `docker/build-push-action` was incorrectly considered a code injection sink
+  (#1705)
 
 ## 1.23.0
 

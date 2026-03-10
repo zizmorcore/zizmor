@@ -67,6 +67,7 @@ chatmail/core#7942
 coder/coder#19459
 conda/conda-lock#814
 containers/podman#27642
+cortex/ripasso#411
 cunla/fakeredis-py#391
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
@@ -97,6 +98,7 @@ edgelesssys/contrast#1604
 EFForg/rayhunter#711
 Electric-Coin-Company/zcash-light-client-ffi#186
 element-hq/element-desktop#2877
+element-hq/element-web#32717
 element-hq/element-x-ios#5161
 elixir-lang/elixir#15114
 emberjs/ember.js#21185
@@ -255,6 +257,7 @@ openbao/openbao#924
 open-edge-platform/geti#162
 open-edge-platform/geti-sdk#603
 open-policy-agent/opa#8356
+open-telemetry/opentelemetry-ebpf-instrumentation#1511
 openpubkey/opkssh#198
 openpubkey/opkssh#247
 Ouranosinc/xclim#2023
@@ -264,6 +267,7 @@ orion-rs/orion#490
 oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
+pallets/flask#5945
 philips-software/amp-devcontainer#830
 PlasmaPy/PlasmaPy#2975
 PowerDNS/pdns#15600

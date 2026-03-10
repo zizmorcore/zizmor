@@ -24,6 +24,12 @@ import yaml
 
 _MODELS_SUBDIR = "actions/ql/lib/ext/"
 
+# action, input pairs that are known to be false positives in CodeQL.
+_FALSE_POSITIVES = {
+    # https://github.com/github/codeql/issues/21428
+    ("docker/build-push-action", "context"),
+}
+
 
 def _debug(msg: str) -> None:
     print(f"[+] {msg}", file=sys.stderr)
@@ -141,6 +147,10 @@ def _process_yaml_file(
                 )
 
             input_name = input_param[len(input_prefix) :]
+
+            if (action, input_name) in _FALSE_POSITIVES:
+                _debug(f"Skipping known false positive: {(action, input_name)}")
+                continue
 
             code_injection_sinks[action].append(input_name)
 
