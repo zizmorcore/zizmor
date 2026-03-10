@@ -31,7 +31,7 @@ of `zizmor`.
 
 ### Changes ⚠️
 
-* `artipacked` audit emits a `Pedantic` finding if `persist-credentials`
+* `artipacked` audit emits a pedantic finding if `persist-credentials`
   is an expression (#1735)
 
 ## 1.23.0
