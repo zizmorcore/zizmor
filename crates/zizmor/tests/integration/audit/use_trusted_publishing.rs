@@ -630,3 +630,60 @@ fn test_twine_upload() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_bun_publish() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing/bun-publish.yml"))
+            .run()?,
+        @r"
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:12:14
+       |
+    12 |         run: bun publish
+       |         ---  ^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:15:14
+       |
+    15 |         run: bun publish --access public
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:20:11
+       |
+    19 |           run: |
+       |           --- this step
+    20 | /           bun \
+    21 | |             publish \
+    22 | |             --access \
+    23 | |             public
+       | |__________________^ this command
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:27:14
+       |
+    27 |         run: bunx npm publish
+       |         ---  ^^^^^^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    8 findings (4 suppressed): 4 informational, 0 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
