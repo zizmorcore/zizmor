@@ -36,12 +36,6 @@
     ]
   ],
   [
-    "docker/build-push-action",
-    [
-      "context"
-    ]
-  ],
-  [
     "gautamkrishnar/blog-post-workflow",
     [
       "item_exec"
