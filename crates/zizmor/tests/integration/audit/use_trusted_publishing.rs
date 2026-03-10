@@ -681,7 +681,7 @@ fn test_bun_publish() -> Result<()> {
        |
        = note: audit confidence → High
 
-    8 findings (4 suppressed): 4 informational, 0 low, 0 medium, 0 high
+    7 findings (3 suppressed): 4 informational, 0 low, 0 medium, 0 high
     "
     );
 
