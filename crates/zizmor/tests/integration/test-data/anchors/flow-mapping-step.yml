@@ -7,4 +7,3 @@ jobs:
     steps:
       - &checkout { uses: "actions/checkout@v4" }
       - *checkout
-      - run: echo "built"

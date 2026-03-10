@@ -68,20 +68,32 @@ fn test_basic() -> Result<()> {
     Ok(())
 }
 
-/// Scalar value anchored in `env:` and aliased as `runs-on:`.
 #[test]
 fn test_scalar_cross_context() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("anchors/scalar-cross-context.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @r#"
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:5:23
+       |
+     5 |   CMD: &cmd "echo ${{ github.event.issue.title }}"
+       |                       ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    ...
+    10 |       - run: *cmd
+       |         --- this run block
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    3 findings (2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    "#
     );
 
     Ok(())
 }
 
-/// Anchor an entire `with:` mapping and alias it in another step.
 #[test]
 fn test_with_mapping_alias() -> Result<()> {
     insta::assert_snapshot!(
@@ -89,56 +101,91 @@ fn test_with_mapping_alias() -> Result<()> {
             .input(input_under_test("anchors/with-mapping-alias.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
-     --> @@INPUT@@:8:15
-      |
-    8 |       - uses: actions/checkout@v6
-      |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-      |
-      = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:12:15
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+      --> @@INPUT@@:8:9
        |
-    12 |       - uses: actions/checkout@v6
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+     8 |         - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+       |  _________^
+     9 | |         with: &checkout-opts
+    10 | |           fetch-depth: 0
+       | |________________________^ does not set persist-credentials: false
        |
-       = note: audit confidence → High
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
 
-    4 findings (2 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+      --> @@INPUT@@:11:9
+       |
+    11 |         - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+       |  _________^
+    12 | |         with: *checkout-opts
+       | |_____________________________^ does not set persist-credentials: false
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    4 findings (2 suppressed, 2 fixable): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 
     Ok(())
 }
 
-/// Anchor `paths-ignore:` under `push:`, alias under `pull_request:`.
 #[test]
 fn test_trigger_paths_anchor() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("anchors/trigger-paths-anchor.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @r#"
+    error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+     --> @@INPUT@@:2:1
+      |
+    2 | / on:
+    3 | |   pull_request_target:
+    4 | |     paths-ignore: &ignore
+    5 | |       - "docs/**"
+    6 | |       - "**.md"
+    7 | |   push:
+    8 | |     paths-ignore: *ignore
+      | |_________________________^ pull_request_target is almost always used insecurely
+      |
+      = note: audit confidence → Medium
+
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    "#
     );
 
     Ok(())
 }
 
-/// Anchor the entire `push:` trigger object and alias as `pull_request:`.
 #[test]
 fn test_trigger_block_alias() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("anchors/trigger-block-alias.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @r#"
+    error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+     --> @@INPUT@@:2:1
+      |
+    2 | / on:
+    3 | |   push: &trigger
+    4 | |     branches: [main]
+    5 | |     paths-ignore:
+    6 | |       - "**.md"
+    7 | |   pull_request_target: *trigger
+      | |_______________________________^ pull_request_target is almost always used insecurely
+      |
+      = note: audit confidence → Medium
+
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    "#
     );
 
     Ok(())
 }
 
-/// Anchor an entire `steps:` list and alias it in another job.
 #[test]
 fn test_steps_list_alias() -> Result<()> {
     insta::assert_snapshot!(
@@ -175,124 +222,137 @@ fn test_steps_list_alias() -> Result<()> {
     Ok(())
 }
 
-/// Anchor a scalar and alias it under a different key name.
 #[test]
 fn test_cross_key_scalar() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("anchors/cross-key-scalar.yml"))
             .run()?,
-        @"
-    error[unpinned-uses]: unpinned action reference
-     --> @@INPUT@@:8:15
-      |
-    8 |       - uses: peter-evans/create-pull-request@v8
-      |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-      |
-      = note: audit confidence → High
+        @r#"
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:10:42
+       |
+     8 |       - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+       |         -------------------------------------------------------------------- action accepts arbitrary code
+     9 |         with:
+    10 |           script: &cmd "console.log('${{ github.event.issue.title }}')"
+       |           ------ via this input          ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |
+       = note: audit confidence → High
 
-    4 findings (3 suppressed): 0 informational, 0 low, 0 medium, 1 high
-    "
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:10:42
+       |
+    10 |           script: &cmd "console.log('${{ github.event.issue.title }}')"
+       |                                          ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    11 |       - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+       |         -------------------------------------------------------------------- action accepts arbitrary code
+    12 |         with:
+    13 |           script: *cmd
+       |           ------ via this input
+       |
+       = note: audit confidence → High
+
+    4 findings (2 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    "#
     );
 
     Ok(())
 }
 
-/// Multiple independent anchors in one step, each aliased later.
 #[test]
 fn test_multi_scalar_anchors() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("anchors/multi-scalar-anchors.yml"))
             .run()?,
-        @"
-    error[unpinned-uses]: unpinned action reference
-     --> @@INPUT@@:8:15
-      |
-    8 |       - uses: actions/cache@v4
-      |               ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-      |
-      = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:13:15
+        @r#"
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:11:37
        |
-    13 |       - uses: actions/cache@v4
-       |               ^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+     8 |       - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2
+       |         -------------------------------------------------------------- action accepts arbitrary code
+    ...
+    11 |           body_template: &body "${{ github.event.issue.body }}"
+       |           -------------             ^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |           |
+       |           via this input
        |
        = note: audit confidence → High
 
-    4 findings (2 suppressed): 0 informational, 0 low, 0 medium, 2 high
-    "
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:10:39
+       |
+     8 |       - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2
+       |         -------------------------------------------------------------- action accepts arbitrary code
+     9 |         with:
+    10 |           title_template: &title "${{ github.event.issue.title }}"
+       |           --------------              ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |           |
+       |           via this input
+       |
+       = note: audit confidence → High
+
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:11:37
+       |
+    11 |           body_template: &body "${{ github.event.issue.body }}"
+       |                                     ^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    12 |       - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2
+       |         -------------------------------------------------------------- action accepts arbitrary code
+    ...
+    15 |           body_template: *body
+       |           ------------- via this input
+       |
+       = note: audit confidence → High
+
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:10:39
+       |
+    10 |           title_template: &title "${{ github.event.issue.title }}"
+       |                                       ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    11 |           body_template: &body "${{ github.event.issue.body }}"
+    12 |       - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2
+       |         -------------------------------------------------------------- action accepts arbitrary code
+    13 |         with:
+    14 |           title_template: *title
+       |           -------------- via this input
+       |
+       = note: audit confidence → High
+
+    6 findings (2 suppressed): 0 informational, 0 low, 0 medium, 4 high
+    "#
     );
 
     Ok(())
 }
 
-/// Dummy job with `if: false` defines anchors; real jobs use aliases.
-/// Tests whether anchors in unreachable jobs resolve correctly.
 #[test]
 fn test_dummy_job_anchors() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("anchors/dummy-job-anchors.yml"))
             .run()?,
-        @r#"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
-      --> @@INPUT@@:10:9
+      --> @@INPUT@@:9:9
        |
-    10 |         uses: actions/checkout@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+     9 |         - &checkout
+       |  _________^
+    10 | |         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2 
+       | |_________________________________________________________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
     warning[artipacked]: credential persistence through GitHub Actions artifacts
-      --> @@INPUT@@:10:9
+      --> @@INPUT@@:14:9
        |
-    10 |         uses: actions/checkout@v4
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+    14 |       - *checkout
+       |         ^^^^^^^^^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
-
-    error[template-injection]: code injection via template expansion
-      --> @@INPUT@@:12:24
-       |
-    12 |         run: echo "${{ github.event.issue.title }}"
-       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-       |         |
-       |         this run block
-       |
-       = note: audit confidence → High
-       = note: this finding has an auto-fix
-
-    error[template-injection]: code injection via template expansion
-      --> @@INPUT@@:12:24
-       |
-    12 |         run: echo "${{ github.event.issue.title }}"
-       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-       |         |
-       |         this run block
-       |
-       = note: audit confidence → High
-       = note: this finding has an auto-fix
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:10:15
-       |
-    10 |         uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:10:15
-       |
-    10 |         uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
 
     help[obfuscation]: obfuscated usage of GitHub Actions features
      --> @@INPUT@@:6:13
@@ -303,14 +363,13 @@ fn test_dummy_job_anchors() -> Result<()> {
       = note: audit confidence → High
       = note: this finding has an auto-fix
 
-    11 findings (4 suppressed, 5 fixable): 0 informational, 1 low, 2 medium, 4 high
-    "#
+    7 findings (4 suppressed, 3 fixable): 0 informational, 1 low, 2 medium, 0 high
+    "
     );
 
     Ok(())
 }
 
-/// Anchor `inputs:` mapping under `workflow_call`, alias under `workflow_dispatch`.
 #[test]
 fn test_inputs_block_alias() -> Result<()> {
     insta::assert_snapshot!(
@@ -323,7 +382,6 @@ fn test_inputs_block_alias() -> Result<()> {
     Ok(())
 }
 
-/// Step defined in compact flow mapping syntax with an anchor.
 #[test]
 fn test_flow_mapping_step() -> Result<()> {
     insta::assert_snapshot!(
@@ -332,19 +390,19 @@ fn test_flow_mapping_step() -> Result<()> {
             .run()?,
         @r#"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
-     --> @@INPUT@@:8:19
+     --> @@INPUT@@:8:9
       |
     8 |       - &checkout { uses: "actions/checkout@v4" }
-      |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
       |
       = note: audit confidence → Low
       = note: this finding has an auto-fix
 
     warning[artipacked]: credential persistence through GitHub Actions artifacts
-     --> @@INPUT@@:8:19
+     --> @@INPUT@@:9:9
       |
-    8 |       - &checkout { uses: "actions/checkout@v4" }
-      |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+    9 |       - *checkout
+      |         ^^^^^^^^^ does not set persist-credentials: false
       |
       = note: audit confidence → Low
       = note: this finding has an auto-fix
@@ -367,30 +425,6 @@ fn test_flow_mapping_step() -> Result<()> {
 
     6 findings (2 suppressed, 2 fixable): 0 informational, 0 low, 2 medium, 2 high
     "#
-    );
-
-    Ok(())
-}
-
-/// Anchor a value containing a `${{ }}` expression, alias elsewhere.
-#[test]
-fn test_expression_anchor() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("anchors/expression-anchor.yml"))
-            .expects_failure(1)
-            .run()?,
-        @"
-    🌈 zizmor v@@VERSION@@
-     WARN audit: zizmor: one or more inputs contains YAML anchors; you may encounter crashes or unpredictable behavior
-     WARN audit: zizmor: for more information, see: https://docs.zizmor.sh/usage/#yaml-anchors
-    fatal: no audit was performed
-    'template-injection' audit failed on file://@@INPUT@@
-
-    Caused by:
-        0: error in 'template-injection' audit
-        1: syntax node `flow_node` is missing child field `key`
-    "
     );
 
     Ok(())

@@ -2,9 +2,9 @@ name: scalar-cross-context
 on: [push]
 permissions: {}
 env:
-  RUNNER: &runner ubuntu-latest
+  CMD: &cmd "echo ${{ github.event.issue.title }}"
 jobs:
   build:
-    runs-on: *runner
+    runs-on: ubuntu-latest
     steps:
-      - run: echo "hello"
+      - run: *cmd

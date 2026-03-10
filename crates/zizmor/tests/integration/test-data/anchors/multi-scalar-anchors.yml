@@ -5,13 +5,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/cache@v4
+      - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2
         with:
-          path: &cache-path ~/.cache/build
-          key: &cache-key build-${{ runner.os }}
-          restore-keys: &cache-restore build-
-      - uses: actions/cache@v4
+          title_template: &title "${{ github.event.issue.title }}"
+          body_template: &body "${{ github.event.issue.body }}"
+      - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2
         with:
-          path: *cache-path
-          key: *cache-key
-          restore-keys: *cache-restore
+          title_template: *title
+          body_template: *body

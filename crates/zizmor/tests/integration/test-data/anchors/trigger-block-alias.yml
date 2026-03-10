@@ -4,7 +4,7 @@ on:
     branches: [main]
     paths-ignore:
       - "**.md"
-  pull_request: *trigger
+  pull_request_target: *trigger
 permissions: {}
 jobs:
   test:

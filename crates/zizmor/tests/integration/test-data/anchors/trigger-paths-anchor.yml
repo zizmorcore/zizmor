@@ -1,10 +1,10 @@
 name: trigger-paths-anchor
 on:
-  push:
+  pull_request_target:
     paths-ignore: &ignore
       - "docs/**"
       - "**.md"
-  pull_request:
+  push:
     paths-ignore: *ignore
 permissions: {}
 jobs:
