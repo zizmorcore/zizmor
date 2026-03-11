@@ -18,6 +18,10 @@ of `zizmor`.
 
     Many thanks to @shaanmajid for proposing and implementing this improvement!
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would strip `.github` from the warning's path (#1748)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
