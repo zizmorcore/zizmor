@@ -610,6 +610,40 @@ fn issue_1356_lsp_mode_starts() -> Result<()> {
     Ok(())
 }
 
+/// Regression test for #1745
+///
+/// Ensures that the `.github` prefix is not stripped from the path.
+#[test]
+fn issue_1745() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(true)
+            .no_config(true)
+            .working_dir(input_under_test("issue-1745-repro"))
+            .args([".github", "--format=github"])
+            .run()?,
+        @r#"
+    ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    "#
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(true)
+            .no_config(true)
+            .working_dir(input_under_test("issue-1745-repro"))
+            .args([".", "--format=github"])
+            .run()?,
+        @r#"
+    ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    "#
+    );
+
+    Ok(())
+}
+
 #[test]
 fn test_cant_retrieve_offline() -> Result<()> {
     // Fails because --offline prevents network access.
