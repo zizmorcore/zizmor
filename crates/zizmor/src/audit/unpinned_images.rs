@@ -7,11 +7,40 @@ use crate::{
     state::AuditState,
 };
 
-use github_actions_expressions::Expr;
+use github_actions_expressions::{Expr, SpannedExpr, literal::Literal, op::BinOp};
 use github_actions_models::common::{DockerUses, expr::LoE};
 use github_actions_models::workflow::job::Container;
 
 use super::{Audit, AuditLoadError, audit_meta};
+
+/// Extract possible string literal values that an expression could evaluate to.
+///
+/// Uses GitHub Actions' short-circuit semantics:
+/// - `A && B`: if A is truthy, result is B (A is a condition, not a value)
+/// - `A || B`: result is A if truthy, otherwise B (both are possible values)
+///
+/// Returns `None` if any value-position subexpression can't be statically determined
+/// (e.g. a context reference like `inputs.image`).
+fn extract_image_values<'a>(expr: &'a SpannedExpr<'a>) -> Option<Vec<&'a str>> {
+    match &expr.inner {
+        Expr::Literal(Literal::String(s)) => Some(vec![s.as_ref()]),
+        Expr::BinOp {
+            lhs,
+            op: BinOp::Or,
+            rhs,
+        } => {
+            let mut values = extract_image_values(lhs)?;
+            values.extend(extract_image_values(rhs)?);
+            Some(values)
+        }
+        Expr::BinOp {
+            op: BinOp::And,
+            rhs,
+            ..
+        } => extract_image_values(rhs),
+        _ => None,
+    }
+}
 
 pub(crate) struct UnpinnedImages;
 
@@ -32,6 +61,50 @@ impl UnpinnedImages {
             .add_location(annotated_location)
             .persona(persona)
             .build(job)
+    }
+
+    /// Classify a `DockerUses` image and push the appropriate finding.
+    /// Returns `true` if a finding was emitted, `false` if the image is hash-pinned.
+    fn check_image<'doc>(
+        &self,
+        image: &DockerUses,
+        location: &SymbolicLocation<'doc>,
+        job: &super::NormalJob<'doc>,
+        findings: &mut Vec<Finding<'doc>>,
+    ) -> Result<bool, AuditError> {
+        match (image.tag(), image.hash()) {
+            (_, Some(_)) => Ok(false),
+            (Some("latest"), None) => {
+                findings.push(self.build_finding(
+                    location,
+                    "container image is pinned to latest",
+                    Confidence::High,
+                    Persona::Regular,
+                    job,
+                )?);
+                Ok(true)
+            }
+            (Some(_), None) => {
+                findings.push(self.build_finding(
+                    location,
+                    "container image is not pinned to a SHA256 hash",
+                    Confidence::High,
+                    Persona::Pedantic,
+                    job,
+                )?);
+                Ok(true)
+            }
+            (None, None) => {
+                findings.push(self.build_finding(
+                    location,
+                    "container image is unpinned",
+                    Confidence::High,
+                    Persona::Regular,
+                    job,
+                )?);
+                Ok(true)
+            }
+        }
     }
 }
 
@@ -87,8 +160,26 @@ impl Audit for UnpinnedImages {
                         Ok(Expr::Context(context)) if context.child_of("matrix") => context,
                         // An invalid expression, or otherwise any expression that's
                         // more complex than a simple matrix reference.
-                        // TODO: Be more precise in some of these cases.
                         _ => {
+                            // Try to extract possible string literal values from
+                            // complex expressions like the conditional pattern:
+                            // `inputs.x == 'true' && 'redis:7' || ''`
+                            if let Ok(parsed) = Expr::parse(expr.as_bare())
+                                && let Some(values) = extract_image_values(&parsed)
+                            {
+                                for value in values {
+                                    if value.is_empty() {
+                                        continue;
+                                    }
+                                    let image = DockerUses::parse(value);
+                                    if image.image().is_empty() {
+                                        continue;
+                                    }
+                                    self.check_image(&image, location, job, &mut findings)?;
+                                }
+                                continue;
+                            }
+
                             findings.push(self.build_finding(
                                 location,
                                 "container image may be unpinned",
@@ -194,38 +285,9 @@ impl Audit for UnpinnedImages {
                     }
                 }
                 LoE::Literal(image) if image.image().is_empty() => continue,
-                LoE::Literal(image) => match image.hash() {
-                    Some(_) => continue,
-                    None => match image.tag() {
-                        Some("latest") => {
-                            findings.push(self.build_finding(
-                                location,
-                                "container image is pinned to latest",
-                                Confidence::High,
-                                Persona::Regular,
-                                job,
-                            )?);
-                        }
-                        None => {
-                            findings.push(self.build_finding(
-                                location,
-                                "container image is unpinned",
-                                Confidence::High,
-                                Persona::Regular,
-                                job,
-                            )?);
-                        }
-                        Some(_) => {
-                            findings.push(self.build_finding(
-                                location,
-                                "container image is not pinned to a SHA256 hash",
-                                Confidence::High,
-                                Persona::Pedantic,
-                                job,
-                            )?);
-                        }
-                    },
-                },
+                LoE::Literal(image) => {
+                    self.check_image(image, location, job, &mut findings)?;
+                }
             }
         }
 
