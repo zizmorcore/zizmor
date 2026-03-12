@@ -114,31 +114,13 @@ If you run into this issue, you have two options:
         You should always reduce the risk of token leakage by granting
         **only the minimum** necessary permissions.
 
-### Failures on inputs containing YAML anchors
+### Known edge cases with YAML anchors { #yaml-anchors }
 
-If your inputs contain YAML anchors, `zizmor` may fail to analyze them
-correctly. Failures caused by anchors are typically opaque compared
-to other errors. For example, you might see something like this:
+In rare cases, inputs containing YAML anchors may produce unexpected
+errors. If you encounter this, please
+[file a bug report](https://github.com/zizmorcore/zizmor/issues/new).
 
-```
-fatal: no audit was performed
-ref-version-mismatch failed on file://test.yml
-
-Caused by:
-    mapping has no key `uses`
-```
-
-Additionally, you'll see this warning in `zizmor`'s warning-level logs:
-
-```
-WARN audit: zizmor: one or more inputs contains YAML anchors; you may encounter crashes or unpredictable behavior
-WARN audit: zizmor: for more information, see: https://docs.zizmor.sh/usage/#yaml-anchors
-```
-
-See [Usage - Limitations - YAML anchors stymie analysis](./usage.md#yaml-anchors)
-for additional information about this problem and why it occurs.
-
-If you run into this issue, the single simplest thing to do is to
+If you run into this issue, the simplest workaround is to
 **avoid YAML anchors** in your inputs. If your inputs already contain
 YAML anchors, you can use a tool like @mikefarah/yq to unroll them:
 
@@ -146,3 +128,6 @@ YAML anchors, you can use a tool like @mikefarah/yq to unroll them:
 # NOTE: `-i` edits the file in place
 yq -i 'explode(.)' your-input.yml
 ```
+
+See [Usage - YAML anchors](./usage.md#yaml-anchors)
+for more background on how `zizmor` handles anchors.
