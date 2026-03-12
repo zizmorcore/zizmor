@@ -204,6 +204,15 @@ impl Workflow {
             kind: Default::default(),
         }
     }
+
+    /// Returns this workflow's location, with a grip on the "name" field if it exists.
+    pub fn location_with_grip(&self) -> SymbolicLocation<'_> {
+        if self.name.is_some() {
+            self.location().with_keys(["name".into()])
+        } else {
+            self.location()
+        }
+    }
 }
 
 /// Represents a single "normal" GitHub Actions job.
