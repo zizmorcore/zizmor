@@ -25,10 +25,12 @@ jobs:
   benchmarks:
     name: Run benchmarks
     # PRs only get benchmarked if they have the `run-benchmarks` label.
+    # Forks don't have access to CodSpeed secrets, so skip them.
     if: |
-      contains(github.event.pull_request.labels.*.name, 'run-benchmarks')
-        || github.event_name == 'push'
-        || github.event_name == 'workflow_dispatch'
+      !github.event.pull_request.head.repo.fork
+        && (contains(github.event.pull_request.labels.*.name, 'run-benchmarks')
+          || github.event_name == 'push'
+          || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
