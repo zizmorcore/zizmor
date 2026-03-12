@@ -68,6 +68,7 @@ subfeature.workspace = true
 tar.workspace = true
 terminal-link.workspace = true
 thiserror.workspace = true
+toml.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "io-std"] }
 tower-lsp-server = { workspace = true, optional = true }
 tracing.workspace = true
