@@ -1,5 +1,6 @@
 //! Per-audit integrationt tests, including snapshots.
 
+mod agentic_actions;
 mod anonymous_definition;
 mod archived_uses;
 mod artipacked;

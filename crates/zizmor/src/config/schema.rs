@@ -107,7 +107,8 @@ define_audit_rules! {
     archived_uses,
     misfeature,
     secrets_outside_env,
-    superfluous_actions;
+    superfluous_actions,
+    agentic_actions;
 
     [DependabotCooldownRuleConfig] dependabot_cooldown,
     [ForbiddenUsesRuleConfig] forbidden_uses,
