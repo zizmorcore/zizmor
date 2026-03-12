@@ -56,7 +56,15 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    6 findings: 0 informational, 0 low, 0 medium, 6 high
+    error[unpinned-images]: unpinned image references
+       --> @@INPUT@@:101:9
+        |
+    101 |         image: ${{ inputs.use-redis == 'true' && 'redis:7' || '' }}
+        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+        |
+        = note: audit confidence → High
+
+    7 findings: 0 informational, 0 low, 0 medium, 7 high
     "
     );
 

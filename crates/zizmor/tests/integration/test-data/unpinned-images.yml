@@ -92,3 +92,21 @@ jobs:
         image: ""
     steps:
       - run: echo 'not vulnerable!'
+
+  conditional-service-image:
+    name: conditional-service-image
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: ${{ inputs.use-redis == 'true' && 'redis:7' || '' }}
+    steps:
+      - run: echo 'not vulnerable!'
+
+  conditional-service-image-hash-pinned:
+    name: conditional-service-image-hash-pinned
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: ${{ inputs.use-redis == 'true' && 'redis@sha256:...' || '' }}
+    steps:
+      - run: echo 'not vulnerable!'
