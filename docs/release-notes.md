@@ -23,6 +23,11 @@ of `zizmor`.
 * `zizmor`'s CLI help and usage output now uses a custom color scheme for
   improved readability (#1747)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [concurrency-limits] audit reported findings
+  at the job level instead of the workflow level (#1627)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
@@ -135,9 +140,6 @@ of `zizmor`.
 
 * Fixed a bug where GitHub Actions expression string comparisons were
   not case-insensitive (#1687)
-  
-* Fixed a bug where the [concurrency-limits] audit reported findings
-  at the job level instead of the workflow level (#1627)
 
 * Fixed a bug in `yamlpath` where resolving an alias to an anchored
   scalar would navigate the wrong parent tree (#1732)
