@@ -83,3 +83,12 @@ jobs:
         image: fake.example.com/redis@sha256:7df1eeff67eb0ba84f6b9d2940765a6bb1158081426745c185a03b1507de6a09
     steps:
       - run: echo 'not vulnerable!'
+
+  empty-service-image:
+    name: empty-service-image
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: ""
+    steps:
+      - run: echo 'not vulnerable!'
