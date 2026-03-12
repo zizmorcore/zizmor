@@ -213,6 +213,112 @@ fn progress_bar_tty() -> Result<()> {
 }
 
 #[test]
+fn quiet_flag() -> Result<()> {
+    // --quiet: shows findings but suppresses banner, INFO logs, and summary.
+    let quiet_with_findings = zizmor()
+        .output(OutputMode::Both)
+        .args(["--quiet"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(!quiet_with_findings.contains("🌈 zizmor"));
+    assert!(!quiet_with_findings.contains(" INFO "));
+    assert!(quiet_with_findings.contains("warning[artipacked]"));
+    assert!(!quiet_with_findings.contains("findings"));
+    assert!(!quiet_with_findings.contains("No findings"));
+
+    // --quiet with no findings: produces no output at all.
+    let quiet_no_findings = zizmor()
+        .output(OutputMode::Both)
+        .args(["--quiet", "--min-severity=high"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(quiet_no_findings.is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn silent_flag() -> Result<()> {
+    // --silent: suppresses all output, but preserves exit code.
+    let silent_with_findings = zizmor()
+        .output(OutputMode::Both)
+        .args(["--silent"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(silent_with_findings.is_empty());
+
+    // --silent with no findings: also produces no output.
+    let silent_no_findings = zizmor()
+        .output(OutputMode::Both)
+        .args(["--silent", "--min-severity=high"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(silent_no_findings.is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn verbose_flag() -> Result<()> {
+    // Default (no flags): INFO level — no DEBUG messages.
+    let default_output = zizmor()
+        .output(OutputMode::Both)
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(!default_output.contains("DEBUG"));
+
+    // -v: DEBUG level — DEBUG messages appear.
+    let verbose_output = zizmor()
+        .output(OutputMode::Both)
+        .args(["-v"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(verbose_output.contains("DEBUG"));
+    assert!(verbose_output.contains("🌈 zizmor"));
+
+    Ok(())
+}
+
+#[test]
+fn verbose_quiet_conflict() -> Result<()> {
+    let output = zizmor()
+        .expects_failure(2)
+        .args(["--verbose", "--quiet"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(output.contains("cannot be used with"));
+
+    Ok(())
+}
+
+#[test]
+fn verbose_silent_conflict() -> Result<()> {
+    let output = zizmor()
+        .expects_failure(2)
+        .args(["--verbose", "--silent"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(output.contains("cannot be used with"));
+
+    Ok(())
+}
+
+#[test]
+fn quiet_silent_conflict() -> Result<()> {
+    // --quiet and --silent are mutually exclusive.
+    let output = zizmor()
+        .expects_failure(2)
+        .args(["--quiet", "--silent"])
+        .input(input_under_test("artipacked.yml"))
+        .run()?;
+    assert!(output.contains("cannot be used with"));
+    assert!(output.contains("--quiet"));
+    assert!(output.contains("--silent"));
+
+    Ok(())
+}
+
+#[test]
 fn issue_612_repro() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
