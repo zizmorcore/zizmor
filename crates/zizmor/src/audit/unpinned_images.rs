@@ -193,6 +193,7 @@ impl Audit for UnpinnedImages {
                         }
                     }
                 }
+                LoE::Literal(image) if image.image().is_empty() => continue,
                 LoE::Literal(image) => match image.hash() {
                     Some(_) => continue,
                     None => match image.tag() {
