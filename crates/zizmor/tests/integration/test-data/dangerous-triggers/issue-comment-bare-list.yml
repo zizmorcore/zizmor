@@ -1,0 +1,11 @@
+on: [push, issue_comment]
+
+name: issue-comment-bare-list
+
+permissions: {}
+
+jobs:
+  respond:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "hello"
