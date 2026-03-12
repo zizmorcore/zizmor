@@ -1,0 +1,16 @@
+name: inputs-block-alias
+on:
+  workflow_call:
+    inputs: &inputs
+      version:
+        description: "Version to deploy"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs: *inputs
+permissions: {}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "deploying"
