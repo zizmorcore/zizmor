@@ -18,6 +18,11 @@ of `zizmor`.
 
     Many thanks to @shaanmajid for proposing and implementing this improvement!
 
+### Enhancements 🌱
+
+* `zizmor`'s CLI help and usage output now uses a custom color scheme for
+  improved readability (#1747)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
