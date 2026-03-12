@@ -24,6 +24,7 @@ apache/opennlp#736
 apache/sedona#1976
 apache/sedona#2582
 aquasecurity/trivy-action#502
+aquasecurity/trivy-operator#2910
 ariel-os/ariel-os#1738
 artichoke/artichoke#2825
 artichoke/boba#265
@@ -68,6 +69,10 @@ coder/coder#19459
 conda/conda-lock#814
 containers/podman#27642
 cortex/ripasso#411
+cucumber/cucumber-jvm#3172
+cucumber/cucumber-jvm-starter-maven-java@1c6575ba15d09110d5face60d4fe2e022c148581
+cucumber/cucumber-rails@c0f4842fe80db7a9d325242a6238ae7b72807957
+cucumber/cucumber-ruby@f5c09789d3777c85ea902e998ac810020e9fde2d
 cunla/fakeredis-py#391
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
@@ -90,6 +95,7 @@ django/django@86b8058b40145fb5ba4fd859676225f533eca986
 django-commons/django-tasks-scheduler#272
 Diaoul/subliminal#1190
 docker/compose#12737
+dry-rb/dry-validation@44db170688d78e301d1e2d5f4e7dc260047f6fa5
 dubzzz/fast-check#6369
 dubzzz/fast-check#6370
 Dynatrace/dynatrace-operator#6154
@@ -97,6 +103,7 @@ earthobservations/wetterdienst#1440
 edgelesssys/contrast#1604
 EFForg/rayhunter#711
 Electric-Coin-Company/zcash-light-client-ffi#186
+element-hq/element-call#3797
 element-hq/element-desktop#2877
 element-hq/element-web#32717
 element-hq/element-x-ios#5161
@@ -148,6 +155,7 @@ google/zx#1126
 guacsec/guac#2276
 GreptimeTeam/greptimedb#5491
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
+hanami/hanami@4c206392546c1bbaea29782df60fed7769071e84
 hellux/jotdown#76
 hexpm/hex#1110
 hexpm/hexpm#1383
@@ -238,6 +246,7 @@ mozilla/neqo#2721
 narwhals-dev/narwhals#1567
 nedbat/coveragepy@675c2f8c6c36771c85929ac9e1190b13e0269344
 neocmakelsp/neocmakelsp#216
+neovim/neovim#38230
 NetApp/harvest#3247
 nextcloud/news#3560
 nextcloud/user_saml#947

@@ -80,6 +80,7 @@
 
     ??? example "Examples"
         - aquasecurity/trivy-action#502
+        - aquasecurity/trivy-operator#2910
 
 
 -   ![](https://github.com/ariel-os.png?size=40){ width="40" loading=lazy align=left } ariel-os
@@ -322,6 +323,17 @@
         - cortex/ripasso#411
 
 
+-   ![](https://github.com/cucumber.png?size=40){ width="40" loading=lazy align=left } cucumber
+
+    ---
+
+    ??? example "Examples"
+        - cucumber/cucumber-jvm#3172
+        - cucumber/cucumber-jvm-starter-maven-java@1c6575ba15d09110d5face60d4fe2e022c148581
+        - cucumber/cucumber-rails@c0f4842fe80db7a9d325242a6238ae7b72807957
+        - cucumber/cucumber-ruby@f5c09789d3777c85ea902e998ac810020e9fde2d
+
+
 -   ![](https://github.com/cunla.png?size=40){ width="40" loading=lazy align=left } cunla
 
     ---
@@ -442,6 +454,14 @@
         - docker/compose#12737
 
 
+-   ![](https://github.com/dry-rb.png?size=40){ width="40" loading=lazy align=left } dry-rb
+
+    ---
+
+    ??? example "Examples"
+        - dry-rb/dry-validation@44db170688d78e301d1e2d5f4e7dc260047f6fa5
+
+
 -   ![](https://github.com/dubzzz.png?size=40){ width="40" loading=lazy align=left } dubzzz
 
     ---
@@ -496,6 +516,7 @@
     ---
 
     ??? example "Examples"
+        - element-hq/element-call#3797
         - element-hq/element-desktop#2877
         - element-hq/element-web#32717
         - element-hq/element-x-ios#5161
@@ -758,6 +779,14 @@
 
     ??? example "Examples"
         - h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
+
+
+-   ![](https://github.com/hanami.png?size=40){ width="40" loading=lazy align=left } hanami
+
+    ---
+
+    ??? example "Examples"
+        - hanami/hanami@4c206392546c1bbaea29782df60fed7769071e84
 
 
 -   ![](https://github.com/hellux.png?size=40){ width="40" loading=lazy align=left } hellux
@@ -1134,6 +1163,14 @@
 
     ??? example "Examples"
         - neocmakelsp/neocmakelsp#216
+
+
+-   ![](https://github.com/neovim.png?size=40){ width="40" loading=lazy align=left } neovim
+
+    ---
+
+    ??? example "Examples"
+        - neovim/neovim#38230
 
 
 -   ![](https://github.com/NetApp.png?size=40){ width="40" loading=lazy align=left } NetApp

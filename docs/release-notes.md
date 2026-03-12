@@ -18,6 +18,11 @@ of `zizmor`.
 
     Many thanks to @shaanmajid for proposing and implementing this improvement!
 
+### Enhancements 🌱
+
+* `zizmor`'s CLI help and usage output now uses a custom color scheme for
+  improved readability (#1747)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
@@ -28,6 +33,11 @@ of `zizmor`.
 * Fixed a bug in [template-injection] where the `context` input of
   `docker/build-push-action` was incorrectly considered a code injection sink
   (#1705)
+
+### Changes ⚠️
+
+* `artipacked` audit emits a pedantic finding if `persist-credentials`
+  is an expression (#1735)
 
 ## 1.23.0
 
