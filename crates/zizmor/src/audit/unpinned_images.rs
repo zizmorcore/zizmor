@@ -10,6 +10,7 @@ use crate::{
 use github_actions_expressions::{Expr, literal::Literal};
 use github_actions_models::common::{DockerUses, expr::LoE};
 use github_actions_models::workflow::job::Container;
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, audit_meta};
 
@@ -133,6 +134,10 @@ impl Audit for UnpinnedImages {
                             // expressions like `inputs.x == 'true' && 'redis:7' || ''`.
                             if let Ok(parsed) = Expr::parse(expr.as_bare()) {
                                 for leaf in parsed.leaf_expressions() {
+                                    let leaf_location = location.clone().subfeature(
+                                        Subfeature::new(0, subfeature::Fragment::from(leaf)),
+                                    );
+
                                     match &leaf.inner {
                                         // String literals can be analyzed precisely.
                                         Expr::Literal(Literal::String(s)) => {
@@ -143,13 +148,18 @@ impl Audit for UnpinnedImages {
                                             if image.image().is_empty() {
                                                 continue;
                                             }
-                                            self.check_image(&image, location, job, &mut findings)?;
+                                            self.check_image(
+                                                &image,
+                                                &leaf_location,
+                                                job,
+                                                &mut findings,
+                                            )?;
                                         }
                                         // Non-string leaves (contexts, calls, etc.)
                                         // can't be analyzed statically.
                                         _ => {
                                             findings.push(self.build_finding(
-                                                location,
+                                                &leaf_location,
                                                 "container image may be unpinned",
                                                 Confidence::Low,
                                                 Persona::Regular,

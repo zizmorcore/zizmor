@@ -82,26 +82,26 @@ error[unpinned-images]: unpinned image references
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> .github/workflows/ci.yml:71:9
+  --> .github/workflows/ci.yml:71:48
    |
 71 |         image: ${{ (matrix.name == 'Tests') && 'postgres:17.5' || '' }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |                                                ^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
    |
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> .github/workflows/ci.yml:80:9
+  --> .github/workflows/ci.yml:80:48
    |
 80 |         image: ${{ (matrix.name == 'Tests') && 'redis:7.0' || '' }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |                                                ^^^^^^^^^^^ container image is not pinned to a SHA256 hash
    |
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> .github/workflows/ci.yml:84:9
+  --> .github/workflows/ci.yml:84:48
    |
 84 |         image: ${{ (matrix.name == 'Tests') && 'stripe/stripe-mock:v0.162.0' || '' }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
    |
    = note: audit confidence → High
 
