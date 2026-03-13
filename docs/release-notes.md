@@ -23,6 +23,12 @@ of `zizmor`.
 * `zizmor`'s CLI help and usage output now uses a custom color scheme for
   improved readability (#1747)
 
+### Bug Fixes 🐛
+
+* The [dependabot-cooldown] audit no longer flags missing cooldowns on
+  ecosystems that don't (yet) support cooldowns, such as `opentofu` and
+  `pre-commit` (#1480)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
