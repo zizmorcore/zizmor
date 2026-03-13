@@ -7,40 +7,11 @@ use crate::{
     state::AuditState,
 };
 
-use github_actions_expressions::{Expr, SpannedExpr, literal::Literal, op::BinOp};
+use github_actions_expressions::{Expr, literal::Literal};
 use github_actions_models::common::{DockerUses, expr::LoE};
 use github_actions_models::workflow::job::Container;
 
 use super::{Audit, AuditLoadError, audit_meta};
-
-/// Extract possible string literal values that an expression could evaluate to.
-///
-/// Uses GitHub Actions' short-circuit semantics:
-/// - `A && B`: if A is truthy, result is B (A is a condition, not a value)
-/// - `A || B`: result is A if truthy, otherwise B (both are possible values)
-///
-/// Returns `None` if any value-position subexpression can't be statically determined
-/// (e.g. a context reference like `inputs.image`).
-fn extract_image_values<'a>(expr: &'a SpannedExpr<'a>) -> Option<Vec<&'a str>> {
-    match &expr.inner {
-        Expr::Literal(Literal::String(s)) => Some(vec![s.as_ref()]),
-        Expr::BinOp {
-            lhs,
-            op: BinOp::Or,
-            rhs,
-        } => {
-            let mut values = extract_image_values(lhs)?;
-            values.extend(extract_image_values(rhs)?);
-            Some(values)
-        }
-        Expr::BinOp {
-            op: BinOp::And,
-            rhs,
-            ..
-        } => extract_image_values(rhs),
-        _ => None,
-    }
-}
 
 pub(crate) struct UnpinnedImages;
 
@@ -64,16 +35,15 @@ impl UnpinnedImages {
     }
 
     /// Classify a `DockerUses` image and push the appropriate finding.
-    /// Returns `true` if a finding was emitted, `false` if the image is hash-pinned.
     fn check_image<'doc>(
         &self,
         image: &DockerUses,
         location: &SymbolicLocation<'doc>,
         job: &super::NormalJob<'doc>,
         findings: &mut Vec<Finding<'doc>>,
-    ) -> Result<bool, AuditError> {
+    ) -> Result<(), AuditError> {
         match (image.tag(), image.hash()) {
-            (_, Some(_)) => Ok(false),
+            (_, Some(_)) => {}
             (Some("latest"), None) => {
                 findings.push(self.build_finding(
                     location,
@@ -82,7 +52,6 @@ impl UnpinnedImages {
                     Persona::Regular,
                     job,
                 )?);
-                Ok(true)
             }
             (Some(_), None) => {
                 findings.push(self.build_finding(
@@ -92,7 +61,6 @@ impl UnpinnedImages {
                     Persona::Pedantic,
                     job,
                 )?);
-                Ok(true)
             }
             (None, None) => {
                 findings.push(self.build_finding(
@@ -102,9 +70,9 @@ impl UnpinnedImages {
                     Persona::Regular,
                     job,
                 )?);
-                Ok(true)
             }
         }
+        Ok(())
     }
 }
 
@@ -161,21 +129,34 @@ impl Audit for UnpinnedImages {
                         // An invalid expression, or otherwise any expression that's
                         // more complex than a simple matrix reference.
                         _ => {
-                            // Try to extract possible string literal values from
-                            // complex expressions like the conditional pattern:
-                            // `inputs.x == 'true' && 'redis:7' || ''`
-                            if let Ok(parsed) = Expr::parse(expr.as_bare())
-                                && let Some(values) = extract_image_values(&parsed)
-                            {
-                                for value in values {
-                                    if value.is_empty() {
-                                        continue;
+                            // Extract possible leaf expressions from complex
+                            // expressions like `inputs.x == 'true' && 'redis:7' || ''`.
+                            if let Ok(parsed) = Expr::parse(expr.as_bare()) {
+                                for leaf in parsed.leaf_expressions() {
+                                    match &leaf.inner {
+                                        // String literals can be analyzed precisely.
+                                        Expr::Literal(Literal::String(s)) => {
+                                            if s.is_empty() {
+                                                continue;
+                                            }
+                                            let image = DockerUses::parse(s.as_ref());
+                                            if image.image().is_empty() {
+                                                continue;
+                                            }
+                                            self.check_image(&image, location, job, &mut findings)?;
+                                        }
+                                        // Non-string leaves (contexts, calls, etc.)
+                                        // can't be analyzed statically.
+                                        _ => {
+                                            findings.push(self.build_finding(
+                                                location,
+                                                "container image may be unpinned",
+                                                Confidence::Low,
+                                                Persona::Regular,
+                                                job,
+                                            )?);
+                                        }
                                     }
-                                    let image = DockerUses::parse(value);
-                                    if image.image().is_empty() {
-                                        continue;
-                                    }
-                                    self.check_image(&image, location, job, &mut findings)?;
                                 }
                                 continue;
                             }

@@ -110,3 +110,11 @@ jobs:
         image: ${{ inputs.use-redis == 'true' && 'redis@sha256:...' || '' }}
     steps:
       - run: echo 'not vulnerable!'
+
+  context-or-context-image:
+    name: context-or-context-image
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
+    steps:
+      - run: echo 'vulnerable!'
