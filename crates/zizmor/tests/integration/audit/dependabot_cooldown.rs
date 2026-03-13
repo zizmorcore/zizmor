@@ -177,18 +177,19 @@ fn test_opentofu_cooldown() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("dependabot-cooldown/opentofu-no-cooldown/dependabot.yml"))
             .run()?,
-        @r"
-    warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
-     --> @@INPUT@@:5:5
-      |
-    5 |   - package-ecosystem: opentofu
-      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
-      |
-      = note: audit confidence → High
-      = note: this finding has an auto-fix
+        @"No findings to report. Good job!"
+    );
 
-    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
-    "
+    Ok(())
+}
+
+#[test]
+fn test_pre_commit_no_cooldown_no_findings() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("dependabot-cooldown/pre-commit-no-cooldown/dependabot.yml"))
+            .run()?,
+        @"No findings to report. Good job!"
     );
 
     Ok(())

@@ -2,6 +2,7 @@ use crate::{
     audit::{Audit, AuditError, audit_meta},
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
 };
+use github_actions_models::dependabot::v2::PackageEcosystem;
 use yamlpatch::{Op, Patch};
 
 audit_meta!(
@@ -11,6 +12,14 @@ audit_meta!(
 );
 
 pub(crate) struct DependabotCooldown;
+
+/// Checks if the given Dependabot package ecosystem supports cooldown configuration.
+fn supports_cooldown(ecosystem: &PackageEcosystem) -> bool {
+    !matches!(
+        ecosystem,
+        PackageEcosystem::Opentofu | PackageEcosystem::PreCommit
+    )
+}
 
 impl DependabotCooldown {
     /// Creates a fix that adds default-days to an existing cooldown block
@@ -90,6 +99,11 @@ impl Audit for DependabotCooldown {
         let mut findings = vec![];
 
         for update in dependabot.updates() {
+            // Skip ecosystems that don't support cooldown
+            if !supports_cooldown(&update.package_ecosystem) {
+                continue;
+            }
+
             match &update.cooldown {
                 // TODO(ww): Should we have opinions about the other
                 // cooldown settings?
