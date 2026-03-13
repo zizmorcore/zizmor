@@ -1919,6 +1919,17 @@
         - Unidata/MetPy#3710
 
 
+-   ![](https://github.com/Uniswap.png?size=40){ width="40" loading=lazy align=left } Uniswap
+
+    ---
+
+    ??? example "Examples"
+        - Uniswap/docs#1114
+        - Uniswap/sdks#516
+        - Uniswap/UniswapX#362
+        - Uniswap/v4-periphery#515
+
+
 -   ![](https://github.com/updatecli.png?size=40){ width="40" loading=lazy align=left } updatecli
 
     ---

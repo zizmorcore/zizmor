@@ -398,6 +398,10 @@ trifectatechfoundation/sudo-rs#1490
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710
+Uniswap/docs#1114
+Uniswap/sdks#516
+Uniswap/UniswapX#362
+Uniswap/v4-periphery#515
 updatecli/updatecli#7865
 urllib3/urllib3#3528
 uutils/coreutils#6973
