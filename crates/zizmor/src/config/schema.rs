@@ -278,6 +278,24 @@ mod tests {
     }
 
     #[test]
+    fn test_secrets_outside_env_base_plus_config() {
+        let secrets_allow = r#"
+        rules:
+          secrets-outside-env:
+            config:
+              allow:
+                - NOT_SO_SECRET
+            ignore:
+              - foo.yml
+        "#;
+
+        let instance = serde_yaml::from_str::<serde_json::Value>(secrets_allow).unwrap();
+        SCHEMA_VALIDATOR
+            .validate(&instance)
+            .expect("secrets-outside-env allow config with base config should be valid");
+    }
+
+    #[test]
     fn test_unpinned_uses_config() {
         let valid = r#"
         rules:

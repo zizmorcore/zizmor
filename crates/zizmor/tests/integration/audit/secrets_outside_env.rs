@@ -90,7 +90,6 @@ fn test_config_allow_none() -> Result<()> {
     Ok(())
 }
 
-
 #[test]
 fn test_config_allow_one() -> Result<()> {
     insta::assert_snapshot!(
