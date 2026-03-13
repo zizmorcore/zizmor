@@ -33,7 +33,7 @@ impl Audit for SecretsOutsideEnvironment {
     async fn audit_normal_job<'doc>(
         &self,
         job: &NormalJob<'doc>,
-        _config: &Config,
+        config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         if job.environment.is_some() {
             // If the job has an environment, then we assume that any secrets
@@ -44,6 +44,8 @@ impl Audit for SecretsOutsideEnvironment {
             // Consequently, we have a higher false-negative rate than is ideal here.
             return Ok(vec![]);
         }
+
+        let config = config.secrets_outside_env_config.as_ref();
 
         // Get every expression in the job's body, and look for accesses of the `secrets` context.
         // NOTE: In principle this is incomplete, since there are some places (like `if:`) where
@@ -64,6 +66,14 @@ impl Audit for SecretsOutsideEnvironment {
                 if context.matches("secrets.GITHUB_TOKEN") {
                     // GITHUB_TOKEN is always latently available, so we don't
                     // flag its usage outside of a dedicated environment.
+                    continue;
+                }
+
+                // If the user has configured the audit, check secret's name against the allowlist.
+                if let Some(config) = config
+                    && let Some(secret_name) = context.single_tail()
+                    && config.allow.contains(secret_name)
+                {
                     continue;
                 }
 

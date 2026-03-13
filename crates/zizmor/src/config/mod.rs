@@ -1,4 +1,10 @@
-use std::{collections::HashMap, fs, num::NonZeroUsize, ops::Deref, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    num::NonZeroUsize,
+    ops::Deref,
+    str::FromStr,
+};
 
 use anyhow::{Context as _, anyhow};
 use camino::Utf8Path;
@@ -16,7 +22,7 @@ use crate::{
     App, CollectionOptions,
     audit::{
         AuditCore, dependabot_cooldown::DependabotCooldown, forbidden_uses::ForbiddenUses,
-        unpinned_uses::UnpinnedUses,
+        secrets_outside_env::SecretsOutsideEnvironment, unpinned_uses::UnpinnedUses,
     },
     finding::Finding,
     github::{Client, ClientError},
@@ -228,6 +234,16 @@ pub(crate) enum ForbiddenUsesConfigInner {
     Deny(Vec<RepositoryUsesPattern>),
 }
 
+/// Configuration for the `secrets-outside-env` audit.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+#[serde(default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub(crate) struct SecretsOutsideEnvConfig {
+    /// List of secret names excluded from the audit
+    pub(crate) allow: HashSet<String>,
+}
+
 /// # Configuration for the `unpinned-uses` audit.
 ///
 /// This configuration is reified into an `UnpinnedUsesPolicies`.
@@ -396,6 +412,7 @@ pub(crate) struct Config {
     raw: RawConfig,
     pub(crate) dependabot_cooldown_config: DependabotCooldownConfig,
     pub(crate) forbidden_uses_config: Option<ForbiddenUsesConfig>,
+    pub(crate) secrets_outside_env_config: Option<SecretsOutsideEnvConfig>,
     pub(crate) unpinned_uses_policies: UnpinnedUsesPolicies,
 }
 
@@ -409,6 +426,8 @@ impl Config {
             .unwrap_or_default();
 
         let forbidden_uses_config = raw.rule_config(ForbiddenUses::ident())?;
+
+        let secrets_outside_env_config = raw.rule_config(SecretsOutsideEnvironment::ident())?;
 
         let unpinned_uses_policies = {
             if let Some(unpinned_uses_config) =
@@ -424,6 +443,7 @@ impl Config {
             raw,
             dependabot_cooldown_config,
             forbidden_uses_config,
+            secrets_outside_env_config,
             unpinned_uses_policies,
         })
     }
