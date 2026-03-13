@@ -64,7 +64,23 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
         |
         = note: audit confidence → High
 
-    7 findings: 0 informational, 0 low, 0 medium, 7 high
+    error[unpinned-images]: unpinned image references
+       --> @@INPUT@@:118:7
+        |
+    118 |       image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
+        |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+        |
+        = note: audit confidence → Low
+
+    error[unpinned-images]: unpinned image references
+       --> @@INPUT@@:118:7
+        |
+    118 |       image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
+        |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+        |
+        = note: audit confidence → Low
+
+    9 findings: 0 informational, 0 low, 0 medium, 9 high
     "
     );
 
