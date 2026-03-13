@@ -1,0 +1,6 @@
+# zizmor.yml config file with an invalid schema for the 'secrets-outside-env' rule.
+
+rules:
+  secrets-outside-env:
+    config:
+      mystery-variant: 42
