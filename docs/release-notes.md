@@ -25,9 +25,8 @@ of `zizmor`.
 
 ### Bug Fixes 🐛
 
-* The [dependabot-cooldown] audit no longer flags missing cooldowns on
-  ecosystems that don't (yet) support cooldowns, such as `opentofu` and
-  `pre-commit` (#1480)
+* The [dependabot-cooldown] audit no longer flags missing cooldowns for
+  the `pre-commit` ecosystem, which does not support cooldown configuration
 
 ## 1.23.1
 

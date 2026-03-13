@@ -15,10 +15,7 @@ pub(crate) struct DependabotCooldown;
 
 /// Checks if the given Dependabot package ecosystem supports cooldown configuration.
 fn supports_cooldown(ecosystem: &PackageEcosystem) -> bool {
-    !matches!(
-        ecosystem,
-        PackageEcosystem::Opentofu | PackageEcosystem::PreCommit
-    )
+    !matches!(ecosystem, PackageEcosystem::PreCommit)
 }
 
 impl DependabotCooldown {
