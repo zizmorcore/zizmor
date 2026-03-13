@@ -11,7 +11,10 @@
 
 use schemars::JsonSchema;
 
-use super::{DependabotCooldownConfig, ForbiddenUsesConfig, UnpinnedUsesConfig, WorkflowRule};
+use super::{
+    DependabotCooldownConfig, ForbiddenUsesConfig, SecretsOutsideEnvConfig, UnpinnedUsesConfig,
+    WorkflowRule,
+};
 
 /// Base configuration for all audit rules.
 #[derive(Clone, Debug, Default, JsonSchema)]
@@ -44,6 +47,17 @@ struct ForbiddenUsesRuleConfig {
 
     #[serde(default)]
     config: Option<ForbiddenUsesConfig>,
+}
+
+/// Configuration for the `secrets-outside-env` audit.
+#[derive(Clone, Debug, Default, JsonSchema)]
+#[serde(deny_unknown_fields)]
+struct SecretsOutsideEnvRuleConfig {
+    #[serde(flatten)]
+    base: BaseRuleConfig,
+
+    #[serde(default)]
+    config: Option<SecretsOutsideEnvConfig>,
 }
 
 /// Configuration for the `unpinned-uses` audit.
@@ -106,11 +120,11 @@ define_audit_rules! {
     concurrency_limits,
     archived_uses,
     misfeature,
-    secrets_outside_env,
     superfluous_actions;
 
     [DependabotCooldownRuleConfig] dependabot_cooldown,
     [ForbiddenUsesRuleConfig] forbidden_uses,
+    [SecretsOutsideEnvRuleConfig] secrets_outside_env,
     [UnpinnedUsesRuleConfig] unpinned_uses,
 }
 
@@ -244,6 +258,23 @@ mod tests {
         SCHEMA_VALIDATOR
             .validate(&instance)
             .expect("forbidden uses deny config should be valid");
+    }
+
+    #[test]
+    fn test_secrets_outside_env_config() {
+        let secrets_allow = r#"
+        rules:
+          secrets-outside-env:
+            config:
+              allow:
+                - NOT_SO_SECRET
+                - ALSO_NOT_SO_SECRET
+        "#;
+
+        let instance = serde_yaml::from_str::<serde_json::Value>(secrets_allow).unwrap();
+        SCHEMA_VALIDATOR
+            .validate(&instance)
+            .expect("secrets-outside-env allow config should be valid");
     }
 
     #[test]

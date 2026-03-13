@@ -1384,6 +1384,35 @@ the job or jobs that need a secret should use the corresponding environment.
                   API_KEY: ${{ secrets.API_KEY }}
         ```
 
+### Configuration { #secrets-outside-env-configuration }
+
+#### `rules.secrets-outside-env.config.allow`
+
+_Type_: `list`
+
+The `secrets-outside-env` audit operates on an allowlist basis:
+
+* Findings for secrets matching the allowlist will not be flagged by this audit.
+
+    Intended use case: only allowing "special" secrets to be used outside environments,
+    and forbidding everything else.
+
+* The `GITHUB_TOKEN` secret is never flagged by this audit.
+
+!!! example
+
+    The following configuration would allow only any usage of CI_COVERAGE_TOKEN
+    and NOT_VERY_SENSITIVE, even outside of an environment.
+
+    ```yaml title="zizmor.yml"
+    rules:
+      secrets-outside-env:
+        config:
+          allow:
+            - CI_COVERAGE_TOKEN
+            - NOT_VERY_SENSITIVE
+    ```
+
 ## `self-hosted-runner`
 
 | Type     | Examples            | Introduced in | Works offline  | Auto-fixes available | Configurable |
