@@ -79,6 +79,7 @@
     ---
 
     ??? example "Examples"
+        - aquasecurity/trivy#10322
         - aquasecurity/trivy-action#502
         - aquasecurity/trivy-operator#2910
 

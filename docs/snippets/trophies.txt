@@ -23,6 +23,7 @@ apache/opendal-reqsign#687
 apache/opennlp#736
 apache/sedona#1976
 apache/sedona#2582
+aquasecurity/trivy#10322
 aquasecurity/trivy-action#502
 aquasecurity/trivy-operator#2910
 ariel-os/ariel-os#1738
