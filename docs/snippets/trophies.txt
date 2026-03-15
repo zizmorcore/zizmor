@@ -23,6 +23,7 @@ apache/opendal-reqsign#687
 apache/opennlp#736
 apache/sedona#1976
 apache/sedona#2582
+aquasecurity/trivy#10322
 aquasecurity/trivy-action#502
 aquasecurity/trivy-operator#2910
 ariel-os/ariel-os#1738
@@ -398,6 +399,10 @@ trifectatechfoundation/sudo-rs#1490
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710
+Uniswap/docs#1114
+Uniswap/sdks#516
+Uniswap/UniswapX#362
+Uniswap/v4-periphery#515
 updatecli/updatecli#7865
 urllib3/urllib3#3528
 uutils/coreutils#6973
