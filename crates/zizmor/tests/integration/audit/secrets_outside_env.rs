@@ -79,12 +79,23 @@ fn test_config_allow_none() -> Result<()> {
      6 |   test:
        |   ---- this job
     ...
-    15 |         run: echo ${{ secrets.ALSO_NOT_SO_SECRET }}
+    15 |         run: echo ${{ secrets['NOT_SO_SECRET'] }}
+       |                       ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:18:23
+       |
+     6 |   test:
+       |   ---- this job
+    ...
+    18 |         run: echo ${{ secrets.ALSO_NOT_SO_SECRET }}
        |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
 
-    7 findings (5 suppressed): 0 informational, 0 low, 2 medium, 0 high
+    11 findings (8 suppressed): 0 informational, 0 low, 3 medium, 0 high
     "
     );
     Ok(())
@@ -99,17 +110,17 @@ fn test_config_allow_one() -> Result<()> {
         .run()?,
         @"
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:15:23
+      --> @@INPUT@@:18:23
        |
      6 |   test:
        |   ---- this job
     ...
-    15 |         run: echo ${{ secrets.ALSO_NOT_SO_SECRET }}
+    18 |         run: echo ${{ secrets.ALSO_NOT_SO_SECRET }}
        |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
 
-    6 findings (5 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    9 findings (8 suppressed): 0 informational, 0 low, 1 medium, 0 high
     "
     );
     Ok(())
@@ -122,7 +133,7 @@ fn test_config_allow_some() -> Result<()> {
         .input(input_under_test("secrets-outside-env/multiple-secrets.yml"))
         .config(input_under_test("secrets-outside-env/configs/allow-some.yml"))
         .run()?,
-        @"No findings to report. Good job! (5 suppressed)"
+        @"No findings to report. Good job! (8 suppressed)"
     );
     Ok(())
 }
