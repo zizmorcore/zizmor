@@ -193,3 +193,15 @@ fn test_opentofu_cooldown() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_pre_commit_no_cooldown_no_findings() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("dependabot-cooldown/pre-commit-no-cooldown/dependabot.yml"))
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
