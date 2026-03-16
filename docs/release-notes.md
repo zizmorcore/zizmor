@@ -23,6 +23,11 @@ of `zizmor`.
 * `zizmor`'s CLI help and usage output now uses a custom color scheme for
   improved readability (#1747)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [concurrency-limits] audit reported findings
+  at the job level instead of the workflow level (#1627)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛

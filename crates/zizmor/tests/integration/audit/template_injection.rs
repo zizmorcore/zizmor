@@ -595,7 +595,21 @@ fn test_issue_1664() -> Result<()> {
        |
        = note: audit confidence → High
 
-    3 findings (2 ignored): 0 informational, 1 low, 0 medium, 0 high
+    help[concurrency-limits]: insufficient job-level concurrency limits
+      --> @@INPUT@@:3:1
+       |
+     3 | / "on":
+     4 | |   push:
+     5 | |     branches:
+     6 | |       - main
+       | |____________^ workflow is missing concurrency setting
+    ...
+    12 |       name: Repro
+       |       ----------- job affected by missing workflow concurrency
+       |
+       = note: audit confidence → High
+
+    3 findings (1 ignored): 0 informational, 2 low, 0 medium, 0 high
     "#
     );
 

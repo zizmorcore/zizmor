@@ -19,29 +19,27 @@ fn test_cancel_false() -> anyhow::Result<()> {
 #[test]
 fn test_missing() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "concurrency-limits/missing.yml"
-            ))
-            .args(["--persona=pedantic"])
-            .run()?,
-        @r"
+            zizmor()
+                .input(input_under_test(
+                    "concurrency-limits/missing.yml"
+                ))
+                .args(["--persona=pedantic"])
+                .run()?,
+    @"
     help[concurrency-limits]: insufficient job-level concurrency limits
-      --> @@INPUT@@:1:1
-       |
-     1 | / name: Workflow without concurrency
-     2 | | on: push
-     3 | | permissions: {}
-    ...  |
-    10 | |     - name: 1-ok
-    11 | |       run: echo ok
-       | |___________________^ missing concurrency setting
-       |
-       = note: audit confidence → High
+     --> @@INPUT@@:2:1
+      |
+    2 | on: push
+      | ^^^^^^^^ workflow is missing concurrency setting
+    ...
+    7 |     name: some-job
+      |     -------------- job affected by missing workflow concurrency
+      |
+      = note: audit confidence → High
 
     1 finding: 0 informational, 1 low, 0 medium, 0 high
     "
-    );
+        );
     Ok(())
 }
 
@@ -73,37 +71,38 @@ fn test_no_cancel() -> anyhow::Result<()> {
 #[test]
 fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test(
-                "concurrency-limits/jobs-missing-no-cancel.yml"
-            ))
-            .args(["--persona=pedantic"])
-            .run()?,
-        @r"
+            zizmor()
+                .input(input_under_test(
+                    "concurrency-limits/jobs-missing-no-cancel.yml"
+                ))
+                .args(["--persona=pedantic"])
+                .run()?,
+    @"
     help[concurrency-limits]: insufficient job-level concurrency limits
-     --> @@INPUT@@:9:5
+     --> @@INPUT@@:2:1
       |
+    2 | on: push
+      | ^^^^^^^^ workflow is missing concurrency setting
+    ...
     9 |     concurrency: group
-      |     ^^^^^^^^^^^^^^^^^^ job concurrency is missing cancel-in-progress
+      |     ------------------ job concurrency is missing cancel-in-progress
       |
       = note: audit confidence → High
 
     help[concurrency-limits]: insufficient job-level concurrency limits
-      --> @@INPUT@@:1:1
+      --> @@INPUT@@:2:1
        |
-     1 | / name: Workflow with job 1 missing cancel-in-progress and job 2 missing concurrency
-     2 | | on: push
-     3 | | permissions: {}
-    ...  |
-    17 | |     - name: 2-ok
-    18 | |       run: echo ok
-       | |___________________^ missing concurrency setting
+     2 | on: push
+       | ^^^^^^^^ workflow is missing concurrency setting
+    ...
+    14 |     name: job-2
+       |     ----------- job affected by missing workflow concurrency
        |
        = note: audit confidence → High
 
     2 findings: 0 informational, 2 low, 0 medium, 0 high
     "
-    );
+        );
 
     Ok(())
 }
