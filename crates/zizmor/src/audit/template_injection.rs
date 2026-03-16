@@ -216,7 +216,8 @@ impl TemplateInjection {
         // TODO: We could probably go a step further here and avoid the
         // loop below entirely, since we expect `env` contexts to only
         // have a single part, i.e. `foo.bar` and never `foo.bar.baz`.
-        if ctx.child_of("env") {
+        let is_env_context = ctx.child_of("env");
+        if is_env_context {
             ctx_parts.next();
         }
 
@@ -271,7 +272,16 @@ impl TemplateInjection {
             }
         }
 
-        Some(env_parts.join("_").to_uppercase())
+        let env_var = env_parts.join("_");
+
+        // For `env` contexts, preserve the original case since these refer
+        // to existing environment variables. GitHub recommends treating
+        // environment variables as case sensitive.
+        if is_env_context {
+            Some(env_var)
+        } else {
+            Some(env_var.to_uppercase())
+        }
     }
 
     /// Attempts to produce a `Fix` for a given expression.
@@ -1059,7 +1069,7 @@ jobs:
                           echo "User: ${GITHUB_ACTOR}"
                           echo "User: ${GITHUB_ACTOR}"
                           echo "User: ${GITHUB_ACTOR}"
-                          echo "User: ${GITHUB_ACTOR}"
+                          echo "User: ${github_actor}"
                 "#);
             }
         );
@@ -1173,11 +1183,11 @@ jobs:
             // Computed indices not supported
             ("foo.bar[computed]", None),
             ("foo.bar[abc && def]", None),
-            // env contexts should have the env prefix removed
+            // env contexts should have the env prefix removed and preserve case
             ("env.FOO_BAR", Some("FOO_BAR")),
-            ("env.foo_bar", Some("FOO_BAR")),
-            ("ENV.foo_bar", Some("FOO_BAR")),
-            ("ENV['foo_bar']", Some("FOO_BAR")),
+            ("env.foo_bar", Some("foo_bar")),
+            ("ENV.foo_bar", Some("foo_bar")),
+            ("ENV['foo_bar']", Some("foo_bar")),
             ("env.GITHUB_ACTOR", Some("GITHUB_ACTOR")),
             // FIXME: soundness hole
             (
