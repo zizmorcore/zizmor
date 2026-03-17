@@ -55,7 +55,7 @@ impl Audit for SecretsOutsideEnvironment {
             return Ok(vec![]);
         }
 
-        let config = config.secrets_outside_env_config.as_ref();
+        let policy = config.secrets_outside_env_policy.as_ref();
 
         // Get every expression in the job's body, and look for accesses of the `secrets` context.
         // NOTE: In principle this is incomplete, since there are some places (like `if:`) where
@@ -80,9 +80,10 @@ impl Audit for SecretsOutsideEnvironment {
                 }
 
                 // If the user has configured the audit, check secret's name against the allowlist.
-                if let Some(config) = config
+                // TODO: use ContextPattern here for the case-insensitivity
+                if let Some(policy) = policy
                     && let Some(secret_name) = context.single_tail()
-                    && config.allow.contains(secret_name)
+                    && policy.allow.contains(&secret_name.to_ascii_lowercase())
                 {
                     continue;
                 }

@@ -244,6 +244,25 @@ pub(crate) struct SecretsOutsideEnvConfig {
     pub(crate) allow: HashSet<String>,
 }
 
+/// Policy to evaluate secrets references
+#[derive(Clone, Debug, Default)]
+pub(crate) struct SecretsOutsideEnvPolicy {
+    /// List of secret names excluded from the audit
+    pub(crate) allow: HashSet<String>,
+}
+
+// TODO: use ContextPattern for this case-insensitivity
+impl From<SecretsOutsideEnvConfig> for SecretsOutsideEnvPolicy {
+    fn from(value: SecretsOutsideEnvConfig) -> Self {
+        let allow = value
+            .allow
+            .iter()
+            .map(|item| item.to_ascii_lowercase())
+            .collect();
+        Self { allow }
+    }
+}
+
 /// # Configuration for the `unpinned-uses` audit.
 ///
 /// This configuration is reified into an `UnpinnedUsesPolicies`.
@@ -412,7 +431,7 @@ pub(crate) struct Config {
     raw: RawConfig,
     pub(crate) dependabot_cooldown_config: DependabotCooldownConfig,
     pub(crate) forbidden_uses_config: Option<ForbiddenUsesConfig>,
-    pub(crate) secrets_outside_env_config: Option<SecretsOutsideEnvConfig>,
+    pub(crate) secrets_outside_env_policy: Option<SecretsOutsideEnvPolicy>,
     pub(crate) unpinned_uses_policies: UnpinnedUsesPolicies,
 }
 
@@ -427,7 +446,9 @@ impl Config {
 
         let forbidden_uses_config = raw.rule_config(ForbiddenUses::ident())?;
 
-        let secrets_outside_env_config = raw.rule_config(SecretsOutsideEnvironment::ident())?;
+        let secrets_outside_env_config =
+            raw.rule_config::<SecretsOutsideEnvConfig>(SecretsOutsideEnvironment::ident())?;
+        let secrets_outside_env_policy = secrets_outside_env_config.map(Into::into);
 
         let unpinned_uses_policies = {
             if let Some(unpinned_uses_config) =
@@ -443,7 +464,7 @@ impl Config {
             raw,
             dependabot_cooldown_config,
             forbidden_uses_config,
-            secrets_outside_env_config,
+            secrets_outside_env_policy,
             unpinned_uses_policies,
         })
     }
