@@ -263,6 +263,7 @@
     ---
 
     ??? example "Examples"
+        - canonical/ubuntu.com#16128
         - canonical/operator#1656
         - canonical/operator#1721
         - canonical/testflinger#630
@@ -1330,6 +1331,14 @@
         - pallets/flask#5945
 
 
+-   ![](https://github.com/pendulum-project.png?size=40){ width="40" loading=lazy align=left } pendulum-project
+
+    ---
+
+    ??? example "Examples"
+        - pendulum-project/ntpd-rs#2139
+
+
 -   ![](https://github.com/philips-software.png?size=40){ width="40" loading=lazy align=left } philips-software
 
     ---
@@ -1463,6 +1472,7 @@
     ---
 
     ??? example "Examples"
+        - pypa/cibuildwheel#2776
         - pypa/packaging#1035
         - pypa/packaging.python.org#1765
         - pypa/pip-audit#851
@@ -1658,6 +1668,8 @@
     ---
 
     ??? example "Examples"
+        - rust-lang/compiler-builtins#1113
+        - rust-lang/compiler-builtins#1115
         - rust-lang/crates.io#10176
         - rust-lang/crates.io#11203
         - rust-lang/rust-clippy#13933
