@@ -28,6 +28,9 @@ of `zizmor`.
 * The [dependabot-cooldown] audit no longer flags missing cooldowns for
   the `pre-commit` ecosystem, which does not support cooldown configuration (#1758)
 
+* Fixed a bug where auto-fixes for the [template-injection] audit would fail
+  to preserve an environment variable's casing (#1766)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
