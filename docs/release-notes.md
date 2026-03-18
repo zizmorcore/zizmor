@@ -23,6 +23,11 @@ of `zizmor`.
 * `zizmor`'s CLI help and usage output now uses a custom color scheme for
   improved readability (#1747)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where auto-fixes for the [template-injection] audit would fail
+  to preserve an environment variable's casing (#1766)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
