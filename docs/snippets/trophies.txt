@@ -60,6 +60,7 @@ cachix/git-hooks.nix#606
 cakephp/cakephp#18081
 Calysto/metakernel#344
 Calysto/octave_kernel#263
+canonical/ubuntu.com#16128
 canonical/operator#1656
 canonical/operator#1721
 canonical/testflinger#630
@@ -278,6 +279,7 @@ oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
 pallets/flask#5945
+pendulum-project/ntpd-rs#2139
 philips-software/amp-devcontainer#830
 PlasmaPy/PlasmaPy#2975
 PowerDNS/pdns#15600
@@ -297,6 +299,7 @@ pubgrub-rs/pubgrub#389
 pyca/service-identity#75
 pydata/pydata-sphinx-theme#2077
 pylast/pylast#465
+pypa/cibuildwheel#2776
 pypa/packaging#1035
 pypa/packaging.python.org#1765
 pypa/pip-audit#851
@@ -344,6 +347,8 @@ rubygems/rubygems#8702
 rustsec/advisory-db#2444
 rustsec/rustsec#1449
 rust-bitcoin/rust-bitcoin#5234
+rust-lang/compiler-builtins#1113
+rust-lang/compiler-builtins#1115
 rust-lang/crates.io#10176
 rust-lang/crates.io#11203
 rust-lang/rust-clippy#13933
