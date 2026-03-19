@@ -104,10 +104,31 @@ impl Artipacked {
         for step in steps {
             let StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
-                with: LoE::Literal(with),
+                with,
             } = &step.body()
             else {
                 continue;
+            };
+
+            let with = match with {
+                LoE::Literal(with) => with,
+                // Emit blanket pedantic finding if the `with:` block cannot be analyzed
+                LoE::Expr(_) => {
+                    findings.push(
+                        Self::finding()
+                            .severity(Severity::Informational)
+                            .confidence(Confidence::High)
+                            .persona(Persona::Pedantic)
+                            .add_location(
+                                step.location()
+                                    .primary()
+                                    .with_keys(["with".into()])
+                                    .annotated("dynamic `with:` clause cannot be analyzed"),
+                            )
+                            .build(&step)?,
+                    );
+                    continue;
+                }
             };
 
             if uses.matches("actions/checkout") {

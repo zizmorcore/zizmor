@@ -7,6 +7,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: custom/build-action@v1
-        with:
-          input-a: ${{ fromJSON(steps.setup.outputs.package_options).input-a }}
-          input-b: ${{ fromJSON(steps.setup.outputs.package_options).input-b }}
+        with: ${{ fromJSON(steps.setup.outputs.package_options) }}

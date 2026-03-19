@@ -28,7 +28,7 @@ of `zizmor`.
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
   to preserve an environment variable's casing (#1766)
 
-* Fixed a bug where dynamic `with` blocks fail to deserialize (#1772)
+* Fixed a bug where dynamic `with: ${{ expr }}` clauses would cause a crash (#1772)
 
 ## 1.23.1
 

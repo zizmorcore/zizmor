@@ -145,6 +145,30 @@ fn test_issue_1709() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Fix #1769: dynamic `with:` clause emits a blanket pedantic finding that
+/// the clause cannot be analyzed.
+///
+/// See <https://github.com/zizmorcore/zizmor/issues/1769>
+#[test]
+fn test_issue_1769() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor().input(input_under_test("artipacked/issue-1769-repro.yml")).args(["--persona=pedantic"]).run()?,
+        @r"
+    info[artipacked]: credential persistence through GitHub Actions artifacts
+      --> @@INPUT@@:19:9
+       |
+    19 |         with: ${{ fromJson(steps.setup.outputs.options) }}
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ dynamic `with:` clause cannot be analyzed
+       |
+       = note: audit confidence → High
+
+    1 finding: 1 informational, 0 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
+
 /// Ensures that the artipacked audit works correctly on composite actions.
 #[test]
 fn test_composite_action() -> anyhow::Result<()> {
