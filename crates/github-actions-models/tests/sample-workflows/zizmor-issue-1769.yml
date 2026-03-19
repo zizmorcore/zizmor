@@ -1,0 +1,12 @@
+# https://github.com/zizmorcore/zizmor/issues/1769
+
+name: Test
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: custom/build-action@v1
+        with:
+          input-a: ${{ fromJSON(steps.setup.outputs.package_options).input-a }}
+          input-b: ${{ fromJSON(steps.setup.outputs.package_options).input-b }}

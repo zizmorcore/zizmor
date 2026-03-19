@@ -19,7 +19,7 @@ use std::{env, ops::Deref, sync::LazyLock, vec};
 
 use fst::Map;
 use github_actions_expressions::{Expr, context::Context, literal::Literal};
-use github_actions_models::common::{EnvValue, RepositoryUses, Uses};
+use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
 use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
@@ -119,7 +119,7 @@ impl TemplateInjection {
         match step.body() {
             models::StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
-                with,
+                with: LoE::Literal(with),
             } => TemplateInjection::action_injection_sinks(uses)
                 .iter()
                 .filter_map(|input| {

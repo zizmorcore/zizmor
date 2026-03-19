@@ -1,6 +1,9 @@
 use std::sync::LazyLock;
 
-use github_actions_models::common::{EnvValue, Uses, expr::ExplicitExpr};
+use github_actions_models::common::{
+    EnvValue, Uses,
+    expr::{ExplicitExpr, LoE},
+};
 use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
@@ -101,7 +104,7 @@ impl Artipacked {
         for step in steps {
             let StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
-                with,
+                with: LoE::Literal(with),
             } = &step.body()
             else {
                 continue;
