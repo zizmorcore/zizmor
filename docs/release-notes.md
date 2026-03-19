@@ -56,6 +56,8 @@ of `zizmor`.
 
 ### Changes ⚠️
 
+* Fixed a bug where dynamic `with` blocks fail to deserialize (#1772)
+
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
   persona, due to numerous false positives and negatives caused by GitHub's
   platform limitations (primarily around interactions between environment

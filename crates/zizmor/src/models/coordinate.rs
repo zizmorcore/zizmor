@@ -15,7 +15,7 @@
 
 use std::ops::{BitAnd, BitOr, Not};
 
-use github_actions_models::common::{EnvValue, Uses};
+use github_actions_models::common::{EnvValue, Uses, expr::LoE};
 use indexmap::IndexMap;
 
 use crate::utils::ExtractedExpr;
@@ -51,7 +51,7 @@ impl ActionCoordinate {
 
         let StepBodyCommon::Uses {
             uses: Uses::Repository(uses),
-            with,
+            with: LoE::Literal(with),
         } = step.body()
         else {
             return None;
