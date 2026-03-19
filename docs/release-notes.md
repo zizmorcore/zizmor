@@ -56,7 +56,7 @@ of `zizmor`.
 
 ### Changes ⚠️
 
-* Fixed a bug where dynamic `with` blocks fail to deserialize (#1772)
+* Fixed a bug where dynamic `with: ${{ expr }}` clauses would cause a crash (#1772)
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
   persona, due to numerous false positives and negatives caused by GitHub's
