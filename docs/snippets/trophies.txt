@@ -254,6 +254,7 @@ NetApp/harvest#3247
 nextcloud/news#3560
 nextcloud/user_saml#947
 nextcloud/.github#477
+nextest-rs/nextest#3196
 NixOS/infra#613
 NixOS/nixpkgs#396451
 NLnetLabs/nsd#413
@@ -357,6 +358,7 @@ rust-lang/this-week-in-rust#6721
 rustls/rustls#2261
 rustls/tokio-rustls#96
 rustls/webpki#299
+RustPython/RustPython#7463
 Saghen/blink.cmp#991
 scientific-python/repo-review#257
 scikit-build/scikit-build-core#983

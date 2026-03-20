@@ -1201,6 +1201,14 @@
         - nextcloud/.github#477
 
 
+-   ![](https://github.com/nextest-rs.png?size=40){ width="40" loading=lazy align=left } nextest-rs
+
+    ---
+
+    ??? example "Examples"
+        - nextest-rs/nextest#3196
+
+
 -   ![](https://github.com/NixOS.png?size=40){ width="40" loading=lazy align=left } NixOS
 
     ---
@@ -1692,6 +1700,14 @@
         - rustls/rustls#2261
         - rustls/tokio-rustls#96
         - rustls/webpki#299
+
+
+-   ![](https://github.com/RustPython.png?size=40){ width="40" loading=lazy align=left } RustPython
+
+    ---
+
+    ??? example "Examples"
+        - RustPython/RustPython#7463
 
 
 -   ![](https://github.com/rustsec.png?size=40){ width="40" loading=lazy align=left } rustsec
