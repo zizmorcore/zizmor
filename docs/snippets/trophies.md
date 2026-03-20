@@ -165,6 +165,14 @@
         - autotag-dev/autotag#142
 
 
+-   ![](https://github.com/basecamp.png?size=40){ width="40" loading=lazy align=left } basecamp
+
+    ---
+
+    ??? example "Examples"
+        - basecamp/fizzy#2645
+
+
 -   ![](https://github.com/ben-manes.png?size=40){ width="40" loading=lazy align=left } ben-manes
 
     ---
