@@ -198,7 +198,7 @@
           "$ref": "#/definitions/BaseRuleConfig"
         },
         "secrets-outside-env": {
-          "$ref": "#/definitions/BaseRuleConfig"
+          "$ref": "#/definitions/SecretsOutsideEnvRuleConfig"
         },
         "self-hosted-runner": {
           "$ref": "#/definitions/BaseRuleConfig"
@@ -232,6 +232,49 @@
         },
         "use-trusted-publishing": {
           "$ref": "#/definitions/BaseRuleConfig"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SecretsOutsideEnvConfig": {
+      "description": "Configuration for the `secrets-outside-env` audit.",
+      "type": "object",
+      "properties": {
+        "allow": {
+          "description": "List of secret names excluded from the audit",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "SecretsOutsideEnvRuleConfig": {
+      "description": "Configuration for the `secrets-outside-env` audit.",
+      "type": "object",
+      "properties": {
+        "config": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SecretsOutsideEnvConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disable": {
+          "type": "boolean",
+          "default": false
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowRule"
+          }
         }
       },
       "additionalProperties": false

@@ -1,0 +1,8 @@
+# zizmor.yml config file allowing multiple secrets for the 'secrets-outside-env' rule
+
+rules:
+  secrets-outside-env:
+    config:
+      allow:
+        - NOT_SO_SECRET
+        - ALSO_NOT_SO_SECRET
