@@ -82,7 +82,7 @@ impl Audit for SecretsOutsideEnvironment {
 
                 findings.push(
                     Self::finding()
-                        .persona(Persona::Regular)
+                        .persona(Persona::Auditor)
                         .severity(Severity::Medium)
                         .confidence(Confidence::High)
                         .add_location(job.location().key_only())
