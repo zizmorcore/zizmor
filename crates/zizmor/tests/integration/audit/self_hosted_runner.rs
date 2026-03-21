@@ -8,7 +8,7 @@ fn test_self_hosted_auditor() -> Result<()> {
             .input(input_under_test("self-hosted.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:17:5
        |
@@ -43,7 +43,7 @@ fn test_self_hosted_runner_label() -> Result<()> {
             .input(input_under_test("self-hosted/self-hosted-runner-label.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:15:5
        |
@@ -66,7 +66,7 @@ fn test_self_hosted_runner_group() -> Result<()> {
             .input(input_under_test("self-hosted/self-hosted-runner-group.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:15:5
        |
@@ -92,7 +92,7 @@ fn test_self_hosted_matrix_dimension() -> Result<()> {
             ))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:15:5
        |
@@ -122,7 +122,7 @@ fn test_self_hosted_matrix_inclusion() -> Result<()> {
             ))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:15:5
        |

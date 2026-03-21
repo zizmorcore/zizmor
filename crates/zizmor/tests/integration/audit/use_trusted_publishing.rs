@@ -7,7 +7,7 @@ fn test_use_trusted_publishing() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:19:9
        |
@@ -111,7 +111,7 @@ fn test_demo_action() -> Result<()> {
                 "use-trusted-publishing/demo-action/action.yml"
             ))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:9:7
        |
@@ -238,7 +238,7 @@ fn test_npm_publish() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing/npm-publish.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:15:9
        |
@@ -490,7 +490,7 @@ fn test_nuget_push() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing/nuget-push.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:12:14
        |

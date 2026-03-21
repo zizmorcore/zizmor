@@ -6,7 +6,7 @@ fn test_setup_python_pip_install() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("misfeature/setup-python-pip-install.yml"))
             .run()?,
-        @r"
+        @"
     help[misfeature]: usage of GitHub Actions misfeatures
       --> @@INPUT@@:14:11
        |
@@ -33,7 +33,7 @@ fn test_non_well_known_shell() -> anyhow::Result<()> {
             .input(input_under_test("misfeature/non-well-known-shell.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     help[misfeature]: usage of GitHub Actions misfeatures
       --> @@INPUT@@:18:9
        |
@@ -63,7 +63,7 @@ fn test_issue_1414_repro() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("misfeature/issue-1414-repro.yml"))
             .run()?,
-        @r"
+        @"
     help[misfeature]: usage of GitHub Actions misfeatures
       --> @@INPUT@@:13:9
        |
@@ -85,7 +85,7 @@ fn test_issue_1414_repro() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("misfeature/workflow-cmd-default-shell.yml"))
             .run()?,
-        @r"
+        @"
     help[misfeature]: usage of GitHub Actions misfeatures
       --> @@INPUT@@:10:5
        |

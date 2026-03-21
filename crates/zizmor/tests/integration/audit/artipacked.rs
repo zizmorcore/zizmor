@@ -4,7 +4,7 @@ use crate::common::{input_under_test, zizmor};
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor().input(input_under_test("artipacked.yml")).run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:22:9
        |
@@ -28,7 +28,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
             .input(input_under_test("artipacked.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:22:9
        |
@@ -52,7 +52,7 @@ fn test_auditor_persona() -> anyhow::Result<()> {
             .input(input_under_test("artipacked.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:22:9
        |
@@ -125,7 +125,7 @@ fn test_issue_1709() -> anyhow::Result<()> {
             .input(input_under_test("artipacked/issue-1709-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r#"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:18:9
        |
@@ -139,7 +139,7 @@ fn test_issue_1709() -> anyhow::Result<()> {
        = note: this finding has an auto-fix
 
     1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
-    "#
+    "
     );
 
     Ok(())
@@ -153,7 +153,7 @@ fn test_composite_action() -> anyhow::Result<()> {
             .input(input_under_test("artipacked/demo-action/action.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:9:7
        |

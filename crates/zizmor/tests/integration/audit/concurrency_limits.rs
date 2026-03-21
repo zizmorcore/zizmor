@@ -25,7 +25,7 @@ fn test_missing() -> anyhow::Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     help[concurrency-limits]: insufficient job-level concurrency limits
       --> @@INPUT@@:1:1
        |
@@ -54,7 +54,7 @@ fn test_no_cancel() -> anyhow::Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     help[concurrency-limits]: insufficient job-level concurrency limits
      --> @@INPUT@@:5:1
       |
@@ -79,7 +79,7 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     help[concurrency-limits]: insufficient job-level concurrency limits
      --> @@INPUT@@:9:5
       |

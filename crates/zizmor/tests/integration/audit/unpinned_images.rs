@@ -7,7 +7,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
             .input(input_under_test("unpinned-images.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     error[unpinned-images]: unpinned image references
       --> @@INPUT@@:23:7
        |
@@ -71,7 +71,7 @@ fn test_matrix_in_image_pedantic() -> anyhow::Result<()> {
             .input(input_under_test("unpinned-images/matrix-in-image.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     error[unpinned-images]: unpinned image references
       --> @@INPUT@@:20:7
        |
@@ -142,7 +142,7 @@ fn test_matrix_in_image_regular() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("unpinned-images/matrix-in-image.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-images]: unpinned image references
       --> @@INPUT@@:20:7
        |

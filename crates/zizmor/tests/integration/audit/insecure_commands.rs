@@ -8,7 +8,7 @@ fn test_insecure_commands_auditor() -> Result<()> {
             .input(input_under_test("insecure-commands.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     error[insecure-commands]: execution of insecure workflow commands is enabled
       --> @@INPUT@@:15:5
        |
@@ -40,7 +40,7 @@ fn test_insecure_commands_default() -> Result<()> {
         zizmor()
             .input(input_under_test("insecure-commands.yml"))
             .run()?,
-        @r"
+        @"
     error[insecure-commands]: execution of insecure workflow commands is enabled
       --> @@INPUT@@:15:5
        |
@@ -65,7 +65,7 @@ fn test_action_auditor() -> Result<()> {
             .input(input_under_test("insecure-commands/action.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     error[insecure-commands]: execution of insecure workflow commands is enabled
       --> @@INPUT@@:18:7
        |

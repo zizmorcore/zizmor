@@ -74,7 +74,7 @@ fn test_pr_317_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/pr-317-repro.yml"))
             .run()?,
-        @r"
+        @"
     warning[template-injection]: code injection via template expansion
       --> @@INPUT@@:28:20
        |
@@ -99,7 +99,7 @@ fn test_static_env() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/static-env.yml"))
             .run()?,
-        @r"
+        @"
     help[template-injection]: code injection via template expansion
       --> @@INPUT@@:43:20
        |
@@ -283,7 +283,7 @@ fn test_codeql_sinks() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/codeql-sinks.yml"))
             .run()?,
-        @r"
+        @"
     error[template-injection]: code injection via template expansion
       --> @@INPUT@@:17:20
        |

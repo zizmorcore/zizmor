@@ -6,7 +6,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("bot-conditions.yml"))
             .run()?,
-        @r"
+        @"
     error[dangerous-triggers]: use of fundamentally insecure workflow trigger
      --> @@INPUT@@:1:1
       |

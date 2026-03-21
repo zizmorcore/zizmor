@@ -1331,7 +1331,7 @@ jobs:
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content.source(), @r"
+                    insta::assert_snapshot!(fixed_content.source(), @"
 
                     name: Test Template Injection - CMD
                     on: push
@@ -1517,7 +1517,7 @@ jobs:
                         finding,
                         "replace expression with environment variable",
                     );
-                    insta::assert_snapshot!(fixed_content.source(), @r"
+                    insta::assert_snapshot!(fixed_content.source(), @"
 
                     name: Test Template Injection - CMD with Custom Env
                     on: push

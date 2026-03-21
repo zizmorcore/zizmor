@@ -10,7 +10,7 @@ fn test_missing_cooldown() -> anyhow::Result<()> {
                 "dependabot-cooldown/missing/dependabot.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
      --> @@INPUT@@:4:5
       |
@@ -35,7 +35,7 @@ fn test_no_default_days() -> anyhow::Result<()> {
                 "dependabot-cooldown/no-default-days/dependabot.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
      --> @@INPUT@@:6:5
       |
@@ -59,7 +59,7 @@ fn test_default_days_too_short() -> anyhow::Result<()> {
                 "dependabot-cooldown/default-days-too-short/dependabot.yml"
             ))
             .run()?,
-        @r"
+        @"
     help[dependabot-cooldown]: insufficient cooldown in Dependabot updates
      --> @@INPUT@@:7:7
       |
@@ -112,7 +112,7 @@ fn test_invalid_config_zero_days() -> anyhow::Result<()> {
             .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-zero-days.yml"))
             .output(OutputMode::Stderr)
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -139,7 +139,7 @@ fn test_invalid_config_negative_days() -> anyhow::Result<()> {
             .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-negative-days.yml"))
             .output(OutputMode::Stderr)
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -177,7 +177,7 @@ fn test_opentofu_cooldown() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("dependabot-cooldown/opentofu-no-cooldown/dependabot.yml"))
             .run()?,
-        @r"
+        @"
     warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
      --> @@INPUT@@:5:5
       |

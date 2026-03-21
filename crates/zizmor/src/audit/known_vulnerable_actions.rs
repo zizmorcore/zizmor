@@ -423,7 +423,7 @@ jobs:
             .unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
-        insta::assert_snapshot!(fixed_document.source(), @r"
+        insta::assert_snapshot!(fixed_document.source(), @"
 
         name: Test Node Setup
         on: push
@@ -553,7 +553,7 @@ jobs:
             .unwrap();
         current_document = fix_cache.apply(&current_document).unwrap();
 
-        insta::assert_snapshot!(current_document.source(), @r"
+        insta::assert_snapshot!(current_document.source(), @"
 
         name: Test Multiple Vulnerable Actions
         on: push
@@ -611,7 +611,7 @@ jobs:
             .unwrap();
         let fixed_document = fix.apply(workflow.as_document()).unwrap();
 
-        insta::assert_snapshot!(fixed_document.source(), @r"
+        insta::assert_snapshot!(fixed_document.source(), @"
 
         name: Test Action with Subpath
         on: push
@@ -661,7 +661,7 @@ jobs:
             .apply(workflow.as_document())
             .unwrap();
 
-        insta::assert_snapshot!(fixed_document.source(), @r"
+        insta::assert_snapshot!(fixed_document.source(), @"
 
         name: Test First Patched Version Priority
         on: push
@@ -706,7 +706,7 @@ jobs:
 
         let new_doc = fix.apply(workflow.as_document()).unwrap();
 
-        assert_snapshot!(new_doc.source(), @r"
+        assert_snapshot!(new_doc.source(), @"
 
         name: Test Non-Commit Ref
         on: push
@@ -770,7 +770,7 @@ jobs:
         assert_eq!(findings.len(), 1);
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
-        assert_snapshot!(new_doc.source(), @r"
+        assert_snapshot!(new_doc.source(), @"
 
         name: Test Commit Hash Pinning Real API
         on: push
@@ -833,7 +833,7 @@ jobs:
             runs-on: ubuntu-latest
             steps:
                 - name: Run Trivy vulnerability scanner in repo mode
-                  uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
+                  uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # v0.34.0
         ");
     }
 
@@ -880,7 +880,7 @@ jobs:
         assert_eq!(findings.len(), 1);
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
-        assert_snapshot!(new_doc.source(), @r"
+        assert_snapshot!(new_doc.source(), @"
 
         name: Test Commit Hash Pinning Real API
         on: push
