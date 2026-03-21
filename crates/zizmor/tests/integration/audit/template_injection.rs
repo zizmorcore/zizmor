@@ -595,7 +595,7 @@ fn test_issue_1664() -> Result<()> {
        |
        = note: audit confidence → High
 
-    3 findings (2 ignored): 0 informational, 1 low, 0 medium, 0 high
+    3 findings (1 ignored, 1 suppressed): 0 informational, 1 low, 0 medium, 0 high
     "#
     );
 

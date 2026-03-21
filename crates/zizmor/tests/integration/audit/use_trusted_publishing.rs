@@ -203,29 +203,7 @@ fn test_cargo_publish() -> Result<()> {
        |
        = note: audit confidence → High
 
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:52:37
-       |
-    44 |   publish-2:
-       |   --------- this job
-    ...
-    52 |           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-       |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:57:37
-       |
-    44 |   publish-2:
-       |   --------- this job
-    ...
-    57 |           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-       |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    11 findings (3 suppressed): 6 informational, 0 low, 2 medium, 0 high
+    11 findings (5 suppressed): 6 informational, 0 low, 0 medium, 0 high
     "
     );
 
@@ -363,106 +341,7 @@ fn test_npm_publish() -> Result<()> {
         |
         = note: audit confidence → High
 
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:46:26
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    46 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:52:26
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    52 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:60:26
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    60 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:66:36
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    66 |           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                                    ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:72:36
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    72 |           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                                    ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:78:26
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    78 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:84:26
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    84 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-       --> @@INPUT@@:126:32
-        |
-     87 |   npm-trusted-publishing:
-        |   ---------------------- this job
-    ...
-    126 |           NODE_AUTH_TOKEN: ${{ secrets.CUSTOM_NPM_TOKEN }}
-        |                                ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-        |
-        = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-       --> @@INPUT@@:137:32
-        |
-     87 |   npm-trusted-publishing:
-        |   ---------------------- this job
-    ...
-    137 |           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        |                                ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-        |
-        = note: audit confidence → High
-
-    31 findings (6 ignored, 4 suppressed): 12 informational, 0 low, 9 medium, 0 high
+    31 findings (6 ignored, 13 suppressed): 12 informational, 0 low, 0 medium, 0 high
     "
     );
 

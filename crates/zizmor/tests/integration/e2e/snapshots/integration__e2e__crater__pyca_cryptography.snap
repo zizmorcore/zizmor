@@ -179,28 +179,6 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |
    = note: audit confidence → High
 
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/boring-open-awslc-bump.yml:49:23
-   |
-12 |   bump:
-   |   ---- this job
-...
-49 |           app_id: ${{ secrets.BORINGBOT_APP_ID }}
-   |                       ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/boring-open-awslc-bump.yml:50:28
-   |
-12 |   bump:
-   |   ---- this job
-...
-50 |           private_key: ${{ secrets.BORINGBOT_PRIVATE_KEY }}
-   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
 help[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/boring-open-awslc-bump.yml:53:15
    |
@@ -415,28 +393,6 @@ help[concurrency-limits]: insufficient job-level concurrency limits
 38 | |           token: ${{ steps.generate-token.outputs.token }}
 39 | |         if: steps.downstream-bump.outputs.HAS_UPDATES == 'true'
    | |________________________________________________________________^ missing concurrency setting
-   |
-   = note: audit confidence → High
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/downstream-version-bump.yml:26:23
-   |
-12 |   bump:
-   |   ---- this job
-...
-26 |           app_id: ${{ secrets.BORINGBOT_APP_ID }}
-   |                       ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/downstream-version-bump.yml:27:28
-   |
-12 |   bump:
-   |   ---- this job
-...
-27 |           private_key: ${{ secrets.BORINGBOT_PRIVATE_KEY }}
-   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
    |
    = note: audit confidence → High
 
@@ -773,28 +729,6 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |
    = note: audit confidence → High
 
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/x509-limbo-version-bump.yml:45:23
-   |
-12 |   bump:
-   |   ---- this job
-...
-45 |           app_id: ${{ secrets.BORINGBOT_APP_ID }}
-   |                       ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/x509-limbo-version-bump.yml:46:28
-   |
-12 |   bump:
-   |   ---- this job
-...
-46 |           private_key: ${{ secrets.BORINGBOT_PRIVATE_KEY }}
-   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
 help[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/x509-limbo-version-bump.yml:49:15
    |
@@ -805,4 +739,4 @@ help[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → High
 
-76 findings (3 suppressed): 13 informational, 41 low, 10 medium, 9 high
+76 findings (9 suppressed): 13 informational, 41 low, 4 medium, 9 high

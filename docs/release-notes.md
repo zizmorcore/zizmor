@@ -28,6 +28,16 @@ of `zizmor`.
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
   to preserve an environment variable's casing (#1766)
 
+* Fixed a bug where the [secrets-outside-env] audit would incorrectly
+  flag reusable workflows (#1777)
+
+### Changes ⚠️
+
+* The [secrets-outside-env] audit now only flags findings with the 'auditor'
+  persona, due to numerous false positives and negatives caused by GitHub's
+  platform limitations (primarily around interactions between environment
+  secrets and reusable workflows) (#1777)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛

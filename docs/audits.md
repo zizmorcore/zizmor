@@ -1334,6 +1334,15 @@ the risk of secrets being exposed to untrusted code or compromised workflows.
     by this audit. This is because the permissions of the `GITHUB_TOKEN`
     secret are entirely determined by the workflow and job-level permissions.
 
+!!! note
+
+    These findings are only shown when running with the "auditor"
+    [persona](./usage.md#using-personas), as fixing them requires
+    careful consideration of GitHub's platform limitations. In particular,
+    as of March 2026 environment secrets do not interact correctly with
+    reusable workflows unless the caller workflow uses `secrets: inherit`,
+    which is itself flagged by [secrets-inherit](./audits.md#secrets-inherit).
+    
 ### Remediation
 
 In general, secrets should be configured at the environment level, and only

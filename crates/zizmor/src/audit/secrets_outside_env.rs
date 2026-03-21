@@ -8,7 +8,7 @@ use crate::{
         Confidence, Finding, Persona, Severity,
         location::{Feature, Locatable, Location},
     },
-    models::workflow::NormalJob,
+    models::workflow::{JobCommon as _, NormalJob},
     state::AuditState,
     utils::{once::warn_once, parse_fenced_expressions_from_routable},
 };
@@ -35,6 +35,16 @@ impl Audit for SecretsOutsideEnvironment {
         job: &NormalJob<'doc>,
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        if job.parent().has_workflow_call() {
+            // Reusable workflows and environments don't interact well, and are more or less
+            // completely undocumented in terms of behavior. We don't flag any findings
+            // for them, since users will discover that a reusable workflow that activates
+            // an environment can't actually use that environment's secrets unless the
+            // caller workflow passes `secrets: inherit`, which violates our `secrets-inherit`
+            // audit.
+            return Ok(vec![]);
+        }
+
         if job.environment.is_some() {
             // If the job has an environment, then we assume that any secrets
             // used in the job are scoped to that environment.
@@ -72,7 +82,7 @@ impl Audit for SecretsOutsideEnvironment {
 
                 findings.push(
                     Self::finding()
-                        .persona(Persona::Regular)
+                        .persona(Persona::Auditor)
                         .severity(Severity::Medium)
                         .confidence(Confidence::High)
                         .add_location(job.location().key_only())
