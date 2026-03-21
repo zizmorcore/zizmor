@@ -171,6 +171,19 @@
 
     ??? example "Examples"
         - basecamp/fizzy#2645
+        - basecamp/trix#1284
+        - basecamp/once-campfire#185
+        - basecamp/once#20
+        - basecamp/marginalia#146
+        - basecamp/kamal-proxy#200
+        - basecamp/console1984#146
+        - basecamp/geared_pagination#58
+        - basecamp/audits1984#73
+        - basecamp/activerecord-tenanted#284
+        - basecamp/kamal#1805
+        - basecamp/lexxy#882
+        - basecamp/upright#50
+        - basecamp/writebook#396
 
 
 -   ![](https://github.com/ben-manes.png?size=40){ width="40" loading=lazy align=left } ben-manes
