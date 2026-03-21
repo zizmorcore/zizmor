@@ -1,6 +1,9 @@
 use std::sync::LazyLock;
 
-use github_actions_models::common::{EnvValue, Uses, expr::ExplicitExpr};
+use github_actions_models::common::{
+    EnvValue, Uses,
+    expr::{ExplicitExpr, LoE},
+};
 use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
@@ -105,6 +108,27 @@ impl Artipacked {
             } = &step.body()
             else {
                 continue;
+            };
+
+            let with = match with {
+                LoE::Literal(with) => with,
+                // Emit blanket pedantic finding if the `with:` block cannot be analyzed
+                LoE::Expr(_) => {
+                    findings.push(
+                        Self::finding()
+                            .severity(Severity::Informational)
+                            .confidence(Confidence::High)
+                            .persona(Persona::Pedantic)
+                            .add_location(
+                                step.location()
+                                    .primary()
+                                    .with_keys(["with".into()])
+                                    .annotated("dynamic `with:` clause cannot be analyzed"),
+                            )
+                            .build(&step)?,
+                    );
+                    continue;
+                }
             };
 
             if uses.matches("actions/checkout") {

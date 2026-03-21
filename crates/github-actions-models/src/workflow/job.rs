@@ -125,7 +125,7 @@ pub enum StepBody {
 
         /// Any inputs to the action being used.
         #[serde(default)]
-        with: Env,
+        with: LoE<Env>,
     },
     Run {
         /// The command to run.
@@ -194,7 +194,7 @@ pub struct ReusableWorkflowCallJob {
     #[serde(deserialize_with = "crate::common::reusable_step_uses")]
     pub uses: Uses,
     #[serde(default)]
-    pub with: Env,
+    pub with: LoE<Env>,
     pub secrets: Option<Secrets>,
 }
 
