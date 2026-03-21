@@ -302,7 +302,7 @@ jobs:
             .unwrap();
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
-        insta::assert_snapshot!(new_doc.source(), @r"
+        insta::assert_snapshot!(new_doc.source(), @"
 
         name: Test
         on: push
@@ -356,7 +356,7 @@ jobs:
             .unwrap();
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
-        insta::assert_snapshot!(new_doc.source(), @r"
+        insta::assert_snapshot!(new_doc.source(), @"
 
         name: Test
         on: push
@@ -411,7 +411,7 @@ jobs:
             .unwrap();
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
-        insta::assert_snapshot!(new_doc.source(), @r"
+        insta::assert_snapshot!(new_doc.source(), @"
 
         name: Test
         on: push
@@ -463,7 +463,7 @@ jobs:
             .unwrap();
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
-        insta::assert_snapshot!(new_doc.source(), @r"
+        insta::assert_snapshot!(new_doc.source(), @"
 
         name: Test
         on: push

@@ -44,6 +44,7 @@ astronomer/dag-factory#482
 astropy/astropy#17315
 audreyfeldroy/cookiecutter-pypackage@40f172432f78ef920d758520b543cd69be32f80a
 autotag-dev/autotag#142
+basecamp/fizzy#2645
 ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
 BerkeleyLearnVerify/Scenic#320
 bevyengine/bevy#22294
@@ -253,6 +254,7 @@ NetApp/harvest#3247
 nextcloud/news#3560
 nextcloud/user_saml#947
 nextcloud/.github#477
+nextest-rs/nextest#3196
 NixOS/infra#613
 NixOS/nixpkgs#396451
 NLnetLabs/nsd#413
@@ -356,6 +358,7 @@ rust-lang/this-week-in-rust#6721
 rustls/rustls#2261
 rustls/tokio-rustls#96
 rustls/webpki#299
+RustPython/RustPython#7463
 Saghen/blink.cmp#991
 scientific-python/repo-review#257
 scikit-build/scikit-build-core#983

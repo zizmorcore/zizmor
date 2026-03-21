@@ -25,7 +25,7 @@ fn test_deny_all() -> Result<()> {
                 "forbidden-uses/forbidden-uses-menagerie.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[forbidden-uses]: forbidden action used
       --> @@INPUT@@:13:15
        |
@@ -66,7 +66,7 @@ fn test_allow_some() -> Result<()> {
                 "forbidden-uses/forbidden-uses-menagerie.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[forbidden-uses]: forbidden action used
       --> @@INPUT@@:13:15
        |
@@ -91,7 +91,7 @@ fn test_deny_some() -> Result<()> {
                 "forbidden-uses/forbidden-uses-menagerie.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[forbidden-uses]: forbidden action used
       --> @@INPUT@@:14:15
        |
@@ -124,7 +124,7 @@ fn test_deny_some_refs() -> Result<()> {
                 "forbidden-uses/forbidden-uses-menagerie.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[forbidden-uses]: forbidden action used
       --> @@INPUT@@:13:15
        |
@@ -157,7 +157,7 @@ fn test_allow_some_refs() -> Result<()> {
                 "forbidden-uses/forbidden-uses-menagerie.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[forbidden-uses]: forbidden action used
       --> @@INPUT@@:15:15
        |
@@ -184,7 +184,7 @@ fn test_config_invalid_pattern() -> Result<()> {
             ))
             .output(OutputMode::Stderr)
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -213,7 +213,7 @@ fn test_config_invalid_variant() -> Result<()> {
             ))
             .output(OutputMode::Stderr)
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@

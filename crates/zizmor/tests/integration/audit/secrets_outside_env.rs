@@ -8,7 +8,7 @@ fn test_secrets_outside_env() -> Result<()> {
         zizmor()
             .input(input_under_test("secrets-outside-env.yml"))
             .run()?,
-        @r"
+        @"
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
       --> @@INPUT@@:12:23
        |

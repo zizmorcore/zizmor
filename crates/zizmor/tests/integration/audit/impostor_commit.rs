@@ -8,7 +8,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
             .input(input_under_test("impostor-commit.yml"))
             .offline(false)
             .run()?,
-        @r"
+        @"
     error[impostor-commit]: commit with no history in referenced repository
       --> @@INPUT@@:29:15
        |

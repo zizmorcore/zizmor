@@ -6,7 +6,7 @@ fn test_superfluous_actions() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("superfluous-actions.yml"))
             .run()?,
-        @r"
+        @"
     help[superfluous-actions]: action functionality is already included by the runner
       --> @@INPUT@@:16:15
        |
