@@ -14,6 +14,72 @@ Legend:
 |----------|------------------|---------------|----------------|--------------------|--------------|
 | Workflow, Action, Dependabot | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit supports auto-fixes when used in the `--fix` mode | The audit supports custom configuration |
 
+## `agentic-actions`
+
+| Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|------------------|---------------|----------------|--------------------|--------------|
+| Workflow | [claude-permissive-users.yml], [multiple-findings.yml] | v1.23.0 | ✅ | ❌ | ❌ |
+
+[claude-permissive-users.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/agentic-actions/claude-permissive-users.yml
+[multiple-findings.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/agentic-actions/multiple-findings.yml
+
+Detects risky configurations in workflows that use known AI agent actions
+(e.g. `anthropics/claude-code-action`, `openai/codex-action`,
+`google-gemini/gemini-cli-action`).
+
+A single step using an agentic action can trigger multiple independent
+findings:
+
+| Check | Severity | Confidence |
+|-------|----------|------------|
+| **Permissive user config**: `with:` field allows any user (`"*"`) to trigger the agent | High | High |
+| **Excessive permissions**: job or workflow grants write permissions alongside the agentic action | Per-permission | High |
+| **Attacker-controllable trigger**: workflow uses `issue_comment`, `issues`, `pull_request_target`, or `discussion_comment` triggers | Medium | Medium |
+| **Unrestricted Gemini tools**: Gemini action used without `coreTools` restriction in `settings` | Medium | High |
+
+### Remediation
+
+Restrict user access, minimize permissions, avoid dangerous triggers,
+and constrain tool access:
+
+=== "Before :warning:"
+
+    ```yaml title="agentic-actions.yml"
+    name: AI assistant
+
+    on: issue_comment
+
+    permissions:
+      contents: write
+
+    jobs:
+      respond:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: anthropics/claude-code-action@<sha>
+            with:
+              allowed_tools: "*"
+    ```
+
+=== "After :white_check_mark:"
+
+    ```yaml title="agentic-actions.yml" hl_lines="3 5 6 15"
+    name: AI assistant
+
+    on: pull_request
+
+    permissions:
+      contents: read
+
+    jobs:
+      respond:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: anthropics/claude-code-action@<sha>
+            with:
+              allowed_tools: "Bash,Read"
+    ```
+
 ## `anonymous-definition`
 
 | Type            | Examples         | Introduced in | Works offline | Auto-fixes available | Configurable |
