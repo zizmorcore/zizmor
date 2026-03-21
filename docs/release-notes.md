@@ -28,6 +28,9 @@ of `zizmor`.
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
   to preserve an environment variable's casing (#1766)
 
+* Fixed a bug where the [secrets-outside-env] audit would incorrectly
+  flag reusable workflows (#1777)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
