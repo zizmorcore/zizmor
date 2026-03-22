@@ -1130,15 +1130,9 @@ mod tests {
             "5e0",
             // NaN and Infinity literals
             "NaN",
-            "nan",
-            "NAN",
             "Infinity",
-            "infinity",
-            "INFINITY",
             "+Infinity",
             "-Infinity",
-            "+infinity",
-            "-infinity",
             "NaN == NaN",
             "Infinity == Infinity",
             // Signed numbers

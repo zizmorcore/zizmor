@@ -56,8 +56,8 @@ primary_expr = {
 number = @{
     "0x" ~ ASCII_HEX_DIGIT+
   | "0o" ~ ('0'..'7')+
-  | ^"nan"
-  | ("+" | "-")? ~ ^"infinity"
+  | "NaN"
+  | ("+" | "-")? ~ "Infinity"
   | ("+" | "-")? ~ (ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT*)? | "." ~ ASCII_DIGIT+) ~ (("e" | "E") ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
 
