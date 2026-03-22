@@ -1,6 +1,6 @@
 use crate::{
     audit::{Audit, AuditError, audit_meta},
-    finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
+    finding::{Confidence, Fix, FixDisposition, Persona, Severity, location::Locatable as _},
 };
 use yamlpatch::{Op, Patch};
 
@@ -114,17 +114,19 @@ impl Audit for DependabotCooldown {
                                         .with_keys(["cooldown".into()])
                                         .primary()
                                         .annotated(
-                                            "cooldown interacts poorly with multi-ecosystem-group",
+                                            "multi-ecosystem-group cooldowns do not batch updates correctly",
                                         ),
                                 )
                                 .add_location(
                                     update
                                         .location()
                                         .with_keys(["multi-ecosystem-group".into()])
+                                        .key_only()
                                         .annotated("multi-ecosystem-group configured here"),
                                 )
                                 .confidence(Confidence::High)
                                 .severity(Severity::Medium)
+                                .persona(Persona::Pedantic)
                                 .build(dependabot)?,
                         );
                     }

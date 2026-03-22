@@ -178,17 +178,18 @@ fn test_multi_ecosystem_group_with_cooldown() -> anyhow::Result<()> {
             .input(input_under_test(
                 "dependabot-cooldown/multi-ecosystem-group-with-cooldown/dependabot.yml"
             ))
+            .args(["--pedantic"])
             .run()?,
         @"
     warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
       --> @@INPUT@@:13:5
        |
     10 |       multi-ecosystem-group: all
-       |       -------------------------- multi-ecosystem-group configured here
+       |       --------------------- multi-ecosystem-group configured here
     ...
     13 | /     cooldown:
     14 | |       default-days: 7
-       | |_____________________^ cooldown interacts poorly with multi-ecosystem-group
+       | |_____________________^ multi-ecosystem-group cooldowns do not batch updates correctly
        |
        = note: audit confidence → High
 
@@ -196,11 +197,11 @@ fn test_multi_ecosystem_group_with_cooldown() -> anyhow::Result<()> {
       --> @@INPUT@@:20:5
        |
     17 |       multi-ecosystem-group: all
-       |       -------------------------- multi-ecosystem-group configured here
+       |       --------------------- multi-ecosystem-group configured here
     ...
     20 | /     cooldown:
     21 | |       default-days: 7
-       | |______________________^ cooldown interacts poorly with multi-ecosystem-group
+       | |______________________^ multi-ecosystem-group cooldowns do not batch updates correctly
        |
        = note: audit confidence → High
 
