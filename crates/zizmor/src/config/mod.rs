@@ -269,7 +269,7 @@ impl From<SecretsOutsideEnvConfig> for SecretsOutsideEnvPolicy {
             .collect::<HashSet<_>>();
 
         let default = Self::default();
-        allow.extend(default.allow.into_iter());
+        allow.extend(default.allow);
 
         Self { allow }
     }
