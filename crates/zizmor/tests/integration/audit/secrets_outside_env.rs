@@ -58,55 +58,56 @@ fn test_config_invalid_variant() -> Result<()> {
 fn test_config_allow_none() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
+        .args(["--persona=auditor"])
         .input(input_under_test("secrets-outside-env/multiple-secrets.yml"))
         .config(input_under_test("secrets-outside-env/configs/allow-none.yml"))
         .run()?,
         @"
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:12:23
+      --> @@INPUT@@:20:30
        |
-     6 |   test:
+    12 |   test:
        |   ---- this job
     ...
-    12 |         run: echo ${{ secrets.NOT_SO_SECRET }}
-       |                       ^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+    20 |           NOT_SO_SECRET: ${{ secrets.NOT_SO_SECRET }}
+       |                              ^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
 
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:15:23
+      --> @@INPUT@@:25:30
        |
-     6 |   test:
+    12 |   test:
        |   ---- this job
     ...
-    15 |         run: echo ${{ secrets.not_so_secret }}
-       |                       ^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+    25 |           NOT_SO_SECRET: ${{ secrets.not_so_secret }}
+       |                              ^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
 
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:18:23
+      --> @@INPUT@@:30:30
        |
-     6 |   test:
+    12 |   test:
        |   ---- this job
     ...
-    18 |         run: echo ${{ secrets['not_so_secret'] }}
-       |                       ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+    30 |           NOT_SO_SECRET: ${{ secrets['not_so_secret'] }}
+       |                              ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
 
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:21:23
+      --> @@INPUT@@:35:35
        |
-     6 |   test:
+    12 |   test:
        |   ---- this job
     ...
-    21 |         run: echo ${{ secrets.ALSO_NOT_SO_SECRET }}
-       |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+    35 |           ALSO_NOT_SO_SECRET: ${{ secrets.ALSO_NOT_SO_SECRET }}
+       |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
 
-    13 findings (9 suppressed): 0 informational, 0 low, 4 medium, 0 high
+    4 findings: 0 informational, 0 low, 4 medium, 0 high
     "
     );
     Ok(())
@@ -116,22 +117,23 @@ fn test_config_allow_none() -> Result<()> {
 fn test_config_allow_one() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
+        .args(["--persona=auditor"])
         .input(input_under_test("secrets-outside-env/multiple-secrets.yml"))
         .config(input_under_test("secrets-outside-env/configs/allow-one.yml"))
         .run()?,
         @"
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:21:23
+      --> @@INPUT@@:35:35
        |
-     6 |   test:
+    12 |   test:
        |   ---- this job
     ...
-    21 |         run: echo ${{ secrets.ALSO_NOT_SO_SECRET }}
-       |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+    35 |           ALSO_NOT_SO_SECRET: ${{ secrets.ALSO_NOT_SO_SECRET }}
+       |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
 
-    10 findings (9 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
     "
     );
     Ok(())
@@ -141,10 +143,11 @@ fn test_config_allow_one() -> Result<()> {
 fn test_config_allow_some() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
+        .args(["--persona=auditor"])
         .input(input_under_test("secrets-outside-env/multiple-secrets.yml"))
         .config(input_under_test("secrets-outside-env/configs/allow-some.yml"))
         .run()?,
-        @"No findings to report. Good job! (9 suppressed)"
+        @"No findings to report. Good job!"
     );
     Ok(())
 }

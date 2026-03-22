@@ -55,8 +55,6 @@ impl Audit for SecretsOutsideEnvironment {
             return Ok(vec![]);
         }
 
-        let policy = config.secrets_outside_env_policy.as_ref();
-
         // Get every expression in the job's body, and look for accesses of the `secrets` context.
         // NOTE: In principle this is incomplete, since there are some places (like `if:`) where
         // GitHub Actions doesn't require fencing on expressions. In practice however GitHub Actions
@@ -73,17 +71,13 @@ impl Audit for SecretsOutsideEnvironment {
                     continue;
                 }
 
-                if context.matches("secrets.GITHUB_TOKEN") {
-                    // GITHUB_TOKEN is always latently available, so we don't
-                    // flag its usage outside of a dedicated environment.
-                    continue;
-                }
-
-                // If the user has configured the audit, check secret's name against the allowlist.
-                // TODO: use ContextPattern here for the case-insensitivity
-                if let Some(policy) = policy
-                    && let Some(secret_name) = context.single_tail()
-                    && policy.allow.contains(&secret_name.to_ascii_lowercase())
+                // Check to see whether we allow this secret. The policy always includes
+                // GITHUB_TOKEN, since it's always latently available.
+                if let Some(secret_name) = context.single_tail()
+                    && config
+                        .secrets_outside_env_policy
+                        .allow
+                        .contains(&secret_name.to_ascii_lowercase())
                 {
                     continue;
                 }
