@@ -37,6 +37,8 @@ of `zizmor`.
 * Fixed a bug where the [secrets-outside-env] audit would incorrectly
   flag reusable workflows (#1777)
 
+* Fixed a bug where expressions containing `Infinity` or `NaN` would fail to parse (#1778)
+
 ### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
