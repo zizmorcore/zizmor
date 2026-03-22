@@ -181,7 +181,7 @@ fn test_multi_ecosystem_group_with_cooldown() -> anyhow::Result<()> {
             .args(["--pedantic"])
             .run()?,
         @"
-    warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+    help[dependabot-cooldown]: insufficient cooldown in Dependabot updates
       --> @@INPUT@@:13:5
        |
     10 |       multi-ecosystem-group: all
@@ -193,7 +193,7 @@ fn test_multi_ecosystem_group_with_cooldown() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+    help[dependabot-cooldown]: insufficient cooldown in Dependabot updates
       --> @@INPUT@@:20:5
        |
     17 |       multi-ecosystem-group: all
@@ -205,7 +205,7 @@ fn test_multi_ecosystem_group_with_cooldown() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings: 0 informational, 0 low, 2 medium, 0 high
+    2 findings: 0 informational, 2 low, 0 medium, 0 high
     "
     );
 

@@ -124,7 +124,7 @@ impl Audit for DependabotCooldown {
                                     .annotated("multi-ecosystem-group configured here"),
                             )
                             .confidence(Confidence::High)
-                            .severity(Severity::Medium)
+                            .severity(Severity::Low)
                             .persona(Persona::Pedantic)
                             .build(dependabot)?,
                     );
