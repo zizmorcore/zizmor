@@ -39,6 +39,8 @@ of `zizmor`.
 
 * Fixed a bug where expressions containing `Infinity` or `NaN` would fail to parse (#1778)
 
+* Fixed a bug where some parenthetical forms in expressions would fail to parse (#1779)
+
 ### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
