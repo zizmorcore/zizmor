@@ -1401,8 +1401,8 @@ The `secrets-outside-env` audit operates on an allowlist basis:
 
 !!! example
 
-    The following configuration would allow any usage of CI_COVERAGE_TOKEN
-    and NOT_VERY_SENSITIVE, even outside of an environment.
+    The following configuration would allow any usage of `CI_COVERAGE_TOKEN`
+    and `NOT_VERY_SENSITIVE`, even outside of an environment.
 
     ```yaml title="zizmor.yml"
     rules:
