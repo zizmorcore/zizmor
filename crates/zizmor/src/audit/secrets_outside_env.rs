@@ -33,7 +33,7 @@ impl Audit for SecretsOutsideEnvironment {
     async fn audit_normal_job<'doc>(
         &self,
         job: &NormalJob<'doc>,
-        _config: &Config,
+        config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         if job.parent().has_workflow_call() {
             // Reusable workflows and environments don't interact well, and are more or less
@@ -71,9 +71,14 @@ impl Audit for SecretsOutsideEnvironment {
                     continue;
                 }
 
-                if context.matches("secrets.GITHUB_TOKEN") {
-                    // GITHUB_TOKEN is always latently available, so we don't
-                    // flag its usage outside of a dedicated environment.
+                // Check to see whether we allow this secret. The policy always includes
+                // GITHUB_TOKEN, since it's always latently available.
+                if let Some(secret_name) = context.single_tail()
+                    && config
+                        .secrets_outside_env_policy
+                        .allow
+                        .contains(&secret_name.to_ascii_lowercase())
+                {
                     continue;
                 }
 
