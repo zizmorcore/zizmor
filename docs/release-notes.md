@@ -23,6 +23,12 @@ of `zizmor`.
 * `zizmor`'s CLI help and usage output now uses a custom color scheme for
   improved readability (#1747)
 
+* The [secrets-outside-env] audit is now configurable with an allowlist of
+  secret names that should not be flagged, even when referenced outside of
+  an environment (#1759)
+
+    Many thanks to @rmuir for proposing and implementing this improvement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
