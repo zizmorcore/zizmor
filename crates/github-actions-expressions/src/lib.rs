@@ -1135,6 +1135,10 @@ mod tests {
             "-Infinity",
             "NaN == NaN",
             "Infinity == Infinity",
+            // Parenthesized compound expressions
+            "2 <= (3 == true)",
+            "0 > (0 < 1)",
+            "(foo || bar) == baz",
             // Signed numbers
             "+42",
             "-42",
