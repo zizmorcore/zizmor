@@ -29,6 +29,10 @@ of `zizmor`.
 
     Many thanks to @rmuir for proposing and implementing this improvement!
 
+* The [dependabot-cooldown] audit now emits a pedantic finding whenever
+  it encounters a cooldown used with a multi-ecosystem-group, as the two
+  do not interact well (#1780)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
