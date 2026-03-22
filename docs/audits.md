@@ -465,6 +465,15 @@ To mitigate these risks, Dependabot supports per-updater `cooldown` settings.
 However, these settings are not enabled by default; users **must** explicitly
 enable them.
 
+!!! tip
+
+    Dependabot's `multi-ecosystem-groups` feature does not interact well
+    with `cooldown`: if you use the two together, Dependabot will only create
+    an update for _one_ ecosystem for each cooldown period, even if multiple 
+    ecosystems have new versions available. See #1501 for context.
+    
+    zizmor will flag these cases with a pedantic finding.
+
 Other resources:
 
 * [Dependabot options reference - `cooldown`](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#cooldown-)
