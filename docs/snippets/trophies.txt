@@ -223,6 +223,7 @@ kata-containers/kata-containers#11392
 kata-containers/kata-containers#11475
 kubecolor/kubecolor#273
 libssh2/libssh2#1609
+llvm/llvm-project#187905
 lmstudio-ai/venvstacks#51
 louislam/uptime-kuma#6575
 maplibre/martin#2440
@@ -439,6 +440,7 @@ yt-dlp/yt-dlp#15324
 yt-dlp/yt-dlp#15387
 zama-ai/tfhe-rs#2292
 zama-ai/tfhe-rs#2979
+zcash/halo2#857
 zcash/librustzcash#1679
 ZcashFoundation/zebra#9110
 zkonduit/ezkl#907

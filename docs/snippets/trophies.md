@@ -1016,6 +1016,14 @@
         - libssh2/libssh2#1609
 
 
+-   ![](https://github.com/llvm.png?size=40){ width="40" loading=lazy align=left } llvm
+
+    ---
+
+    ??? example "Examples"
+        - llvm/llvm-project#187905
+
+
 -   ![](https://github.com/lmstudio-ai.png?size=40){ width="40" loading=lazy align=left } lmstudio-ai
 
     ---
@@ -2084,6 +2092,7 @@
     ---
 
     ??? example "Examples"
+        - zcash/halo2#857
         - zcash/librustzcash#1679
 
 
