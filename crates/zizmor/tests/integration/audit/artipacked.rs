@@ -153,16 +153,18 @@ fn test_issue_1709() -> anyhow::Result<()> {
 fn test_issue_1769() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor().input(input_under_test("artipacked/issue-1769-repro.yml")).args(["--persona=pedantic"]).run()?,
-        @r"
+        @"
     info[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:19:9
        |
+    18 |       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # zizmor: ignore[obfuscation]
+       |               --------------------------------------------------------- this action
     19 |         with: ${{ fromJson(steps.setup.outputs.options) }}
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ dynamic `with:` clause cannot be analyzed
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may not set persist-credentials: false
        |
        = note: audit confidence → High
 
-    1 finding: 1 informational, 0 low, 0 medium, 0 high
+    2 findings (1 ignored): 1 informational, 0 low, 0 medium, 0 high
     "
     );
 

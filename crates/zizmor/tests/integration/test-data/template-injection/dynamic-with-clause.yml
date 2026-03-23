@@ -1,6 +1,4 @@
-# see https://github.com/zizmorcore/zizmor/issues/1769
-
-name: ISSUE-1769-REPRO
+name: dynamic-with-clause
 on: push
 
 permissions: {}
@@ -10,10 +8,10 @@ concurrency:
   cancel-in-progress: ${{ github.base_ref == main }}
 
 jobs:
-  issue-1769-repro:
-    name: issue-1769-repro
+  dynamic-with-clause:
+    name: dynamic-with-clause
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # zizmor: ignore[obfuscation]
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # zizmor: ignore[artipacked, obfuscation]
         with: ${{ fromJson(steps.setup.outputs.options) }}

@@ -573,6 +573,33 @@ impl TemplateInjection {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
+        if let models::StepBodyCommon::Uses {
+            uses: Uses::Repository(uses),
+            with: LoE::Expr(_),
+        } = step.body()
+            && !Self::action_injection_sinks(uses).is_empty()
+        {
+            findings.push(
+                Self::finding()
+                    .severity(Severity::Informational)
+                    .confidence(Confidence::High)
+                    .persona(Persona::Pedantic)
+                    .add_location(
+                        step.location()
+                            .with_keys(["uses".into()])
+                            .annotated("action has injection-prone inputs"),
+                    )
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(["with".into()])
+                            .annotated("dynamic with: clause cannot be analyzed"),
+                    )
+                    .build(step)
+                    .map_err(Self::err)?,
+            );
+        }
+
         for (script, script_loc, related_locs) in Self::scripts_with_location(step) {
             for (subfeature, fix, severity, confidence, persona) in
                 self.injectable_template_expressions(script, step)

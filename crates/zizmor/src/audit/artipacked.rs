@@ -5,6 +5,7 @@ use github_actions_models::common::{
     expr::{ExplicitExpr, LoE},
 };
 use itertools::Itertools as _;
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
@@ -121,9 +122,15 @@ impl Artipacked {
                             .persona(Persona::Pedantic)
                             .add_location(
                                 step.location()
+                                    .with_keys(["uses".into()])
+                                    .subfeature(Subfeature::new(0, uses.raw()))
+                                    .annotated("this action"),
+                            )
+                            .add_location(
+                                step.location()
                                     .primary()
                                     .with_keys(["with".into()])
-                                    .annotated("dynamic `with:` clause cannot be analyzed"),
+                                    .annotated("may not set persist-credentials: false"),
                             )
                             .build(&step)?,
                     );

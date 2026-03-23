@@ -615,3 +615,25 @@ fn test_issue_1664() -> Result<()> {
 
     Ok(())
 }
+
+/// Pedantic persona will now flag dynamic `with:` clauses that cannot be analyzed.
+#[test]
+fn test_dynamic_with_clause() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor().input(input_under_test("template-injection/dynamic-with-clause.yml")).args(["--persona=pedantic"]).run()?, @"
+    info[template-injection]: code injection via template expansion
+      --> @@INPUT@@:17:9
+       |
+    16 |       - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # zizmor: ignore[artipacked, obfuscation]
+       |         -------------------------------------------------------------------- action has injection-prone inputs
+    17 |         with: ${{ fromJson(steps.setup.outputs.options) }}
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ dynamic with: clause cannot be analyzed
+       |
+       = note: audit confidence → High
+
+    3 findings (2 ignored): 1 informational, 0 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}

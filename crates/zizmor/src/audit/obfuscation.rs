@@ -1,5 +1,5 @@
 use github_actions_expressions::{Expr, Origin, SpannedExpr};
-use github_actions_models::common::{RepositoryUses, Uses};
+use github_actions_models::common::{RepositoryUses, Uses, expr::LoE};
 use yamlpatch::{Op, Patch};
 
 use crate::{
@@ -194,7 +194,7 @@ impl Obfuscation {
 
         if let crate::models::StepBodyCommon::Uses {
             uses: Uses::Repository(uses),
-            ..
+            with,
         } = step.body()
         {
             let obfuscated_annotations = self.obfuscated_repo_uses(uses);
@@ -219,6 +219,28 @@ impl Obfuscation {
                 }
 
                 findings.push(finding_builder.build(step).map_err(Self::err)?);
+            }
+
+            if let LoE::Expr(_) = with {
+                findings.push(
+                    Self::finding()
+                        .confidence(Confidence::High)
+                        .severity(Severity::Informational)
+                        .persona(Persona::Regular)
+                        .add_location(
+                            step.location()
+                                .with_keys(["uses".into()])
+                                .annotated("this action"),
+                        )
+                        .add_location(
+                            step.location()
+                                .primary()
+                                .with_keys(["with".into()])
+                                .annotated("expression in with: clause cannot be analyzed"),
+                        )
+                        .build(step)
+                        .map_err(Self::err)?,
+                );
             }
         }
 

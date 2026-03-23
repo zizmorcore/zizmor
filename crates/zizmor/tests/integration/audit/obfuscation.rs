@@ -237,3 +237,26 @@ fn test_issue_1177_repro_pedantic() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_issue_1769() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+        .input(input_under_test("obfuscation/issue-1769-repro.yml")).run()?,
+        @r#"
+    info[obfuscation]: obfuscated usage of GitHub Actions features
+      --> @@INPUT@@:19:9
+       |
+    18 |       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # zizmor: ignore[artipacked]
+       |         --------------------------------------------------------------- this action
+    19 |         with: ${{ fromJson(steps.setup.outputs.options) }}
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expression in with: clause cannot be analyzed
+       |
+       = note: audit confidence → High
+
+    2 findings (1 suppressed): 1 informational, 0 low, 0 medium, 0 high
+    "#
+    );
+
+    Ok(())
+}
