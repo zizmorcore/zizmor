@@ -963,7 +963,6 @@ outside of any repository-tracked state.
 !!! warning "Beta"
 
     `zizmor`'s support for YAML anchors is currently in **beta**.
-    Anchor-related bugs are treated as first-class issues.
     If you encounter a problem, please
     [file a bug report](https://github.com/zizmorcore/zizmor/issues/new).
 
