@@ -1,0 +1,21 @@
+version: 2
+multi-ecosystem-groups:
+  all:
+    schedule:
+      interval: weekly
+      day: friday
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    multi-ecosystem-group: all
+    patterns:
+      - "*"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: pip
+    directory: "/"
+    multi-ecosystem-group: all
+    patterns:
+      - "*"
+    cooldown:
+      default-days: 7
