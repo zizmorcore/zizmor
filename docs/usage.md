@@ -958,13 +958,13 @@ workflow/action definitions, as they may not actually exist until runtime.
 For example, `some-script.sh` above may have been generated or downloaded
 outside of any repository-tracked state.
 
-### YAML anchors stymie analysis { #yaml-anchors }
+### YAML anchors { #yaml-anchors }
 
-!!! tip "TL;DR"
+!!! warning "Beta"
 
-    `zizmor`'s support for YAML anchors is provided on a **best effort**
-    basis. Users of `zizmor` are **strongly encouraged** to avoid anchors
-    if they care about accurate static analysis results.
+    `zizmor`'s support for YAML anchors is currently in **beta**.
+    If you encounter a problem, please
+    [file a bug report](https://github.com/zizmorcore/zizmor/issues/new).
 
 `zizmor` tries very hard to present *useful* source spans in its audit
 results.
@@ -985,14 +985,7 @@ layer of (arbitrarily deep) indirection and misalignment between the
 deserialized object model (which is what `zizmor` analyzes) and the source
 representation (which `zizmor` spans back to).
 
-As a result, `zizmor`'s support for YAML anchors is **best effort only**.
-Users are **strongly encouraged** to avoid anchors in their workflows
-and actions. Bug reports for issues in inputs containing anchors are
-appreciated, but will be given a lower priority relative to bugs that
-aren't observed with YAML anchors.
+If you're having issues with inputs containing anchors, see 
+[Troubleshooting - YAML anchors].
 
-If you're having issues with inputs containing anchors, see
-[Troubleshooting - Failures on inputs containing YAML anchors]
-for some suggested workarounds.
-
-[Troubleshooting - Failures on inputs containing YAML anchors]: ./troubleshooting.md#failures-on-inputs-containing-yaml-anchors
+[Troubleshooting - YAML anchors]: ./troubleshooting.md#yaml-anchors

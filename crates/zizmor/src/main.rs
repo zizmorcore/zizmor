@@ -898,9 +898,8 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
             if input.as_document().has_anchors() {
                 warn_once!(
-                    "one or more inputs contains YAML anchors; you may encounter crashes or unpredictable behavior"
+                    "one or more inputs contains YAML anchors; see https://docs.zizmor.sh/usage/#yaml-anchors for details"
                 );
-                warn_once!("for more information, see: https://docs.zizmor.sh/usage/#yaml-anchors");
             }
 
             let mut completion_stream = FuturesOrdered::new();
