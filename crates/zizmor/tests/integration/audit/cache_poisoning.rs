@@ -22,7 +22,7 @@ fn test_caching_enabled_by_default() -> anyhow::Result<()> {
                 "cache-poisoning/caching-enabled-by-default.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:21:9
        |
@@ -230,7 +230,7 @@ fn test_publisher_step() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/publisher-step.yml"))
             .run()?,
-        @r"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:23:9
        |
@@ -406,7 +406,7 @@ fn test_issue_642() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-642-repro.yml"))
             .run()?,
-        @r"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:15:9
        |
@@ -438,7 +438,7 @@ fn test_issue_1081() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-1081-repro.yml"))
             .run()?,
-        @r"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:15:9
        |
@@ -482,7 +482,7 @@ fn test_issue_1152() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-1152-repro.yml"))
             .run()?,
-        @r"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:16:9
        |
@@ -550,7 +550,7 @@ fn test_ramsey_composer_install_action() -> anyhow::Result<()> {
                 "cache-poisoning/ramsey-composer-install.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:13:9
        |

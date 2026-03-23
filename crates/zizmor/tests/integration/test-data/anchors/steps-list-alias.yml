@@ -1,0 +1,11 @@
+name: steps-list-alias
+on: [pull_request]
+permissions: {}
+jobs:
+  first:
+    runs-on: ubuntu-latest
+    steps: &steps
+      - run: echo "${{ github.event.issue.title }}"
+  second:
+    runs-on: ubuntu-latest
+    steps: *steps

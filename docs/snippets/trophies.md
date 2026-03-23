@@ -79,7 +79,9 @@
     ---
 
     ??? example "Examples"
+        - aquasecurity/trivy#10322
         - aquasecurity/trivy-action#502
+        - aquasecurity/trivy-operator#2910
 
 
 -   ![](https://github.com/ariel-os.png?size=40){ width="40" loading=lazy align=left } ariel-os
@@ -161,6 +163,27 @@
 
     ??? example "Examples"
         - autotag-dev/autotag#142
+
+
+-   ![](https://github.com/basecamp.png?size=40){ width="40" loading=lazy align=left } basecamp
+
+    ---
+
+    ??? example "Examples"
+        - basecamp/fizzy#2645
+        - basecamp/trix#1284
+        - basecamp/once-campfire#185
+        - basecamp/once#20
+        - basecamp/marginalia#146
+        - basecamp/kamal-proxy#200
+        - basecamp/console1984#146
+        - basecamp/geared_pagination#58
+        - basecamp/audits1984#73
+        - basecamp/activerecord-tenanted#284
+        - basecamp/kamal#1805
+        - basecamp/lexxy#882
+        - basecamp/upright#50
+        - basecamp/writebook#396
 
 
 -   ![](https://github.com/ben-manes.png?size=40){ width="40" loading=lazy align=left } ben-manes
@@ -261,6 +284,7 @@
     ---
 
     ??? example "Examples"
+        - canonical/ubuntu.com#16128
         - canonical/operator#1656
         - canonical/operator#1721
         - canonical/testflinger#630
@@ -312,6 +336,25 @@
 
     ??? example "Examples"
         - containers/podman#27642
+
+
+-   ![](https://github.com/cortex.png?size=40){ width="40" loading=lazy align=left } cortex
+
+    ---
+
+    ??? example "Examples"
+        - cortex/ripasso#411
+
+
+-   ![](https://github.com/cucumber.png?size=40){ width="40" loading=lazy align=left } cucumber
+
+    ---
+
+    ??? example "Examples"
+        - cucumber/cucumber-jvm#3172
+        - cucumber/cucumber-jvm-starter-maven-java@1c6575ba15d09110d5face60d4fe2e022c148581
+        - cucumber/cucumber-rails@c0f4842fe80db7a9d325242a6238ae7b72807957
+        - cucumber/cucumber-ruby@f5c09789d3777c85ea902e998ac810020e9fde2d
 
 
 -   ![](https://github.com/cunla.png?size=40){ width="40" loading=lazy align=left } cunla
@@ -434,6 +477,14 @@
         - docker/compose#12737
 
 
+-   ![](https://github.com/dry-rb.png?size=40){ width="40" loading=lazy align=left } dry-rb
+
+    ---
+
+    ??? example "Examples"
+        - dry-rb/dry-validation@44db170688d78e301d1e2d5f4e7dc260047f6fa5
+
+
 -   ![](https://github.com/dubzzz.png?size=40){ width="40" loading=lazy align=left } dubzzz
 
     ---
@@ -488,7 +539,9 @@
     ---
 
     ??? example "Examples"
+        - element-hq/element-call#3797
         - element-hq/element-desktop#2877
+        - element-hq/element-web#32717
         - element-hq/element-x-ios#5161
 
 
@@ -749,6 +802,14 @@
 
     ??? example "Examples"
         - h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
+
+
+-   ![](https://github.com/hanami.png?size=40){ width="40" loading=lazy align=left } hanami
+
+    ---
+
+    ??? example "Examples"
+        - hanami/hanami@4c206392546c1bbaea29782df60fed7769071e84
 
 
 -   ![](https://github.com/hellux.png?size=40){ width="40" loading=lazy align=left } hellux
@@ -1127,6 +1188,14 @@
         - neocmakelsp/neocmakelsp#216
 
 
+-   ![](https://github.com/neovim.png?size=40){ width="40" loading=lazy align=left } neovim
+
+    ---
+
+    ??? example "Examples"
+        - neovim/neovim#38230
+
+
 -   ![](https://github.com/NetApp.png?size=40){ width="40" loading=lazy align=left } NetApp
 
     ---
@@ -1143,6 +1212,14 @@
         - nextcloud/news#3560
         - nextcloud/user_saml#947
         - nextcloud/.github#477
+
+
+-   ![](https://github.com/nextest-rs.png?size=40){ width="40" loading=lazy align=left } nextest-rs
+
+    ---
+
+    ??? example "Examples"
+        - nextest-rs/nextest#3196
 
 
 -   ![](https://github.com/NixOS.png?size=40){ width="40" loading=lazy align=left } NixOS
@@ -1215,6 +1292,14 @@
         - open-policy-agent/opa#8356
 
 
+-   ![](https://github.com/open-telemetry.png?size=40){ width="40" loading=lazy align=left } open-telemetry
+
+    ---
+
+    ??? example "Examples"
+        - open-telemetry/opentelemetry-ebpf-instrumentation#1511
+
+
 -   ![](https://github.com/openbao.png?size=40){ width="40" loading=lazy align=left } openbao
 
     ---
@@ -1265,6 +1350,22 @@
         - oxc-project/oxc#7844
         - oxc-project/oxc-resolver#370
         - oxc-project/oxc-resolver#373
+
+
+-   ![](https://github.com/pallets.png?size=40){ width="40" loading=lazy align=left } pallets
+
+    ---
+
+    ??? example "Examples"
+        - pallets/flask#5945
+
+
+-   ![](https://github.com/pendulum-project.png?size=40){ width="40" loading=lazy align=left } pendulum-project
+
+    ---
+
+    ??? example "Examples"
+        - pendulum-project/ntpd-rs#2139
 
 
 -   ![](https://github.com/philips-software.png?size=40){ width="40" loading=lazy align=left } philips-software
@@ -1400,6 +1501,7 @@
     ---
 
     ??? example "Examples"
+        - pypa/cibuildwheel#2776
         - pypa/packaging#1035
         - pypa/packaging.python.org#1765
         - pypa/pip-audit#851
@@ -1595,6 +1697,8 @@
     ---
 
     ??? example "Examples"
+        - rust-lang/compiler-builtins#1113
+        - rust-lang/compiler-builtins#1115
         - rust-lang/crates.io#10176
         - rust-lang/crates.io#11203
         - rust-lang/rust-clippy#13933
@@ -1609,6 +1713,14 @@
         - rustls/rustls#2261
         - rustls/tokio-rustls#96
         - rustls/webpki#299
+
+
+-   ![](https://github.com/RustPython.png?size=40){ width="40" loading=lazy align=left } RustPython
+
+    ---
+
+    ??? example "Examples"
+        - RustPython/RustPython#7463
 
 
 -   ![](https://github.com/rustsec.png?size=40){ width="40" loading=lazy align=left } rustsec
@@ -1855,6 +1967,17 @@
 
     ??? example "Examples"
         - Unidata/MetPy#3710
+
+
+-   ![](https://github.com/Uniswap.png?size=40){ width="40" loading=lazy align=left } Uniswap
+
+    ---
+
+    ??? example "Examples"
+        - Uniswap/docs#1114
+        - Uniswap/sdks#516
+        - Uniswap/UniswapX#362
+        - Uniswap/v4-periphery#515
 
 
 -   ![](https://github.com/updatecli.png?size=40){ width="40" loading=lazy align=left } updatecli

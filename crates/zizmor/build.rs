@@ -47,7 +47,7 @@ fn do_codeql_injection_sinks() {
     let source = Path::new(&manifest_dir).join("data/codeql-injection-sinks.json");
     let target = Path::new(&env::var("OUT_DIR").unwrap()).join("codeql-injection-sinks.json");
 
-    print!(
+    println!(
         "cargo::rerun-if-changed={source}",
         source = source.display()
     );
@@ -60,7 +60,7 @@ fn do_archived_action_repos() {
     let source = Path::new(&manifest_dir).join("data/archived-repos.txt");
     let target = Path::new(&env::var("OUT_DIR").unwrap()).join("archived-repos.fst");
 
-    print!(
+    println!(
         "cargo::rerun-if-changed={source}",
         source = source.display()
     );

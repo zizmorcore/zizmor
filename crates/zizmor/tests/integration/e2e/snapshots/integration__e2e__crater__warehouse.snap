@@ -220,28 +220,6 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |
    = note: audit confidence → High
 
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/combine-prs.yml:32:23
-   |
-17 |   combine-prs:
-   |   ----------- this job
-...
-32 |           app_id: ${{ secrets.COMBINE_PRS_APP_ID }}
-   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/combine-prs.yml:33:28
-   |
-17 |   combine-prs:
-   |   ----------- this job
-...
-33 |           private_key: ${{ secrets.COMBINE_PRS_PRIVATE_KEY }}
-   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/dev-env-test.yml:1:1
    |
@@ -371,4 +349,4 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |
    = note: audit confidence → High
 
-34 findings: 4 informational, 14 low, 10 medium, 6 high
+34 findings (2 suppressed): 4 informational, 14 low, 8 medium, 6 high

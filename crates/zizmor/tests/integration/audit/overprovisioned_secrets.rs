@@ -6,7 +6,7 @@ fn overprovisioned_secrets() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("overprovisioned-secrets.yml"))
             .run()?,
-        @r"
+        @"
     warning[overprovisioned-secrets]: excessively provisioned secrets
       --> @@INPUT@@:16:18
        |

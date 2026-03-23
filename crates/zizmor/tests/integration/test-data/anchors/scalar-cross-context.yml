@@ -1,0 +1,10 @@
+name: scalar-cross-context
+on: [push]
+permissions: {}
+env:
+  CMD: &cmd "echo ${{ github.event.issue.title }}"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: *cmd

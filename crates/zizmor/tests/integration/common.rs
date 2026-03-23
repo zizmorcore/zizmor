@@ -251,7 +251,7 @@ impl Zizmor {
                         );
                     }
                 }
-                Some(expected_code) if !is_failure => {
+                Some(_) if !is_failure => {
                     anyhow::bail!("zizmor exited successfully but failure was expected: {raw}")
                 }
                 None if is_failure => {

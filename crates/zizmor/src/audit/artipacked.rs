@@ -123,8 +123,9 @@ impl Artipacked {
                         // they probably mean it. Only report if in auditor mode.
                         vulnerable_checkouts.push((step, Persona::Auditor, is_v6_or_higher))
                     }
-                    // TODO: handle expressions here.
-                    // persist-credentials is true by default.
+                    Some(v) if ExplicitExpr::from_curly(v).is_some() => {
+                        vulnerable_checkouts.push((step, Persona::Pedantic, is_v6_or_higher));
+                    }
                     _ => vulnerable_checkouts.push((step, Persona::default(), is_v6_or_higher)),
                 }
             } else if uses.matches("actions/upload-artifact") {
@@ -523,7 +524,7 @@ jobs:
             workflow_content,
             |workflow: &Workflow, findings| {
                 let fixed = apply_fix_for_snapshot(workflow.as_document(), findings);
-                insta::assert_snapshot!(fixed.source(), @r"
+                insta::assert_snapshot!(fixed.source(), @"
 
                 name: Test Workflow
                 on: push
@@ -571,7 +572,7 @@ jobs:
             workflow_content,
             |workflow: &Workflow, findings| {
                 let fixed = apply_fix_for_snapshot(workflow.as_document(), findings);
-                insta::assert_snapshot!(fixed.source(), @r"
+                insta::assert_snapshot!(fixed.source(), @"
 
                 name: Test Workflow
                 on: push

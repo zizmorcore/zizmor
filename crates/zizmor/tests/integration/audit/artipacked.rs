@@ -4,7 +4,7 @@ use crate::common::{input_under_test, zizmor};
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor().input(input_under_test("artipacked.yml")).run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:22:9
        |
@@ -28,7 +28,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
             .input(input_under_test("artipacked.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:22:9
        |
@@ -52,7 +52,7 @@ fn test_auditor_persona() -> anyhow::Result<()> {
             .input(input_under_test("artipacked.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:22:9
        |
@@ -114,6 +114,37 @@ fn test_issue_447() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Feature #1709: `persist-credentials` is only flagged by the pedantic persona
+/// as it reflects intent from the author.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/1709>
+#[test]
+fn test_issue_1709() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("artipacked/issue-1709-repro.yml"))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @"
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+      --> @@INPUT@@:18:9
+       |
+    18 |         - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+       |  _________^
+    19 | |         with:
+    20 | |           persist-credentials: ${{ github.event_name == 'pull_request' }}
+       | |__________________________________________________________________________^ does not set persist-credentials: false
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
+
 /// Ensures that the artipacked audit works correctly on composite actions.
 #[test]
 fn test_composite_action() -> anyhow::Result<()> {
@@ -122,7 +153,7 @@ fn test_composite_action() -> anyhow::Result<()> {
             .input(input_under_test("artipacked/demo-action/action.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:9:7
        |

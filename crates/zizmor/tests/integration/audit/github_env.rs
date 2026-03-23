@@ -100,7 +100,7 @@ fn test_issue_1333() -> Result<()> {
             .setenv("RUST_LOG", "warn")
             .input(input_under_test("github-env/issue-1333/action.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
      WARN zizmor::audit::github_env: github-env: couldn't determine shell type for @@INPUT@@ step 0; assuming bash
     No findings to report. Good job!
