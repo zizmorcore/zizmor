@@ -11,7 +11,7 @@ use subfeature::Subfeature;
 use terminal_link::Link;
 
 /// Represents a location's type.
-#[derive(Serialize, Copy, Clone, Debug, Default)]
+#[derive(Serialize, Copy, Clone, Debug, Default, Hash)]
 pub(crate) enum LocationKind {
     /// A location that is subjectively "primary" to a finding.
     ///
@@ -45,6 +45,14 @@ pub(crate) enum SymbolicFeature<'doc> {
     KeyOnly,
 }
 
+/// Only the discriminant is hashed, since `Subfeature` contains a
+/// `Regex` that doesn't implement `Hash`.
+impl std::hash::Hash for SymbolicFeature<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self).hash(state);
+    }
+}
+
 /// Represents a symbolic location.
 #[derive(Serialize, Clone, Debug)]
 pub(crate) struct SymbolicLocation<'doc> {
@@ -67,6 +75,20 @@ pub(crate) struct SymbolicLocation<'doc> {
 
     /// The kind of location.
     pub(crate) kind: LocationKind,
+}
+
+/// Hash implementation for deduplication of findings from YAML anchors.
+///
+/// This intentionally excludes `route`, which differs between anchor
+/// definitions and alias usages.
+impl std::hash::Hash for SymbolicLocation<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.key.hash(state);
+        self.annotation.hash(state);
+        self.link.hash(state);
+        self.feature_kind.hash(state);
+        self.kind.hash(state);
+    }
 }
 
 impl<'doc> SymbolicLocation<'doc> {
@@ -233,7 +255,7 @@ impl<'a, 'doc, T: Locatable<'doc>> Routable<'a, 'doc> for T {
 }
 
 /// Represents a `(row, column)` point within a file.
-#[derive(Copy, Clone, Serialize)]
+#[derive(Copy, Clone, Hash, Serialize)]
 pub(crate) struct Point {
     pub(crate) row: usize,
     pub(crate) column: usize,
@@ -251,7 +273,7 @@ impl From<LineCol> for Point {
 /// A "concrete" location for some feature.
 /// Every concrete location contains two spans: a line-and-column span,
 /// and an offset range.
-#[derive(Serialize)]
+#[derive(Hash, Serialize)]
 pub(crate) struct ConcreteLocation {
     pub(crate) start_point: Point,
     pub(crate) end_point: Point,
@@ -303,7 +325,7 @@ static_regex!(ANY_COMMENT, r"#.*$");
 static_regex!(IGNORE_EXPR, r"# zizmor: ignore\[(.+)\](?:\s+.*)?$");
 
 /// Represents a single source comment.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Hash, Serialize)]
 #[serde(transparent)]
 pub(crate) struct Comment<'doc>(&'doc str);
 
@@ -334,7 +356,7 @@ impl<'a> AsRef<str> for Comment<'a> {
 }
 
 /// An extracted feature, along with its concrete location.
-#[derive(Serialize)]
+#[derive(Hash, Serialize)]
 pub(crate) struct Feature<'doc> {
     /// The feature's concrete location, as both an offset range and point span.
     pub(crate) location: ConcreteLocation,
@@ -405,7 +427,7 @@ impl<'doc> Feature<'doc> {
 }
 
 /// A location within a GitHub Actions workflow, with both symbolic and concrete components.
-#[derive(Serialize)]
+#[derive(Hash, Serialize)]
 pub(crate) struct Location<'doc> {
     /// The symbolic workflow location.
     pub(crate) symbolic: SymbolicLocation<'doc>,
@@ -416,28 +438,6 @@ pub(crate) struct Location<'doc> {
 impl<'doc> Location<'doc> {
     pub(crate) fn new(symbolic: SymbolicLocation<'doc>, concrete: Feature<'doc>) -> Self {
         Self { symbolic, concrete }
-    }
-
-    /// Computes a content hash for this location, used for deduplication.
-    ///
-    /// The hash includes:
-    /// - The byte offset span (concrete location)
-    /// - The annotation (symbolic description of the issue)
-    /// - The feature kind discriminant (Normal vs Subfeature)
-    ///
-    /// This ensures that two findings at the same byte location with different
-    /// annotations (e.g., two different issues on the same line) produce different hashes.
-    pub(crate) fn content_hash(&self) -> u64 {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-        self.concrete.location.offset_span.start.hash(&mut hasher);
-        self.concrete.location.offset_span.end.hash(&mut hasher);
-        self.symbolic.annotation.hash(&mut hasher);
-        // Hash the feature_kind discriminant to distinguish Normal vs Subfeature
-        std::mem::discriminant(&self.symbolic.feature_kind).hash(&mut hasher);
-        hasher.finish()
     }
 }
 

@@ -2,6 +2,7 @@
 //! audits.
 
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 use std::process::ExitCode;
 
 use indexmap::IndexMap;
@@ -20,10 +21,6 @@ pub(crate) mod input;
 /// We deduplicate based on (audit_ident, input_key, location_hash, determinations)
 /// to handle YAML anchors, which cause the same content to appear at multiple
 /// symbolic routes but with the same concrete byte location and annotation.
-///
-/// The location_hash includes: offset_span, annotation, feature text, and feature_kind.
-/// This ensures that two findings at the same location with different annotations
-/// (e.g., two different issues on the same line) are not incorrectly deduplicated.
 #[derive(Hash, Eq, PartialEq, Clone)]
 struct FindingKey {
     audit_ident: &'static str,
@@ -181,10 +178,15 @@ impl<'a> FindingRegistry<'a> {
             // (e.g., two different vulnerabilities on the same line) are NOT deduplicated.
             if self.dedup {
                 let primary_loc = finding.primary_location();
+
+                let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                primary_loc.hash(&mut hasher);
+                let location_hash = hasher.finish();
+
                 let dedup_key = FindingKey {
                     audit_ident: finding.ident,
                     input_key: primary_loc.symbolic.key.clone(),
-                    location_hash: primary_loc.content_hash(),
+                    location_hash,
                     determinations: finding.determinations,
                 };
 
