@@ -26,12 +26,8 @@ eq_expr = { (comp_expr ~ (eq_op ~ comp_expr)*) }
 eq_op   = { "==" | "!=" }
 
 /// Structural comparison
-// HACK: parenthetical production of or_expr here to
-// allow left-parenthetical productions like `(foo || bar) == baz`.
-// This works well, but I'm not convinced it's right.
 comp_expr = {
     unary_expr ~ (comp_op ~ unary_expr)*
-  | ("(" ~ or_expr ~ ")")
 }
 comp_op   = { ">=" | ">" | "<=" | "<" }
 
@@ -47,7 +43,7 @@ primary_expr = {
   | boolean
   | null
   | context
-  | "(" ~ primary_expr ~ ")"
+  | "(" ~ or_expr ~ ")"
 }
 
 /// Numbers
@@ -56,6 +52,8 @@ primary_expr = {
 number = @{
     "0x" ~ ASCII_HEX_DIGIT+
   | "0o" ~ ('0'..'7')+
+  | "NaN"
+  | ("+" | "-")? ~ "Infinity"
   | ("+" | "-")? ~ (ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT*)? | "." ~ ASCII_DIGIT+) ~ (("e" | "E") ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
 

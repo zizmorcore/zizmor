@@ -169,8 +169,8 @@ impl<'src> Call<'src> {
             | Evaluation::Number(_)
             | Evaluation::Boolean(_)
             | Evaluation::Null => {
-                let search_str = search.sema().to_string().to_lowercase();
-                let item_str = item.sema().to_string().to_lowercase();
+                let search_str = search.sema().to_string().to_uppercase();
+                let item_str = item.sema().to_string().to_uppercase();
                 Some(Evaluation::Boolean(search_str.contains(&item_str)))
             }
             // For arrays, check if any element equals the item
@@ -210,8 +210,8 @@ impl<'src> Call<'src> {
                 | Evaluation::Null,
             ) => {
                 // Case-insensitive comparison
-                let string_str = search_string.sema().to_string().to_lowercase();
-                let prefix_str = search_value.sema().to_string().to_lowercase();
+                let string_str = search_string.sema().to_string().to_uppercase();
+                let prefix_str = search_value.sema().to_string().to_uppercase();
                 Some(Evaluation::Boolean(string_str.starts_with(&prefix_str)))
             }
             // If either argument is not primitive (array or dictionary), return false
@@ -243,8 +243,8 @@ impl<'src> Call<'src> {
                 | Evaluation::Null,
             ) => {
                 // Case-insensitive comparison
-                let string_str = search_string.sema().to_string().to_lowercase();
-                let suffix_str = search_value.sema().to_string().to_lowercase();
+                let string_str = search_string.sema().to_string().to_uppercase();
+                let suffix_str = search_value.sema().to_string().to_uppercase();
                 Some(Evaluation::Boolean(string_str.ends_with(&suffix_str)))
             }
             // If either argument is not primitive (array or dictionary), return false
@@ -654,7 +654,7 @@ mod tests {
             ),
             (
                 "contains(fromJSON('[\"a\", \"b\", \"c\"]'), 'B')",
-                Evaluation::Boolean(false), // Array search is exact match, not case-insensitive
+                Evaluation::Boolean(true), // Array search uses == semantics, which is case-insensitive for strings
             ),
             (
                 "contains(fromJSON('[true, false, null]'), true)",

@@ -143,6 +143,12 @@ fn color_control_tty() -> Result<()> {
     let color_default_output = zizmor()
         .output(OutputMode::Both)
         .unbuffer(true)
+        // indicatif 0.18.4+ hides progress bars when `TERM` is unset or `dumb`.
+        // GitHub Actions runners have `TERM=dumb`, so we explicitly set a
+        // color-capable value here to ensure the TTY tests can assert on
+        // progress bar output.
+        // TODO: Should probably do something more general here.
+        .setenv("TERM", "xterm-256color")
         .input(input_under_test("e2e-menagerie"))
         .run()?;
     assert!(color_default_output.contains("\x1b["));
@@ -184,6 +190,12 @@ fn progress_bar_tty() -> Result<()> {
     let progress_bar_default_output = zizmor()
         .output(OutputMode::Both)
         .unbuffer(true)
+        // indicatif 0.18.4+ hides progress bars when `TERM` is unset or `dumb`.
+        // GitHub Actions runners have `TERM=dumb`, so we explicitly set a
+        // color-capable value here to ensure the TTY tests can assert on
+        // progress bar output.
+        // TODO: Should probably do something more general here.
+        .setenv("TERM", "xterm-256color")
         .input(input_under_test("e2e-menagerie"))
         .run()?;
     assert!(progress_bar_default_output.contains("collect_inputs{}"));
@@ -219,7 +231,7 @@ fn invalid_config_file() -> Result<()> {
             .config(if cfg!(windows) { "NUL" } else { "/dev/null" })
             .input(input_under_test("e2e-menagerie"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -266,7 +278,7 @@ fn invalid_inputs() -> Result<()> {
             .input(input_under_test("invalid/empty/"))
             .args(["--strict-collection"])
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: no inputs collected
@@ -400,7 +412,7 @@ fn issue_1065() -> Result<()> {
             .output(OutputMode::Both)
             .input(input_under_test("issue-1065.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
      INFO audit: zizmor: 🌈 completed @@INPUT@@
     warning[excessive-permissions]: overly broad permissions
@@ -445,7 +457,7 @@ fn warn_on_min_severity_unknown() -> Result<()> {
             .args(["--min-severity=unknown"])
             .input(input_under_test("e2e-menagerie"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
      WARN zizmor: `unknown` is a deprecated minimum severity that has no effect
      WARN zizmor: future versions of zizmor will reject this value
@@ -466,7 +478,7 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
             .args(["--min-confidence=unknown"])
             .input(input_under_test("e2e-menagerie"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
      WARN zizmor: `unknown` is a deprecated minimum confidence that has no effect
      WARN zizmor: future versions of zizmor will reject this value
@@ -509,7 +521,7 @@ fn issue_1286() -> Result<()> {
             .offline(false)
             .input(input_under_test("issue-1286.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     'ref-confusion' audit failed on file://@@INPUT@@
@@ -540,7 +552,7 @@ fn issue_1300() -> Result<()> {
             .args(["--collect=workflows"])
             .input("woodruffw-experiments/empty")
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: input @@INPUT@@ doesn't contain any workflows
@@ -607,7 +619,7 @@ fn test_cant_retrieve_offline() -> Result<()> {
             .offline(true)
             .args(["pypa/sampleproject"])
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: can't fetch remote repository: pypa/sampleproject
@@ -633,7 +645,7 @@ fn test_cant_retrieve_no_gh_token() -> Result<()> {
             .gh_token(false)
             .args(["pypa/sampleproject"])
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: can't fetch remote repository: pypa/sampleproject
@@ -656,7 +668,7 @@ fn test_github_output() -> Result<()> {
             .input(input_under_test("several-vulnerabilities.yml"))
             .args(["--persona=auditor", "--format=github"])
             .run()?,
-        @r"
+        @"
     ::error file=@@INPUT@@,line=5,title=excessive-permissions::several-vulnerabilities.yml:5: overly broad permissions: uses write-all permissions
     ::error file=@@INPUT@@,line=11,title=excessive-permissions::several-vulnerabilities.yml:11: overly broad permissions: uses write-all permissions
     ::error file=@@INPUT@@,line=2,title=dangerous-triggers::several-vulnerabilities.yml:2: use of fundamentally insecure workflow trigger: pull_request_target is almost always used insecurely

@@ -1,6 +1,6 @@
 use crate::{
     audit::{Audit, AuditError, audit_meta},
-    finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
+    finding::{Confidence, Fix, FixDisposition, Persona, Severity, location::Locatable as _},
 };
 use yamlpatch::{Op, Patch};
 
@@ -90,6 +90,47 @@ impl Audit for DependabotCooldown {
         let mut findings = vec![];
 
         for update in dependabot.updates() {
+            // Check for cooldown + multi-ecosystem-group interaction.
+            // When cooldown is applied to an update in a multi-ecosystem group,
+            // it produces only one ecosystem update every N days instead of
+            // batching all ecosystem updates together, which is rarely intended.
+            if update.multi_ecosystem_group.is_some()
+                && let Some(cooldown) = &update.cooldown
+            {
+                // Only flag if there's an effective cooldown (default_days > 0
+                // or any semver-specific days set).
+                let has_effective_cooldown = cooldown.default_days.is_some_and(|d| d > 0)
+                    || cooldown.semver_major_days.is_some()
+                    || cooldown.semver_minor_days.is_some()
+                    || cooldown.semver_patch_days.is_some();
+
+                if has_effective_cooldown {
+                    findings.push(
+                        Self::finding()
+                            .add_location(
+                                update
+                                    .location()
+                                    .with_keys(["cooldown".into()])
+                                    .primary()
+                                    .annotated(
+                                        "multi-ecosystem-group cooldowns do not batch updates correctly",
+                                    ),
+                            )
+                            .add_location(
+                                update
+                                    .location()
+                                    .with_keys(["multi-ecosystem-group".into()])
+                                    .key_only()
+                                    .annotated("multi-ecosystem-group configured here"),
+                            )
+                            .confidence(Confidence::High)
+                            .severity(Severity::Low)
+                            .persona(Persona::Pedantic)
+                            .build(dependabot)?,
+                    );
+                }
+            }
+
             match &update.cooldown {
                 // TODO(ww): Should we have opinions about the other
                 // cooldown settings?
@@ -201,7 +242,7 @@ updates:
 
                 let fix = &finding.fixes[0];
                 let fixed_document = fix.apply(dependabot.as_document()).unwrap();
-                insta::assert_snapshot!(fixed_document.source(), @r"
+                insta::assert_snapshot!(fixed_document.source(), @"
 
                 version: 2
 
@@ -243,7 +284,7 @@ updates:
 
                 let fix = &finding.fixes[0];
                 let fixed_document = fix.apply(dependabot.as_document()).unwrap();
-                insta::assert_snapshot!(fixed_document.source(), @r"
+                insta::assert_snapshot!(fixed_document.source(), @"
 
                 version: 2
 
@@ -285,7 +326,7 @@ updates:
 
                 let fix = &finding.fixes[0];
                 let fixed_document = fix.apply(dependabot.as_document()).unwrap();
-                insta::assert_snapshot!(fixed_document.source(), @r"
+                insta::assert_snapshot!(fixed_document.source(), @"
 
                 version: 2
 
@@ -337,7 +378,7 @@ updates:
                     }
                 }
 
-                insta::assert_snapshot!(document.source(), @r"
+                insta::assert_snapshot!(document.source(), @"
 
                 version: 2
 
@@ -356,6 +397,72 @@ updates:
                     schedule:
                       interval: weekly
                 ");
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn test_multi_ecosystem_group_with_cooldown() {
+        let dependabot_content = r#"
+version: 2
+multi-ecosystem-groups:
+  all:
+    schedule:
+      interval: weekly
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    multi-ecosystem-group: all
+    patterns:
+      - "*"
+    cooldown:
+      default-days: 7
+"#;
+
+        test_dependabot_audit!(
+            DependabotCooldown,
+            "test_multi_ecosystem_group_with_cooldown.yml",
+            dependabot_content,
+            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                // Should have one finding for cooldown + multi-ecosystem-group interaction
+                assert_eq!(
+                    findings.len(),
+                    1,
+                    "Expected 1 finding for multi-ecosystem-group + cooldown"
+                );
+                // No autofix for this case
+                assert!(findings[0].fixes.is_empty(), "Expected no fixes");
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn test_multi_ecosystem_group_without_cooldown() {
+        let dependabot_content = r#"
+version: 2
+multi-ecosystem-groups:
+  all:
+    schedule:
+      interval: weekly
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    multi-ecosystem-group: all
+    patterns:
+      - "*"
+"#;
+
+        test_dependabot_audit!(
+            DependabotCooldown,
+            "test_multi_ecosystem_group_without_cooldown.yml",
+            dependabot_content,
+            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
+                // Should have one finding for missing cooldown, but NOT for multi-ecosystem interaction
+                assert_eq!(findings.len(), 1, "Expected 1 finding for missing cooldown");
+                assert!(
+                    !findings[0].fixes.is_empty(),
+                    "Expected a fix for missing cooldown"
+                );
             }
         );
     }
@@ -382,7 +489,7 @@ updates:
                 assert_eq!(findings.len(), 0, "Expected no findings");
 
                 // Verify the document remains unchanged
-                insta::assert_snapshot!(dependabot.as_document().source(), @r"
+                insta::assert_snapshot!(dependabot.as_document().source(), @"
 
                 version: 2
 

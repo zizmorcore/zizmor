@@ -247,7 +247,7 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
 
@@ -421,7 +421,7 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo:
@@ -453,7 +453,7 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo:
@@ -508,7 +508,7 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo:
@@ -540,7 +540,7 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo:
@@ -616,7 +616,7 @@ foo: {}
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo: {} # Empty object
@@ -643,7 +643,7 @@ foo: []
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo: [] # Empty list
@@ -671,7 +671,7 @@ foo: |
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo: | # Multiline string
@@ -699,7 +699,7 @@ foo: 'abc'
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo: 'abc' # Single-quoted string
@@ -779,7 +779,7 @@ foo: [
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo: [
@@ -811,7 +811,7 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo:
@@ -837,7 +837,7 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo:
@@ -862,7 +862,7 @@ fn test_replace_empty_flow_value() {
 
     let result = apply_yaml_patches(&document, &patches).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
         foo: { bar: abc }
@@ -887,7 +887,7 @@ fn test_replace_empty_flow_value_no_colon() {
 
     let result = apply_yaml_patches(&document, &patches).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
             foo: { bar: abc }
@@ -916,7 +916,7 @@ foo:
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo:
@@ -957,7 +957,7 @@ jobs:
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
     // Preserves all comments, but changes the value of `contents`
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     # This is a workflow file
@@ -1026,7 +1026,7 @@ permissions:
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
     // Preserves original content, adds new key while maintaining indentation
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     permissions:
@@ -1055,7 +1055,7 @@ foo: { bar: abc }
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo: { bar: abc, baz: qux }
@@ -1083,7 +1083,7 @@ permissions:
     let result = apply_yaml_patches(&document, &operations).unwrap();
 
     // Preserves other content, removes the target line
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     permissions:
@@ -1130,7 +1130,7 @@ jobs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // All comments preserved, all changes applied
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     # Main configuration
@@ -1272,7 +1272,7 @@ normal:
         .unwrap();
     let end = find_content_end(&feature, &doc);
 
-    insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @r"
+    insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @"
     bar: baz
       abc: def # comment
     ");
@@ -1281,7 +1281,7 @@ normal:
         .unwrap()
         .unwrap();
     let end = find_content_end(&feature, &doc);
-    insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @r"
+    insta::assert_snapshot!(doc.source()[feature.location.byte_span.0..end], @"
     - foo
 
       - bar
@@ -1337,7 +1337,7 @@ jobs:
     )
     .unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     # GitHub Actions Workflow
@@ -1382,7 +1382,7 @@ jobs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // Empty mapping should be formatted inline
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
     name: Test
     jobs:
@@ -1629,7 +1629,7 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
     # GitHub Actions Workflow
     name: CI
@@ -1667,7 +1667,7 @@ jobs:
     assert!(result.is_ok());
 
     let result = result.unwrap();
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
     name: Test
     on: push
@@ -2355,7 +2355,7 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     jobs:
@@ -2390,7 +2390,7 @@ foo:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     foo:
@@ -2426,7 +2426,7 @@ matrix:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     matrix:
@@ -2463,7 +2463,7 @@ matrix:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     matrix:
@@ -2499,7 +2499,7 @@ strategy:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     strategy:
@@ -2532,7 +2532,7 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     jobs:
@@ -2565,7 +2565,7 @@ jobs:
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
     // The trailing comment should be preserved after the mapping
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     jobs:
@@ -2670,7 +2670,7 @@ permissions:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     permissions:
@@ -2838,7 +2838,7 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
 
     jobs:
@@ -2926,7 +2926,7 @@ updates:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
     version: 2
 
@@ -2959,7 +2959,7 @@ version: 1.0
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
     name: Test
     version: '2.0'
@@ -2985,7 +2985,7 @@ version: 1.0  # old version
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
     name: Test
     version: 1.0  # updated version
@@ -3039,7 +3039,7 @@ key: value
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
     name: Test
     key: value
@@ -3067,7 +3067,7 @@ fn test_preserve_trailing_newline_replace_nested_at_end() {
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
     jobs:
       test:
@@ -3129,7 +3129,7 @@ fn test_preserve_trailing_newline_replace_multiline_at_end() {
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
     description: New description
 
@@ -3155,7 +3155,7 @@ key: value"#;
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(format_patch(result.source()), @r"
+    insta::assert_snapshot!(format_patch(result.source()), @"
     --- PATCH ---
     name: Test
     key: newvalue
@@ -3182,7 +3182,7 @@ items:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
+    insta::assert_snapshot!(result.source(), @"
 
     items:
       - first
@@ -3231,7 +3231,7 @@ databases:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
+    insta::assert_snapshot!(result.source(), @"
 
     databases:
       - name: primary
@@ -3335,7 +3335,7 @@ servers:
     assert!(result.source().contains("# Staging server"));
     assert!(result.source().contains("# internal only"));
 
-    insta::assert_snapshot!(result.source(), @r"
+    insta::assert_snapshot!(result.source(), @"
 
     servers:
       # Production server
@@ -3370,7 +3370,7 @@ ports:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
+    insta::assert_snapshot!(result.source(), @"
 
     ports:
       - 8080
@@ -3397,7 +3397,7 @@ configs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
+    insta::assert_snapshot!(result.source(), @"
 
     configs:
       - name: config1
@@ -3445,7 +3445,7 @@ services:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
+    insta::assert_snapshot!(result.source(), @"
 
     services:
       - name: api
@@ -3510,7 +3510,7 @@ tasks:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
+    insta::assert_snapshot!(result.source(), @"
 
     tasks:
       - task1
@@ -3554,7 +3554,7 @@ jobs:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
+    insta::assert_snapshot!(result.source(), @"
 
     name: CI
     on: push
@@ -3592,7 +3592,7 @@ foo:
     let result =
         apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
 
-    insta::assert_snapshot!(result.source(), @r"
+    insta::assert_snapshot!(result.source(), @"
 
     foo:
       - abc

@@ -7,7 +7,7 @@ fn test_obfuscation() -> Result<()> {
         zizmor()
             .input(input_under_test("obfuscation.yml"))
             .run()?,
-        @r"
+        @"
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:13:9
        |
@@ -209,7 +209,7 @@ fn test_computed_indices_pedantic() -> Result<()> {
             .input(input_under_test("obfuscation/computed-indices.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:18:23
        |

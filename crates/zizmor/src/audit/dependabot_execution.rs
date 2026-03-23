@@ -122,7 +122,7 @@ updates:
 
                 let fix = &finding.fixes[0];
                 let fixed_document = fix.apply(dependabot.as_document()).unwrap();
-                insta::assert_snapshot!(fixed_document.source(), @r"
+                insta::assert_snapshot!(fixed_document.source(), @"
 
                 version: 2
 
@@ -158,7 +158,7 @@ updates:
                 assert_eq!(findings.len(), 0, "Expected no findings");
 
                 // Verify the document remains unchanged
-                insta::assert_snapshot!(dependabot.as_document().source(), @r"
+                insta::assert_snapshot!(dependabot.as_document().source(), @"
 
                 version: 2
 
@@ -193,7 +193,7 @@ updates:
                 assert_eq!(findings.len(), 0, "Expected no findings");
 
                 // Verify the document remains unchanged
-                insta::assert_snapshot!(dependabot.as_document().source(), @r"
+                insta::assert_snapshot!(dependabot.as_document().source(), @"
 
                 version: 2
 
@@ -242,7 +242,7 @@ updates:
                     }
                 }
 
-                insta::assert_snapshot!(document.source(), @r"
+                insta::assert_snapshot!(document.source(), @"
 
                 version: 2
 

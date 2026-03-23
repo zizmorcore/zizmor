@@ -119,6 +119,16 @@ These tests use [`unbuffer`](https://linux.die.net/man/1/unbuffer)
 from the [Expect project](https://core.tcl-lang.org/expect/index)
 to provide a TTY-like environment.
 
+### JSON Schema tests
+
+`zizmor` has some tests for the JSON schema of its configuration file.
+These tests are gated behind the `schema` crate feature. To run these
+tests, pass the `--features` flag to `cargo test`:
+
+```bash
+cargo test --features schema
+```
+
 ### Writing snapshot tests
 
 `zizmor` uses @mitsuhiko/insta for snapshot testing.
@@ -180,6 +190,7 @@ run locally with:
 
 ```bash
 # run all offline benchmarks
+cargo build --release
 make bench
 ```
 
@@ -266,6 +277,14 @@ Then, regenerate the trophy case:
 
 ```
 make trophies
+```
+
+### Regenerating the JSON schema
+
+To regenerate the JSON schema file in the repository:
+
+```bash
+make generate-schema
 ```
 
 ## Adding or modifying an audit

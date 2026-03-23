@@ -6,7 +6,7 @@ fn secrets_inherit() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("secrets-inherit.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:10:11
        |

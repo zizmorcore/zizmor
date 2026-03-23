@@ -1,0 +1,41 @@
+on: [push]
+
+name: use-trusted-publishing
+
+jobs:
+  bun-publish:
+    name: bun-publish
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: vulnerable-1
+        run: bun publish
+
+      - name: vulnerable-2
+        run: bun publish --access public
+
+      # multiline bun commands are detected
+      - name: vulnerable-3
+        run: |
+          bun \
+            publish \
+            --access \
+            public
+
+      # bunx npm publish workaround should still be flagged
+      - name: vulnerable-4
+        run: bunx npm publish
+
+      # OK: --dry-run is not a real publish
+      - name: not-vulnerable-1
+        run: bun publish --dry-run
+
+  true-negatives:
+    name: true-negatives
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      # OK: bun publish with id-token permission (suppressed)
+      - name: safe-1
+        run: bun publish

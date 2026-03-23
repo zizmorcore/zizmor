@@ -4,7 +4,7 @@ use crate::common::{input_under_test, zizmor};
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor().input(input_under_test("archived-uses.yml")).run()?,
-        @r"
+        @"
     warning[archived-uses]: action or reusable workflow from archived repository
       --> @@INPUT@@:17:15
        |
@@ -48,7 +48,7 @@ fn test_composite_action() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("archived-uses/action/"))
             .run()?,
-        @r"
+        @"
     warning[archived-uses]: action or reusable workflow from archived repository
      --> @@INPUT@@action.yml:9:13
       |

@@ -1,0 +1,15 @@
+name: multi-scalar-anchors
+on: [push]
+permissions: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2
+        with:
+          title_template: &title "${{ github.event.issue.title }}"
+          body_template: &body "${{ github.event.issue.body }}"
+      - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2
+        with:
+          title_template: *title
+          body_template: *body

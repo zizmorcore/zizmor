@@ -7,7 +7,7 @@ fn test_use_trusted_publishing() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:19:9
        |
@@ -111,7 +111,7 @@ fn test_demo_action() -> Result<()> {
                 "use-trusted-publishing/demo-action/action.yml"
             ))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:9:7
        |
@@ -203,29 +203,7 @@ fn test_cargo_publish() -> Result<()> {
        |
        = note: audit confidence → High
 
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:52:37
-       |
-    44 |   publish-2:
-       |   --------- this job
-    ...
-    52 |           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-       |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:57:37
-       |
-    44 |   publish-2:
-       |   --------- this job
-    ...
-    57 |           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-       |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    11 findings (3 suppressed): 6 informational, 0 low, 2 medium, 0 high
+    11 findings (5 suppressed): 6 informational, 0 low, 0 medium, 0 high
     "
     );
 
@@ -238,7 +216,7 @@ fn test_npm_publish() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing/npm-publish.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:15:9
        |
@@ -363,106 +341,7 @@ fn test_npm_publish() -> Result<()> {
         |
         = note: audit confidence → High
 
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:46:26
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    46 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:52:26
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    52 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:60:26
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    60 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:66:36
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    66 |           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                                    ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:72:36
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    72 |           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                                    ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:78:26
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    78 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:84:26
-       |
-    37 |   npm-direct-commands:
-       |   ------------------- this job
-    ...
-    84 |           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-       |                          ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-       |
-       = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-       --> @@INPUT@@:126:32
-        |
-     87 |   npm-trusted-publishing:
-        |   ---------------------- this job
-    ...
-    126 |           NODE_AUTH_TOKEN: ${{ secrets.CUSTOM_NPM_TOKEN }}
-        |                                ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-        |
-        = note: audit confidence → High
-
-    warning[secrets-outside-env]: secrets referenced without a dedicated environment
-       --> @@INPUT@@:137:32
-        |
-     87 |   npm-trusted-publishing:
-        |   ---------------------- this job
-    ...
-    137 |           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        |                                ^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-        |
-        = note: audit confidence → High
-
-    31 findings (6 ignored, 4 suppressed): 12 informational, 0 low, 9 medium, 0 high
+    31 findings (6 ignored, 13 suppressed): 12 informational, 0 low, 0 medium, 0 high
     "
     );
 
@@ -490,7 +369,7 @@ fn test_nuget_push() -> Result<()> {
         zizmor()
             .input(input_under_test("use-trusted-publishing/nuget-push.yml"))
             .run()?,
-        @r"
+        @"
     info[use-trusted-publishing]: prefer trusted publishing for authentication
       --> @@INPUT@@:12:14
        |
@@ -625,6 +504,63 @@ fn test_twine_upload() -> Result<()> {
        = note: audit confidence → High
 
     6 findings (2 suppressed): 4 informational, 0 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_bun_publish() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("use-trusted-publishing/bun-publish.yml"))
+            .run()?,
+        @r"
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:12:14
+       |
+    12 |         run: bun publish
+       |         ---  ^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:15:14
+       |
+    15 |         run: bun publish --access public
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:20:11
+       |
+    19 |           run: |
+       |           --- this step
+    20 | /           bun \
+    21 | |             publish \
+    22 | |             --access \
+    23 | |             public
+       | |__________________^ this command
+       |
+       = note: audit confidence → High
+
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:27:14
+       |
+    27 |         run: bunx npm publish
+       |         ---  ^^^^^^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    8 findings (4 suppressed): 4 informational, 0 low, 0 medium, 0 high
     "
     );
 

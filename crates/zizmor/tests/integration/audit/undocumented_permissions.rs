@@ -9,7 +9,7 @@ fn test_undocumented_permissions_pedantic() -> Result<()> {
             .input(input_under_test("undocumented-permissions.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     help[undocumented-permissions]: permissions without explanatory comments
      --> @@INPUT@@:8:3
       |
@@ -78,7 +78,7 @@ fn test_documented_permissions_pedantic() -> Result<()> {
             .input(input_under_test("undocumented-permissions/documented.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:23:15
        |
@@ -120,7 +120,7 @@ fn test_contents_read_only_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:21:15
        |
@@ -146,7 +146,7 @@ fn test_empty_permissions_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:19:15
        |
@@ -172,7 +172,7 @@ fn test_contents_read_with_other_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:8:3
       |
@@ -214,7 +214,7 @@ fn test_partially_documented_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:25:15
        |

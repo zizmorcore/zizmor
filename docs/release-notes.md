@@ -11,6 +11,67 @@ of `zizmor`.
 
 ### New Features 🌈
 
+* `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
+
+* The [use-trusted-publishing] audit now detects `bun publish` and `bunx npm publish`
+  patterns (#1737)
+
+    Many thanks to @shaanmajid for proposing and implementing this improvement!
+
+### Enhancements 🌱
+
+* `zizmor`'s CLI help and usage output now uses a custom color scheme for
+  improved readability (#1747)
+
+* The [secrets-outside-env] audit is now configurable with an allowlist of
+  secret names that should not be flagged, even when referenced outside of
+  an environment (#1759)
+
+    Many thanks to @rmuir for proposing and implementing this improvement!
+
+* The [dependabot-cooldown] audit now emits a pedantic finding whenever
+  it encounters a cooldown used with a multi-ecosystem-group, as the two
+  do not interact well (#1780)
+
+### Bug Fixes 🐛
+
+* Fixed a bug where auto-fixes for the [template-injection] audit would fail
+  to preserve an environment variable's casing (#1766)
+
+* Fixed a bug where the [secrets-outside-env] audit would incorrectly
+  flag reusable workflows (#1777)
+
+* Fixed a bug where expressions containing `Infinity` or `NaN` would fail to parse (#1778)
+
+* Fixed a bug where some parenthetical forms in expressions would fail to parse (#1779)
+
+### Changes ⚠️
+
+* The [secrets-outside-env] audit now only flags findings with the 'auditor'
+  persona, due to numerous false positives and negatives caused by GitHub's
+  platform limitations (primarily around interactions between environment
+  secrets and reusable workflows) (#1777)
+
+## 1.23.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would error if given both a `GH_TOKEN` and
+  a `GITHUB_TOKEN` (or `ZIZMOR_GITHUB_TOKEN`) via the environment (#1724)
+
+* Fixed a bug in [template-injection] where the `context` input of
+  `docker/build-push-action` was incorrectly considered a code injection sink
+  (#1705)
+
+### Changes ⚠️
+
+* `artipacked` audit emits a pedantic finding if `persist-credentials`
+  is an expression (#1735)
+
+## 1.23.0
+
+### New Features 🌈
+
 * **New audit**: [secrets-outside-env] detects usage of the `secrets` context
   in jobs that don't have a corresponding `environment` (#1599)
 
@@ -35,6 +96,9 @@ of `zizmor`.
 
 * The SARIF output format now adds `zizmor/confidence`, `zizmor/persona` and `zizmor/severity`
   to the `properties` of findings (#1656)
+
+* Added [awalsh128/cache-apt-pkgs-action](https://github.com/awalsh128/cache-apt-pkgs-action)
+  as a cache-aware action to the cache-poisoning audit (#1708)
 
 ### Changes ⚠️
 
@@ -97,6 +161,12 @@ of `zizmor`.
 
 * Fixed a bug where `zizmor` would crash on workflows containing bare
   numeric values in `if:` conditions (#1683)
+
+* Fixed a bug where GitHub Actions expression string comparisons were
+  not case-insensitive (#1687)
+
+* Fixed a bug in `yamlpath` where resolving an alias to an anchored
+  scalar would navigate the wrong parent tree (#1732)
 
 ## 1.22.0
 

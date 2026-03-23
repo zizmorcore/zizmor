@@ -29,7 +29,7 @@ jobs:
       - name: Format
         run: cargo fmt --check
 
-      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Lint
         run: cargo clippy -- --deny warnings
@@ -42,9 +42,9 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
-      - uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+      - uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
 
       - name: Test dependencies
         run: |
@@ -71,7 +71,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+      - uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
 
       - name: Test site
         run: make site
@@ -96,7 +96,7 @@ jobs:
           fi
           echo "Schema covers all $REGISTRY_COUNT audits"
 
-      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Verify committed schema is up-to-date
         run: |
@@ -107,7 +107,7 @@ jobs:
     name: All tests pass
     if: always()
     needs: [lint, test, test-site, test-schema]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
 
     steps:
       - name: check test jobs

@@ -273,7 +273,7 @@ by GitHub come with built-in caching functionality, like @actions/setup-node,
 Furthermore, there are many examples of community-driven Actions with built-in
 caching functionality, like @ruby/setup-ruby, @astral-sh/setup-uv,
 @Swatinem/rust-cache. In general, most of them build on top of @actions/toolkit
-for the sake of easily integrate with GitHub cache server at Workflow runtime.
+for the sake of easily integrating with GitHub cache server at Workflow runtime.
 
 This vulnerability happens when release workflows leverage build state cached
 from previous workflow executions, in general on top of the aforementioned
@@ -464,6 +464,15 @@ both stability and supply-chain security risks:
 To mitigate these risks, Dependabot supports per-updater `cooldown` settings.
 However, these settings are not enabled by default; users **must** explicitly
 enable them.
+
+!!! tip
+
+    Dependabot's `multi-ecosystem-groups` feature does not interact well
+    with `cooldown`: if you use the two together, Dependabot will only create
+    an update for _one_ ecosystem for each cooldown period, even if multiple 
+    ecosystems have new versions available. See #1501 for context.
+    
+    zizmor will flag these cases with a pedantic finding.
 
 Other resources:
 
@@ -1328,6 +1337,21 @@ Consequently, configuring secrets at the environment level ensures that they're
 only exposed to jobs that meet the environment's protection rules, mitigating
 the risk of secrets being exposed to untrusted code or compromised workflows.
 
+!!! tip
+
+    The `secrets.GITHUB_TOKEN` secret is a special case, and is not flagged
+    by this audit. This is because the permissions of the `GITHUB_TOKEN`
+    secret are entirely determined by the workflow and job-level permissions.
+
+!!! note
+
+    These findings are only shown when running with the "auditor"
+    [persona](./usage.md#using-personas), as fixing them requires
+    careful consideration of GitHub's platform limitations. In particular,
+    as of March 2026 environment secrets do not interact correctly with
+    reusable workflows unless the caller workflow uses `secrets: inherit`,
+    which is itself flagged by [secrets-inherit](./audits.md#secrets-inherit).
+    
 ### Remediation
 
 In general, secrets should be configured at the environment level, and only
@@ -1335,9 +1359,13 @@ the job or jobs that need a secret should use the corresponding environment.
 
 !!! important
 
+    zizmor will assume that referenced secrets are environment secrets if
+    the job has an associated environment. zizmor cannot actually see
+    where secrets are stored on GitHub's side.
+
     You **must** move your secrets into the environment's secrets (and remove
     them from the repo/org-wide secrets) in order for this to be effective.
-
+    
 !!! example
 
     === "Before :warning:"
@@ -1364,6 +1392,35 @@ the job or jobs that need a secret should use the corresponding environment.
                 env:
                   API_KEY: ${{ secrets.API_KEY }}
         ```
+
+### Configuration { #secrets-outside-env-configuration }
+
+#### `rules.secrets-outside-env.config.allow`
+
+_Type_: `list`
+
+The `secrets-outside-env` audit operates on an allowlist basis:
+
+* Findings for secrets matching the allowlist will not be flagged by this audit.
+
+    Intended use case: only allowing "special" secrets to be used outside environments,
+    and forbidding everything else.
+
+* The `GITHUB_TOKEN` secret is never flagged by this audit.
+
+!!! example
+
+    The following configuration would allow any usage of `CI_COVERAGE_TOKEN`
+    and `NOT_VERY_SENSITIVE`, even outside of an environment.
+
+    ```yaml title="zizmor.yml"
+    rules:
+      secrets-outside-env:
+        config:
+          allow:
+            - CI_COVERAGE_TOKEN
+            - NOT_VERY_SENSITIVE
+    ```
 
 ## `self-hosted-runner`
 

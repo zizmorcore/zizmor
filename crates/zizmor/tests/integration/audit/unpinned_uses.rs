@@ -8,7 +8,7 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
             .input(input_under_test("unpinned-uses.yml"))
             .args(["--pedantic"])
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:16:15
        |
@@ -46,7 +46,7 @@ fn test_unpinned_uses_default() -> Result<()> {
         zizmor()
             .input(input_under_test("unpinned-uses.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:16:15
        |
@@ -85,7 +85,7 @@ fn test_action_pedantic() -> Result<()> {
             .input(input_under_test("unpinned-uses/action.yml"))
             .args(["--pedantic"])
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:12:13
        |
@@ -130,7 +130,7 @@ fn test_issue_659_repro() -> Result<()> {
             .input(input_under_test("unpinned-uses/issue-659-repro.yml"))
             .args(["--pedantic"])
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:24:15
        |
@@ -155,7 +155,7 @@ fn test_issue_1543_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("unpinned-uses/issue-1543-repro.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:18:11
        |
@@ -178,7 +178,7 @@ fn test_default_config() -> Result<()> {
         zizmor()
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:12:15
        |
@@ -236,7 +236,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
             ))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:12:15
        |
@@ -307,7 +307,7 @@ fn test_composite_config() -> Result<()> {
             .config(input_under_test("unpinned-uses/configs/composite.yml"))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:12:15
        |
@@ -346,7 +346,7 @@ fn test_composite_config_2() -> Result<()> {
             .config(input_under_test("unpinned-uses/configs/composite-2.yml"))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:24:15
        |
@@ -377,7 +377,7 @@ fn test_empty_config() -> Result<()> {
             .config(input_under_test("unpinned-uses/configs/empty.yml"))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:12:15
        |
@@ -435,7 +435,7 @@ fn test_invalid_wrong_policy_object() -> Result<()> {
             ))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -463,7 +463,7 @@ fn test_invalid_policy_syntax_1() -> Result<()> {
             ))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -491,7 +491,7 @@ fn test_invalid_policy_syntax_2() -> Result<()> {
             ))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -519,7 +519,7 @@ fn test_invalid_policy_syntax_3() -> Result<()> {
             ))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -547,7 +547,7 @@ fn test_invalid_policy_syntax_4() -> Result<()> {
             ))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -575,7 +575,7 @@ fn test_invalid_policy_syntax_5() -> Result<()> {
             ))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -603,7 +603,7 @@ fn test_invalid_policy_syntax_6() -> Result<()> {
             ))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -624,7 +624,7 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
         zizmor()
             .input(input_under_test("unpinned-uses/reusable-workflow-unpinned.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:17:11
        |

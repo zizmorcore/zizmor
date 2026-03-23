@@ -60,3 +60,17 @@ fn pyca_cryptography() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[cfg_attr(not(feature = "crater-tests"), ignore)]
+#[test]
+fn astral_sh_uv() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .output(OutputMode::Both)
+            .args(["--persona=pedantic"])
+            .input("astral-sh/uv@8ed803e507f41937d55865ae88c8c806573b3b9e")
+            .run()?
+    );
+    Ok(())
+}
