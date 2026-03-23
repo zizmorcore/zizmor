@@ -23,3 +23,4 @@ warning[ref-version-mismatch]: detects commit SHAs that don't match their versio
     = note: this finding has an auto-fix
 
 13 findings (2 ignored, 10 suppressed): 0 informational, 0 low, 1 medium, 0 high
+

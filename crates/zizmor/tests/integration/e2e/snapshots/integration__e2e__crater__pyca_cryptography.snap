@@ -135,18 +135,18 @@ info[anonymous-definition]: workflow or action definition without a name
   = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/auto-close-stale.yml:1:1
-   |
- 1 | / name: Auto-close stale issues
- 2 | | on:
- 3 | |   workflow_dispatch:
- 4 | |   schedule:
-...  |
-22 | |           close-issue-message: "This issue has not received a reporter response and has been auto-closed. If the issue is still re...
-23 | |           close-issue-reason: completed
-   | |________________________________________^ missing concurrency setting
-   |
-   = note: audit confidence → High
+ --> .github/workflows/auto-close-stale.yml:2:1
+  |
+2 | / on:
+3 | |   workflow_dispatch:
+4 | |   schedule:
+5 | |     - cron: '0 0 * * *'
+  | |_______________________^ workflow is missing concurrency setting
+...
+8 |     auto-close:
+  |     ---------- job affected by missing workflow concurrency
+  |
+  = note: audit confidence → High
 
 info[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/benchmark.yml:21:3
@@ -167,15 +167,17 @@ info[anonymous-definition]: workflow or action definition without a name
    = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/boring-open-awslc-bump.yml:1:1
+  --> .github/workflows/boring-open-awslc-bump.yml:5:1
    |
- 1 | / name: Bump BoringSSL, OpenSSL, AWS-LC
- 2 | | permissions:
- 3 | |   contents: read
-...  |
-62 | |           token: ${{ steps.generate-token.outputs.token }}
-63 | |         if: steps.bump-boringssl.outputs.HAS_UPDATES == 'true' || steps.bump-awslc.outputs.HAS_UPDATES == 'true'
-   | |_________________________________________________________________________________________________________________^ missing concurrency setting
+ 5 | / on:
+ 6 | |   workflow_dispatch:
+ 7 | |   schedule:
+ 8 | |     # Run daily
+ 9 | |     - cron: "0 10 * * *"
+   | |________________________^ workflow is missing concurrency setting
+...
+12 |     bump:
+   |     ---- job affected by missing workflow concurrency
    |
    = note: audit confidence → High
 
@@ -384,15 +386,17 @@ info[anonymous-definition]: workflow or action definition without a name
    = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/downstream-version-bump.yml:1:1
+  --> .github/workflows/downstream-version-bump.yml:5:1
    |
- 1 | / name: Bump downstream dependencies
- 2 | | permissions:
- 3 | |   contents: read
-...  |
-38 | |           token: ${{ steps.generate-token.outputs.token }}
-39 | |         if: steps.downstream-bump.outputs.HAS_UPDATES == 'true'
-   | |________________________________________________________________^ missing concurrency setting
+ 5 | / on:
+ 6 | |   workflow_dispatch:
+ 7 | |   schedule:
+ 8 | |     # Run daily
+ 9 | |     - cron: "0 10 * * *"
+   | |________________________^ workflow is missing concurrency setting
+...
+12 |     bump:
+   |     ---- job affected by missing workflow concurrency
    |
    = note: audit confidence → High
 
@@ -407,16 +411,19 @@ help[superfluous-actions]: action functionality is already included by the runne
    = note: audit confidence → High
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/linkcheck.yml:1:1
+  --> .github/workflows/linkcheck.yml:2:1
    |
- 1 | / name: linkcheck
- 2 | | on:
+ 2 | / on:
  3 | |   pull_request:
  4 | |     paths:
+ 5 | |       - docs/conf.py
 ...  |
-44 | |       - name: linkcheck
-45 | |         run: nox --no-install -s docs-linkcheck -- --color=yes
-   | |_______________________________________________________________^ missing concurrency setting
+ 8 | |     # Run once a week on Fridays
+ 9 | |     - cron: "0 0 * * FRI"
+   | |_________________________^ workflow is missing concurrency setting
+...
+20 |       name: "linkcheck"
+   |       ----------------- job affected by missing workflow concurrency
    |
    = note: audit confidence → High
 
@@ -452,18 +459,18 @@ info[anonymous-definition]: workflow or action definition without a name
   = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/lock.yml:1:1
-   |
- 1 | / name: Lock Issues
- 2 | | on:
- 3 | |   workflow_dispatch:
- 4 | |   schedule:
-...  |
-18 | |           issue-inactive-days: 90
-19 | |           pr-inactive-days: 90
-   | |_______________________________^ missing concurrency setting
-   |
-   = note: audit confidence → High
+ --> .github/workflows/lock.yml:2:1
+  |
+2 | / on:
+3 | |   workflow_dispatch:
+4 | |   schedule:
+5 | |     - cron: '0 3 * * *'
+  | |_______________________^ workflow is missing concurrency setting
+...
+8 |     lock:
+  |     ---- job affected by missing workflow concurrency
+  |
+  = note: audit confidence → High
 
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   --> .github/workflows/pypi-publish.yml:3:1
@@ -499,16 +506,19 @@ info[anonymous-definition]: workflow or action definition without a name
    = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/pypi-publish.yml:1:1
+  --> .github/workflows/pypi-publish.yml:3:1
    |
- 1 | / name: Publish to PyPI
- 2 | |
- 3 | | on:
+ 3 | / on:
  4 | |   workflow_dispatch:
+ 5 | |     inputs:
+ 6 | |       run_id:
 ...  |
-62 | |           # PyPI.
-63 | |           attestations: ${{ env.PYPI_URL == 'https://upload.pypi.org/legacy/' }}
-   | |_________________________________________________________________________________^ missing concurrency setting
+15 | |     workflows: ["Wheel Builder"]
+16 | |     types: [completed]
+   | |______________________^ workflow is missing concurrency setting
+...
+25 |     publish:
+   |     ------- job affected by missing workflow concurrency
    |
    = note: audit confidence → High
 
@@ -623,58 +633,28 @@ error[unpinned-images]: unpinned image references
    = note: audit confidence → High
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-   --> .github/workflows/wheel-builder.yml:1:1
+   --> .github/workflows/wheel-builder.yml:4:1
     |
-  1 | / name: Wheel Builder
-  2 | | permissions:
-  3 | |   contents: read
-  4 | | on:
+  4 | / on:
+  5 | |   workflow_dispatch:
+  6 | |     inputs:
+  7 | |       version:
 ...   |
-389 | |           name: "cryptography-${{ github.event.inputs.version }}-${{ matrix.WINDOWS.WINDOWS }}-${{ matrix.PYTHON.VERSION }}-${{ m...
-390 | |           path: wheelhouse\
-    | |____________________________^ missing concurrency setting
-    |
-    = note: audit confidence → High
-
-help[concurrency-limits]: insufficient job-level concurrency limits
-   --> .github/workflows/wheel-builder.yml:1:1
-    |
-  1 | / name: Wheel Builder
-  2 | | permissions:
-  3 | |   contents: read
-  4 | | on:
-...   |
-389 | |           name: "cryptography-${{ github.event.inputs.version }}-${{ matrix.WINDOWS.WINDOWS }}-${{ matrix.PYTHON.VERSION }}-${{ m...
-390 | |           path: wheelhouse\
-    | |____________________________^ missing concurrency setting
-    |
-    = note: audit confidence → High
-
-help[concurrency-limits]: insufficient job-level concurrency limits
-   --> .github/workflows/wheel-builder.yml:1:1
-    |
-  1 | / name: Wheel Builder
-  2 | | permissions:
-  3 | |   contents: read
-  4 | | on:
-...   |
-389 | |           name: "cryptography-${{ github.event.inputs.version }}-${{ matrix.WINDOWS.WINDOWS }}-${{ matrix.PYTHON.VERSION }}-${{ m...
-390 | |           path: wheelhouse\
-    | |____________________________^ missing concurrency setting
-    |
-    = note: audit confidence → High
-
-help[concurrency-limits]: insufficient job-level concurrency limits
-   --> .github/workflows/wheel-builder.yml:1:1
-    |
-  1 | / name: Wheel Builder
-  2 | | permissions:
-  3 | |   contents: read
-  4 | | on:
-...   |
-389 | |           name: "cryptography-${{ github.event.inputs.version }}-${{ matrix.WINDOWS.WINDOWS }}-${{ matrix.PYTHON.VERSION }}-${{ m...
-390 | |           path: wheelhouse\
-    | |____________________________^ missing concurrency setting
+ 19 | |       - pyproject.toml
+ 20 | |       - vectors/pyproject.toml
+    | |______________________________^ workflow is missing concurrency setting
+...
+ 29 |       name: sdists
+    |       ------------ job affected by missing workflow concurrency
+...
+112 |       name: "${{ matrix.PYTHON.VERSION }} for ${{ matrix.MANYLINUX.NAME }}"
+    |       --------------------------------------------------------------------- job affected by missing workflow concurrency
+...
+224 |       name: "${{ matrix.PYTHON.VERSION }} ABI ${{ matrix.PYTHON.ABI_VERSION }} macOS ${{ matrix.PYTHON.ARCHFLAGS }}"
+    |       -------------------------------------------------------------------------------------------------------------- job affected by missing workflow concurrency
+...
+327 |       name: "${{ matrix.PYTHON.VERSION }} ${{ matrix.WINDOWS.WINDOWS }} ${{ matrix.PYTHON.ABI_VERSION }}"
+    |       --------------------------------------------------------------------------------------------------- job affected by missing workflow concurrency
     |
     = note: audit confidence → High
 
@@ -717,15 +697,17 @@ info[anonymous-definition]: workflow or action definition without a name
    = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/x509-limbo-version-bump.yml:1:1
+  --> .github/workflows/x509-limbo-version-bump.yml:5:1
    |
- 1 | / name: Bump x509-limbo and/or wycheproof
- 2 | | permissions:
- 3 | |   contents: read
-...  |
-58 | |           token: ${{ steps.generate-token.outputs.token }}
-59 | |         if: steps.bump-x509-limbo.outputs.HAS_UPDATES == 'true' || steps.bump-wycheproof.outputs.HAS_UPDATES == 'true'
-   | |_______________________________________________________________________________________________________________________^ missing concurrency setting
+ 5 | / on:
+ 6 | |   workflow_dispatch:
+ 7 | |   schedule:
+ 8 | |     # Run daily
+ 9 | |     - cron: "0 10 * * *"
+   | |________________________^ workflow is missing concurrency setting
+...
+12 |     bump:
+   |     ---- job affected by missing workflow concurrency
    |
    = note: audit confidence → High
 
@@ -739,4 +721,5 @@ help[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → High
 
-76 findings (9 suppressed): 13 informational, 41 low, 4 medium, 9 high
+73 findings (9 suppressed): 13 informational, 38 low, 4 medium, 9 high
+
