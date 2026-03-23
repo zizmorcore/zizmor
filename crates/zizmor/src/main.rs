@@ -201,6 +201,13 @@ struct App {
     #[arg(long, default_values = ["default"], num_args=1.., value_delimiter=',')]
     collect: Vec<CliCollectionMode>,
 
+    /// Disable deduplication of findings.
+    ///
+    /// By default, zizmor deduplicates findings from inputs.
+    /// This flag disables that behavior.
+    #[arg(long, hide = true)]
+    no_dedup: bool,
+
     /// Fail instead of warning on syntax and schema errors
     /// in collected inputs.
     #[arg(long)]
@@ -881,9 +888,13 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     let audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;
 
-    let dedup = std::env::var("ZIZMOR_NO_DEDUP").is_err();
-    let mut results =
-        FindingRegistry::new(&registry, min_severity, min_confidence, app.persona, dedup);
+    let mut results = FindingRegistry::new(
+        &registry,
+        min_severity,
+        min_confidence,
+        app.persona,
+        !app.no_dedup,
+    );
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");

@@ -46,6 +46,7 @@ pub struct Zizmor {
     inputs: Vec<String>,
     config: Option<String>,
     no_config: bool,
+    no_dedup: bool,
     output: OutputMode,
     expects_failure: Option<i32>,
     show_audit_urls: bool,
@@ -61,10 +62,6 @@ impl Zizmor {
         // and `GH_TOKEN`.
         cmd.env_clear();
 
-        // Disable finding deduplication by default in tests, so that
-        // dedup doesn't silently mask distinct findings from audits.
-        cmd.env("ZIZMOR_NO_DEDUP", "1");
-
         Self {
             cmd,
             stdin: None,
@@ -74,6 +71,7 @@ impl Zizmor {
             inputs: vec![],
             config: None,
             no_config: false,
+            no_dedup: true,
             output: OutputMode::Stdout,
             expects_failure: None,
             show_audit_urls: false,
@@ -142,7 +140,7 @@ impl Zizmor {
     }
 
     pub fn with_dedup(mut self) -> Self {
-        self.cmd.env_remove("ZIZMOR_NO_DEDUP");
+        self.no_dedup = false;
         self
     }
 
@@ -189,6 +187,10 @@ impl Zizmor {
             // simulates a TTY.
             // See: https://github.com/emersonford/tracing-indicatif/issues/24
             self.cmd.arg("--no-progress");
+        }
+
+        if self.no_dedup {
+            self.cmd.arg("--no-dedup");
         }
 
         if self.show_audit_urls {
