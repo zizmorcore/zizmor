@@ -586,7 +586,7 @@ jobs:
             workflow_content,
             |findings: Vec<Finding>| {
                 let fixed_content = apply_fix_for_snapshot(workflow_content, findings);
-                insta::assert_snapshot!(fixed_content, @r"
+                insta::assert_snapshot!(fixed_content, @"
 
                 name: Test Workflow
                 on: release
@@ -631,7 +631,7 @@ jobs:
             workflow_content,
             |findings: Vec<Finding>| {
                 let fixed_content = apply_fix_for_snapshot(workflow_content, findings);
-                insta::assert_snapshot!(fixed_content, @r"
+                insta::assert_snapshot!(fixed_content, @"
 
                 name: Test Workflow
                 on: release

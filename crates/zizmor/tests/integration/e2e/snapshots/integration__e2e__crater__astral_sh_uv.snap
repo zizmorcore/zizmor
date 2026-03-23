@@ -44,28 +44,6 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/bench.yml:95:22
-   |
-63 |   benchmarks-walltime-run:
-   |   ----------------------- this job
-...
-95 |           token: ${{ secrets.CODSPEED_TOKEN }}
-   |                      ^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-   --> .github/workflows/bench.yml:136:22
-    |
- 97 |   benchmarks-simulated:
-    |   -------------------- this job
-...
-136 |           token: ${{ secrets.CODSPEED_TOKEN }}
-    |                      ^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-    |
-    = note: audit confidence → High
-
 help[template-injection]: code injection via template expansion
    --> .github/workflows/build-dev-binaries.yml:165:18
     |
@@ -548,39 +526,6 @@ help[concurrency-limits]: insufficient job-level concurrency limits
     |
     = note: audit confidence → High
 
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/publish-docs.yml:86:32
-   |
-23 |   mkdocs:
-   |   ------ this job
-...
-86 |           ASTRAL_DOCS_PAT: ${{ secrets.ASTRAL_DOCS_PAT }}
-   |                                ^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-   --> .github/workflows/publish-docs.yml:106:29
-    |
- 23 |   mkdocs:
-    |   ------ this job
-...
-106 |           GITHUB_TOKEN: ${{ secrets.ASTRAL_DOCS_PAT }}
-    |                             ^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-    |
-    = note: audit confidence → High
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-   --> .github/workflows/publish-docs.yml:134:29
-    |
- 23 |   mkdocs:
-    |   ------ this job
-...
-134 |           GITHUB_TOKEN: ${{ secrets.ASTRAL_DOCS_PAT }}
-    |                             ^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-    |
-    = note: audit confidence → High
-
 info[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/publish-mirror.yml:16:3
    |
@@ -620,39 +565,6 @@ info[anonymous-definition]: workflow or action definition without a name
    |
    = note: audit confidence → High
    = tip: use 'name: ...' to give this job a name
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/publish-versions.yml:30:36
-   |
-17 |   publish-versions:
-   |   ---------------- this job
-...
-30 |         run: git clone https://${{ secrets.ASTRAL_VERSIONS_PAT }}@github.com/astral-sh/versions.git astral-versions
-   |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/publish-versions.yml:53:29
-   |
-17 |   publish-versions:
-   |   ---------------- this job
-...
-53 |           GITHUB_TOKEN: ${{ secrets.ASTRAL_VERSIONS_PAT }}
-   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
-
-warning[secrets-outside-env]: secrets referenced without a dedicated environment
-  --> .github/workflows/publish-versions.yml:71:29
-   |
-17 |   publish-versions:
-   |   ---------------- this job
-...
-71 |           GITHUB_TOKEN: ${{ secrets.ASTRAL_VERSIONS_PAT }}
-   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
-   |
-   = note: audit confidence → High
 
 error[excessive-permissions]: overly broad permissions
   --> .github/workflows/release.yml:18:3
@@ -1336,4 +1248,4 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-122 findings (2 suppressed): 23 informational, 71 low, 24 medium, 2 high
+114 findings (2 suppressed): 23 informational, 71 low, 16 medium, 2 high

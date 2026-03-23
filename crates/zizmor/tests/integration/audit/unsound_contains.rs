@@ -6,7 +6,7 @@ fn test_normal_persona() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("unsound-contains.yml"))
             .run()?,
-        @r"
+        @"
     error[unsound-contains]: unsound contains condition
       --> @@INPUT@@:20:9
        |

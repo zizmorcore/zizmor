@@ -431,7 +431,7 @@ jobs:
 "#;
 
         let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result, @"
 
         name: Test Workflow
         on: push
@@ -458,7 +458,7 @@ jobs:
 "#;
 
         let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result, @"
 
         name: Test Workflow
         on: push
@@ -485,7 +485,7 @@ jobs:
 "#;
 
         let result = apply_fix_for_snapshot(workflow_content, "obfuscation").await;
-        insta::assert_snapshot!(result, @r"
+        insta::assert_snapshot!(result, @"
 
         name: Test Workflow
         on: push

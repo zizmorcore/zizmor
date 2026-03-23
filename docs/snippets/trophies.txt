@@ -23,6 +23,7 @@ apache/opendal-reqsign#687
 apache/opennlp#736
 apache/sedona#1976
 apache/sedona#2582
+aquasecurity/trivy#10322
 aquasecurity/trivy-action#502
 aquasecurity/trivy-operator#2910
 ariel-os/ariel-os#1738
@@ -43,6 +44,20 @@ astronomer/dag-factory#482
 astropy/astropy#17315
 audreyfeldroy/cookiecutter-pypackage@40f172432f78ef920d758520b543cd69be32f80a
 autotag-dev/autotag#142
+basecamp/fizzy#2645
+basecamp/trix#1284
+basecamp/once-campfire#185
+basecamp/once#20
+basecamp/marginalia#146
+basecamp/kamal-proxy#200
+basecamp/console1984#146
+basecamp/geared_pagination#58
+basecamp/audits1984#73
+basecamp/activerecord-tenanted#284
+basecamp/kamal#1805
+basecamp/lexxy#882
+basecamp/upright#50
+basecamp/writebook#396
 ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
 BerkeleyLearnVerify/Scenic#320
 bevyengine/bevy#22294
@@ -59,6 +74,7 @@ cachix/git-hooks.nix#606
 cakephp/cakephp#18081
 Calysto/metakernel#344
 Calysto/octave_kernel#263
+canonical/ubuntu.com#16128
 canonical/operator#1656
 canonical/operator#1721
 canonical/testflinger#630
@@ -251,6 +267,7 @@ NetApp/harvest#3247
 nextcloud/news#3560
 nextcloud/user_saml#947
 nextcloud/.github#477
+nextest-rs/nextest#3196
 NixOS/infra#613
 NixOS/nixpkgs#396451
 NLnetLabs/nsd#413
@@ -277,6 +294,7 @@ oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
 pallets/flask#5945
+pendulum-project/ntpd-rs#2139
 philips-software/amp-devcontainer#830
 PlasmaPy/PlasmaPy#2975
 PowerDNS/pdns#15600
@@ -296,6 +314,7 @@ pubgrub-rs/pubgrub#389
 pyca/service-identity#75
 pydata/pydata-sphinx-theme#2077
 pylast/pylast#465
+pypa/cibuildwheel#2776
 pypa/packaging#1035
 pypa/packaging.python.org#1765
 pypa/pip-audit#851
@@ -343,6 +362,8 @@ rubygems/rubygems#8702
 rustsec/advisory-db#2444
 rustsec/rustsec#1449
 rust-bitcoin/rust-bitcoin#5234
+rust-lang/compiler-builtins#1113
+rust-lang/compiler-builtins#1115
 rust-lang/crates.io#10176
 rust-lang/crates.io#11203
 rust-lang/rust-clippy#13933
@@ -350,6 +371,7 @@ rust-lang/this-week-in-rust#6721
 rustls/rustls#2261
 rustls/tokio-rustls#96
 rustls/webpki#299
+RustPython/RustPython#7463
 Saghen/blink.cmp#991
 scientific-python/repo-review#257
 scikit-build/scikit-build-core#983
@@ -398,6 +420,10 @@ trifectatechfoundation/sudo-rs#1490
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710
+Uniswap/docs#1114
+Uniswap/sdks#516
+Uniswap/UniswapX#362
+Uniswap/v4-periphery#515
 updatecli/updatecli#7865
 urllib3/urllib3#3528
 uutils/coreutils#6973

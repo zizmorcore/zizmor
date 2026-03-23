@@ -23,6 +23,35 @@ of `zizmor`.
 * `zizmor`'s CLI help and usage output now uses a custom color scheme for
   improved readability (#1747)
 
+* The [secrets-outside-env] audit is now configurable with an allowlist of
+  secret names that should not be flagged, even when referenced outside of
+  an environment (#1759)
+
+    Many thanks to @rmuir for proposing and implementing this improvement!
+
+* The [dependabot-cooldown] audit now emits a pedantic finding whenever
+  it encounters a cooldown used with a multi-ecosystem-group, as the two
+  do not interact well (#1780)
+
+### Bug Fixes 🐛
+
+* Fixed a bug where auto-fixes for the [template-injection] audit would fail
+  to preserve an environment variable's casing (#1766)
+
+* Fixed a bug where the [secrets-outside-env] audit would incorrectly
+  flag reusable workflows (#1777)
+
+* Fixed a bug where expressions containing `Infinity` or `NaN` would fail to parse (#1778)
+
+* Fixed a bug where some parenthetical forms in expressions would fail to parse (#1779)
+
+### Changes ⚠️
+
+* The [secrets-outside-env] audit now only flags findings with the 'auditor'
+  persona, due to numerous false positives and negatives caused by GitHub's
+  platform limitations (primarily around interactions between environment
+  secrets and reusable workflows) (#1777)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛

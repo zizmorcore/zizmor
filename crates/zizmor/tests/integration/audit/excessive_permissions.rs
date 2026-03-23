@@ -24,7 +24,7 @@ fn test_issue_336_repro_pedantic() -> Result<()> {
             ))
             .args(["--pedantic"])
             .run()?,
-        @r"
+        @"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:6:3
       |
@@ -49,7 +49,7 @@ fn test_workflow_default_perms_pedantic() -> Result<()> {
             ))
             .args(["--pedantic"])
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:5:1
        |
@@ -95,7 +95,7 @@ fn test_workflow_read_all() -> Result<()> {
                 "excessive-permissions/workflow-read-all.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:5:1
       |
@@ -119,7 +119,7 @@ fn test_workflow_write_all() -> Result<()> {
                 "excessive-permissions/workflow-write-all.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:5:1
       |
@@ -157,7 +157,7 @@ fn test_jobs_broaden_permissions() -> Result<()> {
                 "excessive-permissions/jobs-broaden-permissions.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:11:5
        |
@@ -203,7 +203,7 @@ fn test_workflow_write_explicit() -> Result<()> {
                 "excessive-permissions/workflow-write-explicit.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:7:3
       |
@@ -257,7 +257,7 @@ fn test_issue_472_repro() -> Result<()> {
                 "excessive-permissions/issue-472-repro.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:20:3
        |
@@ -289,7 +289,7 @@ fn test_reusable_workflow_call() -> Result<()> {
                 "excessive-permissions/reusable-workflow-call.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:7:3
        |
@@ -319,7 +319,7 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
                 "excessive-permissions/reusable-workflow-other-triggers.yml"
             ))
             .run()?,
-        @r"
+        @"
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:1:1
        |

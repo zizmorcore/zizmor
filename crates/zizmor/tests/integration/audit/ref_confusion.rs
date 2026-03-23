@@ -9,7 +9,7 @@ fn test_ref_confusion() -> Result<()> {
             .input(input_under_test("ref-confusion.yml"))
             .offline(false)
             .run()?,
-        @r"
+        @"
     warning[ref-confusion]: git ref for action with ambiguous ref type
       --> @@INPUT@@:11:9
        |

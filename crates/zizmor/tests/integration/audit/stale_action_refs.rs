@@ -9,7 +9,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
             .offline(false)
             .args(["--persona=pedantic"])
             .run()?,
-        @r"
+        @"
     help[stale-action-refs]: commit hash does not point to a Git tag
       --> @@INPUT@@:34:15
        |

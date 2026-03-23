@@ -8,7 +8,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
                 "dependabot-execution/basic/dependabot.yml"
             ))
             .run()?,
-        @r"
+        @"
     error[dependabot-execution]: external code execution in Dependabot updates
       --> @@INPUT@@:10:5
        |

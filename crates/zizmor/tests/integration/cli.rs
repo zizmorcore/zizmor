@@ -16,7 +16,7 @@ jobs:
     // output, and `-` would corrupt arrows, flags, etc.
     insta::assert_snapshot!(
         zizmor().stdin(workflow).no_config(true).args(["-"]).run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
      --> <stdin>:6:9
       |
@@ -68,7 +68,7 @@ runs:
 ";
     insta::assert_snapshot!(
         zizmor().stdin(action).no_config(true).args(["-"]).run()?,
-        @r"
+        @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
      --> <stdin>:6:7
       |
@@ -110,7 +110,7 @@ updates:
             .no_config(true)
             .args(["-"])
             .run()?,
-        @r"
+        @"
     warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
      --> <stdin>:3:5
       |
@@ -137,7 +137,7 @@ fn test_stdin_with_other_inputs() -> anyhow::Result<()> {
             .expects_failure(2)
             .args(["-", "some-dir/"])
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     error: `-` (stdin) cannot be combined with other inputs
 
@@ -160,7 +160,7 @@ fn test_stdin_with_fix() -> anyhow::Result<()> {
             .expects_failure(2)
             .args(["--fix", "-"])
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     error: `--fix` cannot be used with `-` (stdin)
 
@@ -207,7 +207,7 @@ fn test_stdin_invalid_yaml_strict() -> anyhow::Result<()> {
             .expects_failure(1)
             .args(["--strict-collection", "-"])
             .run()?,
-        @r###"
+        @"
     🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     failed to load <stdin> as workflow
@@ -215,7 +215,7 @@ fn test_stdin_invalid_yaml_strict() -> anyhow::Result<()> {
     Caused by:
         0: invalid YAML syntax: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
         1: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
-    "###
+    "
     );
 
     Ok(())
