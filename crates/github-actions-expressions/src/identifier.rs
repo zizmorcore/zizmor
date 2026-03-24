@@ -7,13 +7,13 @@
 #[derive(Debug)]
 pub struct Identifier<'src>(pub(crate) &'src str);
 
-impl Identifier<'_> {
+impl<'src> Identifier<'src> {
     /// Returns the identifier as a string slice, as it appears in the
     /// expression.
     ///
     /// Important: identifiers are case-insensitive, so this should not
     /// be used for comparisons.
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &'src str {
         self.0
     }
 }

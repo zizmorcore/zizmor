@@ -151,3 +151,39 @@ fn test_config_allow_some() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn test_issue_1773() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+        .args(["--persona=auditor"])
+        .input(input_under_test("secrets-outside-env/issue-1773-repro.yml"))
+        .run()?,
+        @"
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:13:28
+       |
+    10 |   pull:
+       |   ---- this job
+    ...
+    13 |       zulip-api-token: ${{ secrets.ZULIP_API_TOKEN }}
+       |                            ^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    warning[secrets-outside-env]: secrets referenced without a dedicated environment
+      --> @@INPUT@@:14:30
+       |
+    10 |   pull:
+       |   ---- this job
+    ...
+    14 |       github-app-secret: ${{ secrets.APP_PRIVATE_KEY }}
+       |                              ^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+       |
+       = note: audit confidence → High
+
+    2 findings: 0 informational, 0 low, 2 medium, 0 high
+    "
+    );
+    Ok(())
+}
