@@ -1163,6 +1163,21 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_expr_rule_rejects() {
+        let cases = &[
+            // "Inf" is not a valid number form; only "Infinity" is accepted.
+            "-Inf", "+Inf",
+        ];
+
+        for case in cases {
+            assert!(
+                ExprParser::parse(Rule::expression, case).is_err(),
+                "{case:?} should not parse as a valid expression"
+            );
+        }
+    }
+
+    #[test]
     fn test_parse() {
         let cases = &[
             (

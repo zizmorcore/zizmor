@@ -513,18 +513,21 @@ info[anonymous-definition]: workflow or action definition without a name
    = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-   --> .github/workflows/publish-docs.yml:5:1
-    |
-  5 | / name: mkdocs
-  6 | |
-  7 | | on:
-  8 | |   workflow_dispatch:
-...   |
-140 | |           sleep 10
-141 | |           gh pr merge --squash $branch_name
-    | |____________________________________________^ missing concurrency setting
-    |
-    = note: audit confidence → High
+  --> .github/workflows/publish-docs.yml:7:1
+   |
+ 7 | / on:
+ 8 | |   workflow_dispatch:
+ 9 | |     inputs:
+10 | |       ref:
+...  |
+17 | |         required: true
+18 | |         type: string
+   | |____________________^ workflow is missing concurrency setting
+...
+23 |     mkdocs:
+   |     ------ job affected by missing workflow concurrency
+   |
+   = note: audit confidence → High
 
 info[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/publish-mirror.yml:16:3
@@ -807,54 +810,28 @@ info[anonymous-definition]: workflow or action definition without a name
     = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-   --> .github/workflows/release.yml:16:1
+   --> .github/workflows/release.yml:41:1
     |
- 16 | / name: Release
- 17 | | permissions:
- 18 | |   "contents": "write"
+ 41 | / on:
+ 42 | |   workflow_dispatch:
+ 43 | |     inputs:
+ 44 | |       tag:
 ...   |
-319 | |     permissions:
-320 | |       "contents": "read"
-    | |_________________________^ missing concurrency setting
-    |
-    = note: audit confidence → High
-
-help[concurrency-limits]: insufficient job-level concurrency limits
-   --> .github/workflows/release.yml:16:1
-    |
- 16 | / name: Release
- 17 | | permissions:
- 18 | |   "contents": "write"
-...   |
-319 | |     permissions:
-320 | |       "contents": "read"
-    | |_________________________^ missing concurrency setting
-    |
-    = note: audit confidence → High
-
-help[concurrency-limits]: insufficient job-level concurrency limits
-   --> .github/workflows/release.yml:16:1
-    |
- 16 | / name: Release
- 17 | | permissions:
- 18 | |   "contents": "write"
-...   |
-319 | |     permissions:
-320 | |       "contents": "read"
-    | |_________________________^ missing concurrency setting
-    |
-    = note: audit confidence → High
-
-help[concurrency-limits]: insufficient job-level concurrency limits
-   --> .github/workflows/release.yml:16:1
-    |
- 16 | / name: Release
- 17 | | permissions:
- 18 | |   "contents": "write"
-...   |
-319 | |     permissions:
-320 | |       "contents": "read"
-    | |_________________________^ missing concurrency setting
+ 47 | |         default: dry-run
+ 48 | |         type: string
+    | |____________________^ workflow is missing concurrency setting
+...
+ 52 |     plan:
+    |     ---- job affected by missing workflow concurrency
+...
+117 |     build-global-artifacts:
+    |     ---------------------- job affected by missing workflow concurrency
+...
+164 |     host:
+    |     ---- job affected by missing workflow concurrency
+...
+239 |     announce:
+    |     -------- job affected by missing workflow concurrency
     |
     = note: audit confidence → High
 
@@ -878,16 +855,16 @@ info[anonymous-definition]: workflow or action definition without a name
    = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/sync-python-releases.yml:4:1
+  --> .github/workflows/sync-python-releases.yml:5:1
    |
- 4 | / name: "Sync Python downloads"
- 5 | | on:
+ 5 | / on:
  6 | |   workflow_dispatch:
  7 | |   schedule:
-...  |
-58 | |           base: "main"
-59 | |           draft: true
-   | |______________________^ missing concurrency setting
+ 8 | |     - cron: "0 0 * * *"
+   | |_______________________^ workflow is missing concurrency setting
+...
+13 |     sync:
+   |     ---- job affected by missing workflow concurrency
    |
    = note: audit confidence → High
 
@@ -1248,4 +1225,5 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-114 findings (2 suppressed): 23 informational, 71 low, 16 medium, 2 high
+111 findings (2 suppressed): 23 informational, 68 low, 16 medium, 2 high
+

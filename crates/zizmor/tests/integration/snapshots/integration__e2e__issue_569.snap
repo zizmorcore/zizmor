@@ -707,4 +707,4 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
-151 findings (1 ignored, 74 suppressed): 0 informational, 1 low, 0 medium, 75 high
+150 findings (1 ignored, 73 suppressed): 0 informational, 1 low, 0 medium, 75 high

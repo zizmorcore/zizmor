@@ -203,7 +203,7 @@ fn test_cargo_publish() -> Result<()> {
        |
        = note: audit confidence → High
 
-    11 findings (5 suppressed): 6 informational, 0 low, 0 medium, 0 high
+    10 findings (4 suppressed): 6 informational, 0 low, 0 medium, 0 high
     "
     );
 
@@ -341,7 +341,7 @@ fn test_npm_publish() -> Result<()> {
         |
         = note: audit confidence → High
 
-    31 findings (6 ignored, 13 suppressed): 12 informational, 0 low, 0 medium, 0 high
+    29 findings (6 ignored, 11 suppressed): 12 informational, 0 low, 0 medium, 0 high
     "
     );
 
@@ -400,7 +400,7 @@ fn test_nuget_push() -> Result<()> {
        |
        = note: audit confidence → High
 
-    7 findings (4 suppressed): 3 informational, 0 low, 0 medium, 0 high
+    6 findings (3 suppressed): 3 informational, 0 low, 0 medium, 0 high
     "
     );
 
@@ -560,7 +560,7 @@ fn test_bun_publish() -> Result<()> {
        |
        = note: audit confidence → High
 
-    8 findings (4 suppressed): 4 informational, 0 low, 0 medium, 0 high
+    7 findings (3 suppressed): 4 informational, 0 low, 0 medium, 0 high
     "
     );
 

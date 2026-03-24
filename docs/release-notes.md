@@ -38,6 +38,9 @@ of `zizmor`.
 * Fixed a bug where YAML anchors and aliases could cause duplicate findings
   to be reported (#1584)
 
+* Fixed a bug where the [concurrency-limits] audit reported findings
+  at the job level instead of the workflow level (#1627)
+
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
   to preserve an environment variable's casing (#1766)
 
@@ -47,6 +50,9 @@ of `zizmor`.
 * Fixed a bug where expressions containing `Infinity` or `NaN` would fail to parse (#1778)
 
 * Fixed a bug where some parenthetical forms in expressions would fail to parse (#1779)
+
+* Fixed a bug where expressions with invalid identifiers (such as `-Inf`) would
+  be incorrectly accepted (#1794)
 
 ### Changes ⚠️
 
