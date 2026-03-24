@@ -50,7 +50,7 @@ fn secrets_inherit() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    5 findings: 0 informational, 0 low, 1 medium, 4 high
+    6 findings (1 suppressed): 0 informational, 0 low, 1 medium, 4 high
     "
     );
 

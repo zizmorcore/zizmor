@@ -33,6 +33,9 @@ of `zizmor`.
   it encounters a cooldown used with a multi-ecosystem-group, as the two
   do not interact well (#1780)
 
+* The [secrets-outside-env] audit now flags secret usages on jobs that
+  call reusable workflows (#1792)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
