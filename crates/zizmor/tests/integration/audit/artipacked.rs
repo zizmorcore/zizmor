@@ -158,7 +158,7 @@ fn test_issue_1769() -> anyhow::Result<()> {
       --> @@INPUT@@:19:9
        |
     18 |       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # zizmor: ignore[obfuscation]
-       |               --------------------------------------------------------- this action
+       |               --------------------------------------------------------- this checkout
     19 |         with: ${{ fromJson(steps.setup.outputs.options) }}
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may not set persist-credentials: false
        |

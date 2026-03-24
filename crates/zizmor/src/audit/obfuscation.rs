@@ -236,7 +236,7 @@ impl Obfuscation {
                             step.location()
                                 .primary()
                                 .with_keys(["with".into()])
-                                .annotated("expression in with: clause cannot be analyzed"),
+                                .annotated("use of an expression for `with:` prevents analysis"),
                         )
                         .build(step)
                         .map_err(Self::err)?,

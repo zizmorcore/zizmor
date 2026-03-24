@@ -124,7 +124,7 @@ impl Artipacked {
                                 step.location()
                                     .with_keys(["uses".into()])
                                     .subfeature(Subfeature::new(0, uses.raw()))
-                                    .annotated("this action"),
+                                    .annotated("this checkout"),
                             )
                             .add_location(
                                 step.location()
