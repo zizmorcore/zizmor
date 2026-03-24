@@ -215,7 +215,7 @@ fn test_steps_list_alias() -> Result<()> {
       = note: audit confidence → High
       = note: this finding has an auto-fix
 
-    6 findings (4 suppressed, 2 fixable): 0 informational, 0 low, 0 medium, 2 high
+    5 findings (3 suppressed, 2 fixable): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 
@@ -363,7 +363,7 @@ fn test_dummy_job_anchors() -> Result<()> {
       = note: audit confidence → High
       = note: this finding has an auto-fix
 
-    7 findings (4 suppressed, 3 fixable): 0 informational, 1 low, 2 medium, 0 high
+    6 findings (3 suppressed, 3 fixable): 0 informational, 1 low, 2 medium, 0 high
     "
     );
 

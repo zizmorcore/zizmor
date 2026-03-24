@@ -35,6 +35,9 @@ of `zizmor`.
 
 ### Bug Fixes 🐛
 
+* Fixed a bug where the [concurrency-limits] audit reported findings
+  at the job level instead of the workflow level (#1627)
+
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
   to preserve an environment variable's casing (#1766)
 
