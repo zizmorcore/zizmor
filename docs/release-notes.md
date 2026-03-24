@@ -48,6 +48,9 @@ of `zizmor`.
 
 * Fixed a bug where some parenthetical forms in expressions would fail to parse (#1779)
 
+* Fixed a bug where expressions with invalid identifiers (such as `-Inf`) would
+  be incorrectly accepted (#1794)
+
 ### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
