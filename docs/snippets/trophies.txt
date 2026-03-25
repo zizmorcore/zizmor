@@ -176,6 +176,7 @@ hellux/jotdown#76
 hexpm/hex#1110
 hexpm/hexpm#1383
 h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
+h5py/h5py#2824
 Homebrew/actions#630
 Homebrew/actions#631
 Homebrew/brew#18662
@@ -222,6 +223,7 @@ kanidm/kanidm#3430
 kata-containers/kata-containers#11392
 kata-containers/kata-containers#11475
 kubecolor/kubecolor#273
+kubewarden/kubewarden-controller#1596
 libssh2/libssh2#1609
 llvm/llvm-project#187905
 lmstudio-ai/venvstacks#51
@@ -229,6 +231,7 @@ louislam/uptime-kuma#6575
 maplibre/martin#2440
 matplotlib/matplotlib#29251
 matrix-org/matrix-js-sdk#5212
+matrix-org/matrix.org#3299
 marcusvolz/strava_py#53
 maxmind/mmdbinspect#82
 maxmind/MaxMind-DB-Reader-python#178
@@ -243,6 +246,8 @@ maxmind/mmdbwriter#104
 maxmind/GeoIP2-node#1387
 MeteorDevelopment/meteor-client#5091
 mfussenegger/nvim-lint#710
+michaelbull/kotlin-retry@b030616942c72812b892fec4950f3eca0813cb07
+michaelbull/kotlin-result@7f213175f2bf525463fa4e8642956d14aebddc69
 microsoft/azurelinux#15733
 microsoft/component-detection#1532
 microsoft/linux-package-repositories#208
@@ -258,6 +263,7 @@ mongodb/mongo-python-driver#2001
 mongodb-labs/flask-pymongo#170
 mozilla/addons#15751
 mozilla/fxa#18628
+mozilla/fx-private-relay#6364
 mozilla/neqo#2413
 mozilla/neqo#2721
 narwhals-dev/narwhals#1567
@@ -402,6 +408,7 @@ stravalib/stravalib#645
 stravalib/stravalib#648
 stravalib/stravalib#649
 strawberry-graphql/strawberry#4097
+stx-labs/clarinet#2281
 super-linter/super-linter#7241
 Swatinem/rust-cache#262
 target/data-validator#223

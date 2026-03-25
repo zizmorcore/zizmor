@@ -804,6 +804,14 @@
         - h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
 
 
+-   ![](https://github.com/h5py.png?size=40){ width="40" loading=lazy align=left } h5py
+
+    ---
+
+    ??? example "Examples"
+        - h5py/h5py#2824
+
+
 -   ![](https://github.com/hanami.png?size=40){ width="40" loading=lazy align=left } hanami
 
     ---
@@ -1008,6 +1016,14 @@
         - kubecolor/kubecolor#273
 
 
+-   ![](https://github.com/kubewarden.png?size=40){ width="40" loading=lazy align=left } kubewarden
+
+    ---
+
+    ??? example "Examples"
+        - kubewarden/kubewarden-controller#1596
+
+
 -   ![](https://github.com/libssh2.png?size=40){ width="40" loading=lazy align=left } libssh2
 
     ---
@@ -1070,6 +1086,7 @@
 
     ??? example "Examples"
         - matrix-org/matrix-js-sdk#5212
+        - matrix-org/matrix.org#3299
 
 
 -   ![](https://github.com/maxmind.png?size=40){ width="40" loading=lazy align=left } maxmind
@@ -1104,6 +1121,15 @@
 
     ??? example "Examples"
         - mfussenegger/nvim-lint#710
+
+
+-   ![](https://github.com/michaelbull.png?size=40){ width="40" loading=lazy align=left } michaelbull
+
+    ---
+
+    ??? example "Examples"
+        - michaelbull/kotlin-retry@b030616942c72812b892fec4950f3eca0813cb07
+        - michaelbull/kotlin-result@7f213175f2bf525463fa4e8642956d14aebddc69
 
 
 -   ![](https://github.com/microsoft.png?size=40){ width="40" loading=lazy align=left } microsoft
@@ -1168,6 +1194,7 @@
     ??? example "Examples"
         - mozilla/addons#15751
         - mozilla/fxa#18628
+        - mozilla/fx-private-relay#6364
         - mozilla/neqo#2413
         - mozilla/neqo#2721
 
@@ -1851,6 +1878,14 @@
 
     ??? example "Examples"
         - strawberry-graphql/strawberry#4097
+
+
+-   ![](https://github.com/stx-labs.png?size=40){ width="40" loading=lazy align=left } stx-labs
+
+    ---
+
+    ??? example "Examples"
+        - stx-labs/clarinet#2281
 
 
 -   ![](https://github.com/super-linter.png?size=40){ width="40" loading=lazy align=left } super-linter
