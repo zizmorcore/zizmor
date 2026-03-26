@@ -120,6 +120,9 @@ impl KnownVulnerableActions {
             // NOTE: An advisory can contain multiple vulnerabilities, for multiple discrete packages,
             // so we need to filter the vulnerabilities by ecosystem and package name.
             // Example: https://github.com/advisories/GHSA-69fq-xp46-6x23
+            // TODO: Rather that selecting the first patched version, maybe we should select
+            // the highest patched version? Also, perhaps we should unify multiple advisories
+            // for the same action into a single compatible patched version?
             let first_patched_version = advisory
                 .vulnerabilities
                 .iter()
