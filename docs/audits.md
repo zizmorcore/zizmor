@@ -1526,6 +1526,7 @@ The following table lists some common superfluous actions and their recommended 
 | @elgohr/Github-Release-Action | `gh release create` |
 | @peter-evans/create-pull-request | `gh pr create` |
 | @peter-evans/create-or-update-comment | `gh pr comment` or `gh issue comment` |
+| @svenstaro/upload-release-action | `gh release upload` |
 | @addnab/docker-run-action | `docker run` |
 | @dtolnay/rust-toolchain | `rustup` |
 

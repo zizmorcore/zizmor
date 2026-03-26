@@ -77,6 +77,11 @@ static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona)>
                 Persona::Regular,
             ),
             (
+                "svenstaro/upload-release-action".parse().unwrap(),
+                "use `gh release upload` in a script step",
+                Persona::Regular,
+            ),
+            (
                 "addnab/docker-run-action".parse().unwrap(),
                 "use `docker run` in a script step, or use a container step",
                 Persona::Regular,

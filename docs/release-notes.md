@@ -33,6 +33,8 @@ of `zizmor`.
   it encounters a cooldown used with a multi-ecosystem-group, as the two
   do not interact well (#1780)
 
+* Recommend `gh release upload` as a replacement for @svenstaro/upload-release-action in [superfluous-actions]
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [concurrency-limits] audit reported findings
