@@ -82,6 +82,7 @@
         - aquasecurity/trivy#10322
         - aquasecurity/trivy-action#502
         - aquasecurity/trivy-operator#2910
+        - aquasecurity/vuln-list-update#411
 
 
 -   ![](https://github.com/ariel-os.png?size=40){ width="40" loading=lazy align=left } ariel-os
@@ -285,6 +286,7 @@
 
     ??? example "Examples"
         - canonical/ubuntu.com#16128
+        - canonical/lxd#17961
         - canonical/operator#1656
         - canonical/operator#1721
         - canonical/testflinger#630
@@ -561,6 +563,22 @@
         - emberjs/ember.js#21185
 
 
+-   ![](https://github.com/EpicWink.png?size=40){ width="40" loading=lazy align=left } EpicWink
+
+    ---
+
+    ??? example "Examples"
+        - EpicWink/proxpi@5e04d5e24bb8abfc6ad65721aea1c1781628ac9b
+
+
+-   ![](https://github.com/erlang.png?size=40){ width="40" loading=lazy align=left } erlang
+
+    ---
+
+    ??? example "Examples"
+        - erlang/rebar3#3001
+
+
 -   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl
 
     ---
@@ -700,6 +718,14 @@
         - girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 
 
+-   ![](https://github.com/Giskard-AI.png?size=40){ width="40" loading=lazy align=left } Giskard-AI
+
+    ---
+
+    ??? example "Examples"
+        - Giskard-AI/giskard-oss#2336
+
+
 -   ![](https://github.com/git-lfs.png?size=40){ width="40" loading=lazy align=left } git-lfs
 
     ---
@@ -750,6 +776,14 @@
         - google/zerocop#2810
         - google/zx#1067
         - google/zx#1126
+
+
+-   ![](https://github.com/gophercloud.png?size=40){ width="40" loading=lazy align=left } gophercloud
+
+    ---
+
+    ??? example "Examples"
+        - gophercloud/gophercloud#3659
 
 
 -   ![](https://github.com/grafana.png?size=40){ width="40" loading=lazy align=left } grafana
@@ -918,6 +952,14 @@
         - indygreg/python-zstandard@d0bf56011d85faf1c76da38f63d174b275c2cdeb
 
 
+-   ![](https://github.com/inspektor-gadget.png?size=40){ width="40" loading=lazy align=left } inspektor-gadget
+
+    ---
+
+    ??? example "Examples"
+        - inspektor-gadget/inspektor-gadget#5337
+
+
 -   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram
 
     ---
@@ -964,6 +1006,14 @@
 
     ??? example "Examples"
         - jj-vcs/jj#5076
+
+
+-   ![](https://github.com/JOML-CI.png?size=40){ width="40" loading=lazy align=left } JOML-CI
+
+    ---
+
+    ??? example "Examples"
+        - JOML-CI/JOML@98290c379f54d05d6d27afb11ae88dfd86e35c9d
 
 
 -   ![](https://github.com/Julian.png?size=40){ width="40" loading=lazy align=left } Julian
@@ -1844,6 +1894,14 @@
         - Skyscanner/backpack#4124
         - Skyscanner/backpack-android#2561
         - Skyscanner/turbolift#202
+
+
+-   ![](https://github.com/Skyvern-AI.png?size=40){ width="40" loading=lazy align=left } Skyvern-AI
+
+    ---
+
+    ??? example "Examples"
+        - Skyvern-AI/skyvern#5237
 
 
 -   ![](https://github.com/slackapi.png?size=40){ width="40" loading=lazy align=left } slackapi
