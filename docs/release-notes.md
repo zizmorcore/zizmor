@@ -57,6 +57,9 @@ of `zizmor`.
 * Fixed a bug where the [known-vulnerable-actions] audit would fail to handle
   multiple discrete packages in a single advisory (#1810)
 
+* Fixed a bug where the [template-injection] audit would incorrectly flag
+  `needs.*.result` as an injection risk in the default persona (#1814)
+
 ### Changes ⚠️
 
 * Fixed a bug where `with: ${{ expr }}` clauses would cause a crash.
