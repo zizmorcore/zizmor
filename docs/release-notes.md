@@ -51,6 +51,9 @@ of `zizmor`.
 * Fixed a bug where expressions with invalid identifiers (such as `-Inf`) would
   be incorrectly accepted (#1794)
 
+* Fixed a bug where the [known-vulnerable-actions] audit would fail to handle
+  multiple discrete packages in a single advisory (#1810)
+
 ### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
