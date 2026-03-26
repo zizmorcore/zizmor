@@ -1,0 +1,19 @@
+# see https://github.com/zizmorcore/zizmor/issues/1769
+
+name: ISSUE-1769-REPRO
+on: push
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.base_ref == main }}
+
+jobs:
+  issue-1769-repro:
+    name: issue-1769-repro
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # zizmor: ignore[artipacked]
+        with: ${{ fromJson(steps.setup.outputs.options) }}

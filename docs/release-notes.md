@@ -33,6 +33,9 @@ of `zizmor`.
   it encounters a cooldown used with a multi-ecosystem-group, as the two
   do not interact well (#1780)
 
+* `obfuscation` audit emits a finding that `with: ${{ expr }}` clauses cannot
+  be analyzed (#1772)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [concurrency-limits] audit reported findings
@@ -55,6 +58,9 @@ of `zizmor`.
   multiple discrete packages in a single advisory (#1810)
 
 ### Changes ⚠️
+
+* Fixed a bug where `with: ${{ expr }}` clauses would cause a crash.
+  `artipacked` audit emits a pedantic finding on such clauses. (#1772)
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
   persona, due to numerous false positives and negatives caused by GitHub's

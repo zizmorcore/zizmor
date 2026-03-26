@@ -26,7 +26,7 @@ pub(crate) trait AsDocument<'a, 'doc> {
 pub(crate) enum StepBodyCommon<'s> {
     Uses {
         uses: &'s common::Uses,
-        with: &'s Env,
+        with: &'s LoE<Env>,
     },
     Run {
         run: &'s str,
