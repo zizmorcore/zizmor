@@ -126,13 +126,12 @@ impl KnownVulnerableActions {
             let first_patched_version = advisory
                 .vulnerabilities
                 .iter()
-                .filter(|v| {
+                .find(|v| {
                     // TODO(ww): it'd be nice to have a well-typed comparison
                     // for repo slugs, rather than just case-insensitive string equality here.
                     v.package.ecosystem == "actions"
                         && v.package.name.eq_ignore_ascii_case(uses.slug())
                 })
-                .next()
                 .and_then(|v| v.first_patched_version.clone());
 
             results.push((severity, advisory.ghsa_id, first_patched_version));
