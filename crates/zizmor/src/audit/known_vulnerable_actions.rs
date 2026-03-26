@@ -124,6 +124,8 @@ impl KnownVulnerableActions {
                 .vulnerabilities
                 .iter()
                 .filter(|v| {
+                    // TODO(ww): it'd be nice to have a well-typed comparison
+                    // for repo slugs, rather than just case-insensitive string equality here.
                     v.package.ecosystem == "actions"
                         && v.package.name.eq_ignore_ascii_case(uses.slug())
                 })
