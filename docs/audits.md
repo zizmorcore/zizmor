@@ -1395,6 +1395,10 @@ the job or jobs that need a secret should use the corresponding environment.
 
 ### Configuration { #secrets-outside-env-configuration }
 
+!!! tip
+
+    `secrets-outside-env` is configurable in `v1.24.0` and later. 
+
 #### `rules.secrets-outside-env.config.allow`
 
 _Type_: `list`
