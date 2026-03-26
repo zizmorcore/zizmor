@@ -26,6 +26,7 @@ apache/sedona#2582
 aquasecurity/trivy#10322
 aquasecurity/trivy-action#502
 aquasecurity/trivy-operator#2910
+aquasecurity/vuln-list-update#411
 ariel-os/ariel-os#1738
 artichoke/artichoke#2825
 artichoke/boba#265
@@ -75,6 +76,7 @@ cakephp/cakephp#18081
 Calysto/metakernel#344
 Calysto/octave_kernel#263
 canonical/ubuntu.com#16128
+canonical/lxd#17961
 canonical/operator#1656
 canonical/operator#1721
 canonical/testflinger#630
@@ -125,6 +127,8 @@ element-hq/element-web#32717
 element-hq/element-x-ios#5161
 elixir-lang/elixir#15114
 emberjs/ember.js#21185
+EpicWink/proxpi@5e04d5e24bb8abfc6ad65721aea1c1781628ac9b
+erlang/rebar3#3001
 esl/MongooseIM#4435
 ethereum/hevm#615
 external-secrets/external-secrets#5368
@@ -144,11 +148,13 @@ gaphor/gaphor#3658
 gechr/WhichSpace@e32d710e7e17102dd6eecd522aa1b511b961fcf3
 getsops/sops#1704
 GenericMappingTools/pygmt#3861
+Giskard-AI/giskard-oss#2336
 git-lfs/git-lfs#5930
 gitbutlerapp/gitbutler#5946
 github/docs@1b4a2ba9469efdb412736afdc7499f608b69faa1
 github-aws-runners/terraform-aws-github-runner#4808
 GitoxideLabs/gitoxide#2337
+gophercloud/gophercloud#3659
 grafana/agent#7148
 grafana/beyla#1868
 grafana/carbon-relay-ng#601
@@ -209,11 +215,13 @@ immich-app/immich#17651
 indygreg/apple-platform-rs@5bded60cbfc2b81e1bedd745ab41417e5c3a76ea
 indygreg/cryptography-rs@d0ae52a8040c7be8fd2024a5e2dc1cc1705c3469
 indygreg/python-zstandard@d0bf56011d85faf1c76da38f63d174b275c2cdeb
+inspektor-gadget/inspektor-gadget#5337
 intel/llvm#20437
 Instagram/LibCST#1262
 ispc/ispc#3589
 jazzband/pip-tools#2327
 jj-vcs/jj#5076
+JOML-CI/JOML@98290c379f54d05d6d27afb11ae88dfd86e35c9d
 Julian/lean.nvim@4f9d48499b002ab361a4351142cae2f6f5403646
 junit-team/junit-framework#4838
 junit-team/junit-framework#4840
@@ -395,6 +403,7 @@ simpeg/simpeg#1592
 Skyscanner/backpack#4124
 Skyscanner/backpack-android#2561
 Skyscanner/turbolift#202
+Skyvern-AI/skyvern#5237
 slackapi/python-slack-hooks#58
 slackapi/bolt-python#1303
 slackapi/python-slack-sdk#1691
