@@ -917,7 +917,7 @@ pub(crate) struct Comparison {
 }
 
 /// Represents a GHSA advisory.
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub(crate) struct Advisory {
     pub(crate) ghsa_id: String,
     pub(crate) severity: String,
@@ -925,9 +925,17 @@ pub(crate) struct Advisory {
 }
 
 /// Represents a vulnerability within a GHSA advisory.
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub(crate) struct Vulnerability {
+    pub(crate) package: VulnerablePackage,
     pub(crate) first_patched_version: Option<String>,
+}
+
+/// Represents a vulnerable package within a GHSA advisory.
+#[derive(Debug, Deserialize)]
+pub(crate) struct VulnerablePackage {
+    pub(crate) name: String,
+    pub(crate) ecosystem: String,
 }
 
 /// Represents a file listing from GitHub's contents API.
