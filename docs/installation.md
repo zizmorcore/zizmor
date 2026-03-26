@@ -169,7 +169,7 @@ description: Installation instructions for zizmor.
 You can install the latest unstable `zizmor` directly from GitHub with `cargo`:
 
 ```bash
-cargo install --git https://github.com/zizmorcore/zizmor
+cargo install --locked --git https://github.com/zizmorcore/zizmor
 ```
 
 ## From GitHub release binaries
