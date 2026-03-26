@@ -424,6 +424,7 @@ impl TemplateInjection {
                                     // While not ideal, secret expansion is typically not exploitable.
                                     continue;
                                 } else if context.matches("needs.*.result") {
+                                    // `result` is always one of `success`, `failure`, `cancelled`, or `skipped`.
                                     continue;
                                 } else if context.child_of("inputs") {
                                     let (severity, confidence, persona) = match context
