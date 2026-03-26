@@ -423,6 +423,8 @@ impl TemplateInjection {
                                 if context.child_of("secrets") {
                                     // While not ideal, secret expansion is typically not exploitable.
                                     continue;
+                                } else if context.matches("needs.*.result") {
+                                    continue;
                                 } else if context.child_of("inputs") {
                                     let (severity, confidence, persona) = match context
                                         .single_tail()
