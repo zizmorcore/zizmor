@@ -58,6 +58,7 @@ mod utils;
 
 #[cfg(all(
     not(target_family = "windows"),
+    not(target_os = "openbsd"),
     any(
         target_arch = "x86_64",
         target_arch = "aarch64",
