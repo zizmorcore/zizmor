@@ -18,6 +18,9 @@ of `zizmor`.
 
     Many thanks to @shaanmajid for proposing and implementing this improvement!
 
+* **New audit**: [unpinned-tools] detects actions that install tools without pinning
+  to a specific version (#1820)
+
 ### Enhancements 🌱
 
 * `zizmor`'s CLI help and usage output now uses a custom color scheme for
