@@ -30,6 +30,8 @@ impl<'src> Context<'src> {
     }
 
     /// Parse a context from the given string.
+    ///
+    /// Returns `None` if the string is not a valid context.
     pub fn parse(raw: &'src str) -> Option<Self> {
         let expr = Expr::parse(raw).ok()?;
 
