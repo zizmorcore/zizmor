@@ -412,7 +412,7 @@ impl<'src> Call<'src> {
     ///
     /// See: <https://github.com/actions/languageservices/blob/83de320ba99ee2bdbb14a2869462a8033714cd96/expressions/src/funcs/case.ts>
     fn consteval_case(args: &[Evaluation]) -> Option<Evaluation> {
-        if args.len() < 3 || args.len() % 2 == 0 {
+        if args.len() < 3 || args.len().is_multiple_of(2) {
             return None;
         }
 
