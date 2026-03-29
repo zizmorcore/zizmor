@@ -1,7 +1,10 @@
 use std::ops::Deref;
 
 use github_actions_expressions::{
-    Expr, SpannedExpr, call::Call, context::Context, literal::Literal,
+    Expr, SpannedExpr,
+    call::{Call, Function},
+    context::Context,
+    literal::Literal,
 };
 use github_actions_models::common::If;
 
@@ -79,7 +82,7 @@ impl UnsoundContains {
         expr: &'a SpannedExpr,
     ) -> Box<dyn Iterator<Item = (&'a str, &'a Context<'a>, &'a str)> + 'a> {
         match expr.deref() {
-            Expr::Call(Call { func, args: exprs }) if func == "contains" => {
+            Expr::Call(Call { func, args: exprs }) if matches!(func, Function::Contains) => {
                 match exprs.as_slice() {
                     [
                         SpannedExpr {

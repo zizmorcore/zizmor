@@ -1182,7 +1182,7 @@ jobs:
             ("foo.bar['baz']['quux'].zap", Some("FOO_BAR_BAZ_QUUX_ZAP")),
             ("github.event.issue.title", Some("GITHUB_EVENT_ISSUE_TITLE")),
             // Calls not supported
-            ("call(foo.bar).baz", None),
+            ("fromJSON(foo.bar).baz", None),
             // Computed indices not supported
             ("foo.bar[computed]", None),
             ("foo.bar[abc && def]", None),
