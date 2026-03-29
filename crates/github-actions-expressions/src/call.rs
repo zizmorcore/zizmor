@@ -128,7 +128,7 @@ impl<'src> Call<'src> {
             Function::ToJSON => Self::consteval_tojson(&args),
             Function::FromJSON => Self::consteval_fromjson(&args),
             Function::Join => Self::consteval_join(&args),
-            // TODO: Function::Case
+            Function::Case => Self::consteval_case(&args),
             _ => None,
         }
     }
@@ -406,6 +406,31 @@ impl<'src> Call<'src> {
             // For dictionaries, return empty string (not supported in reference)
             Evaluation::Object(_) => Some(Evaluation::String("".to_string())),
         }
+    }
+
+    /// Constant-evaluates a `case(pred1, val1, pred2, val2, ..., default)` call.
+    ///
+    /// See: <https://github.com/actions/languageservices/blob/83de320ba99ee2bdbb14a2869462a8033714cd96/expressions/src/funcs/case.ts>
+    fn consteval_case(args: &[Evaluation]) -> Option<Evaluation> {
+        if args.len() < 3 || args.len().is_multiple_of(2) {
+            return None;
+        }
+
+        let (pairs, default) = args.as_chunks::<2>();
+        for pair in pairs {
+            let pred = &pair[0];
+            let val = &pair[1];
+
+            match pred {
+                Evaluation::Boolean(true) => return Some(val.clone()),
+                Evaluation::Boolean(false) => continue,
+                // `case` predicates must be booleans; non-booleans are not coerced.
+                _ => return None,
+            }
+        }
+
+        // Default case
+        Some(default[0].clone())
     }
 }
 
@@ -1044,6 +1069,43 @@ mod tests {
         for (expr_str, expected) in test_cases {
             let expr = Expr::parse(expr_str)?;
             let result = expr.consteval().unwrap();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_consteval_case() -> Result<(), Error> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Basic `case` with two predicates
+            (
+                "case(true, 'yes', false, 'no', 'maybe')",
+                Some(Evaluation::String("yes".to_string())),
+            ),
+            (
+                "case(false, 'yes', true, 'no', 'maybe')",
+                Some(Evaluation::String("no".to_string())),
+            ),
+            // `case` with multiple predicates
+            (
+                "case(false, 'first', false, 'second', true, 'third', 'default')",
+                Some(Evaluation::String("third".to_string())),
+            ),
+            // `case` with default value
+            (
+                "case(false, 'first', false, 'second', false, 'third', 'default')",
+                Some(Evaluation::String("default".to_string())),
+            ),
+            // Invalid: `case` with non-boolean predicate
+            ("case(1, 'yes', 0, 'no', 'maybe')", None),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval();
             assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
         }
 
