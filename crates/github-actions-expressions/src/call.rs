@@ -89,19 +89,19 @@ impl<'src> Call<'src> {
             Function::ToJSON | Function::FromJSON if args.len() != 1 => {
                 return Err(Error::Arity(func, "exactly 1 argument"));
             }
-            Function::Join | Function::HashFiles if args.len() < 1 => {
+            Function::Join | Function::HashFiles if args.is_empty() => {
                 return Err(Error::Arity(func, "at least 1 argument"));
             }
             Function::Case => {
                 if args.len() < 3 {
                     return Err(Error::Arity(func, "at least 3 arguments"));
                 }
-                if args.len() % 2 == 0 {
+                if args.len().is_multiple_of(2) {
                     return Err(Error::Arity(func, "odd number of arguments"));
                 }
             }
             Function::Success | Function::Always | Function::Cancelled | Function::Failure
-                if args.len() != 0 =>
+                if !args.is_empty() =>
             {
                 return Err(Error::Arity(func, "no arguments"));
             }

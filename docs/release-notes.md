@@ -71,7 +71,8 @@ of `zizmor`.
   secrets and reusable workflows) (#1777)
 
 * zizmor's handling of GitHub Actions expressions has been made stricter,
-  and now rejects unknown functions (#1823)
+  and now rejects unknown functions and function calls with incorrect
+  arities (#1823, #1826)
 
 ## 1.23.1
 
