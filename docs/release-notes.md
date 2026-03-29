@@ -70,6 +70,9 @@ of `zizmor`.
   platform limitations (primarily around interactions between environment
   secrets and reusable workflows) (#1777)
 
+* zizmor's handling of GitHub Actions expressions has been made stricter,
+  and now rejects unknown functions (#1823)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
