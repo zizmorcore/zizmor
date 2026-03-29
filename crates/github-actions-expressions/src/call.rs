@@ -2,6 +2,17 @@
 
 use crate::{Evaluation, SpannedExpr};
 
+/// Errors that can occur during parsing of function calls.
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    /// An unknown function name was encountered during parsing.
+    #[error("Unknown function: {0}")]
+    UnknownFunction(String),
+    /// A function was called with an incorrect number of arguments.
+    #[error("Incorrect arguments for function {0:?}: expected {1}")]
+    Arity(Function, &'static str),
+}
+
 /// Represents a function in a GitHub Actions expression.
 ///
 /// Function names are case-insensitive.
@@ -68,6 +79,38 @@ pub struct Call<'src> {
 }
 
 impl<'src> Call<'src> {
+    pub(crate) fn new(func: &str, args: Vec<SpannedExpr<'src>>) -> Result<Self, Error> {
+        let func = Function::new(func).ok_or_else(|| Error::UnknownFunction(func.to_string()))?;
+
+        match func {
+            Function::Contains | Function::StartsWith | Function::EndsWith if args.len() != 2 => {
+                return Err(Error::Arity(func, "exactly 2 arguments"));
+            }
+            Function::ToJSON | Function::FromJSON if args.len() != 1 => {
+                return Err(Error::Arity(func, "exactly 1 argument"));
+            }
+            Function::Join | Function::HashFiles if args.len() < 1 => {
+                return Err(Error::Arity(func, "at least 1 argument"));
+            }
+            Function::Case => {
+                if args.len() < 3 {
+                    return Err(Error::Arity(func, "at least 3 arguments"));
+                }
+                if args.len() % 2 == 0 {
+                    return Err(Error::Arity(func, "odd number of arguments"));
+                }
+            }
+            Function::Success | Function::Always | Function::Cancelled | Function::Failure
+                if args.len() != 0 =>
+            {
+                return Err(Error::Arity(func, "no arguments"));
+            }
+            _ => (),
+        }
+
+        Ok(Self { func, args })
+    }
+
     /// Performs constant evaluation of a GitHub Actions expression
     /// function call.
     pub(crate) fn consteval(&self) -> Option<Evaluation> {

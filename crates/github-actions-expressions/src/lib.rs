@@ -29,9 +29,9 @@ pub enum Error {
     /// The expression failed to parse according to the grammar.
     #[error("Parse error: {0}")]
     Pest(#[from] pest::error::Error<Rule>),
-    /// The expression contains a function call to an unknown function.
-    #[error("Unknown function: {0}")]
-    UnknownFunction(String),
+    /// The expression contains an invalid function call.
+    #[error("Invalid function call")]
+    Call(#[from] call::Error),
 }
 
 // Isolates the ExprParser, Rule and other generated types
@@ -558,12 +558,11 @@ impl<'src> Expr<'src> {
                         .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
-                    let func = Function::new(identifier.as_str())
-                        .ok_or_else(|| Error::UnknownFunction(identifier.as_str().to_string()))?;
+                    let call = Call::new(identifier.as_str(), args)?;
 
                     Ok(SpannedExpr::new(
                         Origin::new(span.start()..span.end(), raw),
-                        Expr::Call(Call { func, args }),
+                        Expr::Call(call),
                     )
                     .into())
                 }
