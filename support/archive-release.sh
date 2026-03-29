@@ -29,7 +29,7 @@ if [[ "${TARGET}" == *"windows"* ]]; then
   7z a "${ARCHIVE_FILE}" "${ARCHIVE_DIR}"/*
 else
   ARCHIVE_FILE="${TARGET_DIR}/archive/zizmor-${TARGET}.tar.gz"
-  tar -C "${ARCHIVE_DIR}" -czf "${ARCHIVE_FILE}" .
+  tar -czf "${ARCHIVE_FILE}" -C "${ARCHIVE_DIR}" zizmor
 fi
 
 if [[ -z "${GITHUB_OUTPUT}" ]]; then
