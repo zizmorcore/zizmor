@@ -74,7 +74,10 @@ static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona)>
             (
                 "peter-evans/create-or-update-comment".parse().unwrap(),
                 "use `gh pr comment` or `gh issue comment` in a script step",
-                Persona::Regular,
+                // NOTE(ww): Currently pedantic because `gh` doesn't support
+                // editing a comment by ID.
+                // See: <https://github.com/cli/cli/issues/3613>
+                Persona::Pedantic,
             ),
             (
                 "addnab/docker-run-action".parse().unwrap(),
@@ -104,7 +107,7 @@ impl SuperfluousActions {
                 findings.push(
                     Self::finding()
                         .confidence(Confidence::High)
-                        .severity(Severity::Low)
+                        .severity(Severity::Informational)
                         .persona(*persona)
                         .add_location(step.location_with_grip())
                         .add_location(

@@ -181,7 +181,7 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |
    = note: audit confidence → High
 
-help[superfluous-actions]: action functionality is already included by the runner
+info[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/boring-open-awslc-bump.yml:53:15
    |
 52 |       - name: Create Pull Request
@@ -366,7 +366,7 @@ info[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this job a name
 
-help[superfluous-actions]: action functionality is already included by the runner
+info[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/ci.yml:74:15
    |
 73 |       - name: Setup rust
@@ -400,7 +400,7 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |
    = note: audit confidence → High
 
-help[superfluous-actions]: action functionality is already included by the runner
+info[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/downstream-version-bump.yml:30:15
    |
 29 |       - name: Create Pull Request
@@ -658,7 +658,7 @@ help[concurrency-limits]: insufficient job-level concurrency limits
     |
     = note: audit confidence → High
 
-help[superfluous-actions]: action functionality is already included by the runner
+info[superfluous-actions]: action functionality is already included by the runner
    --> .github/workflows/wheel-builder.yml:266:15
     |
 266 |         - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
@@ -673,7 +673,7 @@ help[superfluous-actions]: action functionality is already included by the runne
     |
     = note: audit confidence → High
 
-help[superfluous-actions]: action functionality is already included by the runner
+info[superfluous-actions]: action functionality is already included by the runner
    --> .github/workflows/wheel-builder.yml:351:15
     |
 351 |         - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
@@ -711,7 +711,7 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |
    = note: audit confidence → High
 
-help[superfluous-actions]: action functionality is already included by the runner
+info[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/x509-limbo-version-bump.yml:49:15
    |
 48 |       - name: Create Pull Request
@@ -721,5 +721,4 @@ help[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → High
 
-73 findings (9 suppressed): 13 informational, 38 low, 4 medium, 9 high
-
+73 findings (9 suppressed): 19 informational, 32 low, 4 medium, 9 high
