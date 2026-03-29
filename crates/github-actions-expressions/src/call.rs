@@ -370,7 +370,21 @@ impl<'src> Call<'src> {
 mod tests {
     use anyhow::Result;
 
-    use crate::{Expr, call::Call};
+    use crate::{
+        Expr,
+        call::{Call, Function},
+    };
+
+    #[test]
+    fn test_function_new() -> Result<()> {
+        assert_eq!(Function::new("contains"), Some(Function::Contains));
+        assert_eq!(Function::new("STARTSWITH"), Some(Function::StartsWith));
+        assert_eq!(Function::new("endsWith"), Some(Function::EndsWith));
+
+        assert_eq!(Function::new("unknown"), None);
+
+        Ok(())
+    }
 
     #[test]
     fn test_consteval_fromjson() -> Result<()> {
