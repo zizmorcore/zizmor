@@ -160,7 +160,7 @@ impl<'src> TryFrom<&'src str> for ContextPattern<'src> {
     type Error = InvalidContextPattern;
 
     fn try_from(val: &'src str) -> Result<Self, Self::Error> {
-        Self::try_new(val).ok_or_else(|| InvalidContextPattern)
+        Self::try_new(val).ok_or(InvalidContextPattern)
     }
 }
 
