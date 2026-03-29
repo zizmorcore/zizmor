@@ -14,7 +14,7 @@ use crate::{
 };
 
 use self::parser::{ExprParser, Rule};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 
@@ -137,7 +137,7 @@ impl<'a> SpannedExpr<'a> {
                 // These functions, when evaluated, produce an evaluation
                 // that includes some or all of the contexts listed in
                 // their arguments.
-                if func == "toJSON" || func == "format" || func == "join" {
+                if matches!(func, Function::ToJSON | Function::Format | Function::Join) {
                     for arg in args {
                         contexts.extend(arg.dataflow_contexts());
                     }
@@ -338,17 +338,18 @@ impl<'src> Expr<'src> {
             Expr::UnOp { op: _, expr } => expr.constant_reducible(),
             Expr::Call(Call { func, args }) => {
                 // These functions are reducible if their arguments are reducible.
-                if func == "format"
-                    || func == "contains"
-                    || func == "startsWith"
-                    || func == "endsWith"
-                    || func == "toJSON"
-                    // TODO(ww): `fromJSON` *is* frequently reducible, but
-                    // doing so soundly with subexpressions is annoying.
-                    // We overapproximate for now and consider it non-reducible.
-                    // || func == "fromJSON"
-                    || func == "join"
-                {
+                // TODO(ww): `fromJSON` *is* frequently reducible, but
+                // doing so soundly with subexpressions is annoying.
+                // We overapproximate for now and consider it non-reducible.
+                if matches!(
+                    func,
+                    Function::Contains
+                        | Function::StartsWith
+                        | Function::EndsWith
+                        | Function::Format
+                        | Function::ToJSON
+                        | Function::Join // | Function::FromJSON
+                ) {
                     args.iter().all(|e| e.constant_reducible())
                 } else {
                     false
@@ -547,12 +548,13 @@ impl<'src> Expr<'src> {
                         .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
+                    let func = Function::new(identifier.as_str()).ok_or_else(|| {
+                        anyhow!("Unknown function: {func}", func = identifier.as_str())
+                    })?;
+
                     Ok(SpannedExpr::new(
                         Origin::new(span.start()..span.end(), raw),
-                        Expr::Call(Call {
-                            func: Function(identifier.as_str()),
-                            args,
-                        }),
+                        Expr::Call(Call { func, args }),
                     )
                     .into())
                 }
@@ -992,16 +994,6 @@ mod tests {
     }
 
     #[test]
-    fn test_function_eq() {
-        let func = Function("foo");
-        assert_eq!(&func, "foo");
-        assert_eq!(&func, "FOO");
-        assert_eq!(&func, "Foo");
-
-        assert_eq!(func, Function("FOO"));
-    }
-
-    #[test]
     fn test_parse_string_rule() {
         let cases = &[
             ("''", ""),
@@ -1233,15 +1225,15 @@ mod tests {
                 ),
             ),
             (
-                "foo(1, 2, 3)",
+                "format('{0} {1}', 2, 3)",
                 SpannedExpr::new(
-                    Origin::new(0..12, "foo(1, 2, 3)"),
+                    Origin::new(0..23, "format('{0} {1}', 2, 3)"),
                     Expr::Call(Call {
-                        func: Function("foo"),
+                        func: Function::Format,
                         args: vec![
-                            SpannedExpr::new(Origin::new(4..5, "1"), 1.0.into()),
-                            SpannedExpr::new(Origin::new(7..8, "2"), 2.0.into()),
-                            SpannedExpr::new(Origin::new(10..11, "3"), 3.0.into()),
+                            SpannedExpr::new(Origin::new(7..16, "'{0} {1}'"), "{0} {1}".into()),
+                            SpannedExpr::new(Origin::new(18..19, "2"), 2.0.into()),
+                            SpannedExpr::new(Origin::new(21..22, "3"), 3.0.into()),
                         ],
                     }),
                 ),
@@ -1437,7 +1429,7 @@ mod tests {
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(7..29, "format('{0}', 'event')"),
                                 Expr::Call(Call {
-                                    func: Function("format"),
+                                    func: Function::Format,
                                     args: vec![
                                         SpannedExpr::new(
                                             Origin::new(14..19, "'{0}'"),
@@ -2014,9 +2006,9 @@ mod tests {
             ("foo==bar", "foo==bar"),
             ("foo    ==   bar", r"foo\s+==\s+bar"),
             ("foo == bar", r"foo\s+==\s+bar"),
-            ("foo(bar)", "foo(bar)"),
-            ("foo(bar, baz)", r"foo\(bar,\s+baz\)"),
-            ("foo (bar, baz)", r"foo\s+\(bar,\s+baz\)"),
+            ("fromJSON('{}')", "fromJSON('{}')"),
+            ("fromJSON('{ }')", r"fromJSON\('\{\s+\}'\)"),
+            ("fromJSON ('{ }')", r"fromJSON\s+\('\{\s+\}'\)"),
             ("a . b . c . d", r"a\s+\.\s+b\s+\.\s+c\s+\.\s+d"),
             ("true \n && \n false", r"true\s+\&\&\s+false"),
         ] {

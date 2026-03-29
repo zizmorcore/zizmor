@@ -5,17 +5,56 @@ use crate::{Evaluation, SpannedExpr};
 /// Represents a function in a GitHub Actions expression.
 ///
 /// Function names are case-insensitive.
-#[derive(Debug)]
-pub struct Function<'src>(pub(crate) &'src str);
-
-impl PartialEq for Function<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq_ignore_ascii_case(other.0)
-    }
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Function {
+    /// `contains(haystack, needle)`
+    Contains,
+    /// `startsWith(string, prefix)`
+    StartsWith,
+    /// `endsWith(string, suffix)`
+    EndsWith,
+    /// `format(fmtspec, args...)`
+    Format,
+    /// `join(separator, items...)`
+    Join,
+    /// `toJSON(value)`
+    ToJSON,
+    /// `fromJSON(json)`
+    FromJSON,
+    /// `hashFiles(glob, ...)`
+    HashFiles,
+    /// `case(pred1, val1, pred2, val2, ..., default)`
+    Case,
+    // Special status-check functions.
+    // See: <https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#status-check-functions>
+    /// `success()`
+    Success,
+    /// `always()`
+    Always,
+    /// `cancelled()`
+    Cancelled,
+    /// `failure()`
+    Failure,
 }
-impl PartialEq<str> for Function<'_> {
-    fn eq(&self, other: &str) -> bool {
-        self.0.eq_ignore_ascii_case(other)
+
+impl Function {
+    pub(crate) fn new(name: &str) -> Option<Self> {
+        match name.to_ascii_lowercase().as_str() {
+            "contains" => Some(Self::Contains),
+            "startswith" => Some(Self::StartsWith),
+            "endswith" => Some(Self::EndsWith),
+            "format" => Some(Self::Format),
+            "join" => Some(Self::Join),
+            "tojson" => Some(Self::ToJSON),
+            "fromjson" => Some(Self::FromJSON),
+            "hashfiles" => Some(Self::HashFiles),
+            "case" => Some(Self::Case),
+            "success" => Some(Self::Success),
+            "always" => Some(Self::Always),
+            "cancelled" => Some(Self::Cancelled),
+            "failure" => Some(Self::Failure),
+            _ => None,
+        }
     }
 }
 
@@ -23,7 +62,7 @@ impl PartialEq<str> for Function<'_> {
 #[derive(Debug, PartialEq)]
 pub struct Call<'src> {
     /// The function name, e.g. `foo` in `foo()`.
-    pub func: Function<'src>,
+    pub func: Function,
     /// The function's arguments.
     pub args: Vec<SpannedExpr<'src>>,
 }
@@ -39,13 +78,14 @@ impl<'src> Call<'src> {
             .collect::<Option<Vec<Evaluation>>>()?;
 
         match &self.func {
-            f if f == "format" => Self::consteval_format(&args),
-            f if f == "contains" => Self::consteval_contains(&args),
-            f if f == "startsWith" => Self::consteval_startswith(&args),
-            f if f == "endsWith" => Self::consteval_endswith(&args),
-            f if f == "toJSON" => Self::consteval_tojson(&args),
-            f if f == "fromJSON" => Self::consteval_fromjson(&args),
-            f if f == "join" => Self::consteval_join(&args),
+            Function::Format => Self::consteval_format(&args),
+            Function::Contains => Self::consteval_contains(&args),
+            Function::StartsWith => Self::consteval_startswith(&args),
+            Function::EndsWith => Self::consteval_endswith(&args),
+            Function::ToJSON => Self::consteval_tojson(&args),
+            Function::FromJSON => Self::consteval_fromjson(&args),
+            Function::Join => Self::consteval_join(&args),
+            // TODO: Function::Case
             _ => None,
         }
     }
@@ -330,7 +370,21 @@ impl<'src> Call<'src> {
 mod tests {
     use anyhow::Result;
 
-    use crate::{Expr, call::Call};
+    use crate::{
+        Expr,
+        call::{Call, Function},
+    };
+
+    #[test]
+    fn test_function_new() -> Result<()> {
+        assert_eq!(Function::new("contains"), Some(Function::Contains));
+        assert_eq!(Function::new("STARTSWITH"), Some(Function::StartsWith));
+        assert_eq!(Function::new("endsWith"), Some(Function::EndsWith));
+
+        assert_eq!(Function::new("unknown"), None);
+
+        Ok(())
+    }
 
     #[test]
     fn test_consteval_fromjson() -> Result<()> {

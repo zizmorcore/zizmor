@@ -338,10 +338,10 @@ mod tests {
             ("foo['bar']", Some("bar")),
             ("inputs.test", Some("test")),
             // Invalid cases.
-            ("foo.bar.baz", None),       // too many parts
-            ("foo.bar.baz.qux", None),   // too many parts
-            ("foo['bar']['baz']", None), // too many parts
-            ("foo().bar", None),         // head is a call, not an identifier
+            ("foo.bar.baz", None),        // too many parts
+            ("foo.bar.baz.qux", None),    // too many parts
+            ("foo['bar']['baz']", None),  // too many parts
+            ("fromJSON('{}').bar", None), // head is a call, not an identifier
         ] {
             let ctx = Context::try_from(*case).unwrap();
             assert_eq!(ctx.single_tail(), *expected);
@@ -378,7 +378,10 @@ mod tests {
             ("foo.bar.baz[0].qux[1]", Some("foo.bar.baz.*.qux.*")),
             ("foo[1][2][3]", Some("foo.*.*.*")),
             ("foo.bar[abc]", Some("foo.bar.*")),
-            ("foo.bar[abc()]", Some("foo.bar.*")),
+            (
+                "foo.bar[join(github.event.issue.labels.*.name, ', ')]",
+                Some("foo.bar.*"),
+            ),
             // Whitespace.
             ("foo . bar", Some("foo.bar")),
             ("foo . bar . baz", Some("foo.bar.baz")),
@@ -389,7 +392,7 @@ mod tests {
             ("foo .* . baz", Some("foo.*.baz")),
             ("foo .* .*", Some("foo.*.*")),
             // Invalid cases
-            ("foo().bar", None),
+            ("fromJSON('{}').bar", None),
         ] {
             let ctx = Context::try_from(*case).unwrap();
             assert_eq!(ctx.as_pattern().as_deref(), *expected);

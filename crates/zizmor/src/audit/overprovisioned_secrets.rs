@@ -1,6 +1,9 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Expr, SpannedExpr, call::Call};
+use github_actions_expressions::{
+    Expr, SpannedExpr,
+    call::{Call, Function},
+};
 
 use crate::{
     audit::AuditError,
@@ -76,7 +79,7 @@ impl OverprovisionedSecrets {
                 // TODO: Consider any function call that accepts bare `secrets`
                 // to be a finding? Are there any other functions that users
                 // would plausibly call with the entire `secrets` object?
-                if func == "toJSON"
+                if matches!(func, Function::ToJSON)
                     && args.iter().any(
                         |arg| matches!(arg.deref(), Expr::Context(ctx) if ctx.matches("secrets")),
                     )

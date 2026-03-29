@@ -1,7 +1,10 @@
 use std::ops::Deref;
 
 use github_actions_expressions::{
-    Expr, SpannedExpr, call::Call, context::Context, literal::Literal,
+    Expr, SpannedExpr,
+    call::{Call, Function},
+    context::Context,
+    literal::Literal,
 };
 use github_actions_models::common::If;
 
@@ -79,21 +82,22 @@ impl UnsoundContains {
         expr: &'a SpannedExpr,
     ) -> Box<dyn Iterator<Item = (&'a str, &'a Context<'a>, &'a str)> + 'a> {
         match expr.deref() {
-            Expr::Call(Call { func, args: exprs }) if func == "contains" => {
-                match exprs.as_slice() {
-                    [
-                        SpannedExpr {
-                            inner: Expr::Literal(Literal::String(s)),
-                            ..
-                        },
-                        ctx_expr @ SpannedExpr {
-                            inner: Expr::Context(c),
-                            ..
-                        },
-                    ] => Box::new(std::iter::once((s.as_ref(), c, ctx_expr.origin.raw))),
-                    args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
-                }
-            }
+            Expr::Call(Call {
+                func: Function::Contains,
+                args: exprs,
+            }) => match exprs.as_slice() {
+                [
+                    SpannedExpr {
+                        inner: Expr::Literal(Literal::String(s)),
+                        ..
+                    },
+                    ctx_expr @ SpannedExpr {
+                        inner: Expr::Context(c),
+                        ..
+                    },
+                ] => Box::new(std::iter::once((s.as_ref(), c, ctx_expr.origin.raw))),
+                args => Box::new(args.iter().flat_map(Self::walk_tree_for_unsound_contains)),
+            },
             Expr::Call(Call {
                 func: _,
                 args: exprs,
