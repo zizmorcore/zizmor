@@ -30,11 +30,10 @@ pub enum UnOp {
 
 #[cfg(test)]
 mod tests {
-    use crate::Expr;
-    use anyhow::Result;
+    use crate::{Error, Expr};
 
     #[test]
-    fn test_evaluate_constant_binary_operations() -> Result<()> {
+    fn test_evaluate_constant_binary_operations() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -79,7 +78,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cross_type_comparison_with_whitespace() -> Result<()> {
+    fn test_cross_type_comparison_with_whitespace() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[

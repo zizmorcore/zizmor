@@ -989,14 +989,22 @@ jobs:
 
         let matrix = Matrix::new(&job).unwrap();
 
-        assert!(matrix.expands_to_static_values(&Context::parse("matrix.trivially-static")?));
-        assert!(!matrix.expands_to_static_values(&Context::parse("matrix.trivially-dynamic")?));
-        assert!(matrix.expands_to_static_values(&Context::parse("matrix.nested-static.a")?));
-        assert!(!matrix.expands_to_static_values(&Context::parse("matrix.nested-dynamic.b")?));
+        assert!(
+            matrix.expands_to_static_values(&Context::parse("matrix.trivially-static").unwrap())
+        );
+        assert!(
+            !matrix.expands_to_static_values(&Context::parse("matrix.trivially-dynamic").unwrap())
+        );
+        assert!(
+            matrix.expands_to_static_values(&Context::parse("matrix.nested-static.a").unwrap())
+        );
+        assert!(
+            !matrix.expands_to_static_values(&Context::parse("matrix.nested-dynamic.b").unwrap())
+        );
 
         // We can assert that a nonexistent path expands to static values because
         // we have a 'direct' matrix here, not a dynamic expression.
-        assert!(matrix.expands_to_static_values(&Context::parse("matrix.nonexistent")?));
+        assert!(matrix.expands_to_static_values(&Context::parse("matrix.nonexistent").unwrap()));
 
         Ok(())
     }
@@ -1033,7 +1041,7 @@ jobs:
         let matrix = Matrix::new(&job).unwrap();
         assert!(matrix.expansions().0.is_empty());
 
-        assert!(!matrix.expands_to_static_values(&Context::parse("matrix.nonexistent")?));
+        assert!(!matrix.expands_to_static_values(&Context::parse("matrix.nonexistent").unwrap()));
 
         Ok(())
     }

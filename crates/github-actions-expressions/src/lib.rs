@@ -14,7 +14,6 @@ use crate::{
 };
 
 use self::parser::{ExprParser, Rule};
-use anyhow::{Result, anyhow};
 use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 
@@ -23,6 +22,17 @@ pub mod context;
 pub mod identifier;
 pub mod literal;
 pub mod op;
+
+/// Errors that can occur during expression parsing.
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    /// The expression failed to parse according to the grammar.
+    #[error("Parse error: {0}")]
+    Pest(#[from] pest::error::Error<Rule>),
+    /// The expression contains a function call to an unknown function.
+    #[error("Unknown function: {0}")]
+    UnknownFunction(String),
+}
 
 // Isolates the ExprParser, Rule and other generated types
 // so that we can do `missing_docs` at the top-level.
@@ -362,7 +372,7 @@ impl<'src> Expr<'src> {
 
     /// Parses the given string into an expression.
     #[allow(clippy::unwrap_used)]
-    pub fn parse(expr: &'src str) -> Result<SpannedExpr<'src>> {
+    pub fn parse(expr: &'src str) -> Result<SpannedExpr<'src>, Error> {
         // Top level `expression` is a single `or_expr`.
         let or_expr = ExprParser::parse(Rule::expression, expr)?
             .next()
@@ -371,7 +381,7 @@ impl<'src> Expr<'src> {
             .next()
             .unwrap();
 
-        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr<'_>>> {
+        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr<'_>>, Error> {
             // We're parsing a pest grammar, which isn't left-recursive.
             // As a result, we have constructions like
             // `or_expr = { and_expr ~ ("||" ~ and_expr)* }`, which
@@ -548,9 +558,8 @@ impl<'src> Expr<'src> {
                         .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
-                    let func = Function::new(identifier.as_str()).ok_or_else(|| {
-                        anyhow!("Unknown function: {func}", func = identifier.as_str())
-                    })?;
+                    let func = Function::new(identifier.as_str())
+                        .ok_or_else(|| Error::UnknownFunction(identifier.as_str().to_string()))?;
 
                     Ok(SpannedExpr::new(
                         Origin::new(span.start()..span.end(), raw),
@@ -939,11 +948,10 @@ impl<'src> Expr<'src> {
 mod tests {
     use std::borrow::Cow;
 
-    use anyhow::Result;
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use crate::{Call, Literal, Origin, SpannedExpr};
+    use crate::{Call, Error, Literal, Origin, SpannedExpr};
 
     use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
 
@@ -1067,7 +1075,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_expr_rule() -> Result<()> {
+    fn test_parse_expr_rule() -> Result<(), Error> {
         // Ensures that we parse multi-line expressions correctly.
         let multiline = "github.repository_owner == 'Homebrew' &&
         ((github.event_name == 'pull_request_review' && github.event.review.state == 'approved') ||
@@ -1481,7 +1489,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_constant_reducible() -> Result<()> {
+    fn test_expr_constant_reducible() -> Result<(), Error> {
         for (expr, reducible) in &[
             ("'foo'", true),
             ("1", true),
@@ -1523,7 +1531,7 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluate_constant_complex_expressions() -> Result<()> {
+    fn test_evaluate_constant_complex_expressions() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -1555,7 +1563,7 @@ mod tests {
     }
 
     #[test]
-    fn test_case_insensitive_string_comparison() -> Result<()> {
+    fn test_case_insensitive_string_comparison() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -1808,7 +1816,7 @@ mod tests {
     }
 
     #[test]
-    fn test_github_actions_logical_semantics() -> Result<()> {
+    fn test_github_actions_logical_semantics() -> Result<(), Error> {
         use crate::Evaluation;
 
         // Test GitHub Actions-specific && and || semantics
@@ -1843,7 +1851,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_has_constant_reducible_subexpr() -> Result<()> {
+    fn test_expr_has_constant_reducible_subexpr() -> Result<(), Error> {
         for (expr, reducible) in &[
             // Literals are not considered reducible subexpressions.
             ("'foo'", false),
@@ -1864,7 +1872,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_contexts() -> Result<()> {
+    fn test_expr_contexts() -> Result<(), Error> {
         // A single context.
         let expr = Expr::parse("foo.bar.baz[1].qux")?;
         assert_eq!(
@@ -1890,7 +1898,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_dataflow_contexts() -> Result<()> {
+    fn test_expr_dataflow_contexts() -> Result<(), Error> {
         // Trivial cases.
         let expr = Expr::parse("foo.bar")?;
         assert_eq!(
@@ -1974,7 +1982,7 @@ mod tests {
     }
 
     #[test]
-    fn test_spannedexpr_computed_indices() -> Result<()> {
+    fn test_spannedexpr_computed_indices() -> Result<(), Error> {
         for (expr, computed_indices) in &[
             ("foo.bar", vec![]),
             ("foo.bar[1]", vec![]),
