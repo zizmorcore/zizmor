@@ -368,26 +368,22 @@ impl<'src> Call<'src> {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Result;
-
     use crate::{
-        Expr,
+        Error, Expr,
         call::{Call, Function},
     };
 
     #[test]
-    fn test_function_new() -> Result<()> {
+    fn test_function_new() {
         assert_eq!(Function::new("contains"), Some(Function::Contains));
         assert_eq!(Function::new("STARTSWITH"), Some(Function::StartsWith));
         assert_eq!(Function::new("endsWith"), Some(Function::EndsWith));
 
         assert_eq!(Function::new("unknown"), None);
-
-        Ok(())
     }
 
     #[test]
-    fn test_consteval_fromjson() -> Result<()> {
+    fn test_consteval_fromjson() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -474,7 +470,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_fromjson_error_cases() -> Result<()> {
+    fn test_consteval_fromjson_error_cases() -> Result<(), Error> {
         let error_cases = &[
             "fromJSON('')",          // Empty string
             "fromJSON('   ')",       // Whitespace only
@@ -497,7 +493,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_fromjson_display_format() -> Result<()> {
+    fn test_consteval_fromjson_display_format() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -516,7 +512,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_tojson_fromjson_roundtrip() -> Result<()> {
+    fn test_consteval_tojson_fromjson_roundtrip() -> Result<(), Error> {
         use crate::Evaluation;
 
         // Test round-trip conversion for complex structures
@@ -562,7 +558,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_format() -> Result<()> {
+    fn test_consteval_format() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -638,7 +634,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_format_error_cases() -> Result<()> {
+    fn test_consteval_format_error_cases() -> Result<(), Error> {
         let error_cases = &[
             // Invalid format strings
             "format('{0', 'test')",        // Missing closing brace
@@ -664,7 +660,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_contains() -> Result<()> {
+    fn test_consteval_contains() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -744,7 +740,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_join() -> Result<()> {
+    fn test_consteval_join() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -832,7 +828,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_endswith() -> Result<()> {
+    fn test_consteval_endswith() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -913,7 +909,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_startswith() -> Result<()> {
+    fn test_consteval_startswith() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -1012,7 +1008,7 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluate_constant_functions() -> Result<()> {
+    fn test_evaluate_constant_functions() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[

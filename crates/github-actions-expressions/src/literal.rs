@@ -46,12 +46,10 @@ impl<'src> Literal<'src> {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Result;
-
-    use crate::Expr;
+    use crate::{Error, Expr};
 
     #[test]
-    fn test_evaluate_constant_literals() -> Result<()> {
+    fn test_evaluate_constant_literals() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[

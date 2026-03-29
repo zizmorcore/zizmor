@@ -1035,13 +1035,13 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 name = "github-actions-expressions"
 version = "0.0.15"
 dependencies = [
- "anyhow",
  "itertools",
  "pest",
  "pest_derive",
  "pretty_assertions",
  "serde_json",
  "subfeature",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

@@ -5,6 +5,11 @@ use crate::Literal;
 
 use super::{Expr, SpannedExpr};
 
+/// Errors that can occur when parsing a context pattern.
+#[derive(Debug, thiserror::Error)]
+#[error("invalid context pattern")]
+pub struct InvalidContextPattern;
+
 /// Represents a context in a GitHub Actions expression.
 ///
 /// These typically look something like `github.actor` or `inputs.foo`,
@@ -25,12 +30,12 @@ impl<'src> Context<'src> {
     }
 
     /// Parse a context from the given string.
-    pub fn parse(raw: &'src str) -> anyhow::Result<Self> {
-        let expr = Expr::parse(raw)?;
+    pub fn parse(raw: &'src str) -> Option<Self> {
+        let expr = Expr::parse(raw).ok()?;
 
         match expr.inner {
-            Expr::Context(ctx) => Ok(ctx),
-            _ => Err(anyhow::anyhow!("expected context, found {:?}", expr)),
+            Expr::Context(ctx) => Some(ctx),
+            _ => None,
         }
     }
 
@@ -150,10 +155,10 @@ pub struct ContextPattern<'src>(
 );
 
 impl<'src> TryFrom<&'src str> for ContextPattern<'src> {
-    type Error = anyhow::Error;
+    type Error = InvalidContextPattern;
 
-    fn try_from(val: &'src str) -> anyhow::Result<Self> {
-        Self::try_new(val).ok_or_else(|| anyhow::anyhow!("invalid context pattern"))
+    fn try_from(val: &'src str) -> Result<Self, Self::Error> {
+        Self::try_new(val).ok_or_else(|| InvalidContextPattern)
     }
 }
 
@@ -284,26 +289,11 @@ impl<'src> ContextPattern<'src> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Expr;
-
     use super::{Context, ContextPattern};
-
-    impl<'a> TryFrom<&'a str> for Context<'a> {
-        type Error = anyhow::Error;
-
-        fn try_from(val: &'a str) -> anyhow::Result<Self> {
-            let expr = Expr::parse(val)?;
-
-            match expr.inner {
-                Expr::Context(ctx) => Ok(ctx),
-                _ => Err(anyhow::anyhow!("expected context, found {:?}", expr)),
-            }
-        }
-    }
 
     #[test]
     fn test_context_child_of() {
-        let ctx = Context::try_from("foo.bar.baz").unwrap();
+        let ctx = Context::parse("foo.bar.baz").unwrap();
 
         for (case, child) in &[
             // Trivial child cases.
@@ -343,7 +333,7 @@ mod tests {
             ("foo['bar']['baz']", None),  // too many parts
             ("fromJSON('{}').bar", None), // head is a call, not an identifier
         ] {
-            let ctx = Context::try_from(*case).unwrap();
+            let ctx = Context::parse(*case).unwrap();
             assert_eq!(ctx.single_tail(), *expected);
         }
     }
@@ -394,7 +384,7 @@ mod tests {
             // Invalid cases
             ("fromJSON('{}').bar", None),
         ] {
-            let ctx = Context::try_from(*case).unwrap();
+            let ctx = Context::parse(*case).unwrap();
             assert_eq!(ctx.as_pattern().as_deref(), *expected);
         }
     }
@@ -458,7 +448,7 @@ mod tests {
             ),
         ] {
             let pattern = ContextPattern::try_new(pattern).unwrap();
-            let ctx = Context::try_from(*ctx).unwrap();
+            let ctx = Context::parse(*ctx).unwrap();
             assert_eq!(pattern.parent_of(&ctx), *expected);
         }
     }
@@ -509,7 +499,7 @@ mod tests {
         ] {
             let pattern = ContextPattern::try_new(pattern)
                 .unwrap_or_else(|| panic!("invalid pattern: {pattern}"));
-            let ctx = Context::try_from(*ctx).unwrap();
+            let ctx = Context::parse(*ctx).unwrap();
             assert_eq!(pattern.matches(&ctx), *expected);
         }
     }
