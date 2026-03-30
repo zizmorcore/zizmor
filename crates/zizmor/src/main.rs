@@ -12,7 +12,7 @@ use anstream::{eprintln, println, stderr, stream::IsTerminal};
 use anyhow::anyhow;
 use camino::Utf8PathBuf;
 use clap::{
-    Args, CommandFactory, Parser, ValueEnum,
+    ArgAction, Args, CommandFactory, Parser, ValueEnum, ValueHint,
     builder::{
         NonEmptyStringValueParser,
         styling::{AnsiColor, Effects, Styles},
@@ -85,10 +85,62 @@ const STYLES: Styles = Styles::styled()
 /// Finds security issues in GitHub Actions setups.
 #[derive(Parser)]
 #[command(about, version, styles = STYLES)]
+#[command(disable_help_flag = true, disable_version_flag = true)]
 struct App {
-    #[cfg(feature = "lsp")]
+    /// The inputs to audit.
+    ///
+    /// These can be individual workflow filenames, action definitions
+    /// (typically `action.yml`), entire directories, or a `user/repo` slug
+    /// for a GitHub repository. In the latter case, a `@ref` can be appended
+    /// to audit the repository at a particular git reference state.
+    ///
+    /// Use `-` to read a single input from stdin.
+    #[arg(required = true)]
+    inputs: Vec<String>,
+
     #[command(flatten)]
-    lsp: LspArgs,
+    audit: AuditArgs,
+
+    #[command(flatten)]
+    output: OutputArgs,
+
+    #[command(flatten)]
+    network: NetworkArgs,
+
+    #[command(flatten)]
+    args: GlobalArgs,
+}
+
+impl App {
+    fn default_cache_dir() -> Utf8PathBuf {
+        etcetera::choose_app_strategy(etcetera::AppStrategyArgs {
+            top_level_domain: "io.github".into(),
+            author: "woodruffw".into(),
+            app_name: "zizmor".into(),
+        })
+        .expect("failed to determine default cache directory")
+        .cache_dir()
+        .try_into()
+        .expect("failed to turn cache directory into a sane path")
+    }
+}
+
+#[derive(Debug, Args)]
+#[command(next_help_heading = "Audit Options")]
+struct AuditArgs {
+    /// Fix findings automatically, when available (EXPERIMENTAL).
+    #[arg(
+        long,
+        value_enum,
+        value_name = "MODE",
+        // NOTE: These attributes are needed to make `--fix` behave as the
+        // default for `--fix=safe`. Unlike other flags we don't support
+        // `--fix safe`, since `clap` can't disambiguate that.
+        num_args=0..=1,
+        require_equals = true,
+        default_missing_value = "safe",
+    )]
+    fix: Option<FixMode>,
 
     /// Emit 'pedantic' findings.
     ///
@@ -100,6 +152,69 @@ struct App {
     #[arg(long, group = "_persona", value_enum, default_value_t)]
     persona: Persona,
 
+    /// Filter all results below this severity.
+    #[arg(long)]
+    min_severity: Option<CliSeverity>,
+
+    /// Filter all results below this confidence.
+    #[arg(long)]
+    min_confidence: Option<CliConfidence>,
+
+    /// Control which kinds of inputs are collected for auditing.
+    ///
+    /// By default, all workflows and composite actions are collected,
+    /// while honoring `.gitignore` files.
+    #[arg(long, default_values = ["default"], num_args=1.., value_delimiter=',')]
+    collect: Vec<CliCollectionMode>,
+}
+
+#[derive(Debug, Args)]
+#[command(next_help_heading = "Output Options")]
+struct OutputArgs {
+    #[command(flatten)]
+    verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
+
+    /// Don't show progress bars, even if the terminal supports them.
+    #[arg(long)]
+    no_progress: bool,
+
+    /// The output format to emit. By default, cargo-style diagnostics will be emitted.
+    #[arg(long, value_enum, default_value_t)]
+    format: OutputFormat,
+
+    /// Whether to render OSC 8 links in the output.
+    ///
+    /// This affects links under audit IDs, as well as any links
+    /// produced by audit rules.
+    ///
+    /// Only affects `--format=plain` (the default).
+    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_RENDER_LINKS")]
+    render_links: CliRenderLinks,
+
+    /// Whether to render audit URLs in the output, separately from any URLs
+    /// embedded in OSC 8 links.
+    ///
+    /// Only affects `--format=plain` (the default).
+    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_SHOW_AUDIT_URLS")]
+    show_audit_urls: CliShowAuditUrls,
+
+    /// Disable all error codes besides success and tool failure.
+    #[arg(long)]
+    no_exit_codes: bool,
+
+    /// Fail instead of warning on syntax and schema errors
+    /// in collected inputs.
+    #[arg(long)]
+    strict_collection: bool,
+
+    /// Enable naches mode.
+    #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
+    naches: bool,
+}
+
+#[derive(Args)]
+#[command(next_help_heading = "Network Options")]
+struct NetworkArgs {
     /// Perform only offline operations.
     ///
     /// This disables all online audit rules, and prevents zizmor from
@@ -131,36 +246,24 @@ struct App {
     #[arg(long, env = "ZIZMOR_NO_ONLINE_AUDITS")]
     no_online_audits: bool,
 
+    /// The directory to use for HTTP caching. By default, a
+    /// host-appropriate user-caching directory will be used.
+    #[arg(
+        long,
+        value_name = "DIR",
+        default_value_t = App::default_cache_dir(),
+        hide_default_value = true,
+        value_hint = ValueHint::DirPath
+    )]
+    cache_dir: Utf8PathBuf,
+}
+
+#[derive(Args)]
+#[command(next_help_heading = "Options")]
+struct GlobalArgs {
+    #[cfg(feature = "lsp")]
     #[command(flatten)]
-    verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
-
-    /// Don't show progress bars, even if the terminal supports them.
-    #[arg(long)]
-    no_progress: bool,
-
-    /// The output format to emit. By default, cargo-style diagnostics will be emitted.
-    #[arg(long, value_enum, default_value_t)]
-    format: OutputFormat,
-
-    /// Whether to render OSC 8 links in the output.
-    ///
-    /// This affects links under audit IDs, as well as any links
-    /// produced by audit rules.
-    ///
-    /// Only affects `--format=plain` (the default).
-    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_RENDER_LINKS")]
-    render_links: CliRenderLinks,
-
-    /// Whether to render audit URLs in the output, separately from any URLs
-    /// embedded in OSC 8 links.
-    ///
-    /// Only affects `--format=plain` (the default).
-    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_SHOW_AUDIT_URLS")]
-    show_audit_urls: CliShowAuditUrls,
-
-    /// Control the use of color in output.
-    #[arg(long, value_enum, value_name = "MODE")]
-    color: Option<ColorMode>,
+    lsp: LspArgs,
 
     /// The configuration file to load.
     /// This loads a single configuration file across all input groups,
@@ -168,9 +271,11 @@ struct App {
     #[arg(
         short,
         long,
+        value_name = "FILE",
         env = "ZIZMOR_CONFIG",
         group = "conf",
-        value_parser = NonEmptyStringValueParser::new()
+        value_parser = NonEmptyStringValueParser::new(),
+        value_hint = ValueHint::FilePath
     )]
     config: Option<String>,
 
@@ -178,90 +283,36 @@ struct App {
     #[arg(long, group = "conf")]
     no_config: bool,
 
-    /// Disable all error codes besides success and tool failure.
-    #[arg(long)]
-    no_exit_codes: bool,
-
-    /// Filter all results below this severity.
-    #[arg(long)]
-    min_severity: Option<CliSeverity>,
-
-    /// Filter all results below this confidence.
-    #[arg(long)]
-    min_confidence: Option<CliConfidence>,
-
-    /// The directory to use for HTTP caching. By default, a
-    /// host-appropriate user-caching directory will be used.
-    #[arg(long, default_value_t = App::default_cache_dir(), hide_default_value = true)]
-    cache_dir: Utf8PathBuf,
-
-    /// Control which kinds of inputs are collected for auditing.
-    ///
-    /// By default, all workflows and composite actions are collected,
-    /// while honoring `.gitignore` files.
-    #[arg(long, default_values = ["default"], num_args=1.., value_delimiter=',')]
-    collect: Vec<CliCollectionMode>,
-
-    /// Fail instead of warning on syntax and schema errors
-    /// in collected inputs.
-    #[arg(long)]
-    strict_collection: bool,
-
     /// Generate tab completion scripts for the specified shell.
     #[arg(long, value_enum, value_name = "SHELL", exclusive = true)]
     completions: Option<Shell>,
-
-    /// Enable naches mode.
-    #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
-    naches: bool,
-
-    /// Fix findings automatically, when available (EXPERIMENTAL).
-    #[arg(
-        long,
-        value_enum,
-        value_name = "MODE",
-        // NOTE: These attributes are needed to make `--fix` behave as the
-        // default for `--fix=safe`. Unlike other flags we don't support
-        // `--fix safe`, since `clap` can't disambiguate that.
-        num_args=0..=1,
-        require_equals = true,
-        default_missing_value = "safe",
-    )]
-    fix: Option<FixMode>,
-
-    /// Emit thank-you messages for zizmor's sponsors.
-    #[arg(long, exclusive = true)]
-    thanks: bool,
 
     /// Generate JSON Schema for zizmor.yml configuration files.
     #[cfg(feature = "schema")]
     #[arg(long, exclusive = true)]
     generate_schema: bool,
 
-    /// The inputs to audit.
-    ///
-    /// These can be individual workflow filenames, action definitions
-    /// (typically `action.yml`), entire directories, or a `user/repo` slug
-    /// for a GitHub repository. In the latter case, a `@ref` can be appended
-    /// to audit the repository at a particular git reference state.
-    ///
-    /// Use `-` to read a single input from stdin.
-    #[arg(required = true)]
-    inputs: Vec<String>,
-}
+    /// Control the use of color in output.
+    #[arg(long, value_enum, value_name = "WHEN")]
+    color: Option<ColorMode>,
 
-impl App {
-    fn default_cache_dir() -> Utf8PathBuf {
-        etcetera::choose_app_strategy(etcetera::AppStrategyArgs {
-            top_level_domain: "io.github".into(),
-            author: "woodruffw".into(),
-            app_name: "zizmor".into(),
-        })
-        .expect("failed to determine default cache directory")
-        .cache_dir()
-        .try_into()
-        .expect("failed to turn cache directory into a sane path")
-    }
+    /// Emit thank-you messages for zizmor's sponsors.
+    #[arg(long, exclusive = true)]
+    thanks: bool,
+
+    /// Print help.
+    #[arg(
+        short,
+        long,
+        help = "Print help (see a more with '--help')",
+        long_help = "Print help (see a summary with '-h')",
+        action = ArgAction::Help
+    )]
+    help: (),
+
+    /// Print version.
+    #[arg(short = 'V', long, action = ArgAction::Version)]
+    version: (),
 }
 
 // NOTE(ww): This can be removed once `--min-severity=unknown`
@@ -689,12 +740,12 @@ enum Error {
 
 async fn run(app: &mut App) -> Result<ExitCode, Error> {
     #[cfg(feature = "lsp")]
-    if app.lsp.lsp {
+    if app.args.lsp.lsp {
         lsp::run().await?;
         return Ok(ExitCode::SUCCESS);
     }
 
-    if app.thanks {
+    if app.args.thanks {
         println!("zizmor's development is sustained by our generous sponsors:");
         for (name, url) in THANKS {
             let link = Link::new(name, url);
@@ -704,18 +755,18 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     }
 
     #[cfg(feature = "schema")]
-    if app.generate_schema {
+    if app.args.generate_schema {
         println!("{}", config::schema::generate_schema());
         return Ok(ExitCode::SUCCESS);
     }
 
-    if let Some(shell) = app.completions {
+    if let Some(shell) = app.args.completions {
         let mut cmd = App::command();
         completions(shell, &mut cmd);
         return Ok(ExitCode::SUCCESS);
     }
 
-    let color_mode = match app.color {
+    let color_mode = match app.args.color {
         Some(color_mode) => color_mode,
         None => {
             // If `--color` wasn't specified, we first check a handful
@@ -748,27 +799,28 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     // output is not a terminal.
     // See: https://github.com/emersonford/tracing-indicatif/issues/24
     if matches!(color_mode, ColorMode::Never) || !stderr().is_terminal() {
-        app.no_progress = true;
+        app.output.no_progress = true;
     }
 
     // `--pedantic` is a shortcut for `--persona=pedantic`.
-    if app.pedantic {
-        app.persona = Persona::Pedantic;
+    if app.audit.pedantic {
+        app.audit.persona = Persona::Pedantic;
     }
 
     // Merge `--github-token` or `--zizmor-github-token` into `--gh-token`, if present.
-    app.gh_token = app
+    app.network.gh_token = app
+        .network
         .gh_token
         .take()
-        .or(app.github_token.take())
-        .or(app.zizmor_github_token.take());
+        .or(app.network.github_token.take())
+        .or(app.network.zizmor_github_token.take());
 
     // Unset the GitHub token if we're in offline mode.
     // We do this manually instead of with clap's `conflicts_with` because
     // we want to support explicitly enabling offline mode while still
     // having `GH_TOKEN` present in the environment.
-    if app.offline {
-        app.gh_token = None;
+    if app.network.offline {
+        app.network.gh_token = None;
     }
 
     let indicatif_layer = IndicatifLayer::new();
@@ -779,7 +831,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     ));
 
     let filter = EnvFilter::builder()
-        .with_default_directive(app.verbose.tracing_level_filter().into())
+        .with_default_directive(app.output.verbose.tracing_level_filter().into())
         .from_env()
         .expect("failed to parse RUST_LOG");
 
@@ -799,7 +851,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         )
         .with(filter);
 
-    if app.no_progress {
+    if app.output.no_progress {
         reg.init();
     } else {
         reg.with(indicatif_layer).init();
@@ -819,7 +871,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             .exit();
         }
 
-        if app.fix.is_some() {
+        if app.audit.fix.is_some() {
             let mut cmd = App::command();
             cmd.error(
                 clap::error::ErrorKind::ArgumentConflict,
@@ -829,9 +881,9 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         }
     }
 
-    let collection_mode_set = CollectionModeSet::from(app.collect.as_slice());
+    let collection_mode_set = CollectionModeSet::from(app.audit.collect.as_slice());
 
-    let min_severity = match app.min_severity {
+    let min_severity = match app.audit.min_severity {
         Some(CliSeverity::Unknown) => {
             tracing::warn!("`unknown` is a deprecated minimum severity that has no effect");
             tracing::warn!("future versions of zizmor will reject this value");
@@ -844,7 +896,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         None => None,
     };
 
-    let min_confidence = match app.min_confidence {
+    let min_confidence = match app.audit.min_confidence {
         Some(CliConfidence::Unknown) => {
             tracing::warn!("`unknown` is a deprecated minimum confidence that has no effect");
             tracing::warn!("future versions of zizmor will reject this value");
@@ -859,15 +911,16 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     let global_config = Config::global(app)?;
 
     let gh_client = app
+        .network
         .gh_token
         .as_ref()
-        .map(|token| Client::new(&app.gh_hostname, token, &app.cache_dir))
+        .map(|token| Client::new(&app.network.gh_hostname, token, &app.network.cache_dir))
         .transpose()?;
 
     let collection_options = CollectionOptions {
         mode_set: collection_mode_set,
-        strict: app.strict_collection,
-        no_config: app.no_config,
+        strict: app.output.strict_collection,
+        no_config: app.args.no_config,
         global_config,
     };
 
@@ -878,11 +931,12 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     )
     .await?;
 
-    let state = AuditState::new(app.no_online_audits, gh_client);
+    let state = AuditState::new(app.network.no_online_audits, gh_client);
 
     let audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;
 
-    let mut results = FindingRegistry::new(&registry, min_severity, min_confidence, app.persona);
+    let mut results =
+        FindingRegistry::new(&registry, min_severity, min_confidence, app.audit.persona);
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");
@@ -930,13 +984,13 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         }
     }
 
-    match app.format {
+    match app.output.format {
         OutputFormat::Plain => output::plain::render_findings(
             &registry,
             &results,
-            &app.show_audit_urls.into(),
-            &app.render_links.into(),
-            app.naches,
+            &app.output.show_audit_urls.into(),
+            &app.output.render_links.into(),
+            app.output.naches,
         ),
         OutputFormat::Json | OutputFormat::JsonV1 => {
             output::json::v1::output(stdout(), results.findings()).map_err(Error::Output)?
@@ -950,7 +1004,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         }
     };
 
-    let all_fixed = if let Some(fix_mode) = app.fix {
+    let all_fixed = if let Some(fix_mode) = app.audit.fix {
         let fix_result =
             output::fix::apply_fixes(fix_mode, &results, &registry).map_err(Error::Fix)?;
 
@@ -963,7 +1017,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         false
     };
 
-    if app.no_exit_codes || matches!(app.format, OutputFormat::Sarif) {
+    if app.output.no_exit_codes || matches!(app.output.format, OutputFormat::Sarif) {
         Ok(ExitCode::SUCCESS)
     } else if all_fixed {
         // All findings were auto-fixed, no manual intervention needed
@@ -1075,10 +1129,10 @@ async fn main() -> ExitCode {
                         let mut group =
                             Group::with_title(Level::ERROR.primary_title(err.to_string()));
 
-                        if app.offline {
+                        if app.network.offline {
                             group = group.elements([Level::HELP
                                 .message("remove --offline to audit remote repositories")]);
-                        } else if app.gh_token.is_none() {
+                        } else if app.network.gh_token.is_none() {
                             group = group.elements([Level::HELP
                                 .message("set a GitHub token with --gh-token or GH_TOKEN")]);
                         }

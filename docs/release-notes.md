@@ -36,6 +36,10 @@ of `zizmor`.
 * `obfuscation` audit emits a finding that `with: ${{ expr }}` clauses cannot
   be analyzed (#1772)
 
+* `zizmor --help` is now rendered with option groups for improved readability (#1831)
+
+    Many thanks to @deckstose for implementing this improvement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [concurrency-limits] audit reported findings
