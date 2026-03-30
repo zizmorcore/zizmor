@@ -2097,7 +2097,7 @@ mod tests {
     }
 
     #[test]
-    fn test_leaf_expressions() -> Result<()> {
+    fn test_leaf_expressions() -> Result<(), Error> {
         // A single literal is its own leaf.
         let expr = Expr::parse("'hello'")?;
         let leaves = expr.leaf_expressions();
