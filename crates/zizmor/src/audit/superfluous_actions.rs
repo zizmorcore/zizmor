@@ -46,23 +46,26 @@ impl Audit for SuperfluousActions {
 }
 
 #[allow(clippy::unwrap_used)]
-static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona)>> =
+static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona, Confidence)>> =
     LazyLock::new(|| {
         vec![
             (
                 "ncipollo/release-action".parse().unwrap(),
                 "use `gh release` in a script step",
                 Persona::Regular,
+                Confidence::High,
             ),
             (
                 "softprops/action-gh-release".parse().unwrap(),
                 "use `gh release` in a script step",
                 Persona::Regular,
+                Confidence::High,
             ),
             (
                 "elgohr/Github-Release-Action".parse().unwrap(),
                 "use `gh release` in a script step",
                 Persona::Regular,
+                Confidence::High,
             ),
             (
                 "peter-evans/create-pull-request".parse().unwrap(),
@@ -70,6 +73,7 @@ static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona)>
                 // NOTE(ww): Currently pedantic because creating a PR
                 // with just `gh` and `git` is pretty cumbersome.
                 Persona::Pedantic,
+                Confidence::Low,
             ),
             (
                 "peter-evans/create-or-update-comment".parse().unwrap(),
@@ -78,16 +82,19 @@ static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona)>
                 // editing a comment by ID.
                 // See: <https://github.com/cli/cli/issues/3613>
                 Persona::Pedantic,
+                Confidence::Low,
             ),
             (
                 "addnab/docker-run-action".parse().unwrap(),
                 "use `docker run` in a script step, or use a container step",
                 Persona::Regular,
+                Confidence::High,
             ),
             (
                 "dtolnay/rust-toolchain".parse().unwrap(),
                 "use `rustup` and/or `cargo` in a script step",
                 Persona::Regular,
+                Confidence::High,
             ),
         ]
     });
@@ -102,11 +109,11 @@ impl SuperfluousActions {
         };
 
         let mut findings = vec![];
-        for (pattern, recommendation, persona) in SUPERFLUOUS_ACTIONS.iter() {
+        for (pattern, recommendation, persona, confidence) in SUPERFLUOUS_ACTIONS.iter() {
             if pattern.matches(uses) {
                 findings.push(
                     Self::finding()
-                        .confidence(Confidence::High)
+                        .confidence(*confidence)
                         .severity(Severity::Informational)
                         .persona(*persona)
                         .add_location(step.location_with_grip())

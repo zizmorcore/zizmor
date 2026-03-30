@@ -26,7 +26,7 @@ fn test_superfluous_actions() -> anyhow::Result<()> {
     19 |         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
        |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr comment` or `gh issue comment` in a script step
        |
-       = note: audit confidence → High
+       = note: audit confidence → Low
 
     2 findings: 2 informational, 0 low, 0 medium, 0 high
     ");
