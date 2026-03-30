@@ -868,7 +868,7 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |
    = note: audit confidence → High
 
-help[superfluous-actions]: action functionality is already included by the runner
+info[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/sync-python-releases.yml:47:15
    |
 46 |       - name: "Create Pull Request"
@@ -876,7 +876,7 @@ help[superfluous-actions]: action functionality is already included by the runne
 47 |         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr create` in a script step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Low
 
 help[template-injection]: code injection via template expansion
   --> .github/workflows/test-ecosystem.yml:58:21
@@ -1225,5 +1225,4 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-111 findings (2 suppressed): 23 informational, 68 low, 16 medium, 2 high
-
+111 findings (2 suppressed): 24 informational, 67 low, 16 medium, 2 high
