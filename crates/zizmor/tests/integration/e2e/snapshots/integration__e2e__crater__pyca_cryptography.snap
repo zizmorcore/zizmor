@@ -189,7 +189,7 @@ info[superfluous-actions]: action functionality is already included by the runne
 53 |         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr create` in a script step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Low
 
 help[template-injection]: code injection via template expansion
   --> .github/workflows/ci.yml:90:36
@@ -408,7 +408,7 @@ info[superfluous-actions]: action functionality is already included by the runne
 30 |         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr create` in a script step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Low
 
 help[concurrency-limits]: insufficient job-level concurrency limits
   --> .github/workflows/linkcheck.yml:2:1
@@ -719,6 +719,6 @@ info[superfluous-actions]: action functionality is already included by the runne
 49 |         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr create` in a script step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Low
 
 73 findings (9 suppressed): 19 informational, 32 low, 4 medium, 9 high

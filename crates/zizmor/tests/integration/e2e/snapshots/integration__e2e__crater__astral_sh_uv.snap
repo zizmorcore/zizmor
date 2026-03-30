@@ -876,7 +876,7 @@ info[superfluous-actions]: action functionality is already included by the runne
 47 |         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr create` in a script step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Low
 
 help[template-injection]: code injection via template expansion
   --> .github/workflows/test-ecosystem.yml:58:21
