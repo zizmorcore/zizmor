@@ -78,6 +78,10 @@ of `zizmor`.
   and now rejects unknown functions and function calls with incorrect
   arities (#1823, #1826)
 
+* The [superfluous-actions] audit now uses the "pedantic" persona for some
+  findings along with a low confidence marker to signal when a action
+  may not be easily replaced with built-in functionality (#1822)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
