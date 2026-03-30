@@ -1,41 +1,28 @@
 Static analysis for GitHub Actions
 
-Usage: zizmor [OPTIONS] <INPUTS>...
+Usage: zizmor [OPTIONS] <INPUT>...
 
-Arguments:
-  <INPUTS>...  The inputs to audit
+Input Options:
+  <INPUT>...               The inputs to audit
+      --collect <KIND>...  Control which kinds of inputs are collected for auditing [default: default] [possible values: all, default, workflows, actions, dependabot]
+      --strict-collection  Fail instead of warning on syntax and schema errors in collected inputs
 
 Audit Options:
-      --fix[=<MODE>]
-          Fix findings automatically, when available (EXPERIMENTAL) [possible values: safe, unsafe-only, all]
-  -p, --pedantic
-          Emit 'pedantic' findings
-      --persona <PERSONA>
-          The persona to use while auditing [default: regular] [possible values: auditor, pedantic, regular]
-      --min-severity <MIN_SEVERITY>
-          Filter all results below this severity [possible values: informational, low, medium, high]
-      --min-confidence <MIN_CONFIDENCE>
-          Filter all results below this confidence [possible values: low, medium, high]
-      --collect <COLLECT>...
-          Control which kinds of inputs are collected for auditing [default: default] [possible values: all, default, workflows, actions, dependabot]
+      --fix[=<MODE>]            Fix findings automatically, when available (EXPERIMENTAL) [possible values: safe, unsafe-only, all]
+  -p, --pedantic                Emit 'pedantic' findings
+      --persona <PERSONA>       The persona to use while auditing [default: regular] [possible values: auditor, pedantic, regular]
+      --min-severity <LEVEL>    Filter all results below this severity [possible values: informational, low, medium, high]
+      --min-confidence <LEVEL>  Filter all results below this confidence [possible values: low, medium, high]
 
 Output Options:
-  -v, --verbose...
-          Increase logging verbosity
-  -q, --quiet...
-          Decrease logging verbosity
-      --no-progress
-          Don't show progress bars, even if the terminal supports them
-      --format <FORMAT>
-          The output format to emit. By default, cargo-style diagnostics will be emitted [default: plain] [possible values: plain, json, json-v1, sarif, github]
-      --render-links <RENDER_LINKS>
-          Whether to render OSC 8 links in the output [env: ZIZMOR_RENDER_LINKS=] [default: auto] [possible values: auto, always, never]
-      --show-audit-urls <SHOW_AUDIT_URLS>
-          Whether to render audit URLs in the output, separately from any URLs embedded in OSC 8 links [env: ZIZMOR_SHOW_AUDIT_URLS=] [default: auto] [possible values: auto, always, never]
-      --no-exit-codes
-          Disable all error codes besides success and tool failure
-      --strict-collection
-          Fail instead of warning on syntax and schema errors in collected inputs
+  -v, --verbose...              Increase logging verbosity
+  -q, --quiet...                Decrease logging verbosity
+      --format <KIND>           The output format to emit. By default, cargo-style diagnostics will be emitted [default: plain] [possible values: plain, json, json-v1, sarif, github]
+      --no-progress             Don't show progress bars, even if the terminal supports them
+      --color <WHEN>            Control the use of color in output [possible values: auto, always, never]
+      --render-links <WHEN>     Whether to render OSC 8 links in the output [env: ZIZMOR_RENDER_LINKS=] [default: auto] [possible values: auto, always, never]
+      --show-audit-urls <WHEN>  Whether to render audit URLs in the output, separately from any URLs embedded in OSC 8 links [env: ZIZMOR_SHOW_AUDIT_URLS=] [default: auto] [possible values: auto, always, never]
+      --no-exit-codes           Disable all error codes besides success and tool failure
 
 Network Options:
   -o, --offline                    Perform only offline operations [env: ZIZMOR_OFFLINE=]
@@ -49,7 +36,6 @@ Options:
   -c, --config <FILE>        The configuration file to load. This loads a single configuration file across all input groups, which may not be what you intend [env: ZIZMOR_CONFIG=]
       --no-config            Disable all configuration loading
       --completions <SHELL>  Generate tab completion scripts for the specified shell [possible values: bash, elvish, fish, nushell, powershell, zsh]
-      --color <WHEN>         Control the use of color in output [possible values: auto, always, never]
       --thanks               Emit thank-you messages for zizmor's sponsors
   -h, --help                 Print help (see more with '--help')
   -V, --version              Print version

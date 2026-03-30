@@ -86,17 +86,10 @@ const STYLES: Styles = Styles::styled()
 #[derive(Parser)]
 #[command(about, version, styles = STYLES)]
 #[command(disable_help_flag = true, disable_version_flag = true)]
+#[command(next_display_order = 1)]
 struct App {
-    /// The inputs to audit.
-    ///
-    /// These can be individual workflow filenames, action definitions
-    /// (typically `action.yml`), entire directories, or a `user/repo` slug
-    /// for a GitHub repository. In the latter case, a `@ref` can be appended
-    /// to audit the repository at a particular git reference state.
-    ///
-    /// Use `-` to read a single input from stdin.
-    #[arg(required = true)]
-    inputs: Vec<String>,
+    #[command(flatten)]
+    input: InputArgs,
 
     #[command(flatten)]
     audit: AuditArgs,
@@ -123,6 +116,33 @@ impl App {
         .try_into()
         .expect("failed to turn cache directory into a sane path")
     }
+}
+
+#[derive(Debug, Args)]
+#[command(next_help_heading = "Input Options")]
+struct InputArgs {
+    /// The inputs to audit.
+    ///
+    /// These can be individual workflow filenames, action definitions
+    /// (typically `action.yml`), entire directories, or a `user/repo` slug
+    /// for a GitHub repository. In the latter case, a `@ref` can be appended
+    /// to audit the repository at a particular git reference state.
+    ///
+    /// Use `-` to read a single input from stdin.
+    #[arg(required = true, value_name = "INPUT", display_order = 0)]
+    inputs: Vec<String>,
+
+    /// Control which kinds of inputs are collected for auditing.
+    ///
+    /// By default, all workflows and composite actions are collected,
+    /// while honoring `.gitignore` files.
+    #[arg(long, default_values = ["default"], num_args=1.., value_delimiter=',', value_name = "KIND")]
+    collect: Vec<CliCollectionMode>,
+
+    /// Fail instead of warning on syntax and schema errors
+    /// in collected inputs.
+    #[arg(long)]
+    strict_collection: bool,
 }
 
 #[derive(Debug, Args)]
@@ -153,19 +173,12 @@ struct AuditArgs {
     persona: Persona,
 
     /// Filter all results below this severity.
-    #[arg(long)]
+    #[arg(long, value_name = "LEVEL")]
     min_severity: Option<CliSeverity>,
 
     /// Filter all results below this confidence.
-    #[arg(long)]
+    #[arg(long, value_name = "LEVEL")]
     min_confidence: Option<CliConfidence>,
-
-    /// Control which kinds of inputs are collected for auditing.
-    ///
-    /// By default, all workflows and composite actions are collected,
-    /// while honoring `.gitignore` files.
-    #[arg(long, default_values = ["default"], num_args=1.., value_delimiter=',')]
-    collect: Vec<CliCollectionMode>,
 }
 
 #[derive(Debug, Args)]
@@ -174,13 +187,17 @@ struct OutputArgs {
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
 
+    /// The output format to emit. By default, cargo-style diagnostics will be emitted.
+    #[arg(long, value_enum, default_value_t, value_name = "KIND")]
+    format: OutputFormat,
+
     /// Don't show progress bars, even if the terminal supports them.
     #[arg(long)]
     no_progress: bool,
 
-    /// The output format to emit. By default, cargo-style diagnostics will be emitted.
-    #[arg(long, value_enum, default_value_t)]
-    format: OutputFormat,
+    /// Control the use of color in output.
+    #[arg(long, value_enum, value_name = "WHEN")]
+    color: Option<ColorMode>,
 
     /// Whether to render OSC 8 links in the output.
     ///
@@ -188,24 +205,31 @@ struct OutputArgs {
     /// produced by audit rules.
     ///
     /// Only affects `--format=plain` (the default).
-    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_RENDER_LINKS")]
+    #[arg(
+        long,
+        value_enum,
+        default_value_t,
+        env = "ZIZMOR_RENDER_LINKS",
+        value_name = "WHEN"
+    )]
     render_links: CliRenderLinks,
 
     /// Whether to render audit URLs in the output, separately from any URLs
     /// embedded in OSC 8 links.
     ///
     /// Only affects `--format=plain` (the default).
-    #[arg(long, value_enum, default_value_t, env = "ZIZMOR_SHOW_AUDIT_URLS")]
+    #[arg(
+        long,
+        value_enum,
+        default_value_t,
+        env = "ZIZMOR_SHOW_AUDIT_URLS",
+        value_name = "WHEN"
+    )]
     show_audit_urls: CliShowAuditUrls,
 
     /// Disable all error codes besides success and tool failure.
     #[arg(long)]
     no_exit_codes: bool,
-
-    /// Fail instead of warning on syntax and schema errors
-    /// in collected inputs.
-    #[arg(long)]
-    strict_collection: bool,
 
     /// Enable naches mode.
     #[arg(long, hide = true, env = "ZIZMOR_NACHES")]
@@ -291,10 +315,6 @@ struct GlobalArgs {
     #[cfg(feature = "schema")]
     #[arg(long, exclusive = true)]
     generate_schema: bool,
-
-    /// Control the use of color in output.
-    #[arg(long, value_enum, value_name = "WHEN")]
-    color: Option<ColorMode>,
 
     /// Emit thank-you messages for zizmor's sponsors.
     #[arg(long, exclusive = true)]
@@ -766,7 +786,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         return Ok(ExitCode::SUCCESS);
     }
 
-    let color_mode = match app.args.color {
+    let color_mode = match app.output.color {
         Some(color_mode) => color_mode,
         None => {
             // If `--color` wasn't specified, we first check a handful
@@ -861,8 +881,8 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     // Validate stdin input constraints: `-` must be the only input,
     // and cannot be combined with `--fix`.
-    if app.inputs.iter().any(|i| i == "-") {
-        if app.inputs.len() > 1 {
+    if app.input.inputs.iter().any(|i| i == "-") {
+        if app.input.inputs.len() > 1 {
             let mut cmd = App::command();
             cmd.error(
                 clap::error::ErrorKind::ArgumentConflict,
@@ -881,7 +901,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         }
     }
 
-    let collection_mode_set = CollectionModeSet::from(app.audit.collect.as_slice());
+    let collection_mode_set = CollectionModeSet::from(app.input.collect.as_slice());
 
     let min_severity = match app.audit.min_severity {
         Some(CliSeverity::Unknown) => {
@@ -919,13 +939,13 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     let collection_options = CollectionOptions {
         mode_set: collection_mode_set,
-        strict: app.output.strict_collection,
+        strict: app.input.strict_collection,
         no_config: app.args.no_config,
         global_config,
     };
 
     let registry = collect_inputs(
-        app.inputs.as_slice(),
+        app.input.inputs.as_slice(),
         &collection_options,
         gh_client.as_ref(),
     )
