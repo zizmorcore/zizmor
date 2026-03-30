@@ -51,5 +51,5 @@ Options:
       --completions <SHELL>  Generate tab completion scripts for the specified shell [possible values: bash, elvish, fish, nushell, powershell, zsh]
       --color <WHEN>         Control the use of color in output [possible values: auto, always, never]
       --thanks               Emit thank-you messages for zizmor's sponsors
-  -h, --help                 Print help (see a more with '--help')
+  -h, --help                 Print help (see more with '--help')
   -V, --version              Print version

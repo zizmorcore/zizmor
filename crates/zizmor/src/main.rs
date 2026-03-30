@@ -304,7 +304,7 @@ struct GlobalArgs {
     #[arg(
         short,
         long,
-        help = "Print help (see a more with '--help')",
+        help = "Print help (see more with '--help')",
         long_help = "Print help (see a summary with '-h')",
         action = ArgAction::Help
     )]
