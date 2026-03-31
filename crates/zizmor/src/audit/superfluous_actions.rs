@@ -78,7 +78,7 @@ static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona)>
             ),
             (
                 "svenstaro/upload-release-action".parse().unwrap(),
-                "use `gh release upload` in a script step",
+                "use `gh release create` and `gh release upload` in a script step",
                 Persona::Regular,
             ),
             (
