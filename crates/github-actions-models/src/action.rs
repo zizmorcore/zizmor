@@ -144,7 +144,7 @@ pub enum StepBody {
 
         /// Any inputs to the action being used.
         #[serde(default)]
-        with: Env,
+        with: LoE<Env>,
     },
     /// A step that runs a command in a shell.
     Run {

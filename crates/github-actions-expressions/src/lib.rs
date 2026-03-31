@@ -14,7 +14,6 @@ use crate::{
 };
 
 use self::parser::{ExprParser, Rule};
-use anyhow::Result;
 use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 
@@ -23,6 +22,17 @@ pub mod context;
 pub mod identifier;
 pub mod literal;
 pub mod op;
+
+/// Errors that can occur during expression parsing.
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    /// The expression failed to parse according to the grammar.
+    #[error("Parse error: {0}")]
+    Pest(#[from] pest::error::Error<Rule>),
+    /// The expression contains an invalid function call.
+    #[error("Invalid function call")]
+    Call(#[from] call::Error),
+}
 
 // Isolates the ExprParser, Rule and other generated types
 // so that we can do `missing_docs` at the top-level.
@@ -137,7 +147,7 @@ impl<'a> SpannedExpr<'a> {
                 // These functions, when evaluated, produce an evaluation
                 // that includes some or all of the contexts listed in
                 // their arguments.
-                if func == "toJSON" || func == "format" || func == "join" {
+                if matches!(func, Function::ToJSON | Function::Format | Function::Join) {
                     for arg in args {
                         contexts.extend(arg.dataflow_contexts());
                     }
@@ -338,17 +348,18 @@ impl<'src> Expr<'src> {
             Expr::UnOp { op: _, expr } => expr.constant_reducible(),
             Expr::Call(Call { func, args }) => {
                 // These functions are reducible if their arguments are reducible.
-                if func == "format"
-                    || func == "contains"
-                    || func == "startsWith"
-                    || func == "endsWith"
-                    || func == "toJSON"
-                    // TODO(ww): `fromJSON` *is* frequently reducible, but
-                    // doing so soundly with subexpressions is annoying.
-                    // We overapproximate for now and consider it non-reducible.
-                    // || func == "fromJSON"
-                    || func == "join"
-                {
+                // TODO(ww): `fromJSON` *is* frequently reducible, but
+                // doing so soundly with subexpressions is annoying.
+                // We overapproximate for now and consider it non-reducible.
+                if matches!(
+                    func,
+                    Function::Contains
+                        | Function::StartsWith
+                        | Function::EndsWith
+                        | Function::Format
+                        | Function::ToJSON
+                        | Function::Join // | Function::FromJSON
+                ) {
                     args.iter().all(|e| e.constant_reducible())
                 } else {
                     false
@@ -361,7 +372,7 @@ impl<'src> Expr<'src> {
 
     /// Parses the given string into an expression.
     #[allow(clippy::unwrap_used)]
-    pub fn parse(expr: &'src str) -> Result<SpannedExpr<'src>> {
+    pub fn parse(expr: &'src str) -> Result<SpannedExpr<'src>, Error> {
         // Top level `expression` is a single `or_expr`.
         let or_expr = ExprParser::parse(Rule::expression, expr)?
             .next()
@@ -370,7 +381,7 @@ impl<'src> Expr<'src> {
             .next()
             .unwrap();
 
-        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr<'_>>> {
+        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr<'_>>, Error> {
             // We're parsing a pest grammar, which isn't left-recursive.
             // As a result, we have constructions like
             // `or_expr = { and_expr ~ ("||" ~ and_expr)* }`, which
@@ -547,12 +558,11 @@ impl<'src> Expr<'src> {
                         .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
+                    let call = Call::new(identifier.as_str(), args)?;
+
                     Ok(SpannedExpr::new(
                         Origin::new(span.start()..span.end(), raw),
-                        Expr::Call(Call {
-                            func: Function(identifier.as_str()),
-                            args,
-                        }),
+                        Expr::Call(call),
                     )
                     .into())
                 }
@@ -937,11 +947,10 @@ impl<'src> Expr<'src> {
 mod tests {
     use std::borrow::Cow;
 
-    use anyhow::Result;
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use crate::{Call, Literal, Origin, SpannedExpr};
+    use crate::{Call, Error, Literal, Origin, SpannedExpr};
 
     use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
 
@@ -989,16 +998,6 @@ mod tests {
 
             assert_eq!(expr.as_str(), *expected);
         }
-    }
-
-    #[test]
-    fn test_function_eq() {
-        let func = Function("foo");
-        assert_eq!(&func, "foo");
-        assert_eq!(&func, "FOO");
-        assert_eq!(&func, "Foo");
-
-        assert_eq!(func, Function("FOO"));
     }
 
     #[test]
@@ -1075,7 +1074,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_expr_rule() -> Result<()> {
+    fn test_parse_expr_rule() -> Result<(), Error> {
         // Ensures that we parse multi-line expressions correctly.
         let multiline = "github.repository_owner == 'Homebrew' &&
         ((github.event_name == 'pull_request_review' && github.event.review.state == 'approved') ||
@@ -1233,15 +1232,15 @@ mod tests {
                 ),
             ),
             (
-                "foo(1, 2, 3)",
+                "format('{0} {1}', 2, 3)",
                 SpannedExpr::new(
-                    Origin::new(0..12, "foo(1, 2, 3)"),
+                    Origin::new(0..23, "format('{0} {1}', 2, 3)"),
                     Expr::Call(Call {
-                        func: Function("foo"),
+                        func: Function::Format,
                         args: vec![
-                            SpannedExpr::new(Origin::new(4..5, "1"), 1.0.into()),
-                            SpannedExpr::new(Origin::new(7..8, "2"), 2.0.into()),
-                            SpannedExpr::new(Origin::new(10..11, "3"), 3.0.into()),
+                            SpannedExpr::new(Origin::new(7..16, "'{0} {1}'"), "{0} {1}".into()),
+                            SpannedExpr::new(Origin::new(18..19, "2"), 2.0.into()),
+                            SpannedExpr::new(Origin::new(21..22, "3"), 3.0.into()),
                         ],
                     }),
                 ),
@@ -1437,7 +1436,7 @@ mod tests {
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(7..29, "format('{0}', 'event')"),
                                 Expr::Call(Call {
-                                    func: Function("format"),
+                                    func: Function::Format,
                                     args: vec![
                                         SpannedExpr::new(
                                             Origin::new(14..19, "'{0}'"),
@@ -1489,7 +1488,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_constant_reducible() -> Result<()> {
+    fn test_expr_constant_reducible() -> Result<(), Error> {
         for (expr, reducible) in &[
             ("'foo'", true),
             ("1", true),
@@ -1531,7 +1530,7 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluate_constant_complex_expressions() -> Result<()> {
+    fn test_evaluate_constant_complex_expressions() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -1563,7 +1562,7 @@ mod tests {
     }
 
     #[test]
-    fn test_case_insensitive_string_comparison() -> Result<()> {
+    fn test_case_insensitive_string_comparison() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -1816,7 +1815,7 @@ mod tests {
     }
 
     #[test]
-    fn test_github_actions_logical_semantics() -> Result<()> {
+    fn test_github_actions_logical_semantics() -> Result<(), Error> {
         use crate::Evaluation;
 
         // Test GitHub Actions-specific && and || semantics
@@ -1851,7 +1850,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_has_constant_reducible_subexpr() -> Result<()> {
+    fn test_expr_has_constant_reducible_subexpr() -> Result<(), Error> {
         for (expr, reducible) in &[
             // Literals are not considered reducible subexpressions.
             ("'foo'", false),
@@ -1872,7 +1871,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_contexts() -> Result<()> {
+    fn test_expr_contexts() -> Result<(), Error> {
         // A single context.
         let expr = Expr::parse("foo.bar.baz[1].qux")?;
         assert_eq!(
@@ -1898,7 +1897,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_dataflow_contexts() -> Result<()> {
+    fn test_expr_dataflow_contexts() -> Result<(), Error> {
         // Trivial cases.
         let expr = Expr::parse("foo.bar")?;
         assert_eq!(
@@ -1982,7 +1981,7 @@ mod tests {
     }
 
     #[test]
-    fn test_spannedexpr_computed_indices() -> Result<()> {
+    fn test_spannedexpr_computed_indices() -> Result<(), Error> {
         for (expr, computed_indices) in &[
             ("foo.bar", vec![]),
             ("foo.bar[1]", vec![]),
@@ -2014,9 +2013,9 @@ mod tests {
             ("foo==bar", "foo==bar"),
             ("foo    ==   bar", r"foo\s+==\s+bar"),
             ("foo == bar", r"foo\s+==\s+bar"),
-            ("foo(bar)", "foo(bar)"),
-            ("foo(bar, baz)", r"foo\(bar,\s+baz\)"),
-            ("foo (bar, baz)", r"foo\s+\(bar,\s+baz\)"),
+            ("fromJSON('{}')", "fromJSON('{}')"),
+            ("fromJSON('{ }')", r"fromJSON\('\{\s+\}'\)"),
+            ("fromJSON ('{ }')", r"fromJSON\s+\('\{\s+\}'\)"),
             ("a . b . c . d", r"a\s+\.\s+b\s+\.\s+c\s+\.\s+d"),
             ("true \n && \n false", r"true\s+\&\&\s+false"),
         ] {

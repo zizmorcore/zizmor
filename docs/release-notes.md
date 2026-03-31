@@ -35,6 +35,13 @@ of `zizmor`.
 
 * Recommend `gh release upload` as a replacement for @svenstaro/upload-release-action in [superfluous-actions] (#1801)
 
+* `obfuscation` audit emits a finding that `with: ${{ expr }}` clauses cannot
+  be analyzed (#1772)
+
+* `zizmor --help` is now rendered with option groups for improved readability (#1831)
+
+    Many thanks to @deckstose for implementing this improvement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [concurrency-limits] audit reported findings
@@ -53,12 +60,29 @@ of `zizmor`.
 * Fixed a bug where expressions with invalid identifiers (such as `-Inf`) would
   be incorrectly accepted (#1794)
 
+* Fixed a bug where the [known-vulnerable-actions] audit would fail to handle
+  multiple discrete packages in a single advisory (#1810)
+
+* Fixed a bug where the [template-injection] audit would incorrectly flag
+  `needs.*.result` as an injection risk in the default persona (#1814)
+
 ### Changes ⚠️
+
+* Fixed a bug where `with: ${{ expr }}` clauses would cause a crash.
+  `artipacked` audit emits a pedantic finding on such clauses. (#1772)
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
   persona, due to numerous false positives and negatives caused by GitHub's
   platform limitations (primarily around interactions between environment
   secrets and reusable workflows) (#1777)
+
+* zizmor's handling of GitHub Actions expressions has been made stricter,
+  and now rejects unknown functions and function calls with incorrect
+  arities (#1823, #1826)
+
+* The [superfluous-actions] audit now uses the "pedantic" persona for some
+  findings along with a low confidence marker to signal when a action
+  may not be easily replaced with built-in functionality (#1822)
 
 ## 1.23.1
 

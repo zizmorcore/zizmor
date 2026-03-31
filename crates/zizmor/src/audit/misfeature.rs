@@ -1,4 +1,4 @@
-use github_actions_models::common::Uses;
+use github_actions_models::common::{Uses, expr::LoE};
 use subfeature::Subfeature;
 
 use crate::{
@@ -30,7 +30,7 @@ impl Misfeature {
         match step.body() {
             StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
-                with,
+                with: LoE::Literal(with),
             } => {
                 if uses.matches("actions/setup-python") && with.contains_key("pip-install") {
                     // The `pip-install` input was added to setup-python in v6.1.0.

@@ -2,20 +2,70 @@
 
 use crate::{Evaluation, SpannedExpr};
 
+/// Errors that can occur during parsing of function calls.
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    /// An unknown function name was encountered during parsing.
+    #[error("Unknown function: {0}")]
+    UnknownFunction(String),
+    /// A function was called with an incorrect number of arguments.
+    #[error("Incorrect arguments for function {0:?}: expected {1}")]
+    Arity(Function, &'static str),
+}
+
 /// Represents a function in a GitHub Actions expression.
 ///
 /// Function names are case-insensitive.
-#[derive(Debug)]
-pub struct Function<'src>(pub(crate) &'src str);
-
-impl PartialEq for Function<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq_ignore_ascii_case(other.0)
-    }
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Function {
+    /// `contains(haystack, needle)`
+    Contains,
+    /// `startsWith(string, prefix)`
+    StartsWith,
+    /// `endsWith(string, suffix)`
+    EndsWith,
+    /// `format(fmtspec, args...)`
+    Format,
+    /// `join(separator, items...)`
+    Join,
+    /// `toJSON(value)`
+    ToJSON,
+    /// `fromJSON(json)`
+    FromJSON,
+    /// `hashFiles(glob, ...)`
+    HashFiles,
+    /// `case(pred1, val1, pred2, val2, ..., default)`
+    Case,
+    // Special status-check functions.
+    // See: <https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#status-check-functions>
+    /// `success()`
+    Success,
+    /// `always()`
+    Always,
+    /// `cancelled()`
+    Cancelled,
+    /// `failure()`
+    Failure,
 }
-impl PartialEq<str> for Function<'_> {
-    fn eq(&self, other: &str) -> bool {
-        self.0.eq_ignore_ascii_case(other)
+
+impl Function {
+    pub(crate) fn new(name: &str) -> Option<Self> {
+        match name.to_ascii_lowercase().as_str() {
+            "contains" => Some(Self::Contains),
+            "startswith" => Some(Self::StartsWith),
+            "endswith" => Some(Self::EndsWith),
+            "format" => Some(Self::Format),
+            "join" => Some(Self::Join),
+            "tojson" => Some(Self::ToJSON),
+            "fromjson" => Some(Self::FromJSON),
+            "hashfiles" => Some(Self::HashFiles),
+            "case" => Some(Self::Case),
+            "success" => Some(Self::Success),
+            "always" => Some(Self::Always),
+            "cancelled" => Some(Self::Cancelled),
+            "failure" => Some(Self::Failure),
+            _ => None,
+        }
     }
 }
 
@@ -23,12 +73,44 @@ impl PartialEq<str> for Function<'_> {
 #[derive(Debug, PartialEq)]
 pub struct Call<'src> {
     /// The function name, e.g. `foo` in `foo()`.
-    pub func: Function<'src>,
+    pub func: Function,
     /// The function's arguments.
     pub args: Vec<SpannedExpr<'src>>,
 }
 
 impl<'src> Call<'src> {
+    pub(crate) fn new(func: &str, args: Vec<SpannedExpr<'src>>) -> Result<Self, Error> {
+        let func = Function::new(func).ok_or_else(|| Error::UnknownFunction(func.to_string()))?;
+
+        match func {
+            Function::Contains | Function::StartsWith | Function::EndsWith if args.len() != 2 => {
+                return Err(Error::Arity(func, "exactly 2 arguments"));
+            }
+            Function::ToJSON | Function::FromJSON if args.len() != 1 => {
+                return Err(Error::Arity(func, "exactly 1 argument"));
+            }
+            Function::Join | Function::HashFiles if args.is_empty() => {
+                return Err(Error::Arity(func, "at least 1 argument"));
+            }
+            Function::Case => {
+                if args.len() < 3 {
+                    return Err(Error::Arity(func, "at least 3 arguments"));
+                }
+                if args.len().is_multiple_of(2) {
+                    return Err(Error::Arity(func, "odd number of arguments"));
+                }
+            }
+            Function::Success | Function::Always | Function::Cancelled | Function::Failure
+                if !args.is_empty() =>
+            {
+                return Err(Error::Arity(func, "no arguments"));
+            }
+            _ => (),
+        }
+
+        Ok(Self { func, args })
+    }
+
     /// Performs constant evaluation of a GitHub Actions expression
     /// function call.
     pub(crate) fn consteval(&self) -> Option<Evaluation> {
@@ -39,13 +121,14 @@ impl<'src> Call<'src> {
             .collect::<Option<Vec<Evaluation>>>()?;
 
         match &self.func {
-            f if f == "format" => Self::consteval_format(&args),
-            f if f == "contains" => Self::consteval_contains(&args),
-            f if f == "startsWith" => Self::consteval_startswith(&args),
-            f if f == "endsWith" => Self::consteval_endswith(&args),
-            f if f == "toJSON" => Self::consteval_tojson(&args),
-            f if f == "fromJSON" => Self::consteval_fromjson(&args),
-            f if f == "join" => Self::consteval_join(&args),
+            Function::Format => Self::consteval_format(&args),
+            Function::Contains => Self::consteval_contains(&args),
+            Function::StartsWith => Self::consteval_startswith(&args),
+            Function::EndsWith => Self::consteval_endswith(&args),
+            Function::ToJSON => Self::consteval_tojson(&args),
+            Function::FromJSON => Self::consteval_fromjson(&args),
+            Function::Join => Self::consteval_join(&args),
+            Function::Case => Self::consteval_case(&args),
             _ => None,
         }
     }
@@ -324,16 +407,51 @@ impl<'src> Call<'src> {
             Evaluation::Object(_) => Some(Evaluation::String("".to_string())),
         }
     }
+
+    /// Constant-evaluates a `case(pred1, val1, pred2, val2, ..., default)` call.
+    ///
+    /// See: <https://github.com/actions/languageservices/blob/83de320ba99ee2bdbb14a2869462a8033714cd96/expressions/src/funcs/case.ts>
+    fn consteval_case(args: &[Evaluation]) -> Option<Evaluation> {
+        if args.len() < 3 || args.len().is_multiple_of(2) {
+            return None;
+        }
+
+        let (pairs, default) = args.as_chunks::<2>();
+        for pair in pairs {
+            let pred = &pair[0];
+            let val = &pair[1];
+
+            match pred {
+                Evaluation::Boolean(true) => return Some(val.clone()),
+                Evaluation::Boolean(false) => continue,
+                // `case` predicates must be booleans; non-booleans are not coerced.
+                _ => return None,
+            }
+        }
+
+        // Default case
+        Some(default[0].clone())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Result;
-
-    use crate::{Expr, call::Call};
+    use crate::{
+        Error, Expr,
+        call::{Call, Function},
+    };
 
     #[test]
-    fn test_consteval_fromjson() -> Result<()> {
+    fn test_function_new() {
+        assert_eq!(Function::new("contains"), Some(Function::Contains));
+        assert_eq!(Function::new("STARTSWITH"), Some(Function::StartsWith));
+        assert_eq!(Function::new("endsWith"), Some(Function::EndsWith));
+
+        assert_eq!(Function::new("unknown"), None);
+    }
+
+    #[test]
+    fn test_consteval_fromjson() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -420,7 +538,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_fromjson_error_cases() -> Result<()> {
+    fn test_consteval_fromjson_error_cases() -> Result<(), Error> {
         let error_cases = &[
             "fromJSON('')",          // Empty string
             "fromJSON('   ')",       // Whitespace only
@@ -443,7 +561,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_fromjson_display_format() -> Result<()> {
+    fn test_consteval_fromjson_display_format() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -462,7 +580,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_tojson_fromjson_roundtrip() -> Result<()> {
+    fn test_consteval_tojson_fromjson_roundtrip() -> Result<(), Error> {
         use crate::Evaluation;
 
         // Test round-trip conversion for complex structures
@@ -508,7 +626,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_format() -> Result<()> {
+    fn test_consteval_format() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -584,7 +702,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_format_error_cases() -> Result<()> {
+    fn test_consteval_format_error_cases() -> Result<(), Error> {
         let error_cases = &[
             // Invalid format strings
             "format('{0', 'test')",        // Missing closing brace
@@ -610,7 +728,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_contains() -> Result<()> {
+    fn test_consteval_contains() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -690,7 +808,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_join() -> Result<()> {
+    fn test_consteval_join() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -778,7 +896,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_endswith() -> Result<()> {
+    fn test_consteval_endswith() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -859,7 +977,7 @@ mod tests {
     }
 
     #[test]
-    fn test_consteval_startswith() -> Result<()> {
+    fn test_consteval_startswith() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -958,7 +1076,44 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluate_constant_functions() -> Result<()> {
+    fn test_consteval_case() -> Result<(), Error> {
+        use crate::Evaluation;
+
+        let test_cases = &[
+            // Basic `case` with two predicates
+            (
+                "case(true, 'yes', false, 'no', 'maybe')",
+                Some(Evaluation::String("yes".to_string())),
+            ),
+            (
+                "case(false, 'yes', true, 'no', 'maybe')",
+                Some(Evaluation::String("no".to_string())),
+            ),
+            // `case` with multiple predicates
+            (
+                "case(false, 'first', false, 'second', true, 'third', 'default')",
+                Some(Evaluation::String("third".to_string())),
+            ),
+            // `case` with default value
+            (
+                "case(false, 'first', false, 'second', false, 'third', 'default')",
+                Some(Evaluation::String("default".to_string())),
+            ),
+            // Invalid: `case` with non-boolean predicate
+            ("case(1, 'yes', 0, 'no', 'maybe')", None),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            let expr = Expr::parse(expr_str)?;
+            let result = expr.consteval();
+            assert_eq!(result, *expected, "Failed for expression: {}", expr_str);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluate_constant_functions() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[

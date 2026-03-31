@@ -1345,11 +1345,11 @@ the risk of secrets being exposed to untrusted code or compromised workflows.
 
 !!! note
 
-    These findings are only shown when running with the "auditor"
-    [persona](./usage.md#using-personas), as fixing them requires
-    careful consideration of GitHub's platform limitations. In particular,
-    as of March 2026 environment secrets do not interact correctly with
-    reusable workflows unless the caller workflow uses `secrets: inherit`,
+    Starting with zizmor 1.24.0, these findings are only shown when running
+    with the "auditor" [persona](./usage.md#using-personas), as fixing them
+    requires careful consideration of GitHub's platform limitations. In
+    particular, as of March 2026 environment secrets do not interact correctly
+    with reusable workflows unless the caller workflow uses `secrets: inherit`,
     which is itself flagged by [secrets-inherit](./audits.md#secrets-inherit).
     
 ### Remediation
@@ -1394,6 +1394,10 @@ the job or jobs that need a secret should use the corresponding environment.
         ```
 
 ### Configuration { #secrets-outside-env-configuration }
+
+!!! tip
+
+    `secrets-outside-env` is configurable in `v1.24.0` and later. 
 
 #### `rules.secrets-outside-env.config.allow`
 

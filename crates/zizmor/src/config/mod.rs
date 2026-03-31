@@ -643,9 +643,9 @@ impl Config {
     /// Returns `Ok(None)` unless the user explicitly specifies
     /// a config file with `--config`.
     pub(crate) fn global(app: &App) -> Result<Option<Self>, ConfigError> {
-        if app.no_config {
+        if app.args.no_config {
             Ok(None)
-        } else if let Some(path) = &app.config {
+        } else if let Some(path) = &app.args.config {
             tracing::debug!("loading config from `{path}`");
 
             let contents = fs::read_to_string(path).map_err(|err| ConfigError {

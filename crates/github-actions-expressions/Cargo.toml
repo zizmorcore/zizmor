@@ -14,7 +14,7 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
-anyhow.workspace = true
+thiserror.workspace = true
 itertools.workspace = true
 pest.workspace = true
 pest_derive.workspace = true

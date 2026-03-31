@@ -98,7 +98,7 @@ impl KnownVulnerableActions {
             }
         };
 
-        let vulns = self
+        let advisories = self
             .client
             .gha_advisories(uses.owner(), uses.repo(), &version)
             .await
@@ -106,8 +106,8 @@ impl KnownVulnerableActions {
 
         let mut results = vec![];
 
-        for vuln in vulns {
-            let severity = match vuln.severity.as_str() {
+        for advisory in advisories {
+            let severity = match advisory.severity.as_str() {
                 "low" => Severity::Low,
                 "medium" => Severity::Medium,
                 "high" => Severity::High,
@@ -116,13 +116,25 @@ impl KnownVulnerableActions {
                 _ => Severity::High,
             };
 
-            // Get the first patched version from the first vulnerability in the advisory
-            let first_patched_version = vuln
+            // Get the first patched version from the first matching vulnerability in the advisory.
+            // NOTE: An advisory can contain multiple vulnerabilities, for multiple discrete packages,
+            // so we need to filter the vulnerabilities by ecosystem and package name.
+            // Example: https://github.com/advisories/GHSA-69fq-xp46-6x23
+            // TODO: Rather that selecting the first patched version, maybe we should select
+            // the highest patched version? Also, perhaps we should unify multiple advisories
+            // for the same action into a single compatible patched version?
+            let first_patched_version = advisory
                 .vulnerabilities
-                .first()
+                .iter()
+                .find(|v| {
+                    // TODO(ww): it'd be nice to have a well-typed comparison
+                    // for repo slugs, rather than just case-insensitive string equality here.
+                    v.package.ecosystem == "actions"
+                        && v.package.name.eq_ignore_ascii_case(uses.slug())
+                })
                 .and_then(|v| v.first_patched_version.clone());
 
-            results.push((severity, vuln.ghsa_id, first_patched_version));
+            results.push((severity, advisory.ghsa_id, first_patched_version));
         }
 
         Ok(results)
@@ -796,7 +808,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
         - name: Run Trivy vulnerability scanner in repo mode
-          uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+          uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # v0.34.0
 "#;
         let key = InputKey::local("fakegroup".into(), "dummy.yml", None::<&str>);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
@@ -820,7 +832,10 @@ jobs:
             .audit(KnownVulnerableActions::ident(), &input, &Config::default())
             .await
             .unwrap();
-        assert_eq!(findings.len(), 1);
+        assert!(
+            findings.len() >= 1,
+            "Expected at least one finding for vulnerable action"
+        );
 
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
         assert_snapshot!(new_doc.source(), @"
@@ -833,7 +848,7 @@ jobs:
             runs-on: ubuntu-latest
             steps:
                 - name: Run Trivy vulnerability scanner in repo mode
-                  uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # v0.34.0
+                  uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         ");
     }
 

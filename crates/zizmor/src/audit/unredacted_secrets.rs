@@ -1,6 +1,10 @@
 use std::ops::Deref;
 
-use github_actions_expressions::{Expr, SpannedExpr, call::Call, context::Context};
+use github_actions_expressions::{
+    Expr, SpannedExpr,
+    call::{Call, Function},
+    context::Context,
+};
 
 use crate::{
     Confidence, Severity,
@@ -74,7 +78,7 @@ impl UnredactedSecrets {
 
         match expr.deref() {
             Expr::Call(Call { func, args }) => {
-                if func == "fromJSON"
+                if matches!(func, Function::FromJSON)
                     && args.iter().any(
                         |arg| matches!(arg.deref(), Expr::Context(ctx) if ctx.child_of("secrets")),
                     )

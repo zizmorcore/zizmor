@@ -82,6 +82,7 @@
         - aquasecurity/trivy#10322
         - aquasecurity/trivy-action#502
         - aquasecurity/trivy-operator#2910
+        - aquasecurity/vuln-list-update#411
 
 
 -   ![](https://github.com/ariel-os.png?size=40){ width="40" loading=lazy align=left } ariel-os
@@ -285,6 +286,7 @@
 
     ??? example "Examples"
         - canonical/ubuntu.com#16128
+        - canonical/lxd#17961
         - canonical/operator#1656
         - canonical/operator#1721
         - canonical/testflinger#630
@@ -561,6 +563,22 @@
         - emberjs/ember.js#21185
 
 
+-   ![](https://github.com/EpicWink.png?size=40){ width="40" loading=lazy align=left } EpicWink
+
+    ---
+
+    ??? example "Examples"
+        - EpicWink/proxpi@5e04d5e24bb8abfc6ad65721aea1c1781628ac9b
+
+
+-   ![](https://github.com/erlang.png?size=40){ width="40" loading=lazy align=left } erlang
+
+    ---
+
+    ??? example "Examples"
+        - erlang/rebar3#3001
+
+
 -   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl
 
     ---
@@ -700,6 +718,14 @@
         - girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 
 
+-   ![](https://github.com/Giskard-AI.png?size=40){ width="40" loading=lazy align=left } Giskard-AI
+
+    ---
+
+    ??? example "Examples"
+        - Giskard-AI/giskard-oss#2336
+
+
 -   ![](https://github.com/git-lfs.png?size=40){ width="40" loading=lazy align=left } git-lfs
 
     ---
@@ -752,6 +778,14 @@
         - google/zx#1126
 
 
+-   ![](https://github.com/gophercloud.png?size=40){ width="40" loading=lazy align=left } gophercloud
+
+    ---
+
+    ??? example "Examples"
+        - gophercloud/gophercloud#3659
+
+
 -   ![](https://github.com/grafana.png?size=40){ width="40" loading=lazy align=left } grafana
 
     ---
@@ -802,6 +836,14 @@
 
     ??? example "Examples"
         - h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
+
+
+-   ![](https://github.com/h5py.png?size=40){ width="40" loading=lazy align=left } h5py
+
+    ---
+
+    ??? example "Examples"
+        - h5py/h5py#2824
 
 
 -   ![](https://github.com/hanami.png?size=40){ width="40" loading=lazy align=left } hanami
@@ -910,6 +952,14 @@
         - indygreg/python-zstandard@d0bf56011d85faf1c76da38f63d174b275c2cdeb
 
 
+-   ![](https://github.com/inspektor-gadget.png?size=40){ width="40" loading=lazy align=left } inspektor-gadget
+
+    ---
+
+    ??? example "Examples"
+        - inspektor-gadget/inspektor-gadget#5337
+
+
 -   ![](https://github.com/Instagram.png?size=40){ width="40" loading=lazy align=left } Instagram
 
     ---
@@ -956,6 +1006,14 @@
 
     ??? example "Examples"
         - jj-vcs/jj#5076
+
+
+-   ![](https://github.com/JOML-CI.png?size=40){ width="40" loading=lazy align=left } JOML-CI
+
+    ---
+
+    ??? example "Examples"
+        - JOML-CI/JOML@98290c379f54d05d6d27afb11ae88dfd86e35c9d
 
 
 -   ![](https://github.com/Julian.png?size=40){ width="40" loading=lazy align=left } Julian
@@ -1006,6 +1064,14 @@
 
     ??? example "Examples"
         - kubecolor/kubecolor#273
+
+
+-   ![](https://github.com/kubewarden.png?size=40){ width="40" loading=lazy align=left } kubewarden
+
+    ---
+
+    ??? example "Examples"
+        - kubewarden/kubewarden-controller#1596
 
 
 -   ![](https://github.com/libssh2.png?size=40){ width="40" loading=lazy align=left } libssh2
@@ -1070,6 +1136,7 @@
 
     ??? example "Examples"
         - matrix-org/matrix-js-sdk#5212
+        - matrix-org/matrix.org#3299
 
 
 -   ![](https://github.com/maxmind.png?size=40){ width="40" loading=lazy align=left } maxmind
@@ -1104,6 +1171,15 @@
 
     ??? example "Examples"
         - mfussenegger/nvim-lint#710
+
+
+-   ![](https://github.com/michaelbull.png?size=40){ width="40" loading=lazy align=left } michaelbull
+
+    ---
+
+    ??? example "Examples"
+        - michaelbull/kotlin-retry@b030616942c72812b892fec4950f3eca0813cb07
+        - michaelbull/kotlin-result@7f213175f2bf525463fa4e8642956d14aebddc69
 
 
 -   ![](https://github.com/microsoft.png?size=40){ width="40" loading=lazy align=left } microsoft
@@ -1168,6 +1244,7 @@
     ??? example "Examples"
         - mozilla/addons#15751
         - mozilla/fxa#18628
+        - mozilla/fx-private-relay#6364
         - mozilla/neqo#2413
         - mozilla/neqo#2721
 
@@ -1819,6 +1896,14 @@
         - Skyscanner/turbolift#202
 
 
+-   ![](https://github.com/Skyvern-AI.png?size=40){ width="40" loading=lazy align=left } Skyvern-AI
+
+    ---
+
+    ??? example "Examples"
+        - Skyvern-AI/skyvern#5237
+
+
 -   ![](https://github.com/slackapi.png?size=40){ width="40" loading=lazy align=left } slackapi
 
     ---
@@ -1851,6 +1936,14 @@
 
     ??? example "Examples"
         - strawberry-graphql/strawberry#4097
+
+
+-   ![](https://github.com/stx-labs.png?size=40){ width="40" loading=lazy align=left } stx-labs
+
+    ---
+
+    ??? example "Examples"
+        - stx-labs/clarinet#2281
 
 
 -   ![](https://github.com/super-linter.png?size=40){ width="40" loading=lazy align=left } super-linter

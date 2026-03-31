@@ -15,7 +15,7 @@
 
 use std::ops::{BitAnd, BitOr, Not};
 
-use github_actions_models::common::{EnvValue, Uses};
+use github_actions_models::common::{EnvValue, Uses, expr::LoE};
 use indexmap::IndexMap;
 
 use crate::utils::ExtractedExpr;
@@ -67,12 +67,17 @@ impl ActionCoordinate {
             ActionCoordinate::Configurable {
                 uses_pattern: _,
                 control,
-            } => match control.eval(with) {
-                ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
-                ControlEvaluation::Satisfied => Some(Usage::DirectOptIn),
-                ControlEvaluation::NotSatisfied => None,
-                ControlEvaluation::Conditional => Some(Usage::ConditionalOptIn),
-            },
+            } => {
+                let LoE::Literal(with) = with else {
+                    return Some(Usage::ConditionalOptIn);
+                };
+                match control.eval(with) {
+                    ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
+                    ControlEvaluation::Satisfied => Some(Usage::DirectOptIn),
+                    ControlEvaluation::NotSatisfied => None,
+                    ControlEvaluation::Conditional => Some(Usage::ConditionalOptIn),
+                }
+            }
             // The mere presence of this `uses:` implies the expected usage semantics.
             ActionCoordinate::NotConfigurable(_) => Some(Usage::Always),
         }
@@ -474,6 +479,9 @@ mod tests {
           - uses: foo/bar@v1      # 7
             with:
               disable-cache: false
+
+          - uses: foo/bar@v1      # 8
+            with: ${{ fromJson(steps.setup.outputs.options) }}
     "#;
 
         let workflow = Workflow::from_string(
@@ -554,5 +562,9 @@ mod tests {
         // Coordinate `uses:` matches and the opt-out inverts the match, clearing it.
         let step = &steps[7];
         assert_eq!(coord.usage(step), Some(Usage::DirectOptIn));
+
+        // Coordinate `uses:` matches but `with:` is an expression.
+        let step = &steps[8];
+        assert_eq!(coord.usage(step), Some(Usage::ConditionalOptIn));
     }
 }
