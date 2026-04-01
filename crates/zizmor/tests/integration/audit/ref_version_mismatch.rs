@@ -22,7 +22,7 @@ fn test_ref_version_mismatch() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    warning[ref-version-mismatch]: detects commit SHAs that don't match their version comment tags
+    warning[ref-version-mismatch]: action's hash pin does not match version comment
       --> @@INPUT@@:22:77
        |
     22 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.1
