@@ -102,24 +102,6 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         .filter(|l| !l.symbolic.is_primary())
         .collect();
 
-    // Build the message with back-links to related locations.
-    // SARIF embedded links use [text](id) syntax, where id references
-    // a related location's integer ID. GitHub renders these as clickable
-    // modals that users can click through to see more context.
-    let message = if related.is_empty() {
-        finding.desc.to_string()
-    } else {
-        let mut msg = format!("{msg}\n\n via:", msg = finding.desc);
-        for (i, loc) in related.iter().enumerate() {
-            msg.push_str(&format!(
-                "- [{annotation}]({id})",
-                annotation = loc.symbolic.annotation.as_ref(),
-                id = i + 1
-            ));
-        }
-        msg
-    };
-
     // Build related locations with sequential IDs for back-linking.
     let related_locations: Vec<SarifLocation> = related
         .iter()
@@ -168,7 +150,7 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         // code security alert titles when the primary annotation was
         // terse. So now we use the finding's description again, like
         // we did before 1.4.0.
-        .message(Message::builder().text(message).build())
+        .message(Message::builder().text(finding.desc).build())
         .locations(vec![build_location(primary, None)])
         .related_locations(related_locations)
         .code_flows(code_flows)
