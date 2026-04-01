@@ -3,9 +3,10 @@
 use std::collections::HashSet;
 
 use serde_sarif::sarif::{
-    ArtifactContent, ArtifactLocation, Invocation, Location as SarifLocation, LogicalLocation,
-    Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region, ReportingDescriptor,
-    Result as SarifResult, ResultKind, ResultLevel, Run, Sarif, Tool, ToolComponent,
+    ArtifactContent, ArtifactLocation, CodeFlow, Invocation, Location as SarifLocation,
+    LogicalLocation, Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region,
+    ReportingDescriptor, Result as SarifResult, ResultKind, ResultLevel, Run, Sarif, ThreadFlow,
+    ThreadFlowLocation, Tool, ToolComponent,
 };
 
 use crate::finding::{Finding, Severity, location::Location};
@@ -97,6 +98,35 @@ fn build_results(findings: &[Finding]) -> Vec<SarifResult> {
 fn build_result(finding: &Finding<'_>) -> SarifResult {
     let primary = finding.primary_location();
 
+    // Build code flows for better visualization of location chains.
+    // GitHub renders these as step-by-step traces in security alerts.
+    let code_flows = {
+        let thread_flow_locations: Vec<ThreadFlowLocation> = finding
+            .visible_locations()
+            .map(|loc| {
+                let importance = if loc.symbolic.is_primary() {
+                    "essential"
+                } else {
+                    "important"
+                };
+                ThreadFlowLocation::builder()
+                    .location(build_location(loc, None))
+                    // See: <https://github.com/psastras/sarif-rs/pull/972>
+                    .importance(serde_json::Value::String(importance.into()))
+                    .build()
+            })
+            .collect();
+        vec![
+            CodeFlow::builder()
+                .thread_flows(vec![
+                    ThreadFlow::builder()
+                        .locations(thread_flow_locations)
+                        .build(),
+                ])
+                .build(),
+        ]
+    };
+
     SarifResult::builder()
         .rule_id(format!("zizmor/{id}", id = finding.ident))
         // NOTE: Between 1.4.0 and 1.9.0 we used the primary location's
@@ -105,20 +135,9 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         // code security alert titles when the primary annotation was
         // terse. So now we use the finding's description again, like
         // we did before 1.4.0.
-        .message(finding.desc)
-        .locations(build_locations(std::iter::once(primary)))
-        // TODO: Evaluate including the related locations via CodeFlows
-        // instead -- GitHub seems to do a better job of rendering these,
-        // but still doesn't do a great job of putting all of the locations
-        // into the same render.
-        // TODO: Give related locations IDs and back-link to them in the
-        // main location's message -- GitHub renders these as modals that
-        // users can click through to see more context.
-        .related_locations(build_locations(
-            finding
-                .visible_locations()
-                .filter(|l| !l.symbolic.is_primary()),
-        ))
+        .message(Message::builder().text(finding.desc).build())
+        .locations(vec![build_location(primary, None)])
+        .code_flows(code_flows)
         .level(ResultLevel::from(finding.determinations.severity))
         .kind(ResultKind::from(finding.determinations.severity))
         .properties(
@@ -145,57 +164,67 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         .build()
 }
 
-fn build_locations<'a>(locations: impl Iterator<Item = &'a Location<'a>>) -> Vec<SarifLocation> {
-    locations
-        .map(|location| {
-            SarifLocation::builder()
-                .logical_locations([LogicalLocation::builder()
-                    .properties(
-                        PropertyBag::builder()
-                            .additional_properties([(
-                                "symbolic".into(),
-                                serde_json::value::to_value(location.symbolic.clone())
-                                    .expect("failed to serialize symbolic location"),
-                            )])
-                            .build(),
-                    )
-                    .build()])
-                .physical_location(
-                    PhysicalLocation::builder()
-                        .artifact_location(
-                            ArtifactLocation::builder()
-                                .uri(location.symbolic.key.sarif_path())
-                                .build(),
-                        )
-                        .region(
-                            Region::builder()
-                                // NOTE: SARIF lines/columns are 1-based.
-                                .start_line((location.concrete.location.start_point.row as i64) + 1)
-                                .end_line((location.concrete.location.end_point.row as i64) + 1)
-                                .start_column(
-                                    (location.concrete.location.start_point.column as i64) + 1,
-                                )
-                                .end_column(
-                                    (location.concrete.location.end_point.column as i64) + 1,
-                                )
-                                .source_language("yaml")
-                                .snippet(
-                                    ArtifactContent::builder()
-                                        .text(location.concrete.feature)
-                                        .build(),
-                                )
-                                .build(),
-                        )
+fn build_physical_location(location: &Location<'_>) -> PhysicalLocation {
+    PhysicalLocation::builder()
+        .artifact_location(
+            ArtifactLocation::builder()
+                .uri(location.symbolic.key.sarif_path())
+                .build(),
+        )
+        .region(
+            Region::builder()
+                // NOTE: SARIF lines/columns are 1-based.
+                .start_line((location.concrete.location.start_point.row as i64) + 1)
+                .end_line((location.concrete.location.end_point.row as i64) + 1)
+                .start_column((location.concrete.location.start_point.column as i64) + 1)
+                .end_column((location.concrete.location.end_point.column as i64) + 1)
+                .source_language("yaml")
+                .snippet(
+                    ArtifactContent::builder()
+                        .text(location.concrete.feature)
                         .build(),
                 )
-                .message(
-                    Message::builder()
-                        .text(location.symbolic.annotation.as_ref())
-                        .build(),
-                )
-                .build()
-        })
-        .collect()
+                .build(),
+        )
+        .build()
+}
+
+fn build_logical_locations(location: &Location<'_>) -> Vec<LogicalLocation> {
+    vec![
+        LogicalLocation::builder()
+            .properties(
+                PropertyBag::builder()
+                    .additional_properties([(
+                        "symbolic".into(),
+                        serde_json::value::to_value(location.symbolic.clone())
+                            .expect("failed to serialize symbolic location"),
+                    )])
+                    .build(),
+            )
+            .build(),
+    ]
+}
+
+fn build_location(location: &Location<'_>, id: Option<i64>) -> SarifLocation {
+    let message = Message::builder()
+        .text(location.symbolic.annotation.as_ref())
+        .build();
+    let physical = build_physical_location(location);
+    let logical = build_logical_locations(location);
+
+    match id {
+        Some(id) => SarifLocation::builder()
+            .id(id)
+            .logical_locations(logical)
+            .physical_location(physical)
+            .message(message)
+            .build(),
+        None => SarifLocation::builder()
+            .logical_locations(logical)
+            .physical_location(physical)
+            .message(message)
+            .build(),
+    }
 }
 
 #[cfg(test)]

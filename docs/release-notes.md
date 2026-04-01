@@ -43,6 +43,12 @@ of `zizmor`.
 
     Many thanks to @deckstose for implementing this improvement!
 
+* zizmor's SARIF output now uses codeflows instead of related locations,
+  improving its rendering behavior on GitHub Advanced Security (#1843)
+
+* The [ref-version-mismatch] audit now uses a more useful audit description
+  for its findings (#1843)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [concurrency-limits] audit reported findings
