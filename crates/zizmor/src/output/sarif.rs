@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use serde_sarif::sarif::{
     ArtifactContent, ArtifactLocation, CodeFlow, Invocation, Location as SarifLocation,
     LogicalLocation, Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region,
-    ReportingDescriptor, Result as SarifResult, ResultKind, ResultLevel, Run, Sarif,
-    ThreadFlow, ThreadFlowLocation, Tool, ToolComponent,
+    ReportingDescriptor, Result as SarifResult, ResultKind, ResultLevel, Run, Sarif, ThreadFlow,
+    ThreadFlowLocation, Tool, ToolComponent,
 };
 
 use crate::finding::{Finding, Severity, location::Location};
@@ -132,7 +132,9 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
 
     // Build code flows for better visualization of location chains.
     // GitHub renders these as step-by-step traces in security alerts.
-    let all_locations: Vec<_> = std::iter::once(primary).chain(related.iter().copied()).collect();
+    let all_locations: Vec<_> = std::iter::once(primary)
+        .chain(related.iter().copied())
+        .collect();
     let code_flows = if all_locations.len() > 1 {
         let thread_flow_locations: Vec<ThreadFlowLocation> = all_locations
             .iter()
@@ -148,13 +150,15 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
                     .build()
             })
             .collect();
-        vec![CodeFlow::builder()
-            .thread_flows(vec![
-                ThreadFlow::builder()
-                    .locations(thread_flow_locations)
-                    .build(),
-            ])
-            .build()]
+        vec![
+            CodeFlow::builder()
+                .thread_flows(vec![
+                    ThreadFlow::builder()
+                        .locations(thread_flow_locations)
+                        .build(),
+                ])
+                .build(),
+        ]
     } else {
         vec![]
     };
@@ -223,17 +227,19 @@ fn build_physical_location(location: &Location<'_>) -> PhysicalLocation {
 }
 
 fn build_logical_locations(location: &Location<'_>) -> Vec<LogicalLocation> {
-    vec![LogicalLocation::builder()
-        .properties(
-            PropertyBag::builder()
-                .additional_properties([(
-                    "symbolic".into(),
-                    serde_json::value::to_value(location.symbolic.clone())
-                        .expect("failed to serialize symbolic location"),
-                )])
-                .build(),
-        )
-        .build()]
+    vec![
+        LogicalLocation::builder()
+            .properties(
+                PropertyBag::builder()
+                    .additional_properties([(
+                        "symbolic".into(),
+                        serde_json::value::to_value(location.symbolic.clone())
+                            .expect("failed to serialize symbolic location"),
+                    )])
+                    .build(),
+            )
+            .build(),
+    ]
 }
 
 fn build_location(location: &Location<'_>, id: Option<i64>) -> SarifLocation {
