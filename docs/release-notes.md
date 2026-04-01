@@ -33,6 +33,9 @@ of `zizmor`.
   it encounters a cooldown used with a multi-ecosystem-group, as the two
   do not interact well (#1780)
 
+* Recommend `gh release upload` as a replacement for @svenstaro/upload-release-action in
+  [superfluous-actions] (#1801)
+
 * The [obfuscation] audit now emits a finding for `with: ${{ expr }}`
   clauses cannot be analyzed (#1772)
 
