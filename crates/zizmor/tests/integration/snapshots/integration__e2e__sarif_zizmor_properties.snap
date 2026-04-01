@@ -19,6 +19,56 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                 {
                   "locations": [
                     {
+                      "importance": "important",
+                      "location": {
+                        "logicalLocations": [
+                          {
+                            "properties": {
+                              "symbolic": {
+                                "annotation": "this job",
+                                "feature_kind": "Normal",
+                                "key": {
+                                  "Local": {
+                                    "given_path": "@@INPUT@@",
+                                    "prefix": null
+                                  }
+                                },
+                                "kind": "Related",
+                                "route": {
+                                  "route": [
+                                    {
+                                      "Key": "jobs"
+                                    },
+                                    {
+                                      "Key": "hackme"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "message": {
+                          "text": "this job"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "@@INPUT@@"
+                          },
+                          "region": {
+                            "endColumn": 1,
+                            "endLine": 17,
+                            "snippet": {
+                              "text": "  hackme:\n    name: hackme\n    runs-on: ubuntu-latest\n    permissions: write-all\n\n    steps:\n      - name: hackme\n        run: |\n          echo \"${{ github.event.pull_request.title }}\"\n"
+                            },
+                            "sourceLanguage": "yaml",
+                            "startColumn": 3,
+                            "startLine": 8
+                          }
+                        }
+                      }
+                    },
+                    {
                       "importance": "essential",
                       "location": {
                         "logicalLocations": [
@@ -67,56 +117,6 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                             "sourceLanguage": "yaml",
                             "startColumn": 5,
                             "startLine": 11
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "importance": "important",
-                      "location": {
-                        "logicalLocations": [
-                          {
-                            "properties": {
-                              "symbolic": {
-                                "annotation": "this job",
-                                "feature_kind": "Normal",
-                                "key": {
-                                  "Local": {
-                                    "given_path": "@@INPUT@@",
-                                    "prefix": null
-                                  }
-                                },
-                                "kind": "Related",
-                                "route": {
-                                  "route": [
-                                    {
-                                      "Key": "jobs"
-                                    },
-                                    {
-                                      "Key": "hackme"
-                                    }
-                                  ]
-                                }
-                              }
-                            }
-                          }
-                        ],
-                        "message": {
-                          "text": "this job"
-                        },
-                        "physicalLocation": {
-                          "artifactLocation": {
-                            "uri": "@@INPUT@@"
-                          },
-                          "region": {
-                            "endColumn": 1,
-                            "endLine": 17,
-                            "snippet": {
-                              "text": "  hackme:\n    name: hackme\n    runs-on: ubuntu-latest\n    permissions: write-all\n\n    steps:\n      - name: hackme\n        run: |\n          echo \"${{ github.event.pull_request.title }}\"\n"
-                            },
-                            "sourceLanguage": "yaml",
-                            "startColumn": 3,
-                            "startLine": 8
                           }
                         }
                       }
@@ -181,67 +181,73 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
             }
           ],
           "message": {
-            "text": "overly broad permissions [this job](1)"
+            "text": "overly broad permissions"
           },
           "properties": {
             "zizmor/confidence": "High",
             "zizmor/persona": "Regular",
             "zizmor/severity": "High"
           },
-          "relatedLocations": [
-            {
-              "id": 1,
-              "logicalLocations": [
-                {
-                  "properties": {
-                    "symbolic": {
-                      "annotation": "this job",
-                      "feature_kind": "Normal",
-                      "key": {
-                        "Local": {
-                          "given_path": "@@INPUT@@",
-                          "prefix": null
-                        }
-                      },
-                      "kind": "Related",
-                      "route": {
-                        "route": [
-                          {
-                            "Key": "jobs"
-                          },
-                          {
-                            "Key": "hackme"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              ],
-              "message": {
-                "text": "this job"
-              },
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "@@INPUT@@"
-                },
-                "region": {
-                  "endColumn": 1,
-                  "endLine": 17,
-                  "snippet": {
-                    "text": "  hackme:\n    name: hackme\n    runs-on: ubuntu-latest\n    permissions: write-all\n\n    steps:\n      - name: hackme\n        run: |\n          echo \"${{ github.event.pull_request.title }}\"\n"
-                  },
-                  "sourceLanguage": "yaml",
-                  "startColumn": 3,
-                  "startLine": 8
-                }
-              }
-            }
-          ],
           "ruleId": "zizmor/excessive-permissions"
         },
         {
-          "codeFlows": [],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "logicalLocations": [
+                          {
+                            "properties": {
+                              "symbolic": {
+                                "annotation": "pull_request_target is almost always used insecurely",
+                                "feature_kind": "Normal",
+                                "key": {
+                                  "Local": {
+                                    "given_path": "@@INPUT@@",
+                                    "prefix": null
+                                  }
+                                },
+                                "kind": "Primary",
+                                "route": {
+                                  "route": [
+                                    {
+                                      "Key": "on"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "message": {
+                          "text": "pull_request_target is almost always used insecurely"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "@@INPUT@@"
+                          },
+                          "region": {
+                            "endColumn": 23,
+                            "endLine": 3,
+                            "snippet": {
+                              "text": "on:\n  pull_request_target:"
+                            },
+                            "sourceLanguage": "yaml",
+                            "startColumn": 1,
+                            "startLine": 2
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
           "kind": "fail",
           "level": "error",
           "locations": [
@@ -298,7 +304,6 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
             "zizmor/persona": "Regular",
             "zizmor/severity": "High"
           },
-          "relatedLocations": [],
           "ruleId": "zizmor/dangerous-triggers"
         },
         {
@@ -505,72 +510,13 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
             }
           ],
           "message": {
-            "text": "code injection via template expansion [this run block](1)"
+            "text": "code injection via template expansion"
           },
           "properties": {
             "zizmor/confidence": "High",
             "zizmor/persona": "Regular",
             "zizmor/severity": "High"
           },
-          "relatedLocations": [
-            {
-              "id": 1,
-              "logicalLocations": [
-                {
-                  "properties": {
-                    "symbolic": {
-                      "annotation": "this run block",
-                      "feature_kind": "KeyOnly",
-                      "key": {
-                        "Local": {
-                          "given_path": "@@INPUT@@",
-                          "prefix": null
-                        }
-                      },
-                      "kind": "Related",
-                      "route": {
-                        "route": [
-                          {
-                            "Key": "jobs"
-                          },
-                          {
-                            "Key": "hackme"
-                          },
-                          {
-                            "Key": "steps"
-                          },
-                          {
-                            "Index": 0
-                          },
-                          {
-                            "Key": "run"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              ],
-              "message": {
-                "text": "this run block"
-              },
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "@@INPUT@@"
-                },
-                "region": {
-                  "endColumn": 12,
-                  "endLine": 15,
-                  "snippet": {
-                    "text": "run"
-                  },
-                  "sourceLanguage": "yaml",
-                  "startColumn": 9,
-                  "startLine": 15
-                }
-              }
-            }
-          ],
           "ruleId": "zizmor/template-injection"
         }
       ],
