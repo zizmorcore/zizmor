@@ -97,24 +97,10 @@ fn build_results(findings: &[Finding]) -> Vec<SarifResult> {
 
 fn build_result(finding: &Finding<'_>) -> SarifResult {
     let primary = finding.primary_location();
-    let related: Vec<_> = finding
-        .visible_locations()
-        .filter(|l| !l.symbolic.is_primary())
-        .collect();
-
-    // // Build related locations with sequential IDs for back-linking.
-    // let related_locations: Vec<SarifLocation> = related
-    //     .iter()
-    //     .enumerate()
-    //     .map(|(i, loc)| build_location(loc, Some((i + 1) as i64)))
-    //     .collect();
 
     // Build code flows for better visualization of location chains.
     // GitHub renders these as step-by-step traces in security alerts.
-    let all_locations: Vec<_> = std::iter::once(primary)
-        .chain(related.iter().copied())
-        .collect();
-    let code_flows = if all_locations.len() > 1 {
+    let code_flows = {
         let thread_flow_locations: Vec<ThreadFlowLocation> = finding
             .visible_locations()
             .map(|loc| {
@@ -138,8 +124,6 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
                 ])
                 .build(),
         ]
-    } else {
-        vec![]
     };
 
     SarifResult::builder()
@@ -152,7 +136,6 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         // we did before 1.4.0.
         .message(Message::builder().text(finding.desc).build())
         .locations(vec![build_location(primary, None)])
-        // .related_locations(related_locations)
         .code_flows(code_flows)
         .level(ResultLevel::from(finding.determinations.severity))
         .kind(ResultKind::from(finding.determinations.severity))
