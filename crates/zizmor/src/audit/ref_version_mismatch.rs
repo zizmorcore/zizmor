@@ -24,7 +24,7 @@ pub(crate) struct RefVersionMismatch {
 audit_meta!(
     RefVersionMismatch,
     "ref-version-mismatch",
-    "detects commit SHAs that don't match their version comment tags"
+    "action's hash pin does not match version comment"
 );
 
 #[allow(clippy::unwrap_used)]
