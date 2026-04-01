@@ -45,6 +45,9 @@ of `zizmor`.
 * Fixed a bug where the [concurrency-limits] audit reported findings
   at the job level instead of the workflow level (#1627)
 
+* Fixed a bug where `with: ${{ expr }}` clauses would cause a crash.
+  `artipacked` audit emits a pedantic finding on such clauses. (#1772)
+
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
   to preserve an environment variable's casing (#1766)
 
@@ -64,10 +67,10 @@ of `zizmor`.
 * Fixed a bug where the [template-injection] audit would incorrectly flag
   `needs.*.result` as an injection risk in the default persona (#1814)
 
-### Changes ⚠️
+* Fixed a bug where the [unpinned-uses] audit would product incorrect auto-fixes
+  for actions with subpaths (#1841)
 
-* Fixed a bug where `with: ${{ expr }}` clauses would cause a crash.
-  `artipacked` audit emits a pedantic finding on such clauses. (#1772)
+### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
   persona, due to numerous false positives and negatives caused by GitHub's
