@@ -171,7 +171,7 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         .message(Message::builder().text(message).build())
         .locations(vec![build_location(primary, None)])
         .related_locations(related_locations)
-        .code_flows(code_flows)
+        // .code_flows(code_flows)
         .level(ResultLevel::from(finding.determinations.severity))
         .kind(ResultKind::from(finding.determinations.severity))
         .properties(
