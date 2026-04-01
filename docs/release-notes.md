@@ -13,12 +13,12 @@ of `zizmor`.
 
 * `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
 
+### Enhancements 🌱
+
 * The [use-trusted-publishing] audit now detects `bun publish` and `bunx npm publish`
   patterns (#1737)
 
     Many thanks to @shaanmajid for proposing and implementing this improvement!
-
-### Enhancements 🌱
 
 * `zizmor`'s CLI help and usage output now uses a custom color scheme for
   improved readability (#1747)
@@ -33,8 +33,8 @@ of `zizmor`.
   it encounters a cooldown used with a multi-ecosystem-group, as the two
   do not interact well (#1780)
 
-* `obfuscation` audit emits a finding that `with: ${{ expr }}` clauses cannot
-  be analyzed (#1772)
+* The [obfuscation] audit now emits a finding for `with: ${{ expr }}`
+  clauses cannot be analyzed (#1772)
 
 * `zizmor --help` is now rendered with option groups for improved readability (#1831)
 
