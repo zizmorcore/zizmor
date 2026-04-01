@@ -106,23 +106,19 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
     // SARIF embedded links use [text](id) syntax, where id references
     // a related location's integer ID. GitHub renders these as clickable
     // modals that users can click through to see more context.
-    let message = finding.desc;
-    // let message = if related.is_empty() {
-    //     finding.desc.to_string()
-    // } else {
-    //     use std::fmt::Write;
-    //     let mut msg = finding.desc.to_string();
-    //     for (i, loc) in related.iter().enumerate() {
-    //         write!(
-    //             &mut msg,
-    //             " [{annotation}]({id})",
-    //             annotation = loc.symbolic.annotation.as_ref(),
-    //             id = i + 1
-    //         )
-    //         .expect("oops");
-    //     }
-    //     msg
-    // };
+    let message = if related.is_empty() {
+        finding.desc.to_string()
+    } else {
+        let mut msg = format!("{msg}\n\n via:", msg = finding.desc);
+        for (i, loc) in related.iter().enumerate() {
+            msg.push_str(&format!(
+                "- [{annotation}]({id})",
+                annotation = loc.symbolic.annotation.as_ref(),
+                id = i + 1
+            ));
+        }
+        msg
+    };
 
     // Build related locations with sequential IDs for back-linking.
     let related_locations: Vec<SarifLocation> = related
