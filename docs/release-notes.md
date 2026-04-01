@@ -13,12 +13,12 @@ of `zizmor`.
 
 * `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
 
+### Enhancements 🌱
+
 * The [use-trusted-publishing] audit now detects `bun publish` and `bunx npm publish`
   patterns (#1737)
 
     Many thanks to @shaanmajid for proposing and implementing this improvement!
-
-### Enhancements 🌱
 
 * `zizmor`'s CLI help and usage output now uses a custom color scheme for
   improved readability (#1747)
@@ -33,10 +33,11 @@ of `zizmor`.
   it encounters a cooldown used with a multi-ecosystem-group, as the two
   do not interact well (#1780)
 
-* Recommend `gh release upload` as a replacement for @svenstaro/upload-release-action in [superfluous-actions] (#1801)
+* Recommend `gh release upload` as a replacement for @svenstaro/upload-release-action in
+  [superfluous-actions] (#1801)
 
-* `obfuscation` audit emits a finding that `with: ${{ expr }}` clauses cannot
-  be analyzed (#1772)
+* The [obfuscation] audit now emits a finding for `with: ${{ expr }}`
+  clauses cannot be analyzed (#1772)
 
 * `zizmor --help` is now rendered with option groups for improved readability (#1831)
 
@@ -46,6 +47,9 @@ of `zizmor`.
 
 * Fixed a bug where the [concurrency-limits] audit reported findings
   at the job level instead of the workflow level (#1627)
+
+* Fixed a bug where `with: ${{ expr }}` clauses would cause a crash.
+  `artipacked` audit emits a pedantic finding on such clauses. (#1772)
 
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
   to preserve an environment variable's casing (#1766)
@@ -66,10 +70,10 @@ of `zizmor`.
 * Fixed a bug where the [template-injection] audit would incorrectly flag
   `needs.*.result` as an injection risk in the default persona (#1814)
 
-### Changes ⚠️
+* Fixed a bug where the [unpinned-uses] audit would product incorrect auto-fixes
+  for actions with subpaths (#1841)
 
-* Fixed a bug where `with: ${{ expr }}` clauses would cause a crash.
-  `artipacked` audit emits a pedantic finding on such clauses. (#1772)
+### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
   persona, due to numerous false positives and negatives caused by GitHub's

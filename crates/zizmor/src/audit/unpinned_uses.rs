@@ -58,17 +58,23 @@ impl UnpinnedUses {
             }
         };
 
+        let action = if let Some(subpath) = uses.subpath() {
+            format!("{}/{}", uses.slug(), subpath)
+        } else {
+            uses.slug().to_string()
+        };
+
         // For the fix itself, we need to situate two patches:
         // 1. `uses: foo/bar@ref` -> `uses: foo/bar@hashhashhash`
         // 2. A `# <ref>` comment following the `uses:` clause.
         Some(Fix {
-            title: format!("pin {slug}@{ref} to {commit}", slug = uses.slug(), ref = uses.git_ref()),
+            title: format!("pin {action}@{ref} to {commit}", ref = uses.git_ref()),
             key: parent.location().key,
             disposition: Default::default(),
             patches: vec![
                 Patch {
                     route: parent.route().with_key("uses"),
-                    operation: Op::Replace(format!("{slug}@{commit}", slug = uses.slug()).into()),
+                    operation: Op::Replace(format!("{action}@{commit}").into()),
                 },
                 Patch {
                     route: parent.route().with_key("uses"),
@@ -474,6 +480,60 @@ jobs:
             steps:
               -
                 uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        ");
+    }
+
+    #[tokio::test]
+    async fn test_fix_subpath() {
+        let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: bytecodealliance/actions/wasmtime/setup@v1.1.3
+"#;
+
+        let key = InputKey::local(
+            "fakegroup".into(),
+            "test_unpinned_uses_subpath.yml",
+            None::<&str>,
+        );
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = UnpinnedUses::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(UnpinnedUses::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @"
+
+        name: Test
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
         ");
     }
 
