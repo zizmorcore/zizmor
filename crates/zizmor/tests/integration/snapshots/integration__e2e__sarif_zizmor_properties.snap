@@ -13,6 +13,119 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
       ],
       "results": [
         {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "logicalLocations": [
+                          {
+                            "properties": {
+                              "symbolic": {
+                                "annotation": "uses write-all permissions",
+                                "feature_kind": "Normal",
+                                "key": {
+                                  "Local": {
+                                    "given_path": "@@INPUT@@",
+                                    "prefix": null
+                                  }
+                                },
+                                "kind": "Primary",
+                                "route": {
+                                  "route": [
+                                    {
+                                      "Key": "jobs"
+                                    },
+                                    {
+                                      "Key": "hackme"
+                                    },
+                                    {
+                                      "Key": "permissions"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "message": {
+                          "text": "uses write-all permissions"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "@@INPUT@@"
+                          },
+                          "region": {
+                            "endColumn": 27,
+                            "endLine": 11,
+                            "snippet": {
+                              "text": "    permissions: write-all"
+                            },
+                            "sourceLanguage": "yaml",
+                            "startColumn": 5,
+                            "startLine": 11
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "important",
+                      "location": {
+                        "logicalLocations": [
+                          {
+                            "properties": {
+                              "symbolic": {
+                                "annotation": "this job",
+                                "feature_kind": "Normal",
+                                "key": {
+                                  "Local": {
+                                    "given_path": "@@INPUT@@",
+                                    "prefix": null
+                                  }
+                                },
+                                "kind": "Related",
+                                "route": {
+                                  "route": [
+                                    {
+                                      "Key": "jobs"
+                                    },
+                                    {
+                                      "Key": "hackme"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "message": {
+                          "text": "this job"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "@@INPUT@@"
+                          },
+                          "region": {
+                            "endColumn": 1,
+                            "endLine": 17,
+                            "snippet": {
+                              "text": "  hackme:\n    name: hackme\n    runs-on: ubuntu-latest\n    permissions: write-all\n\n    steps:\n      - name: hackme\n        run: |\n          echo \"${{ github.event.pull_request.title }}\"\n"
+                            },
+                            "sourceLanguage": "yaml",
+                            "startColumn": 3,
+                            "startLine": 8
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
           "kind": "fail",
           "level": "error",
           "locations": [
@@ -68,7 +181,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
             }
           ],
           "message": {
-            "text": "overly broad permissions"
+            "text": "overly broad permissions [this job](1)"
           },
           "properties": {
             "zizmor/confidence": "High",
@@ -77,6 +190,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
           },
           "relatedLocations": [
             {
+              "id": 1,
               "logicalLocations": [
                 {
                   "properties": {
@@ -127,6 +241,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
           "ruleId": "zizmor/excessive-permissions"
         },
         {
+          "codeFlows": [],
           "kind": "fail",
           "level": "error",
           "locations": [
@@ -187,6 +302,141 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
           "ruleId": "zizmor/dangerous-triggers"
         },
         {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "logicalLocations": [
+                          {
+                            "properties": {
+                              "symbolic": {
+                                "annotation": "may expand into attacker-controllable code",
+                                "feature_kind": {
+                                  "Subfeature": {
+                                    "after": 7,
+                                    "fragment": {
+                                      "Raw": "github.event.pull_request.title"
+                                    }
+                                  }
+                                },
+                                "key": {
+                                  "Local": {
+                                    "given_path": "@@INPUT@@",
+                                    "prefix": null
+                                  }
+                                },
+                                "kind": "Primary",
+                                "route": {
+                                  "route": [
+                                    {
+                                      "Key": "jobs"
+                                    },
+                                    {
+                                      "Key": "hackme"
+                                    },
+                                    {
+                                      "Key": "steps"
+                                    },
+                                    {
+                                      "Index": 0
+                                    },
+                                    {
+                                      "Key": "run"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "message": {
+                          "text": "may expand into attacker-controllable code"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "@@INPUT@@"
+                          },
+                          "region": {
+                            "endColumn": 52,
+                            "endLine": 16,
+                            "snippet": {
+                              "text": "|\n          echo \"${{ github.event.pull_request.title }}\"\n"
+                            },
+                            "sourceLanguage": "yaml",
+                            "startColumn": 21,
+                            "startLine": 16
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "important",
+                      "location": {
+                        "logicalLocations": [
+                          {
+                            "properties": {
+                              "symbolic": {
+                                "annotation": "this run block",
+                                "feature_kind": "KeyOnly",
+                                "key": {
+                                  "Local": {
+                                    "given_path": "@@INPUT@@",
+                                    "prefix": null
+                                  }
+                                },
+                                "kind": "Related",
+                                "route": {
+                                  "route": [
+                                    {
+                                      "Key": "jobs"
+                                    },
+                                    {
+                                      "Key": "hackme"
+                                    },
+                                    {
+                                      "Key": "steps"
+                                    },
+                                    {
+                                      "Index": 0
+                                    },
+                                    {
+                                      "Key": "run"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "message": {
+                          "text": "this run block"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "@@INPUT@@"
+                          },
+                          "region": {
+                            "endColumn": 12,
+                            "endLine": 15,
+                            "snippet": {
+                              "text": "run"
+                            },
+                            "sourceLanguage": "yaml",
+                            "startColumn": 9,
+                            "startLine": 15
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
           "kind": "fail",
           "level": "error",
           "locations": [
@@ -255,7 +505,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
             }
           ],
           "message": {
-            "text": "code injection via template expansion"
+            "text": "code injection via template expansion [this run block](1)"
           },
           "properties": {
             "zizmor/confidence": "High",
@@ -264,6 +514,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
           },
           "relatedLocations": [
             {
+              "id": 1,
               "logicalLocations": [
                 {
                   "properties": {

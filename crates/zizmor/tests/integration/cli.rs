@@ -277,6 +277,7 @@ jobs:
           ],
           "results": [
             {
+              "codeFlows": [],
               "kind": "fail",
               "level": "warning",
               "locations": [
@@ -343,6 +344,110 @@ jobs:
               "ruleId": "zizmor/artipacked"
             },
             {
+              "codeFlows": [
+                {
+                  "threadFlows": [
+                    {
+                      "locations": [
+                        {
+                          "importance": "essential",
+                          "location": {
+                            "logicalLocations": [
+                              {
+                                "properties": {
+                                  "symbolic": {
+                                    "annotation": "default permissions used due to no permissions: block",
+                                    "feature_kind": "Normal",
+                                    "key": {
+                                      "Stdin": {}
+                                    },
+                                    "kind": "Primary",
+                                    "route": {
+                                      "route": [
+                                        {
+                                          "Key": "jobs"
+                                        },
+                                        {
+                                          "Key": "test"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ],
+                            "message": {
+                              "text": "default permissions used due to no permissions: block"
+                            },
+                            "physicalLocation": {
+                              "artifactLocation": {
+                                "uri": "<stdin>"
+                              },
+                              "region": {
+                                "endColumn": 1,
+                                "endLine": 7,
+                                "snippet": {
+                                  "text": "  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n"
+                                },
+                                "sourceLanguage": "yaml",
+                                "startColumn": 3,
+                                "startLine": 3
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "importance": "important",
+                          "location": {
+                            "logicalLocations": [
+                              {
+                                "properties": {
+                                  "symbolic": {
+                                    "annotation": "this job",
+                                    "feature_kind": "Normal",
+                                    "key": {
+                                      "Stdin": {}
+                                    },
+                                    "kind": "Related",
+                                    "route": {
+                                      "route": [
+                                        {
+                                          "Key": "jobs"
+                                        },
+                                        {
+                                          "Key": "test"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ],
+                            "message": {
+                              "text": "this job"
+                            },
+                            "physicalLocation": {
+                              "artifactLocation": {
+                                "uri": "<stdin>"
+                              },
+                              "region": {
+                                "endColumn": 1,
+                                "endLine": 7,
+                                "snippet": {
+                                  "text": "  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n"
+                                },
+                                "sourceLanguage": "yaml",
+                                "startColumn": 3,
+                                "startLine": 3
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
               "kind": "fail",
               "level": "warning",
               "locations": [
@@ -392,7 +497,7 @@ jobs:
                 }
               ],
               "message": {
-                "text": "overly broad permissions"
+                "text": "overly broad permissions [this job](1)"
               },
               "properties": {
                 "zizmor/confidence": "Medium",
@@ -401,6 +506,7 @@ jobs:
               },
               "relatedLocations": [
                 {
+                  "id": 1,
                   "logicalLocations": [
                     {
                       "properties": {
@@ -448,6 +554,7 @@ jobs:
               "ruleId": "zizmor/excessive-permissions"
             },
             {
+              "codeFlows": [],
               "kind": "fail",
               "level": "error",
               "locations": [
