@@ -107,12 +107,12 @@ zizmor --collect=workflows,actions example/example
 
 !!! warning "Deprecation"
 
-  `--collect=workflows-only` and `--collect=actions-only` are
-  deprecated aliases for `--collect=workflows` and
-  `--collect=actions`, respectively, as of `v1.15.0`.
-
-  Users should switch to the non-deprecated forms, as the deprecated
-  forms will be removed in a future release.
+    `--collect=workflows-only` and `--collect=actions-only` are
+    deprecated aliases for `--collect=workflows` and
+    `--collect=actions`, respectively, as of `v1.15.0`.
+  
+    Users should switch to the non-deprecated forms, as the deprecated
+    forms will be removed in a future release.
 
 !!! tip
 
