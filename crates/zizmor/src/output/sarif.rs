@@ -111,6 +111,7 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
                 };
                 ThreadFlowLocation::builder()
                     .location(build_location(loc, None))
+                    // See: <https://github.com/psastras/sarif-rs/pull/972>
                     .importance(serde_json::Value::String(importance.into()))
                     .build()
             })
