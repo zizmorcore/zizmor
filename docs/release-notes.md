@@ -79,6 +79,9 @@ of `zizmor`.
 * Fixed a bug where the [unpinned-uses] audit would product incorrect auto-fixes
   for actions with subpaths (#1841)
 
+* Fixed a bug where the [ref-version-mismatch] audit would fail to produce
+  findings for comments containing nonexistent refs (#1853)
+
 ### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
