@@ -21,7 +21,7 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=
  INFO audit: zizmor: 🌈 completed .github/workflows/macos.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/non-native.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/windows.yml
-warning[ref-version-mismatch]: action's hash pin does not match version comment
+warning[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
   --> .github/workflows/windows.yml:57:87
    |
 57 |       - uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # v6

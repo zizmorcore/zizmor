@@ -366,6 +366,16 @@ info[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this job a name
 
+help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
+  --> .github/workflows/ci.yml:74:9
+   |
+74 |         uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+   |
+   = note: audit confidence → High
+   = tip: add version comment '# v1'
+   = note: this finding has an auto-fix
+
 info[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/ci.yml:74:15
    |
@@ -632,6 +642,26 @@ error[unpinned-images]: unpinned image references
    |
    = note: audit confidence → High
 
+help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
+   --> .github/workflows/wheel-builder.yml:266:9
+    |
+266 |       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |
+    = note: audit confidence → High
+    = tip: add version comment '# v1'
+    = note: this finding has an auto-fix
+
+help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
+   --> .github/workflows/wheel-builder.yml:351:9
+    |
+351 |       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |
+    = note: audit confidence → High
+    = tip: add version comment '# v1'
+    = note: this finding has an auto-fix
+
 help[concurrency-limits]: insufficient job-level concurrency limits
    --> .github/workflows/wheel-builder.yml:4:1
     |
@@ -721,4 +751,4 @@ info[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → Low
 
-73 findings (9 suppressed): 19 informational, 32 low, 4 medium, 9 high
+76 findings (9 suppressed): 19 informational, 35 low, 4 medium, 9 high
