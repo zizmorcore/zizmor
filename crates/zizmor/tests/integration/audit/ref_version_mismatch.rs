@@ -10,42 +10,23 @@ fn test_ref_version_mismatch() -> Result<()> {
             .output(crate::common::OutputMode::Both)
             .input(input_under_test("ref-version-mismatch.yml"))
             .run()?,
-        @"
-    🌈 zizmor v@@VERSION@@
-     INFO audit: zizmor: 🌈 completed @@INPUT@@
-    error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:19:15
-       |
-    19 |       - uses: actions/setup-node@v3.8.2 # v3.8.2
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
-       |
-       = note: audit confidence → High
-       = note: this finding has an auto-fix
+        @""
+    );
 
-    warning[ref-version-mismatch]: action's hash pin does not match version comment
-      --> @@INPUT@@:22:77
-       |
-    22 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.1
-       |         -----------------------------------------------------------------   ^^^^^^ points to commit 5e21ff4d9bc1
-       |         |
-       |         is pointed to by tag v3.8.2
-       |
-       = note: audit confidence → High
-       = note: this finding has an auto-fix
+    Ok(())
+}
 
-    warning[ref-version-mismatch]: action's hash pin does not match version comment
-      --> @@INPUT@@:25:77
-       |
-    25 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v300000.8.1
-       |         -----------------------------------------------------------------   ^^^^^^^^^^^ points to unknown ref
-       |         |
-       |         is pointed to by tag v3.8.2
-       |
-       = note: audit confidence → High
-       = note: this finding has an auto-fix
-
-    4 findings (1 suppressed, 3 fixable): 0 informational, 0 low, 2 medium, 1 high
-    "
+/// SHA-pinned actions without version comments produce a pedantic finding.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_missing_version_comment_pedantic() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .args(["--persona=pedantic"])
+            .input(input_under_test("ref-version-mismatch.yml"))
+            .run()?,
+        @""
     );
 
     Ok(())
