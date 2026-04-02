@@ -66,7 +66,12 @@
         - apache/airflow#45408
         - apache/airflow#47258
         - apache/airflow#50749
+        - apache/iceberg#15793
+        - apache/iceberg#15820
+        - apache/iceberg-python#3204
         - apache/iceberg-rust#1123
+        - apache/iceberg-rust#2289
+        - apache/iceberg-rust#2290
         - apache/lucene#15216
         - apache/opendal-reqsign#687
         - apache/opennlp#736
@@ -166,6 +171,14 @@
         - autotag-dev/autotag#142
 
 
+-   ![](https://github.com/axios.png?size=40){ width="40" loading=lazy align=left } axios
+
+    ---
+
+    ??? example "Examples"
+        - axios/axios#10618
+
+
 -   ![](https://github.com/basecamp.png?size=40){ width="40" loading=lazy align=left } basecamp
 
     ---
@@ -201,6 +214,22 @@
 
     ??? example "Examples"
         - BerkeleyLearnVerify/Scenic#320
+
+
+-   ![](https://github.com/BerriAI.png?size=40){ width="40" loading=lazy align=left } BerriAI
+
+    ---
+
+    ??? example "Examples"
+        - BerriAI/litellm#24663
+
+
+-   ![](https://github.com/better-auth.png?size=40){ width="40" loading=lazy align=left } better-auth
+
+    ---
+
+    ??? example "Examples"
+        - better-auth/better-auth#8879
 
 
 -   ![](https://github.com/bevyengine.png?size=40){ width="40" loading=lazy align=left } bevyengine
@@ -437,6 +466,14 @@
         - dependabot/dependabot-core#13531
 
 
+-   ![](https://github.com/developmentseed.png?size=40){ width="40" loading=lazy align=left } developmentseed
+
+    ---
+
+    ??? example "Examples"
+        - developmentseed/titiler#1354
+
+
 -   ![](https://github.com/Diaoul.png?size=40){ width="40" loading=lazy align=left } Diaoul
 
     ---
@@ -510,6 +547,14 @@
 
     ??? example "Examples"
         - earthobservations/wetterdienst#1440
+
+
+-   ![](https://github.com/eclipse-transformer.png?size=40){ width="40" loading=lazy align=left } eclipse-transformer
+
+    ---
+
+    ??? example "Examples"
+        - eclipse-transformer/transformer#867
 
 
 -   ![](https://github.com/edgelesssys.png?size=40){ width="40" loading=lazy align=left } edgelesssys
@@ -917,13 +962,18 @@
     ??? example "Examples"
         - hynek/argon2-cffi#185
         - hynek/doc2dash#225
+        - hynek/doc2dash#288
         - hynek/environ-config#88
+        - hynek/environ-config@196762acd9033d975b293dc94592db93c9ac4133
         - hynek/hatch-fancy-pypi-readme#57
+        - hynek/hatch-fancy-pypi-readme@40ee1ed2764da14034a3774b28ccda80ce58710b
         - hynek/pem#100
         - hynek/prometheus-async#70
         - hynek/stamina#81
+        - hynek/stamina@fa8740c0c866f9519cd2b8923404764417ec78df
         - hynek/structlog#663
         - hynek/svcs#111
+        - hynek/svcs#161
 
 
 -   ![](https://github.com/icsharpcode.png?size=40){ width="40" loading=lazy align=left } icsharpcode
@@ -1058,12 +1108,37 @@
         - kata-containers/kata-containers#11475
 
 
+-   ![](https://github.com/Kludex.png?size=40){ width="40" loading=lazy align=left } Kludex
+
+    ---
+
+    ??? example "Examples"
+        - Kludex/uvicorn#2872
+
+
 -   ![](https://github.com/kubecolor.png?size=40){ width="40" loading=lazy align=left } kubecolor
 
     ---
 
     ??? example "Examples"
         - kubecolor/kubecolor#273
+
+
+-   ![](https://github.com/kubernetes-client.png?size=40){ width="40" loading=lazy align=left } kubernetes-client
+
+    ---
+
+    ??? example "Examples"
+        - kubernetes-client/javascript#2814
+
+
+-   ![](https://github.com/kubernetes-sigs.png?size=40){ width="40" loading=lazy align=left } kubernetes-sigs
+
+    ---
+
+    ??? example "Examples"
+        - kubernetes-sigs/kubebuilder#5570
+        - kubernetes-sigs/kubebuilder#5578
 
 
 -   ![](https://github.com/kubewarden.png?size=40){ width="40" loading=lazy align=left } kubewarden
@@ -1529,6 +1604,7 @@
         - psf/black#4906
         - psf/black#4911
         - psf/cachecontrol#345
+        - psf/requests#7314
 
 
 -   ![](https://github.com/pubgrub-rs.png?size=40){ width="40" loading=lazy align=left } pubgrub-rs
@@ -1717,6 +1793,14 @@
 
     ??? example "Examples"
         - quarkslab/quokka#46
+
+
+-   ![](https://github.com/rancher.png?size=40){ width="40" loading=lazy align=left } rancher
+
+    ---
+
+    ??? example "Examples"
+        - rancher/rancher#54439
 
 
 -   ![](https://github.com/ratatui.png?size=40){ width="40" loading=lazy align=left } ratatui
@@ -1976,6 +2060,16 @@
 
     ??? example "Examples"
         - TecharoHQ/anubis#188
+
+
+-   ![](https://github.com/tektoncd.png?size=40){ width="40" loading=lazy align=left } tektoncd
+
+    ---
+
+    ??? example "Examples"
+        - tektoncd/operator#3300
+        - tektoncd/operator#3324
+        - tektoncd/pipeline#9667
 
 
 -   ![](https://github.com/termcolor.png?size=40){ width="40" loading=lazy align=left } termcolor
