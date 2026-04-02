@@ -17,7 +17,12 @@ anthropics/claude-code-action#729
 apache/airflow#45408
 apache/airflow#47258
 apache/airflow#50749
+apache/iceberg#15793
+apache/iceberg#15820
+apache/iceberg-python#3204
 apache/iceberg-rust#1123
+apache/iceberg-rust#2289
+apache/iceberg-rust#2290
 apache/lucene#15216
 apache/opendal-reqsign#687
 apache/opennlp#736
@@ -45,6 +50,7 @@ astronomer/dag-factory#482
 astropy/astropy#17315
 audreyfeldroy/cookiecutter-pypackage@40f172432f78ef920d758520b543cd69be32f80a
 autotag-dev/autotag#142
+axios/axios#10618
 basecamp/fizzy#2645
 basecamp/trix#1284
 basecamp/once-campfire#185
@@ -61,6 +67,8 @@ basecamp/upright#50
 basecamp/writebook#396
 ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
 BerkeleyLearnVerify/Scenic#320
+better-auth/better-auth#8879
+BerriAI/litellm#24663
 bevyengine/bevy#22294
 bitcoindevkit/bdk#1778
 bitcoindevkit/bdk#1813
@@ -106,6 +114,7 @@ datalens-tech/datalens-backend#777
 davidlattimore/wild#450
 deltachat/deltachat-core-rust#6539
 dependabot/dependabot-core#13531
+developmentseed/titiler#1354
 digitalbazaar/pyld#211
 django/django@09d4bf5cd9c95c588d3ec22edea5db1f5f146900
 django/django@e8958c4690faef27b6715524ecb5c49c3ecb6a09
@@ -118,6 +127,7 @@ dubzzz/fast-check#6369
 dubzzz/fast-check#6370
 Dynatrace/dynatrace-operator#6154
 earthobservations/wetterdienst#1440
+eclipse-transformer/transformer#867
 edgelesssys/contrast#1604
 EFForg/rayhunter#711
 Electric-Coin-Company/zcash-light-client-ffi#186
@@ -203,13 +213,18 @@ hugovk/norwegianblue#233
 hugovk/pypistats#460
 hynek/argon2-cffi#185
 hynek/doc2dash#225
+hynek/doc2dash#288
 hynek/environ-config#88
+hynek/environ-config@196762acd9033d975b293dc94592db93c9ac4133
 hynek/hatch-fancy-pypi-readme#57
+hynek/hatch-fancy-pypi-readme@40ee1ed2764da14034a3774b28ccda80ce58710b
 hynek/pem#100
 hynek/prometheus-async#70
 hynek/stamina#81
+hynek/stamina@fa8740c0c866f9519cd2b8923404764417ec78df
 hynek/structlog#663
 hynek/svcs#111
+hynek/svcs#161
 icsharpcode/ILSpy#3365
 immich-app/immich#17651
 indygreg/apple-platform-rs@5bded60cbfc2b81e1bedd745ab41417e5c3a76ea
@@ -230,7 +245,11 @@ jupyterhub/jupyterhub#5049
 kanidm/kanidm#3430
 kata-containers/kata-containers#11392
 kata-containers/kata-containers#11475
+Kludex/uvicorn#2872
 kubecolor/kubecolor#273
+kubernetes-client/javascript#2814
+kubernetes-sigs/kubebuilder#5570
+kubernetes-sigs/kubebuilder#5578
 kubewarden/kubewarden-controller#1596
 libssh2/libssh2#1609
 llvm/llvm-project#187905
@@ -325,6 +344,7 @@ psf/black#4905
 psf/black#4906
 psf/black#4911
 psf/cachecontrol#345
+psf/requests#7314
 pubgrub-rs/pubgrub#389
 pyca/service-identity#75
 pydata/pydata-sphinx-theme#2077
@@ -366,6 +386,7 @@ pyvista/pyvista#7006
 PyVRP/PyVRP#670
 PyO3/pyo3#4774
 quarkslab/quokka#46
+rancher/rancher#54439
 ratatui/ratatui#1961
 reubeno/brush#534
 reubeno/brush#535
@@ -422,6 +443,9 @@ super-linter/super-linter#7241
 Swatinem/rust-cache#262
 target/data-validator#223
 TecharoHQ/anubis#188
+tektoncd/operator#3300
+tektoncd/operator#3324
+tektoncd/pipeline#9667
 termcolor/termcolor#89
 termux/termux-packages#22519
 textlint/textlint#1711
