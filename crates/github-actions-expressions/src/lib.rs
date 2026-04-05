@@ -729,14 +729,14 @@ impl Evaluation {
     ///
     /// GitHub Actions truthiness:
     /// - false and null are falsy
-    /// - Numbers: 0 is falsy, everything else is truthy
+    /// - Numbers: 0 and NaN are falsy, everything else is truthy
     /// - Strings: empty string is falsy, everything else is truthy
     /// - Arrays and dictionaries are always truthy (non-empty objects)
     pub fn as_boolean(&self) -> bool {
         match self {
             Evaluation::Boolean(b) => *b,
             Evaluation::Null => false,
-            Evaluation::Number(n) => *n != 0.0,
+            Evaluation::Number(n) => *n != 0.0 && !n.is_nan(),
             Evaluation::String(s) => !s.is_empty(),
             // Arrays and objects are always truthy, even if empty.
             Evaluation::Array(_) | Evaluation::Object(_) => true,
@@ -1673,6 +1673,7 @@ mod tests {
             (Evaluation::Number(0.0), false),
             (Evaluation::Number(1.0), true),
             (Evaluation::Number(-1.0), true),
+            (Evaluation::Number(f64::NAN), false), // NaN is falsy in GitHub Actions
             (Evaluation::String("".to_string()), false),
             (Evaluation::String("hello".to_string()), true),
             (Evaluation::Array(vec![]), true), // Arrays are always truthy
@@ -1870,6 +1871,8 @@ mod tests {
             ("false || 'hello'", Evaluation::String("hello".to_string())),
             ("null || false", Evaluation::Boolean(false)),
             ("'' || null", Evaluation::Null),
+            ("!NaN", Evaluation::Boolean(true)),
+            ("!!NaN", Evaluation::Boolean(false)),
         ];
 
         for (expr_str, expected) in test_cases {

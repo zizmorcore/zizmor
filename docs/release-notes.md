@@ -83,6 +83,9 @@ of `zizmor`.
 * Fixed a bug where the [ref-version-mismatch] audit would fail to produce
   findings for comments containing nonexistent refs (#1853)
 
+* Fixed a bug where expressions containing `NaN` would be constant-evaluated
+  incorrectly (#1858)
+
 ### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
