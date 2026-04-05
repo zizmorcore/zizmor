@@ -11,6 +11,7 @@ aio-libs/aiobotocore#1355
 altair-graphql/altair@4aa5679f89528c183321a07e387567c13be29f26
 anchore/sbom-action#564
 anchore/scan-action#573
+anchore/syft#4556
 anchore/vunnel#832
 ansible/ansible-documentation#3188
 anthropics/claude-code-action#729
@@ -327,7 +328,10 @@ orion-rs/orion#490
 oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
+pallets/click#3304
 pallets/flask#5945
+pallets/werkzeug#3150
+paperless-ngx/paperless-ngx#12466
 pendulum-project/ntpd-rs#2139
 philips-software/amp-devcontainer#830
 PlasmaPy/PlasmaPy#2975
@@ -441,6 +445,7 @@ strawberry-graphql/strawberry#4097
 stx-labs/clarinet#2281
 super-linter/super-linter#7241
 Swatinem/rust-cache#262
+sympy/sympy#29641
 target/data-validator#223
 TecharoHQ/anubis#188
 tektoncd/operator#3300
@@ -480,6 +485,7 @@ yt-dlp/yt-dlp#15324
 yt-dlp/yt-dlp#15387
 zama-ai/tfhe-rs#2292
 zama-ai/tfhe-rs#2979
+zarr-developers/zarr-python#3837
 zcash/halo2#857
 zcash/librustzcash#1679
 ZcashFoundation/zebra#9110

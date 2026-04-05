@@ -39,6 +39,7 @@
     ??? example "Examples"
         - anchore/sbom-action#564
         - anchore/scan-action#573
+        - anchore/syft#4556
         - anchore/vunnel#832
 
 
@@ -1517,7 +1518,17 @@
     ---
 
     ??? example "Examples"
+        - pallets/click#3304
         - pallets/flask#5945
+        - pallets/werkzeug#3150
+
+
+-   ![](https://github.com/paperless-ngx.png?size=40){ width="40" loading=lazy align=left } paperless-ngx
+
+    ---
+
+    ??? example "Examples"
+        - paperless-ngx/paperless-ngx#12466
 
 
 -   ![](https://github.com/pendulum-project.png?size=40){ width="40" loading=lazy align=left } pendulum-project
@@ -2046,6 +2057,14 @@
         - Swatinem/rust-cache#262
 
 
+-   ![](https://github.com/sympy.png?size=40){ width="40" loading=lazy align=left } sympy
+
+    ---
+
+    ??? example "Examples"
+        - sympy/sympy#29641
+
+
 -   ![](https://github.com/target.png?size=40){ width="40" loading=lazy align=left } target
 
     ---
@@ -2272,6 +2291,14 @@
     ??? example "Examples"
         - zama-ai/tfhe-rs#2292
         - zama-ai/tfhe-rs#2979
+
+
+-   ![](https://github.com/zarr-developers.png?size=40){ width="40" loading=lazy align=left } zarr-developers
+
+    ---
+
+    ??? example "Examples"
+        - zarr-developers/zarr-python#3837
 
 
 -   ![](https://github.com/zcash.png?size=40){ width="40" loading=lazy align=left } zcash
