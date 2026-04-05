@@ -1701,7 +1701,8 @@ Add inline comments explaining why each permission is needed:
 
 [unpinned-images.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned-images.yml
 
-Checks for `container.image` values where the image is not pinned by either a tag (other than `latest`) or SHA256.
+Checks for unpinned image references in `container.image`, `services.*.image`,
+and `docker`/`podman` commands within `run:` steps.
 
 When image references are unpinned or are pinned to a mutable tag, the
 workflow is at risk because the image used will be unpredictable over time.
@@ -1713,7 +1714,9 @@ This can be a security risk:
 1. Registries may not consistently enforce immutable image tags
 2. Completely unpinned images can be changed at any time by the OCI registry.
 
-By default, this audit applies the following policy:
+This audit detects unpinned images in two contexts:
+
+**Declarative image references** in `container:` and `services:` blocks:
 
 * Regular findings are created for all image references missing a tag
 
@@ -1736,6 +1739,19 @@ By default, this audit applies the following policy:
       image: foo/bar:not-a-sha256
     ```
 
+**Docker/Podman commands** in `run:` steps (bash/sh/zsh):
+
+* `docker pull`, `docker run`, `docker create`, and their `podman` equivalents
+  are detected using tree-sitter shell parsing, which avoids false positives
+  from strings and comments.
+
+    ```yaml
+    steps:
+      - run: docker pull foo/bar:latest    # finding: pinned to latest
+      - run: docker run --rm foo/bar       # finding: unpinned
+      - run: echo "docker pull foo/bar"    # safe: not a real command
+    ```
+
 Other resources:
 
 - [Aqua: The Challenges of Uniquely Identifying Your Images]
@@ -1745,13 +1761,14 @@ Other resources:
 
 ### Remediation
 
-Pin the `#!yaml container.image:` value to a specific SHA256 image registry hash.
+Pin image references to a specific SHA256 digest hash, whether in
+`#!yaml container.image:` values or `docker`/`podman` commands in `#!yaml run:` steps.
 
 Many popular registries will display the hash value in their web console or you
 can use the command line to determine the hash of an image you have previously pulled
 by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
 
-!!! example
+!!! example "Container image"
 
     === "Before :warning:"
 
@@ -1781,6 +1798,38 @@ by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
               image: fake.example.com/example@sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
             steps:
               - run: "echo pinned container!"
+        ```
+
+!!! example "Docker command in run: step"
+
+    === "Before :warning:"
+
+        ```yaml title="unpinned-images.yml" hl_lines="8-9"
+        name: unpinned-images
+        on: [push]
+
+        jobs:
+          docker-run:
+            runs-on: ubuntu-latest
+            steps:
+              - run: |
+                  docker pull redis:7
+                  docker run -d redis:7
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="unpinned-images.yml" hl_lines="8-9"
+        name: unpinned-images
+        on: [push]
+
+        jobs:
+          docker-run:
+            runs-on: ubuntu-latest
+            steps:
+              - run: |
+                  docker pull redis@sha256:7df1eeff67eb0ba84f6b9d2940765a6bb1158081426745c185a03b1507de6a09
+                  docker run -d redis@sha256:7df1eeff67eb0ba84f6b9d2940765a6bb1158081426745c185a03b1507de6a09
         ```
 
 ## `unpinned-uses`

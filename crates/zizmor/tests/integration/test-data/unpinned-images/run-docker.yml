@@ -1,0 +1,71 @@
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+name: unpinned-images-run-docker
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker-pull-unpinned:
+    name: docker-pull-unpinned
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker pull ubuntu:latest
+      - run: docker pull ubuntu
+      - run: docker pull ubuntu:22.04
+      - run: docker pull ubuntu@sha256:bfadbbcb25fd75c30c295843f1a861414f46c080f0f1d0c5cd93843c88edabcf
+
+  docker-run-unpinned:
+    name: docker-run-unpinned
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker run -d --rm nginx:latest
+      - run: docker run -it alpine
+      - run: docker run ghcr.io/org/img@sha256:bfadbbcb25fd75c30c295843f1a861414f46c080f0f1d0c5cd93843c88edabcf /bin/sh
+
+  docker-create-unpinned:
+    name: docker-create-unpinned
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker create --name myapp node:20
+
+  multiline-script:
+    name: multiline-script
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Setting up"
+          docker pull redis:7
+          docker run -d redis:7
+
+  echo-not-command:
+    name: echo-not-command
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "docker pull ubuntu"
+
+  podman-pull:
+    name: podman-pull
+    runs-on: ubuntu-latest
+    steps:
+      - run: podman pull alpine
+
+  docker-run-with-flags:
+    name: docker-run-with-flags
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker run -d --rm -v /tmp:/tmp -e FOO=bar --name mycontainer postgres:15
+
+  docker-global-flags:
+    name: docker-global-flags
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker --debug pull ubuntu
+      - run: docker -D --tls run nginx
