@@ -101,6 +101,9 @@ of `zizmor`.
   findings along with a medium or low confidence marker to signal when a action
   may not be easily replaced with built-in functionality (#1822, #1859)
 
+* The [unpinned-uses] audit no longer suggests auto-fixes for Git references
+  that don't look like version tags, such as `main` (#1860)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
