@@ -65,7 +65,8 @@ of `zizmor`.
 
 * Fixed a bug where expressions containing `Infinity` or `NaN` would fail to parse (#1778)
 
-* Fixed a bug where some parenthetical forms in expressions would fail to parse (#1779)
+* Fixed a bug where some parenthetical forms in expressions would fail to parse
+  (#1779, #1856)
 
 * Fixed a bug where expressions with invalid identifiers (such as `-Inf`) would
   be incorrectly accepted (#1794)
