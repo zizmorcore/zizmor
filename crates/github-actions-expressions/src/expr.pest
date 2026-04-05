@@ -43,7 +43,7 @@ primary_expr = {
   | boolean
   | null
   | context
-  | "(" ~ or_expr ~ ")"
+  | "(" ~ or_expr ~ ")" ~ (("." ~ (identifier | star)) | index)*
 }
 
 /// Numbers
