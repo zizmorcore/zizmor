@@ -98,8 +98,8 @@ of `zizmor`.
   arities (#1823, #1826)
 
 * The [superfluous-actions] audit now uses the "pedantic" persona for some
-  findings along with a low confidence marker to signal when a action
-  may not be easily replaced with built-in functionality (#1822)
+  findings along with a medium or low confidence marker to signal when a action
+  may not be easily replaced with built-in functionality (#1822, #1859)
 
 ## 1.23.1
 
