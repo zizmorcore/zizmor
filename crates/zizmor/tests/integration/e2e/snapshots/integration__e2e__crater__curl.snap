@@ -27,7 +27,7 @@ warning[ref-version-mismatch]: action's hash pin does not match version comment
 57 |       - uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # v6
    |         ---------------------------------------------------------------------------   ^^ points to commit 711d29f3da23
    |         |
-   |         is pointed to by tag v6.0
+   |         is pointed to by tag v6.0.0
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
