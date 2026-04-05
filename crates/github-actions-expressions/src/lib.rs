@@ -589,9 +589,7 @@ impl<'src> Expr<'src> {
                     // contexts for those to avoid unnecessary nesting.
                     // Bare identifiers are kept as `Context` since they
                     // represent genuine context references (e.g. `github`).
-                    if inner.len() == 1
-                        && !matches!(inner[0].inner, Expr::Identifier(_))
-                    {
+                    if inner.len() == 1 && !matches!(inner[0].inner, Expr::Identifier(_)) {
                         Ok(inner.remove(0).into())
                     } else {
                         Ok(SpannedExpr::new(
