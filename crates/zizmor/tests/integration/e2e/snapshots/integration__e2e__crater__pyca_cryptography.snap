@@ -374,7 +374,7 @@ info[superfluous-actions]: action functionality is already included by the runne
 74 |         uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `rustup` and/or `cargo` in a script step
    |
-   = note: audit confidence → High
+   = note: audit confidence → Medium
 
 info[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/downstream-version-bump.yml:12:3
@@ -671,7 +671,7 @@ info[superfluous-actions]: action functionality is already included by the runne
 270 | |           target: x86_64-apple-darwin
     | |_____________________________________- this step
     |
-    = note: audit confidence → High
+    = note: audit confidence → Medium
 
 info[superfluous-actions]: action functionality is already included by the runner
    --> .github/workflows/wheel-builder.yml:351:15
@@ -685,7 +685,7 @@ info[superfluous-actions]: action functionality is already included by the runne
 354 | |           target: ${{ matrix.WINDOWS.RUST_TRIPLE }}
     | |___________________________________________________- this step
     |
-    = note: audit confidence → High
+    = note: audit confidence → Medium
 
 info[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/x509-limbo-version-bump.yml:12:3

@@ -99,8 +99,12 @@ static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona, 
             (
                 "dtolnay/rust-toolchain".parse().unwrap(),
                 "use `rustup` and/or `cargo` in a script step",
-                Persona::Regular,
-                Confidence::High,
+                // NOTE(ww): Currently pedantic because this action does
+                // some additional environment setup, and users find the
+                // finding here disruptive.
+                // See: <https://github.com/zizmorcore/zizmor/issues/1817>
+                Persona::Pedantic,
+                Confidence::Medium,
             ),
         ]
     });
