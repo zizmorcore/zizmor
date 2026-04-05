@@ -1,3 +1,9 @@
+//! Known-answer tests (KATs) derived from GitHub's official
+//! `actions/languageservices` tests.
+//!
+//! See `support/sync-expression-tests.py` for how the KATs themselves
+//! are synchronized from the upstream test suite.
+
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -17,15 +23,33 @@ struct TestCase {
     options: Option<TestOptions>,
 }
 
+#[derive(Copy, Clone, Debug, Deserialize)]
+enum ValueKind {
+    Boolean,
+    Number,
+    String,
+    Null,
+    Array,
+    Object,
+}
+
 #[derive(Deserialize)]
 struct TestResult {
-    kind: String,
+    kind: ValueKind,
     value: serde_json::Value,
+}
+
+#[derive(Copy, Clone, Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum ErrorKind {
+    Parsing,
+    Lexing,
+    Evaluation,
 }
 
 #[derive(Deserialize)]
 struct TestError {
-    kind: String,
+    kind: ErrorKind,
     value: String,
 }
 
@@ -36,16 +60,15 @@ struct TestOptions {
 }
 
 fn to_evaluation(result: &TestResult) -> Result<Evaluation, String> {
-    match result.kind.as_str() {
-        "Boolean" => Ok(Evaluation::Boolean(result.value.as_bool().unwrap())),
-        "Number" => Ok(Evaluation::Number(result.value.as_f64().unwrap())),
-        "String" => Ok(Evaluation::String(
+    match result.kind {
+        ValueKind::Boolean => Ok(Evaluation::Boolean(result.value.as_bool().unwrap())),
+        ValueKind::Number => Ok(Evaluation::Number(result.value.as_f64().unwrap())),
+        ValueKind::String => Ok(Evaluation::String(
             result.value.as_str().unwrap().to_string(),
         )),
-        "Null" => Ok(Evaluation::Null),
-        "Array" | "Object" => Evaluation::try_from(result.value.clone())
+        ValueKind::Null => Ok(Evaluation::Null),
+        ValueKind::Array | ValueKind::Object => Evaluation::try_from(result.value.clone())
             .map_err(|()| format!("failed to convert {:?} value to Evaluation", result.kind)),
-        other => Err(format!("unknown result kind {other:?}")),
     }
 }
 
@@ -107,18 +130,18 @@ fn run_test_file(filename: &str, failures: &mut Vec<String>) {
             }
 
             if let Some(err) = &case.err {
-                match err.kind.as_str() {
+                match err.kind {
                     // Parse/lex errors
-                    "parsing" | "lexing" => {
+                    ErrorKind::Parsing | ErrorKind::Lexing => {
                         if Expr::parse(&case.expr).is_ok() {
                             failures.push(format!(
-                                "{label}: expected {} error {:?} but parsed OK",
+                                "{label}: expected {:?} error {:?} but parsed OK",
                                 err.kind, err.value
                             ));
                         }
                     }
                     // Evaluation errors
-                    "evaluation" => {
+                    ErrorKind::Evaluation => {
                         if let Ok(parsed) = Expr::parse(&case.expr) {
                             if parsed.consteval().is_some() {
                                 failures.push(format!(
@@ -127,9 +150,6 @@ fn run_test_file(filename: &str, failures: &mut Vec<String>) {
                                 ));
                             }
                         }
-                    }
-                    other => {
-                        failures.push(format!("{label}: unknown error kind {other:?}"));
                     }
                 }
             } else if let Some(expected) = &case.result {
