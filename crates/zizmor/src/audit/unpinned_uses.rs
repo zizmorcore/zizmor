@@ -9,6 +9,7 @@ use crate::finding::location::{Locatable, Routable};
 use crate::finding::{Confidence, Finding, Fix, Persona, Severity};
 use crate::github;
 use crate::models::uses::{RepositoryUsesExt, RepositoryUsesPattern};
+use crate::models::version::Version;
 use crate::models::workflow::ReusableWorkflowCallJob;
 use crate::models::{
     AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step,
@@ -36,6 +37,17 @@ impl UnpinnedUses {
 
         // There's nothing to fix if the ref is already a commit SHA.
         if uses.ref_is_commit() {
+            return None;
+        }
+
+        // Only attempt a fix if the git ref _looks_ like it might be a
+        // version, e.g. `@v1`, `@1.2.3`, etc. Technically we can hash-pin
+        // any symbolic ref, but we don't want to do so automatically for refs
+        // like `@main`, `@stable`, etc. because other tools like Dependabot
+        // and pinact don't handle those gracefully.
+        // The user can always pin manually if they so desire.
+        if Version::parse(uses.git_ref()).is_err() {
+            tracing::debug!("not proposing an auto-fix for a non-version ref: {uses}");
             return None;
         }
 
@@ -578,5 +590,50 @@ jobs:
             .unwrap();
 
         assert!(findings.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_no_fix_for_non_version_ref() {
+        let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+"#;
+
+        let key = InputKey::local(
+            "fakegroup".into(),
+            "test_no_fix_for_non_version_ref.yml",
+            None::<&str>,
+        );
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = UnpinnedUses::new(&state).unwrap();
+        let input = workflow.into();
+        let findings = audit
+            .audit(UnpinnedUses::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        // A finding should be produced (the action is unhashed), but no fix
+        // should be proposed since `@main` is not a version ref.
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].fixes.is_empty());
     }
 }
