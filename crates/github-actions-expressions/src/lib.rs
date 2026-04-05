@@ -505,24 +505,8 @@ impl<'src> Expr<'src> {
                     }
                 }
                 Rule::primary_expr => {
-                    let (span, raw) = (pair.as_span(), pair.as_str());
-                    let mut inner: Vec<SpannedExpr> = pair
-                        .into_inner()
-                        .map(|pair| parse_pair(pair).map(|e| *e))
-                        .collect::<Result<_, _>>()?;
-
-                    if inner.len() == 1 {
-                        // Simple case: punt back to the top level match.
-                        Ok(inner.remove(0).into())
-                    } else {
-                        // Parenthesized expression with context access chains,
-                        // e.g. (fromJson('...')).foo or (fromJson('...'))[0]
-                        Ok(SpannedExpr::new(
-                            Origin::new(span.start()..span.end(), raw),
-                            Expr::context(inner),
-                        )
-                        .into())
-                    }
+                    // Punt back to the top level match to keep things simple.
+                    parse_pair(pair.into_inner().next().unwrap())
                 }
                 Rule::number => Ok(SpannedExpr::new(
                     Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
@@ -600,10 +584,14 @@ impl<'src> Expr<'src> {
                         .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
-                    // NOTE(ww): Annoying specialization: the `context` rule
-                    // wholly encloses the `function_call` rule, so we clean up
-                    // the AST slightly to turn `Context { Call }` into just `Call`.
-                    if inner.len() == 1 && matches!(inner[0].inner, Expr::Call { .. }) {
+                    // The `context` rule wholly encloses `function_call`
+                    // and parenthesized expressions, so unwrap single-element
+                    // contexts for those to avoid unnecessary nesting.
+                    // Bare identifiers are kept as `Context` since they
+                    // represent genuine context references (e.g. `github`).
+                    if inner.len() == 1
+                        && !matches!(inner[0].inner, Expr::Identifier(_))
+                    {
                         Ok(inner.remove(0).into())
                     } else {
                         Ok(SpannedExpr::new(
