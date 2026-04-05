@@ -16,7 +16,7 @@ fn test_superfluous_actions() -> anyhow::Result<()> {
     16 |         uses: dtolnay/rust-toolchain@086dfa4efe372cfb6b375460a56e26a62a873d2e # 1.93.1
        |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `rustup` and/or `cargo` in a script step
        |
-       = note: audit confidence → High
+       = note: audit confidence → Medium
 
     info[superfluous-actions]: action functionality is already included by the runner
       --> @@INPUT@@:19:15
