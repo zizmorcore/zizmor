@@ -9,6 +9,7 @@ use crate::finding::location::{Locatable, Routable};
 use crate::finding::{Confidence, Finding, Fix, Persona, Severity};
 use crate::github;
 use crate::models::uses::{RepositoryUsesExt, RepositoryUsesPattern};
+use crate::models::version::Version;
 use crate::models::workflow::ReusableWorkflowCallJob;
 use crate::models::{
     AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step,
@@ -36,6 +37,17 @@ impl UnpinnedUses {
 
         // There's nothing to fix if the ref is already a commit SHA.
         if uses.ref_is_commit() {
+            return None;
+        }
+
+        // Only attempt a fix if the git ref _looks_ like it might be a
+        // version, e.g. `@v1`, `@1.2.3`, etc. Technically we can hash-pin
+        // any symbolic ref, but we don't want to do so automatically for refs
+        // like `@main`, `@stable`, etc. because other tools like Dependabot
+        // and pinact don't handle those gracefully.
+        // The user can always pin manually if they so desire.
+        if let Err(_) = Version::parse(uses.git_ref()) {
+            tracing::info!("not proposing an auto-fix for a non-version ref: {uses}");
             return None;
         }
 
