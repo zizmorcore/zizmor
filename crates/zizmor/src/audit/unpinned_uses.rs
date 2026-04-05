@@ -47,7 +47,7 @@ impl UnpinnedUses {
         // and pinact don't handle those gracefully.
         // The user can always pin manually if they so desire.
         if let Err(_) = Version::parse(uses.git_ref()) {
-            tracing::info!("not proposing an auto-fix for a non-version ref: {uses}");
+            tracing::debug!("not proposing an auto-fix for a non-version ref: {uses}");
             return None;
         }
 
@@ -590,5 +590,50 @@ jobs:
             .unwrap();
 
         assert!(findings.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_no_fix_for_non_version_ref() {
+        let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+"#;
+
+        let key = InputKey::local(
+            "fakegroup".into(),
+            "test_no_fix_for_non_version_ref.yml",
+            None::<&str>,
+        );
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = UnpinnedUses::new(&state).unwrap();
+        let input = workflow.into();
+        let findings = audit
+            .audit(UnpinnedUses::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        // A finding should be produced (the action is unhashed), but no fix
+        // should be proposed since `@main` is not a version ref.
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].fixes.is_empty());
     }
 }

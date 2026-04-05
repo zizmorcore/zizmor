@@ -237,7 +237,6 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
-    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:588:15
@@ -246,7 +245,6 @@ error[unpinned-uses]: unpinned action reference
     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
-    = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
    --> .github/workflows/build.yml:596:15
