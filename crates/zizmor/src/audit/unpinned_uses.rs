@@ -46,7 +46,7 @@ impl UnpinnedUses {
         // like `@main`, `@stable`, etc. because other tools like Dependabot
         // and pinact don't handle those gracefully.
         // The user can always pin manually if they so desire.
-        if let Err(_) = Version::parse(uses.git_ref()) {
+        if Version::parse(uses.git_ref()).is_err() {
             tracing::debug!("not proposing an auto-fix for a non-version ref: {uses}");
             return None;
         }
