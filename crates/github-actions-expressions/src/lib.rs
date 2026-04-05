@@ -584,10 +584,12 @@ impl<'src> Expr<'src> {
                         .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
-                    // NOTE(ww): Annoying specialization: the `context` rule
-                    // wholly encloses the `function_call` rule, so we clean up
-                    // the AST slightly to turn `Context { Call }` into just `Call`.
-                    if inner.len() == 1 && matches!(inner[0].inner, Expr::Call { .. }) {
+                    // The `context` rule wholly encloses `function_call`
+                    // and parenthesized expressions, so unwrap single-element
+                    // contexts for those to avoid unnecessary nesting.
+                    // Bare identifiers are kept as `Context` since they
+                    // represent genuine context references (e.g. `github`).
+                    if inner.len() == 1 && !matches!(inner[0].inner, Expr::Identifier(_)) {
                         Ok(inner.remove(0).into())
                     } else {
                         Ok(SpannedExpr::new(
@@ -1144,8 +1146,12 @@ mod tests {
             // Leading/trailing dot
             ".5",
             "123.",
+            // Whitespace handling
             multiline2,
             "fromJSON( github.event.inputs.hmm ) [ 0 ]",
+            // Parens around a call
+            "(fromJson('{\"one\": \"one val\"}')).one",
+            "(fromJson('[\"one\", \"two\"]'))[1]",
         ];
 
         for case in cases {
@@ -1478,6 +1484,32 @@ mod tests {
                             Expr::from("49699333"),
                         )),
                     },
+                ),
+            ),
+            // Parenthesized call with index access
+            (
+                "(fromJSON('[]'))[1]",
+                SpannedExpr::new(
+                    Origin::new(0..19, "(fromJSON('[]'))[1]"),
+                    Expr::context(vec![
+                        SpannedExpr::new(
+                            Origin::new(1..15, "fromJSON('[]')"),
+                            Expr::Call(Call {
+                                func: Function::FromJSON,
+                                args: vec![SpannedExpr::new(
+                                    Origin::new(10..14, "'[]'"),
+                                    Expr::from("[]"),
+                                )],
+                            }),
+                        ),
+                        SpannedExpr::new(
+                            Origin::new(16..19, "[1]"),
+                            Expr::Index(Box::new(SpannedExpr::new(
+                                Origin::new(17..18, "1"),
+                                1.0.into(),
+                            ))),
+                        ),
+                    ]),
                 ),
             ),
         ];

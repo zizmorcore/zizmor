@@ -43,7 +43,6 @@ primary_expr = {
   | boolean
   | null
   | context
-  | "(" ~ or_expr ~ ")"
 }
 
 /// Numbers
@@ -72,7 +71,7 @@ boolean = { "true" | "false" }
 null = { "null" }
 
 /// Context references (e.g., github.event.issue.number)
-context = { (function_call | identifier) ~ (("." ~ (identifier | star)) | index)* }
+context = { (function_call | identifier | "(" ~ or_expr ~ ")") ~ (("." ~ (identifier | star)) | index)* }
 
 /// A star within a context component.
 star = { "*" }
