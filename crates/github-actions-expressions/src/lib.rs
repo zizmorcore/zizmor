@@ -179,6 +179,40 @@ impl<'a> SpannedExpr<'a> {
         contexts
     }
 
+    /// Returns all possible leaf expressions that could be the result
+    /// of evaluating this expression.
+    ///
+    /// Uses GitHub Actions' short-circuit semantics:
+    /// - `A && B`: only B can flow into the result (A is a condition)
+    /// - `A || B`: either A or B can be the result
+    ///
+    /// Leaf expressions are any non-`BinOp` expressions: literals, contexts,
+    /// function calls, etc.
+    ///
+    /// For example, `${{ foo.bar == 'true' && 'hello' || '' }}` returns
+    /// `['hello', '']` since those are the two possible evaluated values.
+    /// `${{ foo.abc || foo.def }}` returns `[foo.abc, foo.def]`.
+    pub fn leaf_expressions(&self) -> Vec<&SpannedExpr<'a>> {
+        let mut leaves = vec![];
+
+        match self.deref() {
+            Expr::BinOp { lhs, op, rhs } => match op {
+                BinOp::And => {
+                    leaves.extend(rhs.leaf_expressions());
+                }
+                BinOp::Or => {
+                    leaves.extend(lhs.leaf_expressions());
+                    leaves.extend(rhs.leaf_expressions());
+                }
+                // Comparison operators produce booleans, not their operands.
+                _ => leaves.push(self),
+            },
+            _ => leaves.push(self),
+        }
+
+        leaves
+    }
+
     /// Returns any computed indices in this expression.
     ///
     /// A computed index is any index operation with a non-literal
@@ -2060,5 +2094,48 @@ mod tests {
                 subfeature::Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
             };
         }
+    }
+
+    #[test]
+    fn test_leaf_expressions() -> Result<(), Error> {
+        // A single literal is its own leaf.
+        let expr = Expr::parse("'hello'")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 1);
+        assert!(matches!(&leaves[0].inner, Expr::Literal(Literal::String(s)) if s == "hello"));
+
+        // A single context is its own leaf.
+        let expr = Expr::parse("foo.bar")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 1);
+        assert!(matches!(&leaves[0].inner, Expr::Context(_)));
+
+        // `A || B` returns both sides.
+        let expr = Expr::parse("foo.abc || foo.def")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 2);
+        assert!(matches!(&leaves[0].inner, Expr::Context(_)));
+        assert!(matches!(&leaves[1].inner, Expr::Context(_)));
+
+        // `A && B` returns only B.
+        let expr = Expr::parse("foo.bar && 'hello'")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 1);
+        assert!(matches!(&leaves[0].inner, Expr::Literal(Literal::String(s)) if s == "hello"));
+
+        // Conditional pattern: `cond && 'value' || 'fallback'`
+        let expr = Expr::parse("foo.bar == 'true' && 'redis:7' || ''")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 2);
+        assert!(matches!(&leaves[0].inner, Expr::Literal(Literal::String(s)) if s == "redis:7"));
+        assert!(matches!(&leaves[1].inner, Expr::Literal(Literal::String(s)) if s == ""));
+
+        // Comparison operators are leaves themselves (they produce booleans).
+        let expr = Expr::parse("foo.bar == 'abc'")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 1);
+        assert!(matches!(&leaves[0].inner, Expr::BinOp { .. }));
+
+        Ok(())
     }
 }

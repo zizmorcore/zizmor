@@ -49,6 +49,11 @@ of `zizmor`.
 * The [ref-version-mismatch] audit now uses a more useful audit description
   for its findings (#1843)
 
+* The [unpinned-images] audit now produces more precise findings for
+  image references that are computed through expressions (#1756)
+
+    Many thanks to @miketheman for implementing this improvement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [concurrency-limits] audit reported findings
