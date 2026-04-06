@@ -27,7 +27,7 @@ jobs:
     # PRs only get benchmarked if they have the `run-benchmarks` label.
     # Forks don't have access to CodSpeed secrets, so skip them.
     if: |
-      !github.event.pull_request.head.repo.fork
+      github.repository_owner == 'zizmorcore'
         && (contains(github.event.pull_request.labels.*.name, 'run-benchmarks')
           || github.event_name == 'push'
           || github.event_name == 'workflow_dispatch')
