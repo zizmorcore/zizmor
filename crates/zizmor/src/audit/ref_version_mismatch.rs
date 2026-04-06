@@ -70,6 +70,7 @@ impl RefVersionMismatch {
 
     /// Create a Fix for updating the version comment to match the pinned hash
     fn create_version_comment_fix<'doc, S: StepCommon<'doc>>(
+        &self,
         step: &S,
         correct_tag: &str,
     ) -> Fix<'doc> {
