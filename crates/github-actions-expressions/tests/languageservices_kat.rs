@@ -99,8 +99,6 @@ const SKIP_GROUP_PREFIXES: &[&str] = &[
     // and will stack-overflow on deeply nested expressions.
     "depth-errors",
     "memory-errors",
-    // case() is not a standard GitHub Actions expression function.
-    "case",
 ];
 
 fn should_skip_group(group: &str) -> bool {
