@@ -91,6 +91,9 @@ of `zizmor`.
 * Fixed a bug where expressions containing `NaN` would be constant-evaluated
   incorrectly (#1858)
 
+* Fixed a bug where `nix` would not be recognized as a `package-ecosystem` in
+  `dependabot.yml` (#1867)
+
 ### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
