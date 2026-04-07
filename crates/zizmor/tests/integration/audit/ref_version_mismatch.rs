@@ -94,3 +94,17 @@ fn test_issue_1853() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_issue_1869() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .input(input_under_test("ref-version-mismatch/issue-1869-repro.yml"))
+            .run()?,
+        @"No findings to report. Good job! (1 suppressed)"
+    );
+
+    Ok(())
+}
