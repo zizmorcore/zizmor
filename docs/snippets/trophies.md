@@ -76,6 +76,7 @@
         - apache/lucene#15216
         - apache/opendal-reqsign#687
         - apache/opennlp#736
+        - apache/polaris#4097
         - apache/sedona#1976
         - apache/sedona#2582
 
@@ -180,6 +181,14 @@
         - axios/axios#10618
 
 
+-   ![](https://github.com/Azure.png?size=40){ width="40" loading=lazy align=left } Azure
+
+    ---
+
+    ??? example "Examples"
+        - Azure/azure-container-networking#4302
+
+
 -   ![](https://github.com/basecamp.png?size=40){ width="40" loading=lazy align=left } basecamp
 
     ---
@@ -269,6 +278,16 @@
         - blakeblackshear/frigate#15490
 
 
+-   ![](https://github.com/boto.png?size=40){ width="40" loading=lazy align=left } boto
+
+    ---
+
+    ??? example "Examples"
+        - boto/boto3#4755
+        - boto/botocore#3665
+        - boto/s3transfer#374
+
+
 -   ![](https://github.com/brian-team.png?size=40){ width="40" loading=lazy align=left } brian-team
 
     ---
@@ -336,6 +355,16 @@
 
     ??? example "Examples"
         - certbot/josepy#193
+
+
+-   ![](https://github.com/chainguard-dev.png?size=40){ width="40" loading=lazy align=left } chainguard-dev
+
+    ---
+
+    ??? example "Examples"
+        - chainguard-dev/apko#2166
+        - chainguard-dev/malcontent#1451
+        - chainguard-dev/melange#2463
 
 
 -   ![](https://github.com/chatmail.png?size=40){ width="40" loading=lazy align=left } chatmail
@@ -804,12 +833,28 @@
         - github-aws-runners/terraform-aws-github-runner#4808
 
 
+-   ![](https://github.com/gitify-app.png?size=40){ width="40" loading=lazy align=left } gitify-app
+
+    ---
+
+    ??? example "Examples"
+        - gitify-app/gitify#2763
+
+
 -   ![](https://github.com/GitoxideLabs.png?size=40){ width="40" loading=lazy align=left } GitoxideLabs
 
     ---
 
     ??? example "Examples"
         - GitoxideLabs/gitoxide#2337
+
+
+-   ![](https://github.com/gleam-lang.png?size=40){ width="40" loading=lazy align=left } gleam-lang
+
+    ---
+
+    ??? example "Examples"
+        - gleam-lang/gleam#5559
 
 
 -   ![](https://github.com/google.png?size=40){ width="40" loading=lazy align=left } google
@@ -1114,6 +1159,7 @@
     ---
 
     ??? example "Examples"
+        - Kludex/python-multipart#242
         - Kludex/uvicorn#2872
 
 
@@ -1271,6 +1317,14 @@
         - microsoft/vscode-jupyter#16622
 
 
+-   ![](https://github.com/miketheman.png?size=40){ width="40" loading=lazy align=left } miketheman
+
+    ---
+
+    ??? example "Examples"
+        - miketheman/pytest-socket#462
+
+
 -   ![](https://github.com/mkuf.png?size=40){ width="40" loading=lazy align=left } mkuf
 
     ---
@@ -1408,6 +1462,14 @@
     ??? example "Examples"
         - numpy/numpy#27931
         - numpy/numpy.org#797
+
+
+-   ![](https://github.com/octo-sts.png?size=40){ width="40" loading=lazy align=left } octo-sts
+
+    ---
+
+    ??? example "Examples"
+        - octo-sts/app#1294
 
 
 -   ![](https://github.com/octobox.png?size=40){ width="40" loading=lazy align=left } octobox
@@ -1806,6 +1868,14 @@
         - quarkslab/quokka#46
 
 
+-   ![](https://github.com/ranaroussi.png?size=40){ width="40" loading=lazy align=left } ranaroussi
+
+    ---
+
+    ??? example "Examples"
+        - ranaroussi/yfinance#2735
+
+
 -   ![](https://github.com/rancher.png?size=40){ width="40" loading=lazy align=left } rancher
 
     ---
@@ -1820,6 +1890,14 @@
 
     ??? example "Examples"
         - ratatui/ratatui#1961
+
+
+-   ![](https://github.com/renovatebot.png?size=40){ width="40" loading=lazy align=left } renovatebot
+
+    ---
+
+    ??? example "Examples"
+        - renovatebot/renovate#42346
 
 
 -   ![](https://github.com/reubeno.png?size=40){ width="40" loading=lazy align=left } reubeno
@@ -2280,6 +2358,7 @@
     ---
 
     ??? example "Examples"
+        - yt-dlp/ejs#40
         - yt-dlp/yt-dlp#15324
         - yt-dlp/yt-dlp#15387
 
