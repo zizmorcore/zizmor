@@ -1146,9 +1146,7 @@ jobs:
             Some(Capability::Arbitrary)
         ));
         assert!(matches!(
-            Capability::from_context(
-                "github.event.workflow_run.triggering_actor.organizations_url"
-            ),
+            Capability::from_context("github.event.answer.user.gists_url"),
             Some(Capability::Structured)
         ));
         assert!(matches!(

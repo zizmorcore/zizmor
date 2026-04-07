@@ -422,21 +422,22 @@ jobs:
 
         // Only test the fix if one is available (depends on GitHub API response)
         let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
-        insta::assert_snapshot!(new_doc.source(), @r"
-            name: nonexistent
+        insta::assert_snapshot!(new_doc.source(), @"
 
-            on:
-              push:
+        name: nonexistent
 
-            permissions: {}
+        on:
+          push:
 
-            jobs:
-              test:
-                name: test
-                runs-on: ubuntu-latest
-                steps:
-                  - name: Setup Go
-                    uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-            ");
+        permissions: {}
+
+        jobs:
+          test:
+            name: test
+            runs-on: ubuntu-latest
+            steps:
+              - name: Setup Go
+                uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        ");
     }
 }
