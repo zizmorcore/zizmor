@@ -137,7 +137,7 @@ fn test_stdin_with_other_inputs() -> anyhow::Result<()> {
             .expects_failure(2)
             .args(["-", "some-dir/"])
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     error: `-` (stdin) cannot be combined with other inputs
 
@@ -160,7 +160,7 @@ fn test_stdin_with_fix() -> anyhow::Result<()> {
             .expects_failure(2)
             .args(["--fix", "-"])
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     error: `--fix` cannot be used with `-` (stdin)
 

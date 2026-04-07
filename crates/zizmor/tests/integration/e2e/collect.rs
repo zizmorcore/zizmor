@@ -13,7 +13,7 @@ fn test_fails_incompatible_modes() -> Result<()> {
             .args(["--collect=workflows,actions-only"])
             .input(input_under_test("neutral.yml"))
             .run()?,
-        @r"
+        @"
     🌈 zizmor v@@VERSION@@
     error: `workflows-only` and `actions-only` cannot be combined with other collection modes
 
