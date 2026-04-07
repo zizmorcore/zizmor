@@ -112,6 +112,9 @@ of `zizmor`.
 * The [unpinned-uses] audit no longer suggests auto-fixes for Git references
   that don't look like version tags, such as `main` (#1860)
 
+* The [template-injection] audit now considers more "URL-shaped" contexts
+  to be fully attacker-controllable, rather than partially controllable (#1868)
+
 ## 1.23.1
 
 ### Bug Fixes 🐛
