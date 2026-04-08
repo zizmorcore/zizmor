@@ -53,13 +53,21 @@ fn test_pip_audit_ci() {
     );
     assert_eq!(test_job.steps.len(), 3);
 
-    let StepBody::Uses { uses, with } = &test_job.steps[0].body else {
+    let StepBody::Uses {
+        uses,
+        with: LoE::Literal(with),
+    } = &test_job.steps[0].body
+    else {
         panic!("expected uses step");
     };
     assert_eq!(uses, &Uses::parse("actions/checkout@v4.1.1").unwrap());
     assert!(with.is_empty());
 
-    let StepBody::Uses { uses, with } = &test_job.steps[1].body else {
+    let StepBody::Uses {
+        uses,
+        with: LoE::Literal(with),
+    } = &test_job.steps[1].body
+    else {
         panic!("expected uses step");
     };
     assert_eq!(uses, &Uses::parse("actions/setup-python@v5").unwrap());

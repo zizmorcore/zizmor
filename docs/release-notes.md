@@ -13,12 +13,12 @@ of `zizmor`.
 
 * `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
 
+### Enhancements 🌱
+
 * The [use-trusted-publishing] audit now detects `bun publish` and `bunx npm publish`
   patterns (#1737)
 
     Many thanks to @shaanmajid for proposing and implementing this improvement!
-
-### Enhancements 🌱
 
 * `zizmor`'s CLI help and usage output now uses a custom color scheme for
   improved readability (#1747)
@@ -33,10 +33,38 @@ of `zizmor`.
   it encounters a cooldown used with a multi-ecosystem-group, as the two
   do not interact well (#1780)
 
+* Recommend `gh release upload` as a replacement for @svenstaro/upload-release-action in
+  [superfluous-actions] (#1801)
+
+* The [obfuscation] audit now emits a finding for `with: ${{ expr }}`
+  clauses cannot be analyzed (#1772)
+
+* `zizmor --help` is now rendered with option groups for improved readability (#1831)
+
+    Many thanks to @deckstose for implementing this improvement!
+
+* zizmor's SARIF output now uses codeflows instead of related locations,
+  improving its rendering behavior on GitHub Advanced Security (#1843)
+
+* The [ref-version-mismatch] audit now uses a more useful audit description
+  for its findings (#1843)
+
+* The [unpinned-images] audit now produces more precise findings for
+  image references that are computed through expressions (#1756)
+
+    Many thanks to @miketheman for implementing this improvement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where YAML anchors and aliases could cause duplicate findings
   to be reported (#1584)
+
+* Fixed a bug where the [concurrency-limits] audit reported findings
+  at the job level instead of the workflow level (#1627)
+
+* Fixed a bug where `with: ${{ expr }}` clauses would cause a crash.
+  `artipacked` audit emits a pedantic finding on such clauses. (#1772)
+
 
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
   to preserve an environment variable's casing (#1766)
@@ -46,7 +74,33 @@ of `zizmor`.
 
 * Fixed a bug where expressions containing `Infinity` or `NaN` would fail to parse (#1778)
 
-* Fixed a bug where some parenthetical forms in expressions would fail to parse (#1779)
+* Fixed several bugs where some parenthetical forms in expressions would fail to parse
+  (#1779, #1856)
+
+* Fixed a bug where expressions with invalid identifiers (such as `-Inf`) would
+  be incorrectly accepted (#1794)
+
+* Fixed a bug where the [known-vulnerable-actions] audit would fail to handle
+  multiple discrete packages in a single advisory (#1810)
+
+* Fixed a bug where the [template-injection] audit would incorrectly flag
+  `needs.*.result` as an injection risk in the default persona (#1814)
+
+* Fixed a bug where the [unpinned-uses] audit would product incorrect auto-fixes
+  for actions with subpaths (#1841)
+
+* Fixed a bug where the [ref-version-mismatch] audit would fail to produce
+  findings for comments containing nonexistent refs (#1853)
+
+* Fixed a bug where expressions containing `NaN` would be constant-evaluated
+  incorrectly (#1858)
+
+* Fixed a bug where `nix` would not be recognized as a `package-ecosystem` in
+  `dependabot.yml` (#1867)
+
+* Fixed a bug where the [ref-version-mismatch] audit would incorrectly parse
+  prerelease version comments (such as `# v6-beta`), causing some findings
+  to appear unresolvable (#1870)
 
 ### Changes ⚠️
 
@@ -54,6 +108,20 @@ of `zizmor`.
   persona, due to numerous false positives and negatives caused by GitHub's
   platform limitations (primarily around interactions between environment
   secrets and reusable workflows) (#1777)
+
+* zizmor's handling of GitHub Actions expressions has been made stricter,
+  and now rejects unknown functions and function calls with incorrect
+  arities (#1823, #1826)
+
+* The [superfluous-actions] audit now uses the "pedantic" persona for some
+  findings along with a medium or low confidence marker to signal when a action
+  may not be easily replaced with built-in functionality (#1822, #1859)
+
+* The [unpinned-uses] audit no longer suggests auto-fixes for Git references
+  that don't look like version tags, such as `main` (#1860)
+
+* The [template-injection] audit now considers more "URL-shaped" contexts
+  to be fully attacker-controllable, rather than partially controllable (#1868)
 
 ## 1.23.1
 

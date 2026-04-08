@@ -195,7 +195,7 @@ fn test_obfuscation() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    38 findings (1 ignored, 17 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 0 high
+    37 findings (1 ignored, 16 suppressed, 19 fixable): 0 informational, 20 low, 0 medium, 0 high
     "
     );
 
@@ -233,6 +233,29 @@ fn test_issue_1177_repro_pedantic() -> Result<()> {
             .args(["--persona=pedantic"])
             .run()?,
         @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_issue_1769() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+        .input(input_under_test("obfuscation/issue-1769-repro.yml")).run()?,
+        @"
+    info[obfuscation]: obfuscated usage of GitHub Actions features
+      --> @@INPUT@@:19:9
+       |
+    18 |       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # zizmor: ignore[artipacked]
+       |         --------------------------------------------------------------- this action
+    19 |         with: ${{ fromJson(steps.setup.outputs.options) }}
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of an expression for `with:` prevents analysis
+       |
+       = note: audit confidence → High
+
+    2 findings (1 suppressed): 1 informational, 0 low, 0 medium, 0 high
+    "
     );
 
     Ok(())

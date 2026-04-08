@@ -14,7 +14,6 @@ use crate::{
 };
 
 use self::parser::{ExprParser, Rule};
-use anyhow::Result;
 use itertools::Itertools;
 use pest::{Parser, iterators::Pair};
 
@@ -23,6 +22,17 @@ pub mod context;
 pub mod identifier;
 pub mod literal;
 pub mod op;
+
+/// Errors that can occur during expression parsing.
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    /// The expression failed to parse according to the grammar.
+    #[error("Parse error: {0}")]
+    Pest(#[from] pest::error::Error<Rule>),
+    /// The expression contains an invalid function call.
+    #[error("Invalid function call")]
+    Call(#[from] call::Error),
+}
 
 // Isolates the ExprParser, Rule and other generated types
 // so that we can do `missing_docs` at the top-level.
@@ -137,7 +147,7 @@ impl<'a> SpannedExpr<'a> {
                 // These functions, when evaluated, produce an evaluation
                 // that includes some or all of the contexts listed in
                 // their arguments.
-                if func == "toJSON" || func == "format" || func == "join" {
+                if matches!(func, Function::ToJSON | Function::Format | Function::Join) {
                     for arg in args {
                         contexts.extend(arg.dataflow_contexts());
                     }
@@ -167,6 +177,40 @@ impl<'a> SpannedExpr<'a> {
         }
 
         contexts
+    }
+
+    /// Returns all possible leaf expressions that could be the result
+    /// of evaluating this expression.
+    ///
+    /// Uses GitHub Actions' short-circuit semantics:
+    /// - `A && B`: only B can flow into the result (A is a condition)
+    /// - `A || B`: either A or B can be the result
+    ///
+    /// Leaf expressions are any non-`BinOp` expressions: literals, contexts,
+    /// function calls, etc.
+    ///
+    /// For example, `${{ foo.bar == 'true' && 'hello' || '' }}` returns
+    /// `['hello', '']` since those are the two possible evaluated values.
+    /// `${{ foo.abc || foo.def }}` returns `[foo.abc, foo.def]`.
+    pub fn leaf_expressions(&self) -> Vec<&SpannedExpr<'a>> {
+        let mut leaves = vec![];
+
+        match self.deref() {
+            Expr::BinOp { lhs, op, rhs } => match op {
+                BinOp::And => {
+                    leaves.extend(rhs.leaf_expressions());
+                }
+                BinOp::Or => {
+                    leaves.extend(lhs.leaf_expressions());
+                    leaves.extend(rhs.leaf_expressions());
+                }
+                // Comparison operators produce booleans, not their operands.
+                _ => leaves.push(self),
+            },
+            _ => leaves.push(self),
+        }
+
+        leaves
     }
 
     /// Returns any computed indices in this expression.
@@ -338,17 +382,18 @@ impl<'src> Expr<'src> {
             Expr::UnOp { op: _, expr } => expr.constant_reducible(),
             Expr::Call(Call { func, args }) => {
                 // These functions are reducible if their arguments are reducible.
-                if func == "format"
-                    || func == "contains"
-                    || func == "startsWith"
-                    || func == "endsWith"
-                    || func == "toJSON"
-                    // TODO(ww): `fromJSON` *is* frequently reducible, but
-                    // doing so soundly with subexpressions is annoying.
-                    // We overapproximate for now and consider it non-reducible.
-                    // || func == "fromJSON"
-                    || func == "join"
-                {
+                // TODO(ww): `fromJSON` *is* frequently reducible, but
+                // doing so soundly with subexpressions is annoying.
+                // We overapproximate for now and consider it non-reducible.
+                if matches!(
+                    func,
+                    Function::Contains
+                        | Function::StartsWith
+                        | Function::EndsWith
+                        | Function::Format
+                        | Function::ToJSON
+                        | Function::Join // | Function::FromJSON
+                ) {
                     args.iter().all(|e| e.constant_reducible())
                 } else {
                     false
@@ -361,7 +406,7 @@ impl<'src> Expr<'src> {
 
     /// Parses the given string into an expression.
     #[allow(clippy::unwrap_used)]
-    pub fn parse(expr: &'src str) -> Result<SpannedExpr<'src>> {
+    pub fn parse(expr: &'src str) -> Result<SpannedExpr<'src>, Error> {
         // Top level `expression` is a single `or_expr`.
         let or_expr = ExprParser::parse(Rule::expression, expr)?
             .next()
@@ -370,7 +415,7 @@ impl<'src> Expr<'src> {
             .next()
             .unwrap();
 
-        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr<'_>>> {
+        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr<'_>>, Error> {
             // We're parsing a pest grammar, which isn't left-recursive.
             // As a result, we have constructions like
             // `or_expr = { and_expr ~ ("||" ~ and_expr)* }`, which
@@ -547,12 +592,11 @@ impl<'src> Expr<'src> {
                         .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
+                    let call = Call::new(identifier.as_str(), args)?;
+
                     Ok(SpannedExpr::new(
                         Origin::new(span.start()..span.end(), raw),
-                        Expr::Call(Call {
-                            func: Function(identifier.as_str()),
-                            args,
-                        }),
+                        Expr::Call(call),
                     )
                     .into())
                 }
@@ -574,10 +618,12 @@ impl<'src> Expr<'src> {
                         .map(|pair| parse_pair(pair).map(|e| *e))
                         .collect::<Result<_, _>>()?;
 
-                    // NOTE(ww): Annoying specialization: the `context` rule
-                    // wholly encloses the `function_call` rule, so we clean up
-                    // the AST slightly to turn `Context { Call }` into just `Call`.
-                    if inner.len() == 1 && matches!(inner[0].inner, Expr::Call { .. }) {
+                    // The `context` rule wholly encloses `function_call`
+                    // and parenthesized expressions, so unwrap single-element
+                    // contexts for those to avoid unnecessary nesting.
+                    // Bare identifiers are kept as `Context` since they
+                    // represent genuine context references (e.g. `github`).
+                    if inner.len() == 1 && !matches!(inner[0].inner, Expr::Identifier(_)) {
                         Ok(inner.remove(0).into())
                     } else {
                         Ok(SpannedExpr::new(
@@ -717,14 +763,14 @@ impl Evaluation {
     ///
     /// GitHub Actions truthiness:
     /// - false and null are falsy
-    /// - Numbers: 0 is falsy, everything else is truthy
+    /// - Numbers: 0 and NaN are falsy, everything else is truthy
     /// - Strings: empty string is falsy, everything else is truthy
     /// - Arrays and dictionaries are always truthy (non-empty objects)
     pub fn as_boolean(&self) -> bool {
         match self {
             Evaluation::Boolean(b) => *b,
             Evaluation::Null => false,
-            Evaluation::Number(n) => *n != 0.0,
+            Evaluation::Number(n) => *n != 0.0 && !n.is_nan(),
             Evaluation::String(s) => !s.is_empty(),
             // Arrays and objects are always truthy, even if empty.
             Evaluation::Array(_) | Evaluation::Object(_) => true,
@@ -937,11 +983,10 @@ impl<'src> Expr<'src> {
 mod tests {
     use std::borrow::Cow;
 
-    use anyhow::Result;
     use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use crate::{Call, Literal, Origin, SpannedExpr};
+    use crate::{Call, Error, Literal, Origin, SpannedExpr};
 
     use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
 
@@ -989,16 +1034,6 @@ mod tests {
 
             assert_eq!(expr.as_str(), *expected);
         }
-    }
-
-    #[test]
-    fn test_function_eq() {
-        let func = Function("foo");
-        assert_eq!(&func, "foo");
-        assert_eq!(&func, "FOO");
-        assert_eq!(&func, "Foo");
-
-        assert_eq!(func, Function("FOO"));
     }
 
     #[test]
@@ -1075,7 +1110,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_expr_rule() -> Result<()> {
+    fn test_parse_expr_rule() -> Result<(), Error> {
         // Ensures that we parse multi-line expressions correctly.
         let multiline = "github.repository_owner == 'Homebrew' &&
         ((github.event_name == 'pull_request_review' && github.event.review.state == 'approved') ||
@@ -1145,8 +1180,12 @@ mod tests {
             // Leading/trailing dot
             ".5",
             "123.",
+            // Whitespace handling
             multiline2,
             "fromJSON( github.event.inputs.hmm ) [ 0 ]",
+            // Parens around a call
+            "(fromJson('{\"one\": \"one val\"}')).one",
+            "(fromJson('[\"one\", \"two\"]'))[1]",
         ];
 
         for case in cases {
@@ -1160,6 +1199,21 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn test_parse_expr_rule_rejects() {
+        let cases = &[
+            // "Inf" is not a valid number form; only "Infinity" is accepted.
+            "-Inf", "+Inf",
+        ];
+
+        for case in cases {
+            assert!(
+                ExprParser::parse(Rule::expression, case).is_err(),
+                "{case:?} should not parse as a valid expression"
+            );
+        }
     }
 
     #[test]
@@ -1218,15 +1272,15 @@ mod tests {
                 ),
             ),
             (
-                "foo(1, 2, 3)",
+                "format('{0} {1}', 2, 3)",
                 SpannedExpr::new(
-                    Origin::new(0..12, "foo(1, 2, 3)"),
+                    Origin::new(0..23, "format('{0} {1}', 2, 3)"),
                     Expr::Call(Call {
-                        func: Function("foo"),
+                        func: Function::Format,
                         args: vec![
-                            SpannedExpr::new(Origin::new(4..5, "1"), 1.0.into()),
-                            SpannedExpr::new(Origin::new(7..8, "2"), 2.0.into()),
-                            SpannedExpr::new(Origin::new(10..11, "3"), 3.0.into()),
+                            SpannedExpr::new(Origin::new(7..16, "'{0} {1}'"), "{0} {1}".into()),
+                            SpannedExpr::new(Origin::new(18..19, "2"), 2.0.into()),
+                            SpannedExpr::new(Origin::new(21..22, "3"), 3.0.into()),
                         ],
                     }),
                 ),
@@ -1422,7 +1476,7 @@ mod tests {
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(7..29, "format('{0}', 'event')"),
                                 Expr::Call(Call {
-                                    func: Function("format"),
+                                    func: Function::Format,
                                     args: vec![
                                         SpannedExpr::new(
                                             Origin::new(14..19, "'{0}'"),
@@ -1466,6 +1520,32 @@ mod tests {
                     },
                 ),
             ),
+            // Parenthesized call with index access
+            (
+                "(fromJSON('[]'))[1]",
+                SpannedExpr::new(
+                    Origin::new(0..19, "(fromJSON('[]'))[1]"),
+                    Expr::context(vec![
+                        SpannedExpr::new(
+                            Origin::new(1..15, "fromJSON('[]')"),
+                            Expr::Call(Call {
+                                func: Function::FromJSON,
+                                args: vec![SpannedExpr::new(
+                                    Origin::new(10..14, "'[]'"),
+                                    Expr::from("[]"),
+                                )],
+                            }),
+                        ),
+                        SpannedExpr::new(
+                            Origin::new(16..19, "[1]"),
+                            Expr::Index(Box::new(SpannedExpr::new(
+                                Origin::new(17..18, "1"),
+                                1.0.into(),
+                            ))),
+                        ),
+                    ]),
+                ),
+            ),
         ];
 
         for (case, expr) in cases {
@@ -1474,7 +1554,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_constant_reducible() -> Result<()> {
+    fn test_expr_constant_reducible() -> Result<(), Error> {
         for (expr, reducible) in &[
             ("'foo'", true),
             ("1", true),
@@ -1516,7 +1596,7 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluate_constant_complex_expressions() -> Result<()> {
+    fn test_evaluate_constant_complex_expressions() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -1548,7 +1628,7 @@ mod tests {
     }
 
     #[test]
-    fn test_case_insensitive_string_comparison() -> Result<()> {
+    fn test_case_insensitive_string_comparison() -> Result<(), Error> {
         use crate::Evaluation;
 
         let test_cases = &[
@@ -1627,6 +1707,7 @@ mod tests {
             (Evaluation::Number(0.0), false),
             (Evaluation::Number(1.0), true),
             (Evaluation::Number(-1.0), true),
+            (Evaluation::Number(f64::NAN), false), // NaN is falsy in GitHub Actions
             (Evaluation::String("".to_string()), false),
             (Evaluation::String("hello".to_string()), true),
             (Evaluation::Array(vec![]), true), // Arrays are always truthy
@@ -1801,7 +1882,7 @@ mod tests {
     }
 
     #[test]
-    fn test_github_actions_logical_semantics() -> Result<()> {
+    fn test_github_actions_logical_semantics() -> Result<(), Error> {
         use crate::Evaluation;
 
         // Test GitHub Actions-specific && and || semantics
@@ -1824,6 +1905,8 @@ mod tests {
             ("false || 'hello'", Evaluation::String("hello".to_string())),
             ("null || false", Evaluation::Boolean(false)),
             ("'' || null", Evaluation::Null),
+            ("!NaN", Evaluation::Boolean(true)),
+            ("!!NaN", Evaluation::Boolean(false)),
         ];
 
         for (expr_str, expected) in test_cases {
@@ -1836,7 +1919,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_has_constant_reducible_subexpr() -> Result<()> {
+    fn test_expr_has_constant_reducible_subexpr() -> Result<(), Error> {
         for (expr, reducible) in &[
             // Literals are not considered reducible subexpressions.
             ("'foo'", false),
@@ -1857,7 +1940,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_contexts() -> Result<()> {
+    fn test_expr_contexts() -> Result<(), Error> {
         // A single context.
         let expr = Expr::parse("foo.bar.baz[1].qux")?;
         assert_eq!(
@@ -1883,7 +1966,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_dataflow_contexts() -> Result<()> {
+    fn test_expr_dataflow_contexts() -> Result<(), Error> {
         // Trivial cases.
         let expr = Expr::parse("foo.bar")?;
         assert_eq!(
@@ -1967,7 +2050,7 @@ mod tests {
     }
 
     #[test]
-    fn test_spannedexpr_computed_indices() -> Result<()> {
+    fn test_spannedexpr_computed_indices() -> Result<(), Error> {
         for (expr, computed_indices) in &[
             ("foo.bar", vec![]),
             ("foo.bar[1]", vec![]),
@@ -1999,9 +2082,9 @@ mod tests {
             ("foo==bar", "foo==bar"),
             ("foo    ==   bar", r"foo\s+==\s+bar"),
             ("foo == bar", r"foo\s+==\s+bar"),
-            ("foo(bar)", "foo(bar)"),
-            ("foo(bar, baz)", r"foo\(bar,\s+baz\)"),
-            ("foo (bar, baz)", r"foo\s+\(bar,\s+baz\)"),
+            ("fromJSON('{}')", "fromJSON('{}')"),
+            ("fromJSON('{ }')", r"fromJSON\('\{\s+\}'\)"),
+            ("fromJSON ('{ }')", r"fromJSON\s+\('\{\s+\}'\)"),
             ("a . b . c . d", r"a\s+\.\s+b\s+\.\s+c\s+\.\s+d"),
             ("true \n && \n false", r"true\s+\&\&\s+false"),
         ] {
@@ -2011,5 +2094,48 @@ mod tests {
                 subfeature::Fragment::Regex(actual) => assert_eq!(actual.as_str(), *expected),
             };
         }
+    }
+
+    #[test]
+    fn test_leaf_expressions() -> Result<(), Error> {
+        // A single literal is its own leaf.
+        let expr = Expr::parse("'hello'")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 1);
+        assert!(matches!(&leaves[0].inner, Expr::Literal(Literal::String(s)) if s == "hello"));
+
+        // A single context is its own leaf.
+        let expr = Expr::parse("foo.bar")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 1);
+        assert!(matches!(&leaves[0].inner, Expr::Context(_)));
+
+        // `A || B` returns both sides.
+        let expr = Expr::parse("foo.abc || foo.def")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 2);
+        assert!(matches!(&leaves[0].inner, Expr::Context(_)));
+        assert!(matches!(&leaves[1].inner, Expr::Context(_)));
+
+        // `A && B` returns only B.
+        let expr = Expr::parse("foo.bar && 'hello'")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 1);
+        assert!(matches!(&leaves[0].inner, Expr::Literal(Literal::String(s)) if s == "hello"));
+
+        // Conditional pattern: `cond && 'value' || 'fallback'`
+        let expr = Expr::parse("foo.bar == 'true' && 'redis:7' || ''")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 2);
+        assert!(matches!(&leaves[0].inner, Expr::Literal(Literal::String(s)) if s == "redis:7"));
+        assert!(matches!(&leaves[1].inner, Expr::Literal(Literal::String(s)) if s == ""));
+
+        // Comparison operators are leaves themselves (they produce booleans).
+        let expr = Expr::parse("foo.bar == 'abc'")?;
+        let leaves = expr.leaf_expressions();
+        assert_eq!(leaves.len(), 1);
+        assert!(matches!(&leaves[0].inner, Expr::BinOp { .. }));
+
+        Ok(())
     }
 }

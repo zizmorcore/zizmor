@@ -24,20 +24,18 @@ pub(crate) struct RefVersionMismatch {
 audit_meta!(
     RefVersionMismatch,
     "ref-version-mismatch",
-    "detects commit SHAs that don't match their version comment tags"
+    "action's hash pin does not match version comment"
 );
 
 #[allow(clippy::unwrap_used)]
 static VERSION_COMMENT_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     vec![
-        // Matches "# tag=v2.8.0" or "# tag=v1.2.3"
-        Regex::new(r"#\s*tag\s*=\s*(v\d+(?:\.\d+)*(?:\.\d+)?)").unwrap(),
-        // Matches "# v2.8.0"
-        Regex::new(r"#\s*(v\d+(?:\.\d+)*(?:\.\d+)?)").unwrap(),
-        // Matches version without 'v' prefix: "# tag=2.8.0"
-        Regex::new(r"#\s*tag\s*=\s*(\d+(?:\.\d+)*(?:\.\d+)?)").unwrap(),
+        // Matches "# tag=v2.8.0", "# tag=v6-beta", or any non-whitespace tag token.
+        Regex::new(r"#\s*tag\s*=\s*(\S+)").unwrap(),
+        // Matches "# v2.8.0" and prerelease forms like "# v1.2.3-rc.1".
+        Regex::new(r"#\s*(v\d+(?:\.\d+)*(?:-[\w.-]+)?)").unwrap(),
         // More flexible: "# version: 2.8.0"
-        Regex::new(r"#\s*(?:version|ver)\s*[:=]\s*(v?\d+(?:\.\d+)*(?:\.\d+)?)").unwrap(),
+        Regex::new(r"#\s*(?:version|ver)\s*[:=]\s*(v?\d+(?:\.\d+)*(?:-[\w.-]+)?)").unwrap(),
     ]
 });
 
@@ -104,54 +102,60 @@ impl RefVersionMismatch {
             return Ok(findings);
         };
 
-        let Some(commit_for_ref) = self
+        let commit_for_ref = self
             .client
             .commit_for_ref(uses.owner(), uses.repo(), version_from_comment)
             .await
-            .map_err(Self::err)?
-        else {
-            // TODO(ww): Does it make sense to flag this as well?
-            // This indicates a completely bogus version comment,
-            // rather than a mismatch.
+            .map_err(Self::err)?;
+
+        // If the ref matches, there's nothing to do.
+        if commit_for_ref.as_deref() == Some(commit_sha) {
             return Ok(findings);
+        }
+
+        let subfeature = Subfeature::new(
+            uses_location.concrete.location.offset_span.end,
+            version_from_comment,
+        );
+
+        let comment_location = match commit_for_ref {
+            Some(commit_for_ref) => Location::new(
+                uses_location.symbolic.clone().primary().annotated(format!(
+                    "points to commit {short_commit}",
+                    short_commit = &commit_for_ref[..12]
+                )),
+                Feature::from_subfeature(&subfeature, step),
+            ),
+            None => Location::new(
+                uses_location
+                    .symbolic
+                    .clone()
+                    .primary()
+                    .annotated("points to unknown ref"),
+                Feature::from_subfeature(&subfeature, step),
+            ),
         };
 
-        if commit_for_ref != commit_sha {
-            let subfeature = Subfeature::new(
-                uses_location.concrete.location.offset_span.end,
-                version_from_comment,
+        let mut builder = Self::finding()
+            .severity(Severity::Medium)
+            .confidence(Confidence::High)
+            .add_raw_location(comment_location);
+
+        if let Some(suggestion) = self
+            .client
+            .longest_tag_for_commit(uses.owner(), uses.repo(), commit_sha)
+            .await
+            .map_err(Self::err)?
+        {
+            builder = builder.add_location(
+                uses_location
+                    .symbolic
+                    .annotated(format!("is pointed to by tag {tag}", tag = suggestion.name)),
             );
-
-            let mut builder = Self::finding()
-                .severity(Severity::Medium)
-                .confidence(Confidence::High)
-                .add_raw_location(Location::new(
-                    // NOTE(ww): We trim the commit SHA to 12 characters
-                    // for display purposes; 12 is a conservative length
-                    // that avoids collisions in Linux-sized repositories.
-                    uses_location.symbolic.clone().primary().annotated(format!(
-                        "points to commit {short_commit}",
-                        short_commit = &commit_for_ref[..12]
-                    )),
-                    Feature::from_subfeature(&subfeature, step),
-                ));
-
-            if let Some(suggestion) = self
-                .client
-                .longest_tag_for_commit(uses.owner(), uses.repo(), commit_sha)
-                .await
-                .map_err(Self::err)?
-            {
-                builder = builder.add_location(
-                    uses_location
-                        .symbolic
-                        .annotated(format!("is pointed to by tag {tag}", tag = suggestion.name)),
-                );
-                // Add auto-fix to update the version comment to match the pinned hash
-                builder = builder.fix(self.create_version_comment_fix(step, &suggestion.name));
-            }
-            findings.push(builder.build(step).map_err(Self::err)?);
+            // Add auto-fix to update the version comment to match the pinned hash
+            builder = builder.fix(self.create_version_comment_fix(step, &suggestion.name));
         }
+        findings.push(builder.build(step).map_err(Self::err)?);
 
         Ok(findings)
     }
@@ -198,10 +202,23 @@ mod tests {
     fn test_version_comment_patterns() {
         let test_cases = vec![
             ("# tag=v2.8.0", Some("v2.8.0")),
+            ("# tag=v6-beta", Some("v6-beta")),
+            ("# tag=v1.2.3-rc.1", Some("v1.2.3-rc.1")),
+            ("# tag=v6-beta-2", Some("v6-beta-2")),
+            ("# tag=release-2024-01", Some("release-2024-01")),
             ("# v2.8.0", Some("v2.8.0")),
+            ("# v6-beta", Some("v6-beta")),
+            ("# v1.2.3-rc.1", Some("v1.2.3-rc.1")),
+            ("# v6-beta-2", Some("v6-beta-2")),
+            ("# v1.0.0-rc-1", Some("v1.0.0-rc-1")),
+            ("# v2.0-preview-3", Some("v2.0-preview-3")),
             ("# tag=2.8.0", Some("2.8.0")),
             ("# version: 2.8.0", Some("2.8.0")),
+            ("# version: v1.2.3-rc.1", Some("v1.2.3-rc.1")),
+            ("# version: v6-beta-2", Some("v6-beta-2")),
+            ("# version: v1.0.0-rc-1", Some("v1.0.0-rc-1")),
             ("# ver=1.0.0", Some("1.0.0")),
+            ("# visit the docs", None),
             ("# some other comment", None),
         ];
 
@@ -239,7 +256,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout with mismatched version comment
-        uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.0
+        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
 "#;
 
         let key = InputKey::local(
@@ -272,21 +289,19 @@ jobs:
         // We expect at least one finding if there's a version mismatch
         assert!(!findings.is_empty(), "Expected to find version mismatch");
 
-        // Only test the fix if one is available (depends on GitHub API response)
-        if !findings[0].fixes.is_empty() {
-            let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
-            insta::assert_snapshot!(new_doc.source(), @r"
-            name: Test Version Comment Mismatch
-            on: push
-            permissions: {}
-            jobs:
-              test:
-                runs-on: ubuntu-latest
-                steps:
-                  - name: Checkout with mismatched version comment
-                    uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.2
-            ");
-        }
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @"
+
+        name: Test Version Comment Mismatch
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout with mismatched version comment
+                uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+        ");
     }
 
     #[cfg(feature = "gh-token-tests")]
@@ -307,11 +322,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Tag format
-        uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # tag=v3.0.0
+        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # tag=v3.0.0
       - name: Simple format
-        uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.0
+        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
       - name: Version format
-        uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # version: 3.0.0
+        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # version: v3.0.0
 "#;
 
         let key = InputKey::local(
@@ -343,24 +358,97 @@ jobs:
 
         assert!(!findings.is_empty(), "Expected to find version mismatch");
 
-        // Only test the fix if one is available (depends on GitHub API response)
-        if !findings[0].fixes.is_empty() {
-            let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
-            insta::assert_snapshot!(new_doc.source(), @r"
-            name: Test Different Version Formats
-            on: push
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        let new_doc = findings[1].fixes[0].apply(&new_doc).unwrap();
+        let new_doc = findings[2].fixes[0].apply(&new_doc).unwrap();
+
+        insta::assert_snapshot!(new_doc.source(), @"
+
+        name: Test Different Version Formats
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Tag format
+                uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+              - name: Simple format
+                uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+              - name: Version format
+                uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+        ");
+    }
+
+    #[cfg(feature = "gh-token-tests")]
+    #[tokio::test]
+    async fn test_fix_nonexistent_ref() {
+        use crate::config::Config;
+        use crate::{
+            models::{AsDocument, workflow::Workflow},
+            registry::input::InputKey,
+        };
+
+        let workflow_content = r#"
+            name: nonexistent
+
+            on:
+              push:
+
             permissions: {}
+
             jobs:
               test:
+                name: test
                 runs-on: ubuntu-latest
                 steps:
-                  - name: Tag format
-                    uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.2
-                  - name: Simple format
-                    uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # v3.0.0
-                  - name: Version format
-                    uses: actions/checkout@a81bbbf8298c0fa03ea29cdc80d8d0ce8b6c2f2c # version: 3.0.0
-            ");
-        }
+                  - name: Setup Go
+                    uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v9.9.9
+        "#;
+
+        let key = InputKey::local("fakegroup".into(), "test_nonexistent_ref.yml", None::<&str>);
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = RefVersionMismatch::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        assert!(!findings.is_empty(), "Expected to find version mismatch");
+
+        // Only test the fix if one is available (depends on GitHub API response)
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @"
+
+        name: nonexistent
+
+        on:
+          push:
+
+        permissions: {}
+
+        jobs:
+          test:
+            name: test
+            runs-on: ubuntu-latest
+            steps:
+              - name: Setup Go
+                uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        ");
     }
 }

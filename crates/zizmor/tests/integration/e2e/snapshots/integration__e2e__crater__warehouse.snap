@@ -82,28 +82,28 @@ error[unpinned-images]: unpinned image references
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> .github/workflows/ci.yml:71:9
+  --> .github/workflows/ci.yml:71:48
    |
 71 |         image: ${{ (matrix.name == 'Tests') && 'postgres:17.5' || '' }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+   |                                                ^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> .github/workflows/ci.yml:80:9
+  --> .github/workflows/ci.yml:80:48
    |
 80 |         image: ${{ (matrix.name == 'Tests') && 'redis:7.0' || '' }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+   |                                                ^^^^^^^^^^^ container image is not pinned to a SHA256 hash
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> .github/workflows/ci.yml:84:9
+  --> .github/workflows/ci.yml:84:48
    |
 84 |         image: ${{ (matrix.name == 'Tests') && 'stripe/stripe-mock:v0.162.0' || '' }}
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+   |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
    |
-   = note: audit confidence → Low
+   = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
    --> .github/workflows/ci.yml:109:7
@@ -156,16 +156,19 @@ help[undocumented-permissions]: permissions without explanatory comments
    = note: audit confidence → High
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/codeql-analysis.yml:12:1
+  --> .github/workflows/codeql-analysis.yml:14:1
    |
-12 | / name: "CodeQL"
-13 | |
-14 | | on:
+14 | / on:
 15 | |   push:
+16 | |     branches: [ "main" ]
+17 | |   pull_request:
 ...  |
-85 | |       with:
-86 | |         category: "/language:${{matrix.language}}"
-   | |___________________________________________________^ missing concurrency setting
+20 | |   schedule:
+21 | |     - cron: '39 14 * * 2'
+   | |_________________________^ workflow is missing concurrency setting
+...
+25 |       name: Analyze
+   |       ------------- job affected by missing workflow concurrency
    |
    = note: audit confidence → High
 
@@ -207,16 +210,18 @@ info[anonymous-definition]: workflow or action definition without a name
    = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/combine-prs.yml:3:1
+  --> .github/workflows/combine-prs.yml:6:1
    |
- 3 | / name: 'Combine PRs'
- 4 | |
- 5 | | # Controls when the action will run - in this case triggered manually
- 6 | | on:
+ 6 | / on:
+ 7 | |   workflow_dispatch:
+ 8 | |     inputs:
+ 9 | |       ignoreLabel:
 ...  |
-40 | |           github_token: ${{ steps.generate_token.outputs.BOT_TOKEN }}
-41 | |           ignore_label: ${{ github.event.inputs.ignoreLabel || 'blocked' }}
-   | |____________________________________________________________________________^ missing concurrency setting
+14 | | # A workflow run is made up of one or more jobs that can run sequentially or in parallel
+   | |________________________________________________________________________________________^ workflow is missing concurrency setting
+...
+17 |     combine-prs:
+   |     ----------- job affected by missing workflow concurrency
    |
    = note: audit confidence → High
 
@@ -244,18 +249,18 @@ info[anonymous-definition]: workflow or action definition without a name
   = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/dev-env-test.yml:1:1
-   |
- 1 | / name: Development Environment
- 2 | |
- 3 | | on:
- 4 | |   schedule:
-...  |
-21 | |       - run: make initdb
-22 | |       - run: make tests
-   | |________________________^ missing concurrency setting
-   |
-   = note: audit confidence → High
+ --> .github/workflows/dev-env-test.yml:3:1
+  |
+3 | / on:
+4 | |   schedule:
+5 | |     - cron: '0 13 * * *'  # once a day at around 9am eastern
+6 | |   workflow_dispatch:
+  | |____________________^ workflow is missing concurrency setting
+...
+9 |     build:
+  |     ----- job affected by missing workflow concurrency
+  |
+  = note: audit confidence → High
 
 help[template-injection]: code injection via template expansion
   --> .github/workflows/node-ci.yml:40:18
@@ -298,17 +303,18 @@ info[anonymous-definition]: workflow or action definition without a name
   = tip: use 'name: ...' to give this job a name
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/not-this-repo.yml:1:1
-   |
- 1 | / name: Add comment & close
- 2 | | on:
- 3 | |   issues:
- 4 | |     types:
-...  |
-23 | |             You should report this issue to the tracker for the project in question instead.
-   | |_____________________________________________________________________________________________^ missing concurrency setting
-   |
-   = note: audit confidence → High
+ --> .github/workflows/not-this-repo.yml:2:1
+  |
+2 | / on:
+3 | |   issues:
+4 | |     types:
+5 | |       - labeled
+  | |_______________^ workflow is missing concurrency setting
+6 |   jobs:
+7 |     add-comment:
+  |     ----------- job affected by missing workflow concurrency
+  |
+  = note: audit confidence → High
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/zizmor.yml:2:1
@@ -336,17 +342,19 @@ help[undocumented-permissions]: permissions without explanatory comments
    = note: audit confidence → High
 
 help[concurrency-limits]: insufficient job-level concurrency limits
-  --> .github/workflows/zizmor.yml:2:1
+  --> .github/workflows/zizmor.yml:4:1
    |
- 2 | / name: GitHub Actions Security Analysis with Zizmor
- 3 | |
- 4 | | on:
+ 4 | / on:
  5 | |   push:
-...  |
-36 | |           # Used to differentiate multiple results for one commit
-37 | |           category: zizmor
-   | |___________________________^ missing concurrency setting
+ 6 | |     branches: ["main"]
+ 7 | |   pull_request:
+ 8 | |     branches: ["*"]
+   | |___________________^ workflow is missing concurrency setting
+...
+14 |       name: Zizmor
+   |       ------------ job affected by missing workflow concurrency
    |
    = note: audit confidence → High
 
 34 findings (2 suppressed): 4 informational, 14 low, 8 medium, 6 high
+

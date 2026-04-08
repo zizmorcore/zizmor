@@ -141,7 +141,7 @@ fn test_stdin_with_other_inputs() -> anyhow::Result<()> {
     🌈 zizmor v@@VERSION@@
     error: `-` (stdin) cannot be combined with other inputs
 
-    Usage: zizmor [OPTIONS] <INPUTS>...
+    Usage: zizmor [OPTIONS] <INPUT>...
 
     For more information, try '--help'.
     "
@@ -164,7 +164,7 @@ fn test_stdin_with_fix() -> anyhow::Result<()> {
     🌈 zizmor v@@VERSION@@
     error: `--fix` cannot be used with `-` (stdin)
 
-    Usage: zizmor [OPTIONS] <INPUTS>...
+    Usage: zizmor [OPTIONS] <INPUT>...
 
     For more information, try '--help'.
     "
@@ -277,6 +277,69 @@ jobs:
           ],
           "results": [
             {
+              "codeFlows": [
+                {
+                  "threadFlows": [
+                    {
+                      "locations": [
+                        {
+                          "importance": "essential",
+                          "location": {
+                            "logicalLocations": [
+                              {
+                                "properties": {
+                                  "symbolic": {
+                                    "annotation": "does not set persist-credentials: false",
+                                    "feature_kind": "Normal",
+                                    "key": {
+                                      "Stdin": {}
+                                    },
+                                    "kind": "Primary",
+                                    "route": {
+                                      "route": [
+                                        {
+                                          "Key": "jobs"
+                                        },
+                                        {
+                                          "Key": "test"
+                                        },
+                                        {
+                                          "Key": "steps"
+                                        },
+                                        {
+                                          "Index": 0
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ],
+                            "message": {
+                              "text": "does not set persist-credentials: false"
+                            },
+                            "physicalLocation": {
+                              "artifactLocation": {
+                                "uri": "<stdin>"
+                              },
+                              "region": {
+                                "endColumn": 1,
+                                "endLine": 7,
+                                "snippet": {
+                                  "text": "uses: actions/checkout@v3\n"
+                                },
+                                "sourceLanguage": "yaml",
+                                "startColumn": 9,
+                                "startLine": 6
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
               "kind": "fail",
               "level": "warning",
               "locations": [
@@ -339,10 +402,113 @@ jobs:
                 "zizmor/persona": "Regular",
                 "zizmor/severity": "Medium"
               },
-              "relatedLocations": [],
               "ruleId": "zizmor/artipacked"
             },
             {
+              "codeFlows": [
+                {
+                  "threadFlows": [
+                    {
+                      "locations": [
+                        {
+                          "importance": "important",
+                          "location": {
+                            "logicalLocations": [
+                              {
+                                "properties": {
+                                  "symbolic": {
+                                    "annotation": "this job",
+                                    "feature_kind": "Normal",
+                                    "key": {
+                                      "Stdin": {}
+                                    },
+                                    "kind": "Related",
+                                    "route": {
+                                      "route": [
+                                        {
+                                          "Key": "jobs"
+                                        },
+                                        {
+                                          "Key": "test"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ],
+                            "message": {
+                              "text": "this job"
+                            },
+                            "physicalLocation": {
+                              "artifactLocation": {
+                                "uri": "<stdin>"
+                              },
+                              "region": {
+                                "endColumn": 1,
+                                "endLine": 7,
+                                "snippet": {
+                                  "text": "  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n"
+                                },
+                                "sourceLanguage": "yaml",
+                                "startColumn": 3,
+                                "startLine": 3
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "importance": "essential",
+                          "location": {
+                            "logicalLocations": [
+                              {
+                                "properties": {
+                                  "symbolic": {
+                                    "annotation": "default permissions used due to no permissions: block",
+                                    "feature_kind": "Normal",
+                                    "key": {
+                                      "Stdin": {}
+                                    },
+                                    "kind": "Primary",
+                                    "route": {
+                                      "route": [
+                                        {
+                                          "Key": "jobs"
+                                        },
+                                        {
+                                          "Key": "test"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ],
+                            "message": {
+                              "text": "default permissions used due to no permissions: block"
+                            },
+                            "physicalLocation": {
+                              "artifactLocation": {
+                                "uri": "<stdin>"
+                              },
+                              "region": {
+                                "endColumn": 1,
+                                "endLine": 7,
+                                "snippet": {
+                                  "text": "  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n"
+                                },
+                                "sourceLanguage": "yaml",
+                                "startColumn": 3,
+                                "startLine": 3
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
               "kind": "fail",
               "level": "warning",
               "locations": [
@@ -399,55 +565,82 @@ jobs:
                 "zizmor/persona": "Regular",
                 "zizmor/severity": "Medium"
               },
-              "relatedLocations": [
-                {
-                  "logicalLocations": [
-                    {
-                      "properties": {
-                        "symbolic": {
-                          "annotation": "this job",
-                          "feature_kind": "Normal",
-                          "key": {
-                            "Stdin": {}
-                          },
-                          "kind": "Related",
-                          "route": {
-                            "route": [
-                              {
-                                "Key": "jobs"
-                              },
-                              {
-                                "Key": "test"
-                              }
-                            ]
-                          }
-                        }
-                      }
-                    }
-                  ],
-                  "message": {
-                    "text": "this job"
-                  },
-                  "physicalLocation": {
-                    "artifactLocation": {
-                      "uri": "<stdin>"
-                    },
-                    "region": {
-                      "endColumn": 1,
-                      "endLine": 7,
-                      "snippet": {
-                        "text": "  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n"
-                      },
-                      "sourceLanguage": "yaml",
-                      "startColumn": 3,
-                      "startLine": 3
-                    }
-                  }
-                }
-              ],
               "ruleId": "zizmor/excessive-permissions"
             },
             {
+              "codeFlows": [
+                {
+                  "threadFlows": [
+                    {
+                      "locations": [
+                        {
+                          "importance": "essential",
+                          "location": {
+                            "logicalLocations": [
+                              {
+                                "properties": {
+                                  "symbolic": {
+                                    "annotation": "action is not pinned to a hash (required by blanket policy)",
+                                    "feature_kind": {
+                                      "Subfeature": {
+                                        "after": 0,
+                                        "fragment": {
+                                          "Raw": "actions/checkout@v3"
+                                        }
+                                      }
+                                    },
+                                    "key": {
+                                      "Stdin": {}
+                                    },
+                                    "kind": "Primary",
+                                    "route": {
+                                      "route": [
+                                        {
+                                          "Key": "jobs"
+                                        },
+                                        {
+                                          "Key": "test"
+                                        },
+                                        {
+                                          "Key": "steps"
+                                        },
+                                        {
+                                          "Index": 0
+                                        },
+                                        {
+                                          "Key": "uses"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ],
+                            "message": {
+                              "text": "action is not pinned to a hash (required by blanket policy)"
+                            },
+                            "physicalLocation": {
+                              "artifactLocation": {
+                                "uri": "<stdin>"
+                              },
+                              "region": {
+                                "endColumn": 34,
+                                "endLine": 6,
+                                "snippet": {
+                                  "text": "actions/checkout@v3"
+                                },
+                                "sourceLanguage": "yaml",
+                                "startColumn": 15,
+                                "startLine": 6
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
               "kind": "fail",
               "level": "error",
               "locations": [
@@ -520,7 +713,6 @@ jobs:
                 "zizmor/persona": "Regular",
                 "zizmor/severity": "High"
               },
-              "relatedLocations": [],
               "ruleId": "zizmor/unpinned-uses"
             }
           ],

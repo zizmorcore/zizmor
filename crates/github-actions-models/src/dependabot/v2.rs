@@ -387,6 +387,8 @@ pub enum PackageEcosystem {
     Maven,
     /// `mix`
     Mix,
+    /// `nix`
+    Nix,
     /// `npm`
     Npm,
     /// `nuget`

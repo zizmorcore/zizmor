@@ -19,7 +19,7 @@ use std::{env, ops::Deref, sync::LazyLock, vec};
 
 use fst::Map;
 use github_actions_expressions::{Expr, context::Context, literal::Literal};
-use github_actions_models::common::{EnvValue, RepositoryUses, Uses};
+use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
 use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
@@ -119,7 +119,7 @@ impl TemplateInjection {
         match step.body() {
             models::StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
-                with,
+                with: LoE::Literal(with),
             } => TemplateInjection::action_injection_sinks(uses)
                 .iter()
                 .filter_map(|input| {
@@ -422,6 +422,9 @@ impl TemplateInjection {
                                 // Without a FST match, we fall back on heuristics.
                                 if context.child_of("secrets") {
                                     // While not ideal, secret expansion is typically not exploitable.
+                                    continue;
+                                } else if context.matches("needs.*.result") {
+                                    // `result` is always one of `success`, `failure`, `cancelled`, or `skipped`.
                                     continue;
                                 } else if context.child_of("inputs") {
                                     let (severity, confidence, persona) = match context
@@ -1143,9 +1146,7 @@ jobs:
             Some(Capability::Arbitrary)
         ));
         assert!(matches!(
-            Capability::from_context(
-                "github.event.workflow_run.triggering_actor.organizations_url"
-            ),
+            Capability::from_context("github.event.answer.user.gists_url"),
             Some(Capability::Structured)
         ));
         assert!(matches!(
@@ -1179,7 +1180,7 @@ jobs:
             ("foo.bar['baz']['quux'].zap", Some("FOO_BAR_BAZ_QUUX_ZAP")),
             ("github.event.issue.title", Some("GITHUB_EVENT_ISSUE_TITLE")),
             // Calls not supported
-            ("call(foo.bar).baz", None),
+            ("fromJSON(foo.bar).baz", None),
             // Computed indices not supported
             ("foo.bar[computed]", None),
             ("foo.bar[abc && def]", None),

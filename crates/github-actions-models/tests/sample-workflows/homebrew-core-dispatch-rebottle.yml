@@ -153,8 +153,8 @@ jobs:
       contents: write # for Homebrew/actions/git-try-push
       packages: write # for brew pr-upload
       pull-requests: write # for gh pr
-      attestations: write # for actions/attest-build-provenance
-      id-token: write # for actions/attest-build-provenance
+      attestations: write # for actions/attest
+      id-token: write # for actions/attest
     runs-on: ubuntu-22.04
     needs: bottle
     if: inputs.upload
@@ -198,7 +198,7 @@ jobs:
           signing_key: ${{ secrets.BREWTESTBOT_GPG_SIGNING_SUBKEY }}
 
       - name: Generate build provenance
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest@v4
         with:
           subject-path: ${{ env.BOTTLES_DIR }}/*.tar.gz
 
