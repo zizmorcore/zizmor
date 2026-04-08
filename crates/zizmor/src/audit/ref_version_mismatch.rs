@@ -30,14 +30,12 @@ audit_meta!(
 #[allow(clippy::unwrap_used)]
 static VERSION_COMMENT_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     vec![
-        // Matches "# tag=v2.8.0" or "# tag=v1.2.3"
-        Regex::new(r"#\s*tag\s*=\s*(v\d+(?:\.\d+)*(?:\.\d+)?)").unwrap(),
-        // Matches "# v2.8.0"
-        Regex::new(r"#\s*(v\d+(?:\.\d+)*(?:\.\d+)?)").unwrap(),
-        // Matches version without 'v' prefix: "# tag=2.8.0"
-        Regex::new(r"#\s*tag\s*=\s*(\d+(?:\.\d+)*(?:\.\d+)?)").unwrap(),
+        // Matches "# tag=v2.8.0", "# tag=v6-beta", or any non-whitespace tag token.
+        Regex::new(r"#\s*tag\s*=\s*(\S+)").unwrap(),
+        // Matches "# v2.8.0" and prerelease forms like "# v1.2.3-rc.1".
+        Regex::new(r"#\s*(v\d+(?:\.\d+)*(?:-[\w.-]+)?)").unwrap(),
         // More flexible: "# version: 2.8.0"
-        Regex::new(r"#\s*(?:version|ver)\s*[:=]\s*(v?\d+(?:\.\d+)*(?:\.\d+)?)").unwrap(),
+        Regex::new(r"#\s*(?:version|ver)\s*[:=]\s*(v?\d+(?:\.\d+)*(?:-[\w.-]+)?)").unwrap(),
     ]
 });
 
@@ -204,10 +202,23 @@ mod tests {
     fn test_version_comment_patterns() {
         let test_cases = vec![
             ("# tag=v2.8.0", Some("v2.8.0")),
+            ("# tag=v6-beta", Some("v6-beta")),
+            ("# tag=v1.2.3-rc.1", Some("v1.2.3-rc.1")),
+            ("# tag=v6-beta-2", Some("v6-beta-2")),
+            ("# tag=release-2024-01", Some("release-2024-01")),
             ("# v2.8.0", Some("v2.8.0")),
+            ("# v6-beta", Some("v6-beta")),
+            ("# v1.2.3-rc.1", Some("v1.2.3-rc.1")),
+            ("# v6-beta-2", Some("v6-beta-2")),
+            ("# v1.0.0-rc-1", Some("v1.0.0-rc-1")),
+            ("# v2.0-preview-3", Some("v2.0-preview-3")),
             ("# tag=2.8.0", Some("2.8.0")),
             ("# version: 2.8.0", Some("2.8.0")),
+            ("# version: v1.2.3-rc.1", Some("v1.2.3-rc.1")),
+            ("# version: v6-beta-2", Some("v6-beta-2")),
+            ("# version: v1.0.0-rc-1", Some("v1.0.0-rc-1")),
             ("# ver=1.0.0", Some("1.0.0")),
+            ("# visit the docs", None),
             ("# some other comment", None),
         ];
 

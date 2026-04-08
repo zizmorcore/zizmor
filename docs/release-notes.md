@@ -94,6 +94,10 @@ of `zizmor`.
 * Fixed a bug where `nix` would not be recognized as a `package-ecosystem` in
   `dependabot.yml` (#1867)
 
+* Fixed a bug where the [ref-version-mismatch] audit would incorrectly parse
+  prerelease version comments (such as `# v6-beta`), causing some findings
+  to appear unresolvable (#1870)
+
 ### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
