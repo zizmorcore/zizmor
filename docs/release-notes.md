@@ -36,6 +36,9 @@ of `zizmor`.
 * Recommend `gh release upload` as a replacement for @svenstaro/upload-release-action in
   [superfluous-actions] (#1801)
 
+* Recommend `gh issue create` as a replacement for @dacbd/create-issue-action in
+  [superfluous-actions] (#1873)
+
 * The [obfuscation] audit now emits a finding for `with: ${{ expr }}`
   clauses cannot be analyzed (#1772)
 
