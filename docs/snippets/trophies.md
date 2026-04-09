@@ -538,6 +538,14 @@
         - django-commons/django-tasks-scheduler#272
 
 
+-   ![](https://github.com/dnnsoftware.png?size=40){ width="40" loading=lazy align=left } dnnsoftware
+
+    ---
+
+    ??? example "Examples"
+        - dnnsoftware/Dnn.Platform#7195
+
+
 -   ![](https://github.com/docker.png?size=40){ width="40" loading=lazy align=left } docker
 
     ---
