@@ -10,7 +10,7 @@ use crate::{
     audit::{Audit, AuditError, AuditLoadError, AuditState, audit_meta},
     config::Config,
     finding::{
-        Confidence, Finding, Fix, Severity,
+        Confidence, Finding, Fix, Persona, Severity,
         location::{Comment, Feature, Location, Routable},
     },
     github,
@@ -24,7 +24,7 @@ pub(crate) struct RefVersionMismatch {
 audit_meta!(
     RefVersionMismatch,
     "ref-version-mismatch",
-    "action's hash pin does not match version comment"
+    "action's hash pin has mismatched or missing version comment"
 );
 
 #[allow(clippy::unwrap_used)]
@@ -39,11 +39,15 @@ static VERSION_COMMENT_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     ]
 });
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CommentVersionState<'doc> {
+    Missing,
+    Version(&'doc str),
+    NonVersionComments,
+}
+
 impl RefVersionMismatch {
-    fn extract_version_from_comments<'doc>(
-        &self,
-        comments: &'doc [Comment<'doc>],
-    ) -> Option<&'doc str> {
+    fn extract_version_from_comments<'doc>(comments: &'doc [Comment<'doc>]) -> Option<&'doc str> {
         for comment in comments {
             for pattern in VERSION_COMMENT_PATTERNS.iter() {
                 if let Some(captures) = pattern.captures(comment.as_ref())
@@ -56,8 +60,16 @@ impl RefVersionMismatch {
         None
     }
 
+    fn comment_version_state<'doc>(comments: &'doc [Comment<'doc>]) -> CommentVersionState<'doc> {
+        match Self::extract_version_from_comments(comments) {
+            Some(version) => CommentVersionState::Version(version),
+            None if comments.is_empty() => CommentVersionState::Missing,
+            None => CommentVersionState::NonVersionComments,
+        }
+    }
+
     /// Create a Fix for updating the version comment to match the pinned hash
-    fn create_version_comment_fix<'doc, S: StepCommon<'doc>>(
+    fn update_version_comment_fix<'doc, S: StepCommon<'doc>>(
         &self,
         step: &S,
         correct_tag: &str,
@@ -70,6 +82,21 @@ impl RefVersionMismatch {
                 route: step.route().with_key("uses"),
                 operation: Op::ReplaceComment {
                     new: format!("# {correct_tag}").into(),
+                },
+            }],
+        }
+    }
+
+    /// Create a Fix for adding a version comment where none exists
+    fn add_version_comment_fix<'doc, S: StepCommon<'doc>>(step: &S, tag: &str) -> Fix<'doc> {
+        Fix {
+            title: format!("add version comment: {tag}"),
+            key: step.location().key,
+            disposition: Default::default(),
+            patches: vec![Patch {
+                route: step.route().with_key("uses"),
+                operation: Op::EmplaceComment {
+                    new: format!("# {tag}").into(),
                 },
             }],
         }
@@ -96,10 +123,47 @@ impl RefVersionMismatch {
             .concretize(step.document())
             .map_err(Self::err)?;
 
-        let Some(version_from_comment) =
-            self.extract_version_from_comments(&uses_location.concrete.comments)
-        else {
-            return Ok(findings);
+        let comment_version_state = Self::comment_version_state(&uses_location.concrete.comments);
+
+        let version_from_comment = match comment_version_state {
+            CommentVersionState::Version(version) => version,
+            CommentVersionState::Missing | CommentVersionState::NonVersionComments => {
+                // SHA-pinned action without a recognized version comment.
+                let Some(tag) = self
+                    .client
+                    .longest_tag_for_commit(uses.owner(), uses.repo(), commit_sha)
+                    .await
+                    .map_err(Self::err)?
+                else {
+                    return Ok(findings);
+                };
+
+                let (annotation, tip) = match comment_version_state {
+                    CommentVersionState::Missing => (
+                        "missing version comment",
+                        format!("add version comment '# {}'", tag.name),
+                    ),
+                    CommentVersionState::NonVersionComments => (
+                        "comment does not contain a version",
+                        format!("rewrite comment to include '# {}'", tag.name),
+                    ),
+                    CommentVersionState::Version(_) => unreachable!(),
+                };
+
+                let mut builder = Self::finding()
+                    .severity(Severity::Low)
+                    .confidence(Confidence::High)
+                    .persona(Persona::Pedantic)
+                    .add_location(uses_location.symbolic.primary().annotated(annotation))
+                    .tip(tip);
+
+                if matches!(comment_version_state, CommentVersionState::Missing) {
+                    builder = builder.fix(Self::add_version_comment_fix(step, &tag.name));
+                }
+
+                findings.push(builder.build(step).map_err(Self::err)?);
+                return Ok(findings);
+            }
         };
 
         let commit_for_ref = self
@@ -153,7 +217,7 @@ impl RefVersionMismatch {
                     .annotated(format!("is pointed to by tag {tag}", tag = suggestion.name)),
             );
             // Add auto-fix to update the version comment to match the pinned hash
-            builder = builder.fix(self.create_version_comment_fix(step, &suggestion.name));
+            builder = builder.fix(self.update_version_comment_fix(step, &suggestion.name));
         }
         findings.push(builder.build(step).map_err(Self::err)?);
 
@@ -197,6 +261,35 @@ impl Audit for RefVersionMismatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        finding::location::Locatable,
+        models::{AsDocument, action::Action},
+        registry::input::InputKey,
+    };
+
+    #[cfg(feature = "gh-token-tests")]
+    use crate::{config::Config, models::workflow::Workflow};
+
+    #[cfg(feature = "gh-token-tests")]
+    fn workflow_from_string(workflow_content: &str, path: &str) -> Workflow {
+        let key = InputKey::local("fakegroup".into(), path, None::<&str>);
+        Workflow::from_string(workflow_content.to_string(), key).unwrap()
+    }
+
+    #[cfg(feature = "gh-token-tests")]
+    fn audit_state() -> crate::state::AuditState {
+        crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        )
+    }
 
     #[test]
     fn test_version_comment_patterns() {
@@ -238,15 +331,67 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_comment_version_state_with_unrelated_comment() {
+        let action_content = r#"
+name: Test Missing Version Comment
+description: Test Missing Version Comment
+runs:
+  using: composite
+  steps:
+    - name: Checkout with unrelated comment
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # some comment
+"#;
+
+        let key = InputKey::local("fakegroup".into(), "action.yml", None::<&str>);
+        let action = Action::from_string(action_content.to_string(), key).unwrap();
+        let step = action.steps().unwrap().next().unwrap();
+        let uses_location = step
+            .location()
+            .with_keys(["uses".into()])
+            .concretize(step.document())
+            .unwrap();
+
+        assert_eq!(
+            RefVersionMismatch::comment_version_state(&uses_location.concrete.comments),
+            CommentVersionState::NonVersionComments,
+        );
+    }
+
+    #[test]
+    fn test_add_version_comment_fix_for_composite_action() {
+        let action_content = r#"
+name: Test Missing Version Comment
+description: Test Missing Version Comment
+runs:
+  using: composite
+  steps:
+    - name: Checkout without version comment
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+"#;
+
+        let key = InputKey::local("fakegroup".into(), "action.yml", None::<&str>);
+        let action = Action::from_string(action_content.to_string(), key).unwrap();
+        let step = action.steps().unwrap().next().unwrap();
+
+        let fix = RefVersionMismatch::add_version_comment_fix(&step, "v4.2.2");
+        let new_doc = fix.apply(action.as_document()).unwrap();
+
+        insta::assert_snapshot!(new_doc.source(), @"
+
+        name: Test Missing Version Comment
+        description: Test Missing Version Comment
+        runs:
+          using: composite
+          steps:
+            - name: Checkout without version comment
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        ");
+    }
+
     #[cfg(feature = "gh-token-tests")]
     #[tokio::test]
     async fn test_fix_version_comment_mismatch() {
-        use crate::config::Config;
-        use crate::{
-            models::{AsDocument, workflow::Workflow},
-            registry::input::InputKey,
-        };
-
         let workflow_content = r#"
 name: Test Version Comment Mismatch
 on: push
@@ -259,25 +404,9 @@ jobs:
         uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
 "#;
 
-        let key = InputKey::local(
-            "fakegroup".into(),
-            "test_version_mismatch.yml",
-            None::<&str>,
-        );
-        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+        let workflow = workflow_from_string(workflow_content, "test_version_mismatch.yml");
 
-        let state = crate::state::AuditState::new(
-            false,
-            Some(
-                github::Client::new(
-                    &github::GitHubHost::default(),
-                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
-                    "/tmp".into(),
-                )
-                .unwrap(),
-            ),
-        );
-
+        let state = audit_state();
         let audit = RefVersionMismatch::new(&state).unwrap();
 
         let input = workflow.into();
@@ -306,13 +435,229 @@ jobs:
 
     #[cfg(feature = "gh-token-tests")]
     #[tokio::test]
-    async fn test_fix_version_comment_different_formats() {
-        use crate::config::Config;
-        use crate::{
-            models::{AsDocument, workflow::Workflow},
-            registry::input::InputKey,
-        };
+    async fn test_fix_missing_version_comment() {
+        let workflow_content = r#"
+name: Test Missing Version Comment
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout without version comment
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+"#;
+        let workflow = workflow_from_string(&workflow_content, "test_missing_version_comment.yml");
 
+        let state = audit_state();
+        let audit = RefVersionMismatch::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        // We expect a finding for the missing version comment
+        assert!(
+            !findings.is_empty(),
+            "Expected to find missing version comment"
+        );
+
+        // The fix should add a version comment via EmplaceComment
+        assert!(!findings[0].fixes.is_empty(), "Expected an auto-fix");
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @"
+
+        name: Test Missing Version Comment
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout without version comment
+                uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        ");
+    }
+
+    #[cfg(feature = "gh-token-tests")]
+    #[tokio::test]
+    async fn test_fix_missing_version_comment_crlf() {
+        let workflow_content = r#"
+name: Test Missing Version Comment
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout without version comment
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+"#
+        .replace('\n', "\r\n");
+
+        let workflow =
+            workflow_from_string(&workflow_content, "test_missing_version_comment_crlf.yml");
+
+        let state = audit_state();
+        let audit = RefVersionMismatch::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        assert!(
+            !findings.is_empty(),
+            "Expected to find missing version comment"
+        );
+        assert!(!findings[0].fixes.is_empty(), "Expected an auto-fix");
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @"
+
+        name: Test Missing Version Comment
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout without version comment
+                uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        ");
+    }
+
+    #[cfg(feature = "gh-token-tests")]
+    #[tokio::test]
+    async fn test_fix_missing_version_comment_bizarre_formatting() {
+        let workflow_content = r#"
+name: Test Missing Version Comment
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+"#;
+
+        let workflow = workflow_from_string(
+            &workflow_content,
+            "test_missing_version_comment_bizarre_formatting.yml",
+        );
+
+        let state = audit_state();
+        let audit = RefVersionMismatch::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        assert!(
+            !findings.is_empty(),
+            "Expected to find missing version comment"
+        );
+        assert!(!findings[0].fixes.is_empty(), "Expected an auto-fix");
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @"
+
+        name: Test Missing Version Comment
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              -
+                uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        ");
+    }
+
+    #[cfg(feature = "gh-token-tests")]
+    #[tokio::test]
+    async fn test_missing_version_comment_without_tag_has_no_finding() {
+        let workflow_content = r#"
+name: Test Missing Version Comment
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout without version comment
+        uses: actions/checkout@631c7dc4f80f88219c5ee78fee08c6b62fac8da1
+"#;
+
+        let workflow = workflow_from_string(
+            &workflow_content,
+            "test_missing_version_comment_without_tag.yml",
+        );
+
+        let state = audit_state();
+        let audit = RefVersionMismatch::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        assert!(
+            findings.is_empty(),
+            "Expected no finding for a commit with no matching tag"
+        );
+    }
+
+    #[cfg(feature = "gh-token-tests")]
+    #[tokio::test]
+    async fn test_missing_version_comment_with_unrelated_comment_has_no_fix() {
+        let workflow_content = r#"
+name: Test Missing Version Comment
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with unrelated comment
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # some comment
+"#;
+
+        let workflow = workflow_from_string(
+            &workflow_content,
+            "test_missing_version_comment_with_unrelated_comment.yml",
+        );
+
+        let state = audit_state();
+        let audit = RefVersionMismatch::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(RefVersionMismatch::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        assert!(
+            !findings.is_empty(),
+            "Expected to find missing version comment"
+        );
+        assert!(
+            findings[0].fixes.is_empty(),
+            "Expected no auto-fix when an unrelated comment already exists"
+        );
+    }
+
+    #[cfg(feature = "gh-token-tests")]
+    #[tokio::test]
+    async fn test_fix_version_comment_different_formats() {
         let workflow_content = r#"
 name: Test Different Version Formats
 on: push
@@ -329,25 +674,9 @@ jobs:
         uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # version: v3.0.0
 "#;
 
-        let key = InputKey::local(
-            "fakegroup".into(),
-            "test_different_formats.yml",
-            None::<&str>,
-        );
-        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+        let workflow = workflow_from_string(workflow_content, "test_different_formats.yml");
 
-        let state = crate::state::AuditState::new(
-            false,
-            Some(
-                github::Client::new(
-                    &github::GitHubHost::default(),
-                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
-                    "/tmp".into(),
-                )
-                .unwrap(),
-            ),
-        );
-
+        let state = audit_state();
         let audit = RefVersionMismatch::new(&state).unwrap();
 
         let input = workflow.into();

@@ -57,6 +57,11 @@ of `zizmor`.
 
     Many thanks to @miketheman for implementing this improvement!
 
+* The [ref-version-mismatch] audit now detects missing version comments as well
+  (#1849)
+
+    Many thanks to @shaanmajid for proposing and implementing this improvement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [concurrency-limits] audit reported findings

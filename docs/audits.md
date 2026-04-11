@@ -1235,18 +1235,27 @@ Switch to hash-pinned actions.
 
 [ref-version-mismatch.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/ref-version-mismatch.yml
 
-Detects `#!yaml uses:` clauses where the action is hash-pinned, but the associated
-tag comment (used by tools like Dependabot) does not match the pinned commit.
+Detects `#!yaml uses:` clauses where a hash-pinned action's version comment
+(used by tools like Dependabot) is mismatched with the pinned commit, or
+missing entirely.
 
-This can happen innocently when a user (or automation) updates a
-hash-pinned `#!yaml uses:` clause to a newer commit, but fails to update the
-associated tag comment. When this happens, tools like Dependabot will silently
-ignore the comment instead of refreshing it on subsequent updates, making
-it progressively more out-of-date over time.
+This can happen innocently when a user (or automation) updates a hash-pinned
+`#!yaml uses:` clause to a newer commit but forgets to update the associated
+version comment. It can also happen when an action is pinned directly to a
+commit hash without any version comment at all.
+
+When the comment is stale, tools like Dependabot may silently ignore it instead
+of refreshing it on subsequent updates, causing it to drift further out of
+date. When the comment is missing, humans lose an easy indication of which
+version is in use.
+
+Missing version comments are reported only with the pedantic persona. If a
+different inline comment is already present, zizmor reports the finding but
+does not rewrite that comment automatically.
 
 ### Remediation
 
-Update the tag comment to match the pinned commit. Tools like
+Update or add the tag comment so that it matches the pinned commit. Tools like
 @suzuki-shunsuke/pinact may be able to do this automatically for you.
 
 !!! example
@@ -1269,6 +1278,28 @@ Update the tag comment to match the pinned commit. Tools like
             runs-on: ubuntu-latest
             steps:
               - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        ```
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="ref-version-mismatch.yml" hl_lines="5"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="ref-version-mismatch.yml" hl_lines="5"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         ```
 
 ## `secrets-inherit`
