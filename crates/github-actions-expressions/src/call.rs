@@ -89,7 +89,7 @@ impl<'src> Call<'src> {
             Function::ToJSON | Function::FromJSON if args.len() != 1 => {
                 return Err(Error::Arity(func, "exactly 1 argument"));
             }
-            Function::Join if args.len() < 1 || args.len() > 2 => {
+            Function::Join if args.is_empty() || args.len() > 2 => {
                 return Err(Error::Arity(func, "1 or 2 arguments"));
             }
             Function::HashFiles if args.is_empty() => {
