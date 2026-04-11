@@ -61,7 +61,7 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
             .args(["--persona=pedantic"])
             .input(input_under_test("ref-version-mismatch.yml"))
             .run()?,
-        @r"
+        @"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:22:15
        |
@@ -88,7 +88,7 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment does not contain a version
        |
        = note: audit confidence → High
-       = tip: rewrite comment to include version '# v3.8.2'
+       = tip: rewrite comment to include '# v3.8.2'
 
     warning[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
       --> @@INPUT@@:25:77

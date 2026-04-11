@@ -145,7 +145,7 @@ impl RefVersionMismatch {
                     ),
                     CommentVersionState::NonVersionComments => (
                         "comment does not contain a version",
-                        format!("rewrite comment to include version '# {}'", tag.name),
+                        format!("rewrite comment to include '# {}'", tag.name),
                     ),
                     CommentVersionState::Version(_) => unreachable!(),
                 };
