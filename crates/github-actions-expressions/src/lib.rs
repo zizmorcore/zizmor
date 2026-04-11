@@ -920,10 +920,16 @@ impl std::fmt::Display for EvaluationSema<'_> {
                     write!(f, "Infinity")
                 } else if n == &f64::NEG_INFINITY {
                     write!(f, "-Infinity")
-                } else if n.fract() == 0.0 {
-                    write!(f, "{}", *n as i64)
                 } else {
-                    write!(f, "{}", n)
+                    // Format with 15 decimal places, parse back to f64 to
+                    // clean up trailing noise, then format normally.
+                    // See: https://github.com/actions/languageservices/blob/cc316ab/expressions/src/data/number.ts#L10
+                    let rounded: f64 = format!("{:.15}", n).parse().unwrap();
+                    if rounded.fract() == 0.0 {
+                        write!(f, "{}", rounded as i64)
+                    } else {
+                        write!(f, "{}", rounded)
+                    }
                 }
             }
             Evaluation::Boolean(b) => write!(f, "{}", b),
