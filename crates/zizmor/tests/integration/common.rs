@@ -46,6 +46,7 @@ pub struct Zizmor {
     inputs: Vec<String>,
     config: Option<String>,
     no_config: bool,
+    no_dedup: bool,
     output: OutputMode,
     expects_failure: Option<i32>,
     show_audit_urls: bool,
@@ -70,6 +71,7 @@ impl Zizmor {
             inputs: vec![],
             config: None,
             no_config: false,
+            no_dedup: true,
             output: OutputMode::Stdout,
             expects_failure: None,
             show_audit_urls: false,
@@ -137,6 +139,11 @@ impl Zizmor {
         self
     }
 
+    pub fn with_dedup(mut self) -> Self {
+        self.no_dedup = false;
+        self
+    }
+
     pub fn working_dir(mut self, dir: impl Into<String>) -> Self {
         self.cmd.current_dir(dir.into());
         self
@@ -180,6 +187,10 @@ impl Zizmor {
             // simulates a TTY.
             // See: https://github.com/emersonford/tracing-indicatif/issues/24
             self.cmd.arg("--no-progress");
+        }
+
+        if self.no_dedup {
+            self.cmd.arg("--no-dedup");
         }
 
         if self.show_audit_urls {

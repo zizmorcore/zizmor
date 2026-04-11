@@ -311,7 +311,8 @@ impl Backend {
         let mut input_registry = InputRegistry::new();
         input_registry.groups.insert("lsp".into(), group);
 
-        let mut registry = FindingRegistry::new(&input_registry, None, None, Persona::Regular);
+        let mut registry =
+            FindingRegistry::new(&input_registry, None, None, Persona::Regular, true);
 
         for (input_key, input) in input_registry.iter_inputs() {
             for (ident, audit) in self.audit_registry.iter_audits() {
