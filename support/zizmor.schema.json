@@ -125,7 +125,7 @@
     },
     "RepositoryUsesPattern": {
       "title": "Represents a pattern for matching repository `uses` references.",
-      "description": "These patterns are ordered by specificity; more specific patterns\nshould be listed first.",
+      "description": "These patterns are ordered by specificity; more specific patterns\nshould be listed first. The ordering is:\n\n1. `ExactWithRef` - most specific (matches owner/repo/subpath@ref exactly)\n2. `ExactPath` - matches owner/repo/subpath (any ref)\n3. `ExactRepo` - matches owner/repo with no subpath (any ref)\n4. `InRepo` - matches owner/repo/* (any subpath, any ref)\n5. `InOwner` - matches owner/* (any repo, any subpath, any ref)\n6. `Any` - matches * (everything)\n\nWithin variants that have `Segment` fields, patterns with exact segments\nare more specific than patterns with wildcard segments.",
       "type": "string"
     },
     "RulesConfig": {

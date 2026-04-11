@@ -1,0 +1,14 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # just to make unrelated findings go away
+        "*": ref-pin
+
+  forbidden-uses:
+    config:
+      allow:
+        # Allow all actions/* repos using glob
+        - "actions/*"
+        # Allow pypa repos starting with "gh-action-"
+        - "pypa/gh-action-*"
