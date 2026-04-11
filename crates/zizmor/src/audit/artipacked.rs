@@ -275,9 +275,13 @@ impl Artipacked {
 #[async_trait::async_trait]
 impl Audit for Artipacked {
     fn new(state: &AuditState) -> Result<Self, AuditLoadError> {
-        Ok(Self {
-            client: state.gh_client.clone(),
-        })
+        let client = if state.no_online_audits {
+            None
+        } else {
+            state.gh_client.clone()
+        };
+
+        Ok(Self { client })
     }
 
     async fn audit_action<'doc>(
