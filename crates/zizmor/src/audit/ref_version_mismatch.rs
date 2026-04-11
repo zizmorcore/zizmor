@@ -69,7 +69,7 @@ impl RefVersionMismatch {
     }
 
     /// Create a Fix for updating the version comment to match the pinned hash
-    fn create_version_comment_fix<'doc, S: StepCommon<'doc>>(
+    fn update_version_comment_fix<'doc, S: StepCommon<'doc>>(
         &self,
         step: &S,
         correct_tag: &str,
@@ -88,7 +88,7 @@ impl RefVersionMismatch {
     }
 
     /// Create a Fix for adding a version comment where none exists
-    fn create_add_version_comment_fix<'doc, S: StepCommon<'doc>>(step: &S, tag: &str) -> Fix<'doc> {
+    fn add_version_comment_fix<'doc, S: StepCommon<'doc>>(step: &S, tag: &str) -> Fix<'doc> {
         Fix {
             title: format!("add version comment: {tag}"),
             key: step.location().key,
@@ -158,7 +158,7 @@ impl RefVersionMismatch {
                     .tip(tip);
 
                 if matches!(comment_version_state, CommentVersionState::Missing) {
-                    builder = builder.fix(Self::create_add_version_comment_fix(step, &tag.name));
+                    builder = builder.fix(Self::add_version_comment_fix(step, &tag.name));
                 }
 
                 findings.push(builder.build(step).map_err(Self::err)?);
@@ -217,7 +217,7 @@ impl RefVersionMismatch {
                     .annotated(format!("is pointed to by tag {tag}", tag = suggestion.name)),
             );
             // Add auto-fix to update the version comment to match the pinned hash
-            builder = builder.fix(self.create_version_comment_fix(step, &suggestion.name));
+            builder = builder.fix(self.update_version_comment_fix(step, &suggestion.name));
         }
         findings.push(builder.build(step).map_err(Self::err)?);
 
@@ -374,7 +374,7 @@ runs:
         let action = Action::from_string(action_content.to_string(), key).unwrap();
         let step = action.steps().unwrap().next().unwrap();
 
-        let fix = RefVersionMismatch::create_add_version_comment_fix(&step, "v4.2.2");
+        let fix = RefVersionMismatch::add_version_comment_fix(&step, "v4.2.2");
         let new_doc = fix.apply(action.as_document()).unwrap();
 
         insta::assert_snapshot!(new_doc.source(), @"
