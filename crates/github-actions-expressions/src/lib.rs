@@ -2179,7 +2179,11 @@ mod tests {
         ];
 
         for (input, want) in cases {
-            assert_eq!(EvaluationSema::upper_special(input), *want, "input: {input}");
+            assert_eq!(
+                EvaluationSema::upper_special(input),
+                *want,
+                "input: {input}"
+            );
         }
     }
 }
