@@ -1,6 +1,6 @@
 //! Representation of function calls in GitHub Actions expressions.
 
-use crate::{Evaluation, SpannedExpr};
+use crate::{Evaluation, EvaluationSema, SpannedExpr};
 
 /// Errors that can occur during parsing of function calls.
 #[derive(Debug, thiserror::Error)]
@@ -293,9 +293,9 @@ impl<'src> Call<'src> {
                 | Evaluation::Null,
             ) => {
                 // Case-insensitive comparison
-                let string_str = search_string.sema().to_string().to_uppercase();
-                let prefix_str = search_value.sema().to_string().to_uppercase();
-                Some(Evaluation::Boolean(string_str.starts_with(&prefix_str)))
+                let haystack = EvaluationSema::upper_special(&search_string.sema().to_string());
+                let needle = EvaluationSema::upper_special(&search_value.sema().to_string());
+                Some(Evaluation::Boolean(haystack.starts_with(&needle)))
             }
             // If either argument is not primitive (array or dictionary), return false
             _ => Some(Evaluation::Boolean(false)),
@@ -326,9 +326,9 @@ impl<'src> Call<'src> {
                 | Evaluation::Null,
             ) => {
                 // Case-insensitive comparison
-                let string_str = search_string.sema().to_string().to_uppercase();
-                let suffix_str = search_value.sema().to_string().to_uppercase();
-                Some(Evaluation::Boolean(string_str.ends_with(&suffix_str)))
+                let haystack = EvaluationSema::upper_special(&search_string.sema().to_string());
+                let needle = EvaluationSema::upper_special(&search_value.sema().to_string());
+                Some(Evaluation::Boolean(haystack.ends_with(&needle)))
             }
             // If either argument is not primitive (array or dictionary), return false
             _ => Some(Evaluation::Boolean(false)),
