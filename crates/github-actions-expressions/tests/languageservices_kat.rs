@@ -72,27 +72,6 @@ fn to_evaluation(result: &TestResult) -> Result<Evaluation, String> {
     }
 }
 
-fn eval_eq(a: &Evaluation, b: &Evaluation) -> bool {
-    match (a, b) {
-        (Evaluation::Number(x), Evaluation::Number(y)) => (x.is_nan() && y.is_nan()) || x == y,
-        // Rust formats infinities as "inf"/"-inf", while GitHub (JS-based) uses
-        // "Infinity"/"-Infinity". We normalize here rather than in the evaluator
-        // since this is a cosmetic Rust-vs-JS difference in float Display formatting.
-        (Evaluation::String(x), Evaluation::String(y)) => {
-            normalize_infinity(x) == normalize_infinity(y)
-        }
-        _ => a == b,
-    }
-}
-
-fn normalize_infinity(s: &str) -> &str {
-    match s {
-        "inf" | "Infinity" => "Infinity",
-        "-inf" | "-Infinity" => "-Infinity",
-        other => other,
-    }
-}
-
 /// Group name prefixes to skip
 const SKIP_GROUP_PREFIXES: &[&str] = &[
     // Depth/memory limit tests: our parser doesn't enforce these limits
@@ -161,7 +140,7 @@ fn run_test_file(filename: &str, failures: &mut Vec<String>) {
                 match to_evaluation(expected) {
                     Ok(expected_eval) => match parsed.consteval() {
                         Some(actual) => {
-                            if !eval_eq(&actual, &expected_eval) {
+                            if expected_eval != actual {
                                 failures.push(format!(
                                     "{label}: expected {expected_eval:?}, got {actual:?}"
                                 ));

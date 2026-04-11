@@ -916,7 +916,11 @@ impl std::fmt::Display for EvaluationSema<'_> {
             Evaluation::String(s) => write!(f, "{}", s),
             Evaluation::Number(n) => {
                 // Format numbers like GitHub Actions does
-                if n.fract() == 0.0 {
+                if n == &f64::INFINITY {
+                    write!(f, "Infinity")
+                } else if n == &f64::NEG_INFINITY {
+                    write!(f, "-Infinity")
+                } else if n.fract() == 0.0 {
                     write!(f, "{}", *n as i64)
                 } else {
                     write!(f, "{}", n)
