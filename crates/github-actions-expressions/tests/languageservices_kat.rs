@@ -4,8 +4,9 @@
 //! See `support/sync-expression-tests.py` for how the KATs themselves
 //! are synchronized from the upstream test suite.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::sync::LazyLock;
 
 use github_actions_expressions::{Evaluation, Expr};
 use serde::Deserialize;
@@ -72,36 +73,59 @@ fn to_evaluation(result: &TestResult) -> Result<Evaluation, String> {
     }
 }
 
-/// Group name prefixes to skip
-const SKIP_GROUP_PREFIXES: &[&str] = &[
-    // Depth/memory limit tests: our parser doesn't enforce these limits
-    // and will stack-overflow on deeply nested expressions.
-    "depth-errors",
-    "memory-errors",
-];
+/// Entire test suite groups to skip.
+static SKIPPED_GROUPS: LazyLock<HashSet<(&str, &str)>> = LazyLock::new(|| {
+    HashSet::from_iter([
+        // We don't enforce recursion limits at the moment.
+        // TODO: Do so?
+        ("syntax-errors.json", "depth-errors"),
+        // We don't enforce memory limits at the moment.
+        // It's not clear whether we should, since GitHub's TypeScript implementation
+        // doesn't either.
+        ("syntax-errors.json", "memory-errors"),
+    ])
+});
 
-fn should_skip_group(group: &str) -> bool {
-    SKIP_GROUP_PREFIXES
-        .iter()
-        .any(|prefix| group.starts_with(prefix))
-}
+/// Specific test cases within a suite/group to skip.
+const SKIPPED_CASES: LazyLock<HashSet<(&str, &str, usize)>> = LazyLock::new(|| {
+    HashSet::from_iter([
+        // We're currently permissive about unknown contexts.
+        ("basic.json", "unknown context", 0),
+        // We don't parse '' (an empty expression) as valid.
+        ("basic.json", "empty_expression", 0),
+        // We don't currently support context evaluation on `fromJSON` in consteval.
+        // TODO: We should support this.
+        ("op_dot.json", "property-basics", 7),
+        ("op_dot.json", "property-basics", 8),
+        // We don't currently support index evaluation on `fromJSON` in consteval.
+        // TODO: We should support this.
+        ("op_idx.json", "index-following-group", 0),
+        ("op_idx.json", "index-following-function", 0),
+    ])
+});
 
-fn run_test_file(filename: &str, failures: &mut Vec<String>) {
+fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/testdata")
-        .join(filename);
+        .join(suite_name);
     let content = std::fs::read_to_string(&path).unwrap();
     let suite: TestSuite = serde_json::from_str(&content).unwrap();
 
     for (group, cases) in &suite {
-        if should_skip_group(group) {
+        if SKIPPED_GROUPS.contains(&(suite_name, group.as_str())) {
             continue;
         }
 
         for (i, case) in cases.iter().enumerate() {
-            let label = format!("{filename}::{group}[{i}] `{}`", case.expr);
+            if SKIPPED_CASES.contains(&(suite_name, group.as_str(), i)) {
+                continue;
+            }
 
-            // Skip cases that require context variables
+            let label = format!("{suite_name}::{group}[{i}] `{}`", case.expr);
+
+            // Skip cases that require context variables.
+            // TODO: We should probably test these too, and broaden
+            // `consteval` to include support for known contexts.
             if case.contexts.is_some() {
                 continue;
             }
