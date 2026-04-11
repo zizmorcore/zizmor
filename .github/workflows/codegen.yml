@@ -125,3 +125,42 @@ jobs:
             Please review manually before merging.
           assignees: ${{ env.PR_ASSIGNEES }}
           reviewers: ${{ env.PR_ASSIGNEES }}
+
+  refresh-expression-tests:
+    name: Refresh expression test data 🧪
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'zizmorcore' }}
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+
+      - name: try to refresh expression tests
+        run: |
+          make sync-expression-tests
+
+      - name: create PR
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        with:
+          draft: true
+          commit-message: "[BOT] update expression test data from GitHub"
+          branch: refresh-expression-tests
+          branch-suffix: timestamp
+          title: "[BOT] update expression test data from GitHub"
+          body: |
+            :robot: :warning: :robot:
+
+            This is an automated pull request, updating the expression
+            test data after a change to GitHub's languageservices
+            testdata was detected.
+
+            Please review manually before merging.
+          assignees: ${{ env.PR_ASSIGNEES }}
+          reviewers: ${{ env.PR_ASSIGNEES }}

@@ -857,6 +857,27 @@ fn parse_number(s: &str) -> f64 {
 /// various evaluation semantics (comparison, stringification, etc.).
 pub struct EvaluationSema<'a>(&'a Evaluation);
 
+impl EvaluationSema<'_> {
+    /// Converts a string to its uppercase form using GitHub Actions'
+    /// special rules.
+    /// See `toUpperSpecial`:
+    /// <https://github.com/actions/languageservices/blob/cc316ab/expressions/src/result.ts#L209>
+    fn upper_special(value: &str) -> String {
+        // Uppercase everything except the small dotless-ı (U+0131),
+        // which GitHub Actions preserves as-is.
+        let mut result = String::with_capacity(value.len());
+        let mut parts = value.split('ı');
+        if let Some(first) = parts.next() {
+            result.extend(first.chars().flat_map(char::to_uppercase));
+        }
+        for part in parts {
+            result.push('ı');
+            result.extend(part.chars().flat_map(char::to_uppercase));
+        }
+        result
+    }
+}
+
 impl PartialEq for EvaluationSema<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self.0, other.0) {
@@ -864,8 +885,9 @@ impl PartialEq for EvaluationSema<'_> {
             (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a == b,
             (Evaluation::Number(a), Evaluation::Number(b)) => a == b,
             // GitHub Actions string comparisons are case-insensitive.
-            (Evaluation::String(a), Evaluation::String(b)) => a.to_uppercase() == b.to_uppercase(),
-
+            (Evaluation::String(a), Evaluation::String(b)) => {
+                Self::upper_special(a) == Self::upper_special(b)
+            }
             // Coercion rules: all others convert to number and compare.
             (a, b) => a.as_number() == b.as_number(),
         }
@@ -879,7 +901,8 @@ impl PartialOrd for EvaluationSema<'_> {
             (Evaluation::Boolean(a), Evaluation::Boolean(b)) => a.partial_cmp(b),
             (Evaluation::Number(a), Evaluation::Number(b)) => a.partial_cmp(b),
             (Evaluation::String(a), Evaluation::String(b)) => {
-                a.to_uppercase().partial_cmp(&b.to_uppercase())
+                // GitHub Actions string comparisons are case-insensitive.
+                Self::upper_special(a).partial_cmp(&Self::upper_special(b))
             }
             // Coercion rules: all others convert to number and compare.
             (a, b) => a.as_number().partial_cmp(&b.as_number()),
@@ -893,10 +916,22 @@ impl std::fmt::Display for EvaluationSema<'_> {
             Evaluation::String(s) => write!(f, "{}", s),
             Evaluation::Number(n) => {
                 // Format numbers like GitHub Actions does
-                if n.fract() == 0.0 {
-                    write!(f, "{}", *n as i64)
+                if n == &f64::INFINITY {
+                    write!(f, "Infinity")
+                } else if n == &f64::NEG_INFINITY {
+                    write!(f, "-Infinity")
                 } else {
-                    write!(f, "{}", n)
+                    // Format with 15 decimal places, parse back to f64 to
+                    // clean up trailing noise, then format normally.
+                    // See: https://github.com/actions/languageservices/blob/cc316ab/expressions/src/data/number.ts#L10
+                    let rounded: f64 = format!("{:.15}", n)
+                        .parse()
+                        .expect("impossible f64 round-trip error");
+                    if rounded.fract() == 0.0 {
+                        write!(f, "{}", rounded as i64)
+                    } else {
+                        write!(f, "{}", rounded)
+                    }
                 }
             }
             Evaluation::Boolean(b) => write!(f, "{}", b),
@@ -2137,5 +2172,30 @@ mod tests {
         assert!(matches!(&leaves[0].inner, Expr::BinOp { .. }));
 
         Ok(())
+    }
+
+    #[test]
+    fn test_upper_special() {
+        use super::EvaluationSema;
+
+        let cases = &[
+            ("", ""),
+            ("abc", "ABC"),
+            ("ıabc", "ıABC"),
+            ("ııabc", "ııABC"),
+            ("abcı", "ABCı"),
+            ("abcıı", "ABCıı"),
+            ("abcıdef", "ABCıDEF"),
+            ("abcııdef", "ABCııDEF"),
+            ("abcıdefıghi", "ABCıDEFıGHI"),
+        ];
+
+        for (input, want) in cases {
+            assert_eq!(
+                EvaluationSema::upper_special(input),
+                *want,
+                "input: {input}"
+            );
+        }
     }
 }

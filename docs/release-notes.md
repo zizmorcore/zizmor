@@ -101,6 +101,9 @@ of `zizmor`.
   prerelease version comments (such as `# v6-beta`), causing some findings
   to appear unresolvable (#1870)
 
+* Fixed a bug where various string comparisons in expressions did not perfectly
+  match GitHub's own special uppercasing semantics (#1879)
+
 ### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'
