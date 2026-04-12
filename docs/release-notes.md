@@ -109,6 +109,12 @@ of `zizmor`.
 * Fixed a bug where various string comparisons in expressions did not perfectly
   match GitHub's own special uppercasing semantics (#1879)
 
+* Fixed a bug where zizmor would incorrectly contact `github.com` instead
+  of the user's requested `--gh-hostname` for some online requests (#1874)
+
+* Fixed a bug where the [artipacked] audit would fail to honor the
+  `--no-online-audits` flag (#1874)
+
 ### Changes ⚠️
 
 * The [secrets-outside-env] audit now only flags findings with the 'auditor'

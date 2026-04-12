@@ -237,7 +237,7 @@ struct RemoteHead {
 #[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
-    _host: GitHubHost,
+    host: GitHubHost,
     token: GitHubToken,
     base_client: ClientWithMiddleware,
     api_client: ClientWithMiddleware,
@@ -298,7 +298,7 @@ impl Client {
 
         Ok(Self {
             api_base: host.to_api_url(),
-            _host: host.clone(),
+            host: host.clone(),
             token: token.clone(),
             base_client: base_client.into(),
             api_client,
@@ -344,7 +344,10 @@ impl Client {
     }
 
     async fn list_refs(&self, owner: &str, repo: &str) -> Result<Vec<RemoteHead>, ClientError> {
-        let url = format!("https://github.com/{owner}/{repo}.git/git-upload-pack");
+        let url = format!(
+            "https://{host}/{owner}/{repo}.git/git-upload-pack",
+            host = self.host
+        );
 
         let entry = self
             .ref_cache
@@ -584,7 +587,10 @@ impl Client {
     ) -> Result<BranchCommits, ClientError> {
         // NOTE(ww): This API is undocumented.
         // See: https://github.com/orgs/community/discussions/78161
-        let url = format!("https://github.com/{owner}/{repo}/branch_commits/{commit}");
+        let url = format!(
+            "https://{host}/{owner}/{repo}/branch_commits/{commit}",
+            host = self.host
+        );
 
         // We ask GitHub for JSON, because it sends HTML by default for this endpoint.
         self.base_client
