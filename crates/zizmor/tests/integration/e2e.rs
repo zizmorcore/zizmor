@@ -458,9 +458,8 @@ fn warn_on_min_severity_unknown() -> Result<()> {
             .input(input_under_test("e2e-menagerie"))
             .run()?,
         @"
-     INFO zizmor: 🌈 zizmor v@@VERSION@@
-     WARN zizmor: `unknown` is a deprecated minimum severity that has no effect
-     WARN zizmor: future versions of zizmor will reject this value
+    WARN zizmor: `unknown` is a deprecated minimum severity that has no effect
+    WARN zizmor: future versions of zizmor will reject this value
     "
     );
 
@@ -479,9 +478,8 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
             .input(input_under_test("e2e-menagerie"))
             .run()?,
         @"
-     INFO zizmor: 🌈 zizmor v@@VERSION@@
-     WARN zizmor: `unknown` is a deprecated minimum confidence that has no effect
-     WARN zizmor: future versions of zizmor will reject this value
+    WARN zizmor: `unknown` is a deprecated minimum confidence that has no effect
+    WARN zizmor: future versions of zizmor will reject this value
     "
     );
     Ok(())
