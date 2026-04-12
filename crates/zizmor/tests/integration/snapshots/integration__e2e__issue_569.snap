@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\",\n\"--collect=workflows\"]).input(\"python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6\").run()?"
 ---
-🌈 zizmor v@@VERSION@@
+ INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/build.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/documentation-links.yml

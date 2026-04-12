@@ -877,7 +877,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         reg.with(indicatif_layer).init();
     }
 
-    eprintln!("🌈 zizmor v{version}", version = env!("CARGO_PKG_VERSION"));
+    tracing::info!("🌈 zizmor v{version}", version = env!("CARGO_PKG_VERSION"));
 
     // Validate stdin input constraints: `-` must be the only input,
     // and cannot be combined with `--fix`.

@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/e2e/crater.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"pyca/cryptography@43eb178ee3aae8d0060221118437b03c23570a41\").run()?"
 ---
-🌈 zizmor v@@VERSION@@
+ INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO collect_inputs: zizmor::registry::input: collected 15 inputs from pyca/cryptography
  INFO audit: zizmor: 🌈 completed .github/actions/cache/action.yml
  INFO audit: zizmor: 🌈 completed .github/actions/fetch-vectors/action.yml

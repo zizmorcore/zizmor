@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw-experiments/zizmor-bug-726@a038d1a35\").run()?"
 ---
-🌈 zizmor v@@VERSION@@
+ INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO collect_inputs: zizmor::registry::input: collected 6 inputs from woodruffw-experiments/zizmor-bug-726
  INFO audit: zizmor: 🌈 completed .github/actions/custom-action/action.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/actions/custom-action/action.yml

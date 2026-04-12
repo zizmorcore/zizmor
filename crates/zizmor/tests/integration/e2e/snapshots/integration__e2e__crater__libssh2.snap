@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/e2e/crater.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"libssh2/libssh2@cb252b5909630dd439d3f80ca9318a99da253dbe\").run()?"
 ---
-🌈 zizmor v@@VERSION@@
+ INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO collect_inputs: zizmor::registry::input: collected 7 inputs from libssh2/libssh2
  INFO audit: zizmor: 🌈 completed .github/dependabot.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/appveyor_docker.yml

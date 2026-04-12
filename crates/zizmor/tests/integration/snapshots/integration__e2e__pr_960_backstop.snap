@@ -2,6 +2,6 @@
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().output(OutputMode::Both).input(input_under_test(\"pr-960-backstop\")).run()?"
 ---
-🌈 zizmor v@@VERSION@@
+ INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO audit: zizmor: 🌈 completed @@INPUT@@/action.yml
 No findings to report. Good job!

@@ -2,6 +2,6 @@
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().output(OutputMode::Both).working_dir(input_under_test(\"e2e-menagerie/dummy-action-1\")).input(\"action.yaml\").run()?"
 ---
-🌈 zizmor v@@VERSION@@
+ INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO audit: zizmor: 🌈 completed @@INPUT@@
 No findings to report. Good job!
