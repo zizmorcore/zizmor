@@ -436,7 +436,7 @@ fn test_invalid_wrong_policy_object() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |
@@ -464,7 +464,7 @@ fn test_invalid_policy_syntax_1() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |
@@ -492,7 +492,7 @@ fn test_invalid_policy_syntax_2() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |
@@ -520,7 +520,7 @@ fn test_invalid_policy_syntax_3() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |
@@ -548,7 +548,7 @@ fn test_invalid_policy_syntax_4() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |
@@ -576,7 +576,7 @@ fn test_invalid_policy_syntax_5() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |
@@ -604,7 +604,7 @@ fn test_invalid_policy_syntax_6() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
 

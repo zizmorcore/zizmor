@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().output(OutputMode::Both).input(input_under_test(\"e2e-menagerie\")).run()?"
 ---
-🌈 zizmor v@@VERSION@@
+ INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/dummy-action-2/action.yml
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/workflows/another-dummy.yml
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/workflows/dummy.yml

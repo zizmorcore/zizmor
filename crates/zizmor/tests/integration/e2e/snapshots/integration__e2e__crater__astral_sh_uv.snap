@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/e2e/crater.rs
 expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"astral-sh/uv@8ed803e507f41937d55865ae88c8c806573b3b9e\").run()?"
 ---
-🌈 zizmor v@@VERSION@@
+ INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO collect_inputs: zizmor::registry::input: collected 25 inputs from astral-sh/uv
  INFO audit: zizmor: 🌈 completed .github/workflows/bench.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/build-dev-binaries.yml

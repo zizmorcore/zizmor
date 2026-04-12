@@ -138,7 +138,7 @@ fn test_stdin_with_other_inputs() -> anyhow::Result<()> {
             .args(["-", "some-dir/"])
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     error: `-` (stdin) cannot be combined with other inputs
 
     Usage: zizmor [OPTIONS] <INPUT>...
@@ -161,7 +161,7 @@ fn test_stdin_with_fix() -> anyhow::Result<()> {
             .args(["--fix", "-"])
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     error: `--fix` cannot be used with `-` (stdin)
 
     Usage: zizmor [OPTIONS] <INPUT>...
@@ -184,7 +184,7 @@ fn test_stdin_invalid_yaml() -> anyhow::Result<()> {
             .args(["-"])
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     failed to load <stdin> as workflow
 
@@ -208,7 +208,7 @@ fn test_stdin_invalid_yaml_strict() -> anyhow::Result<()> {
             .args(["--strict-collection", "-"])
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     failed to load <stdin> as workflow
 
@@ -232,7 +232,7 @@ fn test_stdin_empty() -> anyhow::Result<()> {
             .args(["-"])
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
      WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected
@@ -790,7 +790,7 @@ fn test_stdin_valid_yaml_unknown_schema() -> anyhow::Result<()> {
             .args(["-"])
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
      WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected
@@ -818,7 +818,7 @@ fn test_stdin_valid_yaml_unknown_schema_strict() -> anyhow::Result<()> {
             .args(["--strict-collection", "-"])
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
      WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected

@@ -14,7 +14,7 @@ fn test_fails_incompatible_modes() -> Result<()> {
             .input(input_under_test("neutral.yml"))
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     error: `workflows-only` and `actions-only` cannot be combined with other collection modes
 
     Usage: zizmor [OPTIONS] <INPUT>...
@@ -30,7 +30,7 @@ fn test_fails_incompatible_modes() -> Result<()> {
             .input(input_under_test("neutral.yml"))
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     error: `workflows-only` and `actions-only` cannot be combined with other collection modes
 
     Usage: zizmor [OPTIONS] <INPUT>...
@@ -46,7 +46,7 @@ fn test_fails_incompatible_modes() -> Result<()> {
             .input(input_under_test("neutral.yml"))
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     error: `workflows-only` and `actions-only` cannot be combined with other collection modes
 
     Usage: zizmor [OPTIONS] <INPUT>...
@@ -68,7 +68,7 @@ fn test_warn_deprecated_modes() -> Result<()> {
             .setenv("RUST_LOG", "warn")
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
      WARN zizmor: --collect=workflows-only is deprecated; use --collect=workflows instead
      WARN zizmor: future versions of zizmor will reject this mode
     No findings to report. Good job!
@@ -82,7 +82,7 @@ fn test_warn_deprecated_modes() -> Result<()> {
             .setenv("RUST_LOG", "warn")
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
      WARN zizmor: --collect=actions-only is deprecated; use --collect=actions instead
      WARN zizmor: future versions of zizmor will reject this mode
     No findings to report. Good job!

@@ -2,7 +2,7 @@
 source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().expects_failure(3).input(input_under_test(&format!(\"invalid/{tc}.yml\"))).run()?"
 ---
-🌈 zizmor v@@VERSION@@
+ INFO zizmor: 🌈 zizmor v@@VERSION@@
  WARN collect_inputs: zizmor::registry::input: failed to validate input as action: input does not match expected validation schema
 fatal: no audit was performed
 error: no inputs collected

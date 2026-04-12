@@ -185,7 +185,7 @@ fn test_config_invalid_pattern() -> Result<()> {
             .output(OutputMode::Stderr)
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |
@@ -214,7 +214,7 @@ fn test_config_invalid_variant() -> Result<()> {
             .output(OutputMode::Stderr)
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |

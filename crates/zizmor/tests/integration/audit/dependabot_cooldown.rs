@@ -86,7 +86,7 @@ fn test_config_not_number() -> anyhow::Result<()> {
             .output(OutputMode::Stderr)
             .run()?,
         @r#"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |
@@ -113,7 +113,7 @@ fn test_invalid_config_zero_days() -> anyhow::Result<()> {
             .output(OutputMode::Stderr)
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |
@@ -140,7 +140,7 @@ fn test_invalid_config_negative_days() -> anyhow::Result<()> {
             .output(OutputMode::Stderr)
             .run()?,
         @"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
       |

@@ -11,7 +11,7 @@ fn test_ref_version_mismatch() -> Result<()> {
             .input(input_under_test("ref-version-mismatch.yml"))
             .run()?,
         @r"
-    🌈 zizmor v@@VERSION@@
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
      INFO audit: zizmor: 🌈 completed @@INPUT@@
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:22:15
