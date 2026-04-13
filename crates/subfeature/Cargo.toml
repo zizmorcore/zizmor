@@ -2,9 +2,9 @@
 name = "subfeature"
 description = "Subfeature handling and manipulation APIs"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/subfeature"
-version = "1.24.0-rc1"
 readme = "README.md"
 
+version.workspace = true
 authors.workspace = true
 homepage.workspace = true
 edition.workspace = true

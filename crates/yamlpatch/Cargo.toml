@@ -1,14 +1,14 @@
 [package]
 name = "yamlpatch"
-version = "1.24.0-rc1"
 description = "Comment and format-preserving YAML patch operations"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/yamlpatch"
 keywords = ["yaml", "patch"]
-
 authors = [
     "Mostafa Moradian <mstfmoradian@gmail.com>",
     "William Woodruff <william@yossarian.net>",
 ]
+
+version.workspace = true
 homepage.workspace = true
 edition.workspace = true
 license.workspace = true

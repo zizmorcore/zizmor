@@ -5,7 +5,7 @@
 #
 # - `release-binaries.yml`: build and attach binaries to the new release on GitHub
 # - `release-pypi.yml`: build and publish distributions of zizmor to PyPI
-# - `release-zizmor-crate.yml`: publish the zizmor crate to crates.io
+# - `release-crates.yml`: publish the zizmor crates to crates.io
 #
 # To enable those child workflows, this workflow creates the release
 # and then invokes each as a reusable workflow, passing the tag as an input.
@@ -86,13 +86,13 @@ jobs:
     with:
       release-tag: ${{ needs.plan-release.outputs.release-tag }}
 
-  release-zizmor-crate:
-    name: Publish zizmor crate to crates.io for ${{ needs.plan-release.outputs.release-tag }}
+  release-crates:
+    name: Publish zizmor crates to crates.io for ${{ needs.plan-release.outputs.release-tag }}
     needs: [plan-release, draft-release]
 
     permissions:
       id-token: write # for Trusted Publishing to crates.io
 
-    uses: ./.github/workflows/release-zizmor-crate.yml
+    uses: ./.github/workflows/release-crates.yml
     with:
       release-tag: ${{ needs.plan-release.outputs.release-tag }}

@@ -1,7 +1,8 @@
 [package]
 name = "tree-sitter-iter"
 description = "A very simple pre-order iterator for tree-sitter CSTs"
-version = "1.24.0-rc1"
+
+version.workspace = true
 authors.workspace = true
 homepage.workspace = true
 edition.workspace = true

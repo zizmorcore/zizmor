@@ -2,9 +2,9 @@
 name = "github-actions-expressions"
 description = "GitHub Actions expression parser and data types"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-expressions"
-version = "1.24.0-rc1"
 readme = "README.md"
 
+version.workspace = true
 homepage.workspace = true
 license.workspace = true
 authors.workspace = true
