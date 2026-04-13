@@ -32,8 +32,8 @@ static VERSION_COMMENT_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     vec![
         // Matches "# tag=v2.8.0", "# tag=v6-beta", or any non-whitespace tag token.
         Regex::new(r"#\s*tag\s*=\s*(\S+)").unwrap(),
-        // Matches "# v2.8.0" and prerelease forms like "# v1.2.3-rc.1".
-        Regex::new(r"#\s*(v\d+(?:\.\d+)*(?:-[\w.-]+)?)").unwrap(),
+        // Matches "# v2.8.0" and prerelease forms like "# v1.2.3-rc.1", with or without the `v` suffix.
+        Regex::new(r"#\s*(v?\d+(?:\.\d+)*(?:-[\w.-]+)?)").unwrap(),
         // More flexible: "# version: 2.8.0"
         Regex::new(r"#\s*(?:version|ver)\s*[:=]\s*(v?\d+(?:\.\d+)*(?:-[\w.-]+)?)").unwrap(),
     ]
