@@ -165,6 +165,8 @@ GitHub Actions setup:
         steps:
           - name: Checkout repository
             uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+            with:
+              persist-credentials: false
 
           - name: Install the latest version of uv
             uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
