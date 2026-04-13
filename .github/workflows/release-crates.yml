@@ -12,7 +12,7 @@ permissions: {}
 
 jobs:
   crates:
-    name: Publish zizmor to crates.io 📦
+    name: Publish zizmor crates to crates.io 📦
     runs-on: ubuntu-latest
 
     environment:
@@ -30,6 +30,6 @@ jobs:
         id: auth
 
       - name: publish to crates.io
-        run: cargo publish -p zizmor
+        run: cargo publish --workspace
         env:
           CARGO_REGISTRY_TOKEN: "${{ steps.auth.outputs.token }}"
