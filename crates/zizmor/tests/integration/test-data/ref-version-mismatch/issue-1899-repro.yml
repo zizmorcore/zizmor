@@ -1,0 +1,17 @@
+name: ISSUE-1899-REPRO
+
+on:
+  push:
+
+permissions: {}
+
+concurrency:
+  group: ISSUE-1899-REPRO
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: canonical/charming-actions/check-libraries@1753e0803f70445132e92acd45c905aba6473225 # 2.7.0
