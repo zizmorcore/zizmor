@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.24.1
+
+### Bug Fixes 🐛
+
+* Fixed a bug where the [ref-version-mismatch] audit would incorrectly flag
+  some version comments as not containing an appropriate version (#1900)
+
 ## 1.24.0
 
 ### New Features 🌈
