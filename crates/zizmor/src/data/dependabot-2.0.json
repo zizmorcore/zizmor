@@ -691,6 +691,7 @@
         "julia",
         "maven",
         "mix",
+        "nix",
         "npm",
         "nuget",
         "opentofu",
@@ -1182,119 +1183,116 @@
     "registry": {
       "type": "object",
       "description": "The top-level registries key is optional. It allows you to specify authentication details that Dependabot can use to access private package registries.",
-      "additionalProperties": false,
-      "patternProperties": {
-        ".+": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "type": {
-              "description": "Identifies the type of registry.",
-              "enum": [
-                "cargo-registry",
-                "composer-repository",
-                "docker-registry",
-                "git",
-                "goproxy-server",
-                "hex-organization",
-                "hex-repository",
-                "helm-registry",
-                "maven-repository",
-                "npm-registry",
-                "nuget-feed",
-                "pub-repository",
-                "python-index",
-                "rubygems-server",
-                "terraform-registry"
-              ]
-            },
-            "url": {
-              "description": "The URL to use to access the dependencies in this registry. The protocol is optional. If not specified, 'https://' is assumed. Dependabot adds or ignores trailing slashes as required.",
-              "type": "string"
-            },
-            "username": {
-              "description": "The username that Dependabot uses to access the registry.",
-              "type": "string"
-            },
-            "password": {
-              "description": "A reference to a Dependabot secret containing the password for the specified user.",
-              "type": "string"
-            },
-            "key": {
-              "description": "A reference to a Dependabot secret containing an access key for this registry.",
-              "type": "string"
-            },
-            "token": {
-              "description": "A reference to a Dependabot secret containing an access token for this registry.",
-              "type": "string"
-            },
-            "replaces-base": {
-              "description": "For registries with type: python-index, if the boolean value is true, pip resolves dependencies by using the specified URL rather than the base URL of the Python Package Index (by default https://pypi.org/simple).",
-              "type": "boolean"
-            },
-            "organization": {
-              "description": "",
-              "type": "string"
-            },
-            "repo": {
-              "description": "",
-              "type": "string"
-            },
-            "auth-key": {
-              "description": "",
-              "type": "string"
-            },
-            "public-key-fingerprint": {
-              "description": "",
-              "type": "string"
-            },
-            "registry": {
-              "description": "The name of the cargo registry.",
-              "type": "string"
-            },
-            "tenant-id": {
-              "description": "The tenant ID for Azure OIDC authentication.",
-              "type": "string"
-            },
-            "client-id": {
-              "description": "The client ID for Azure OIDC authentication.",
-              "type": "string"
-            },
-            "jfrog-oidc-provider-name": {
-              "description": "The JFrog OIDC provider name for authentication.",
-              "type": "string"
-            },
-            "identity-mapping-name": {
-              "description": "The identity mapping name for JFrog OIDC authentication.",
-              "type": "string"
-            },
-            "audience": {
-              "description": "The audience for OIDC or AWS authentication.",
-              "type": "string"
-            },
-            "aws-region": {
-              "description": "The AWS region for AWS CodeArtifact authentication.",
-              "type": "string"
-            },
-            "account-id": {
-              "description": "The AWS account ID for AWS CodeArtifact authentication.",
-              "type": "string"
-            },
-            "role-name": {
-              "description": "The AWS role name for AWS CodeArtifact authentication.",
-              "type": "string"
-            },
-            "domain": {
-              "description": "The domain for AWS CodeArtifact authentication.",
-              "type": "string"
-            },
-            "domain-owner": {
-              "description": "The domain owner for AWS CodeArtifact authentication.",
-              "type": "string"
-            }
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "description": "Identifies the type of registry.",
+            "enum": [
+              "cargo-registry",
+              "composer-repository",
+              "docker-registry",
+              "git",
+              "goproxy-server",
+              "hex-organization",
+              "hex-repository",
+              "helm-registry",
+              "maven-repository",
+              "npm-registry",
+              "nuget-feed",
+              "pub-repository",
+              "python-index",
+              "rubygems-server",
+              "terraform-registry"
+            ]
           },
-          "required": ["type", "url"]
-        }
+          "url": {
+            "description": "The URL to use to access the dependencies in this registry. The protocol is optional. If not specified, 'https://' is assumed. Dependabot adds or ignores trailing slashes as required.",
+            "type": "string"
+          },
+          "username": {
+            "description": "The username that Dependabot uses to access the registry.",
+            "type": "string"
+          },
+          "password": {
+            "description": "A reference to a Dependabot secret containing the password for the specified user.",
+            "type": "string"
+          },
+          "key": {
+            "description": "A reference to a Dependabot secret containing an access key for this registry.",
+            "type": "string"
+          },
+          "token": {
+            "description": "A reference to a Dependabot secret containing an access token for this registry.",
+            "type": "string"
+          },
+          "replaces-base": {
+            "description": "For registries with type: python-index, if the boolean value is true, pip resolves dependencies by using the specified URL rather than the base URL of the Python Package Index (by default https://pypi.org/simple).",
+            "type": "boolean"
+          },
+          "organization": {
+            "description": "",
+            "type": "string"
+          },
+          "repo": {
+            "description": "",
+            "type": "string"
+          },
+          "auth-key": {
+            "description": "",
+            "type": "string"
+          },
+          "public-key-fingerprint": {
+            "description": "",
+            "type": "string"
+          },
+          "registry": {
+            "description": "The name of the cargo registry.",
+            "type": "string"
+          },
+          "tenant-id": {
+            "description": "The tenant ID for Azure OIDC authentication.",
+            "type": "string"
+          },
+          "client-id": {
+            "description": "The client ID for Azure OIDC authentication.",
+            "type": "string"
+          },
+          "jfrog-oidc-provider-name": {
+            "description": "The JFrog OIDC provider name for authentication.",
+            "type": "string"
+          },
+          "identity-mapping-name": {
+            "description": "The identity mapping name for JFrog OIDC authentication.",
+            "type": "string"
+          },
+          "audience": {
+            "description": "The audience for OIDC or AWS authentication.",
+            "type": "string"
+          },
+          "aws-region": {
+            "description": "The AWS region for AWS CodeArtifact authentication.",
+            "type": "string"
+          },
+          "account-id": {
+            "description": "The AWS account ID for AWS CodeArtifact authentication.",
+            "type": "string"
+          },
+          "role-name": {
+            "description": "The AWS role name for AWS CodeArtifact authentication.",
+            "type": "string"
+          },
+          "domain": {
+            "description": "The domain for AWS CodeArtifact authentication.",
+            "type": "string"
+          },
+          "domain-owner": {
+            "description": "The domain owner for AWS CodeArtifact authentication.",
+            "type": "string"
+          }
+        },
+        "required": ["type", "url"]
       },
       "minProperties": 1
     },
