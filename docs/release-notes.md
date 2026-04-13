@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.24.0
+
 ### New Features 🌈
 
 * `zizmor` now allows users to audit from stdin, by passing `zizmor -` (#1611)
