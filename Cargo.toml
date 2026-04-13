@@ -32,7 +32,7 @@ itertools = "0.14.0"
 pest = "2.8.6"
 pest_derive = "2.8.6"
 pretty_assertions = "1.4.1"
-annotate-snippets = "0.12.12"
+annotate-snippets = "0.12.14"
 anstream = "1.0.0"
 assert_cmd = "2.2.0"
 async-trait = "0.1.89"
@@ -48,12 +48,12 @@ fst = "0.4.7"
 futures = "0.3"
 http = "1.4.0"
 http-cache-reqwest = { version = "1.0.0-alpha.5", features = ["manager-moka"] }
-human-panic = "2.0.7"
+human-panic = "2.0.8"
 ignore = "0.4.25"
-indexmap = { version = "2.13.0", features = ["serde"] }
+indexmap = { version = "2.13.1", features = ["serde"] }
 indicatif = "0.18"
 insta = "1.47.1"
-jsonschema = { version = "0.45.0", default-features = false }
+jsonschema = { version = "0.45.1", default-features = false }
 line-index = "0.1.2"
 memchr = "2.8.0"
 owo-colors = "4.3.0"
@@ -70,12 +70,12 @@ serde_yaml = "0.9.34"
 tar = "0.4.45"
 terminal-link = "0.1.0"
 thiserror = "2.0.18"
-tokio = { version = "1.50.0", features = ["rt-multi-thread", "io-std"] }
+tokio = { version = "1.51.0", features = ["rt-multi-thread", "io-std"] }
 tower-lsp-server = "0.23"
 tracing = "0.1.44"
 tracing-indicatif = "0.3.14"
 tracing-subscriber = "0.3.23"
-tree-sitter = "0.26.7"
+tree-sitter = "0.26.8"
 tree-sitter-bash = "0.25.1"
 # Exact version since the upstream performed a breaking change outside of semver.
 # See: https://github.com/zizmorcore/zizmor/pull/1427
