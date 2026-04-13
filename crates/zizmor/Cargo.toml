@@ -1,12 +1,12 @@
 [package]
 name = "zizmor"
 description = "Static analysis for GitHub Actions"
-version = "1.24.0-rc1"
 repository = "https://github.com/zizmorcore/zizmor"
 documentation = "https://docs.zizmor.sh"
 keywords = ["cli", "github-actions", "static-analysis", "security"]
 categories = ["command-line-utilities", "security"]
 
+version.workspace = true
 homepage.workspace = true
 license.workspace = true
 readme.workspace = true
