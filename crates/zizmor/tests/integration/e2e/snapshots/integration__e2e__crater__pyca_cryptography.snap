@@ -181,6 +181,16 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |
    = note: audit confidence → High
 
+warning[archived-uses]: action or reusable workflow from archived repository
+  --> .github/workflows/boring-open-awslc-bump.yml:46:15
+   |
+46 |       - uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+   |               ^^^^^^^^^^^^^^^^^^^^^^^ repository is archived
+47 |         id: generate-token
+   |         ------------------ this step
+   |
+   = note: audit confidence → High
+
 info[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/boring-open-awslc-bump.yml:53:15
    |
@@ -407,6 +417,16 @@ help[concurrency-limits]: insufficient job-level concurrency limits
 ...
 12 |     bump:
    |     ---- job affected by missing workflow concurrency
+   |
+   = note: audit confidence → High
+
+warning[archived-uses]: action or reusable workflow from archived repository
+  --> .github/workflows/downstream-version-bump.yml:23:15
+   |
+23 |       - uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+   |               ^^^^^^^^^^^^^^^^^^^^^^^ repository is archived
+24 |         id: generate-token
+   |         ------------------ this step
    |
    = note: audit confidence → High
 
@@ -741,6 +761,16 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |
    = note: audit confidence → High
 
+warning[archived-uses]: action or reusable workflow from archived repository
+  --> .github/workflows/x509-limbo-version-bump.yml:42:15
+   |
+42 |       - uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+   |               ^^^^^^^^^^^^^^^^^^^^^^^ repository is archived
+43 |         id: generate-token
+   |         ------------------ this step
+   |
+   = note: audit confidence → High
+
 info[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/x509-limbo-version-bump.yml:49:15
    |
@@ -751,4 +781,4 @@ info[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → Low
 
-76 findings (9 suppressed): 19 informational, 35 low, 4 medium, 9 high
+79 findings (9 suppressed): 19 informational, 35 low, 7 medium, 9 high
