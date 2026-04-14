@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a crash in the [template-injection] audit when a workflow uses
+  a parenthesized compound expression in context position (#XXXX)
+
 ## 1.24.1
 
 ### Bug Fixes 🐛

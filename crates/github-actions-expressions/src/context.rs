@@ -94,7 +94,7 @@ impl<'src> Context<'src> {
     /// Returns None if the context doesn't have a sensible pattern
     /// equivalent, e.g. if it starts with a call.
     pub fn as_pattern(&self) -> Option<String> {
-        fn push_part(part: &Expr<'_>, pattern: &mut String) {
+        fn push_part(part: &Expr<'_>, pattern: &mut String) -> bool {
             match part {
                 Expr::Identifier(ident) => pattern.push_str(ident.0),
                 Expr::Star => pattern.push('*'),
@@ -105,8 +105,12 @@ impl<'src> Context<'src> {
                     // foo[0], foo[1 + 2], foo[bar]
                     _ => pattern.push('*'),
                 },
-                _ => unreachable!("unexpected part in context pattern"),
+                // Compound expressions like `(a || b).foo` could be expanded
+                // into multiple patterns (one per branch). For now, bail out
+                // and let the caller handle the `None` via its fallback path.
+                _ => return false,
             }
+            true
         }
 
         // TODO: Optimization ideas:
@@ -123,10 +127,14 @@ impl<'src> Context<'src> {
             return None;
         }
 
-        push_part(head, &mut pattern);
+        if !push_part(head, &mut pattern) {
+            return None;
+        }
         for part in parts {
             pattern.push('.');
-            push_part(part, &mut pattern);
+            if !push_part(part, &mut pattern) {
+                return None;
+            }
         }
 
         pattern.make_ascii_lowercase();
@@ -385,6 +393,12 @@ mod tests {
             ("foo .* .*", Some("foo.*.*")),
             // Invalid cases
             ("fromJSON('{}').bar", None),
+            // Grouped/compound expressions in context position return None
+            // rather than panicking.
+            (
+                "(github.event.pull_request || github.event.issue).number",
+                None,
+            ),
         ] {
             let ctx = Context::parse(*case).unwrap();
             assert_eq!(ctx.as_pattern().as_deref(), *expected);
