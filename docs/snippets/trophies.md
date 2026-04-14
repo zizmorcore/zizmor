@@ -1609,7 +1609,7 @@
         - pendulum-project/ntpd-rs#2139
 
 
--   ![](https://github.com/keila-org.png?size=40){ width="40" loading=lazy align=left } Keila
+-   ![](https://github.com/pentacent.png?size=40){ width="40" loading=lazy align=left } pentacent
 
     ---
 
