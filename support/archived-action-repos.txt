@@ -152,6 +152,8 @@ technote-space/get-diff-action
 
 TencentCloudBase/cloudbase-action
 
+tibdex/github-app-token
+
 trmcnvn/chrome-addon
 
 whelk-io/maven-settings-xml-action
