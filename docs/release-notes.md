@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements
+
+* @tibdex/github-app-token is now recognized as an archived action by
+  [archived-uses] (#1910)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where local directory input collection could miss workflows for
