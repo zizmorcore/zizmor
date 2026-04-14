@@ -50,4 +50,6 @@ jobs:
         uses: CodSpeedHQ/action@db35df748deb45fdef0960669f57d627c1956c30 # v4.13.1
         with:
           mode: walltime
-          run: make bench
+          run: GH_TOKEN=${GH_TOKEN} make bench
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
