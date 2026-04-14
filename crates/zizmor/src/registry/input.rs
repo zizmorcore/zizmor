@@ -410,13 +410,9 @@ impl InputGroup {
         // with action definitions). Consequently, we make a best effort
         // disambiguate them by looking at their parent path.
         // See: https://github.com/zizmorcore/zizmor/issues/1341
-        let is_workflow_path = {
-            let resolved = path.canonicalize_utf8()?;
-
-            resolved
-                .parent()
-                .is_some_and(|parent| parent.ends_with(".github/workflows"))
-        };
+        let is_workflow_path = camino::absolute_utf8(path)?
+            .parent()
+            .is_some_and(|parent| parent.ends_with(".github/workflows"));
 
         let mut group = Self::new(config);
 
@@ -485,7 +481,7 @@ impl InputGroup {
             if options.mode_set.workflows()
                 && entry.is_file()
                 && matches!(entry.extension(), Some("yml" | "yaml"))
-                && entry
+                && camino::absolute_utf8(entry)?
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
