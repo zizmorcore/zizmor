@@ -1,26 +1,17 @@
-use std::sync::LazyLock;
-
 use github_actions_models::common::{EnvValue, Uses};
 
 use crate::audit::{Audit, AuditError, audit_meta};
 use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::StepBodyCommon;
-use crate::models::coordinate::ActionCoordinate;
+use crate::models::uses::RepositoryUsesExt;
 use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
 use crate::state::AuditState;
 
 use super::AuditLoadError;
 
-#[allow(clippy::unwrap_used)]
-static KNOWN_UNPINNED_TOOLS_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(|| {
-    vec![
-        // https://github.com/aquasecurity/trivy-action/blob/master/action.yaml
-        ActionCoordinate::NotConfigurable("aquasecurity/trivy-action".parse().unwrap()),
-        // https://github.com/1Password/load-secrets-action/blob/main/action.yml
-        ActionCoordinate::NotConfigurable("1password/load-secrets-action".parse().unwrap()),
-    ]
-});
+static KNOWN_UNPINNED_TOOLS_ACTIONS: &[&str] =
+    &["aquasecurity/trivy-action", "1password/load-secrets-action"];
 
 pub(crate) struct UnpinnedTools;
 
@@ -38,50 +29,53 @@ impl UnpinnedTools {
         let mut findings = vec![];
 
         let StepBodyCommon::Uses {
-            uses: Uses::Repository(_),
+            uses: Uses::Repository(uses),
             with,
         } = step.body()
         else {
             return Ok(findings);
         };
 
-        for coord in KNOWN_UNPINNED_TOOLS_ACTIONS.iter() {
-            if coord.usage(step).is_some() {
-                let finding = match with.get("version") {
-                    None => Some(
-                        Self::finding()
-                            .confidence(Confidence::High)
-                            .severity(Severity::Medium)
-                            .add_location(
-                                step.location()
-                                    .primary()
-                                    .with_keys(["uses".into()])
-                                    .annotated("this action's tool version is not pinned"),
-                            ),
-                    ),
-                    Some(EnvValue::String(v)) if v == "latest" => Some(
-                        Self::finding()
-                            .confidence(Confidence::High)
-                            .severity(Severity::Medium)
-                            .add_location(
-                                step.location()
-                                    .with_keys(["uses".into()])
-                                    .annotated("this action"),
-                            )
-                            .add_location(
-                                step.location()
-                                    .primary()
-                                    .with_keys(["with".into(), "version".into()])
-                                    .annotated("specifies `version: latest` which is unpinned"),
-                            ),
-                    ),
-                    Some(_) => None,
-                };
+        if !KNOWN_UNPINNED_TOOLS_ACTIONS
+            .iter()
+            .any(|action| uses.matches(action))
+        {
+            return Ok(findings);
+        }
 
-                if let Some(finding) = finding {
-                    findings.push(finding.build(step)?);
-                }
-            }
+        let finding = match with.get("version") {
+            None => Some(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(Severity::Medium)
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(["uses".into()])
+                            .annotated("this action's tool version is not pinned"),
+                    ),
+            ),
+            Some(EnvValue::String(v)) if v == "latest" => Some(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(Severity::Medium)
+                    .add_location(
+                        step.location()
+                            .with_keys(["uses".into()])
+                            .annotated("this action"),
+                    )
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(["with".into(), "version".into()])
+                            .annotated("specifies `version: latest` which is unpinned"),
+                    ),
+            ),
+            Some(_) => None,
+        };
+
+        if let Some(finding) = finding {
+            findings.push(finding.build(step)?);
         }
 
         Ok(findings)
