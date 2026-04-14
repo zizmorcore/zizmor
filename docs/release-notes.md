@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where local directory input collection could miss workflows for
+  relative-path invocations from within `.github` subdirectories (#1909)
+
 ## 1.24.1
 
 ### Bug Fixes 🐛
