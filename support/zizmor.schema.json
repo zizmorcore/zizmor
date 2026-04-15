@@ -23,6 +23,16 @@
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SchemaRemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -57,6 +67,16 @@
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SchemaRemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -119,6 +139,16 @@
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SchemaRemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -236,6 +266,29 @@
       },
       "additionalProperties": false
     },
+    "SchemaRemapConfig": {
+      "description": "Remap configuration: overrides a rule's finding severities.",
+      "type": "object",
+      "properties": {
+        "severity": {
+          "$ref": "#/definitions/SchemaRemapSeverity"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "severity"
+      ]
+    },
+    "SchemaRemapSeverity": {
+      "description": "Severity level for use in remap configuration.",
+      "type": "string",
+      "enum": [
+        "informational",
+        "low",
+        "medium",
+        "high"
+      ]
+    },
     "SecretsOutsideEnvConfig": {
       "description": "Configuration for the `secrets-outside-env` audit.",
       "type": "object",
@@ -274,6 +327,16 @@
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SchemaRemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -309,6 +372,16 @@
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SchemaRemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false

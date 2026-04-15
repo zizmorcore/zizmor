@@ -145,7 +145,15 @@ impl<'a> FindingRegistry<'a> {
     pub(crate) fn extend(&mut self, results: Vec<Finding<'a>>) {
         // TODO: is it faster to iterate like this, or do `find_by_max`
         // and then `extend`?
-        for finding in results {
+        for mut finding in results {
+            if let Some(remapped) = self
+                .input_registry
+                .get_config(finding.input_group())
+                .severity_remap(&finding)
+            {
+                finding.determinations.severity = remapped;
+            }
+
             if self.persona > finding.determinations.persona {
                 self.suppressed.push(finding);
             } else if finding.ignored

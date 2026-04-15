@@ -284,3 +284,69 @@ fn test_invalid_configs() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Ensures that severity remapping changes the displayed severity of a finding.
+/// artipacked normally produces Medium; remapped to High here.
+#[test]
+fn test_severity_remap() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("config-scenarios/severity-remap"))
+            .run()?,
+        @"
+    error[artipacked]: credential persistence through GitHub Actions artifacts
+      --> @@INPUT@@/.github/workflows/hackme.yml:12:9
+       |
+    12 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
+/// Ensures that remapped severity affects --min-severity filtering.
+/// A Medium finding remapped to High must survive --min-severity=high.
+#[test]
+fn test_severity_remap_affects_min_severity() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("config-scenarios/severity-remap"))
+            .args(["--min-severity=high"])
+            .run()?,
+        @"
+    error[artipacked]: credential persistence through GitHub Actions artifacts
+      --> @@INPUT@@/.github/workflows/hackme.yml:12:9
+       |
+    12 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
+/// Without remap config, an artipacked Medium finding is filtered out by --min-severity=high.
+#[test]
+fn test_no_remap_filtered_by_min_severity() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .no_config(true)
+            .input(input_under_test("config-scenarios/severity-remap"))
+            .args(["--min-severity=high"])
+            .run()?,
+        @"No findings to report. Good job! (1 ignored, 1 suppressed)"
+    );
+
+    Ok(())
+}

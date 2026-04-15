@@ -172,6 +172,26 @@ Per-audit configuration, where `id` is the audit's name, e.g.
 
 Not all audits are configurable. See each audit's documentation for details.
 
+### `rules.<id>.remap`
+
+*Type*: `object`
+
+Remap parts of the rule. Currently, only severity is supported.
+
+!!! important
+
+    `rules.<id>.remap.severity` was added in `v1.25.0`.
+
+For example, here is a configuration file with the rule severity remapped:
+
+```yaml title="zizmor.yml"
+rules:
+  # As of writing, artipacked is a medium severity finding by default.
+  artipacked:
+    remap:
+      severity: high # one of: informational, low, medium, high
+```
+
 ## Patterns
 
 Several audits support being configured with _patterns_, which can be used
