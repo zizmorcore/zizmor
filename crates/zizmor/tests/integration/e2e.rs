@@ -82,6 +82,30 @@ fn menagerie() -> Result<()> {
     Ok(())
 }
 
+/// Regression test for #1907.
+///
+/// Ensures that directory collection finds workflows when invoked
+/// from inside `.github/` with a relative path.
+#[test]
+fn issue_1907() -> Result<()> {
+    let working_dir = format!("{}/.github", input_under_test("issue-1907-repro"));
+
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Both)
+            .working_dir(working_dir)
+            .input("./workflows")
+            .run()?,
+        @r"
+         INFO zizmor: 🌈 zizmor v@@VERSION@@
+         INFO audit: zizmor: 🌈 completed @@INPUT@@/test.yml
+        No findings to report. Good job! (1 suppressed)
+        "
+    );
+
+    Ok(())
+}
+
 #[test]
 fn color_control_basic() -> Result<()> {
     // No terminal and not CI, so no color by default.

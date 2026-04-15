@@ -9,10 +9,18 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements
+
+* @tibdex/github-app-token is now recognized as an archived action by
+  [archived-uses] (#1910)
+
 ### Bug Fixes 🐛
 
 * Fixed a crash in the [template-injection] audit when a workflow uses
   a parenthesized compound expression in context position (#1904)
+
+* Fixed a bug where local directory input collection could miss workflows for
+  relative-path invocations from within `.github` subdirectories (#1909)
 
 ## 1.24.1
 
