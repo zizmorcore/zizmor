@@ -1,0 +1,21 @@
+# See: https://github.com/zizmorcore/zizmor/issues/1903
+#
+# Parenthesized compound expressions in context position
+# (e.g. `(a || b).foo`) should not crash zizmor.
+
+name: issue-1903-repro
+
+on: issue_comment
+
+permissions: {}
+
+concurrency:
+  group: issue-1903-repro
+  cancel-in-progress: true
+
+jobs:
+  repro:
+    name: Repro
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ (github.event.pull_request || github.event.issue).number }}"
