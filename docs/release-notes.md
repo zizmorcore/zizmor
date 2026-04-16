@@ -86,11 +86,15 @@ of `zizmor`.
 
 ### Bug Fixes 🐛
 
+* Fixed a bug where YAML anchors and aliases could cause duplicate findings
+  to be reported (#1584)
+
 * Fixed a bug where the [concurrency-limits] audit reported findings
   at the job level instead of the workflow level (#1627)
 
 * Fixed a bug where `with: ${{ expr }}` clauses would cause a crash.
   `artipacked` audit emits a pedantic finding on such clauses. (#1772)
+
 
 * Fixed a bug where auto-fixes for the [template-injection] audit would fail
   to preserve an environment variable's casing (#1766)

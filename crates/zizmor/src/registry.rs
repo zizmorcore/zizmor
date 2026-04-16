@@ -1,18 +1,33 @@
 //! Functionality for registering and managing the lifecycles of
 //! audits.
 
+use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 use std::process::ExitCode;
 
 use indexmap::IndexMap;
 
 use crate::{
     audit::{self, Audit, AuditLoadError},
-    finding::{Confidence, Finding, Persona, Severity},
+    finding::{Confidence, Determinations, Finding, Persona, Severity},
     registry::input::{InputKey, InputRegistry},
     state::AuditState,
 };
 
 pub(crate) mod input;
+
+/// A hash-based key for deduplicating findings.
+///
+/// We deduplicate based on (audit_ident, input_key, location_hash, determinations)
+/// to handle YAML anchors, which cause the same content to appear at multiple
+/// symbolic routes but with the same concrete byte location and annotation.
+#[derive(Hash, Eq, PartialEq, Clone)]
+struct FindingKey {
+    audit_ident: &'static str,
+    input_key: InputKey,
+    location_hash: u64,
+    determinations: Determinations,
+}
 
 pub(crate) struct AuditRegistry {
     pub(crate) audits: IndexMap<&'static str, Box<dyn Audit + Send + Sync>>,
@@ -119,6 +134,9 @@ pub(crate) struct FindingRegistry<'a> {
     ignored: Vec<Finding<'a>>,
     findings: Vec<Finding<'a>>,
     highest_seen_severity: Option<Severity>,
+    // Tracks seen findings to avoid duplicates from YAML anchors.
+    seen_findings: HashSet<FindingKey>,
+    dedup: bool,
 }
 
 impl<'a> FindingRegistry<'a> {
@@ -127,6 +145,7 @@ impl<'a> FindingRegistry<'a> {
         minimum_severity: Option<Severity>,
         minimum_confidence: Option<Confidence>,
         persona: Persona,
+        dedup: bool,
     ) -> Self {
         Self {
             input_registry,
@@ -137,6 +156,8 @@ impl<'a> FindingRegistry<'a> {
             ignored: Default::default(),
             findings: Default::default(),
             highest_seen_severity: None,
+            seen_findings: Default::default(),
+            dedup,
         }
     }
 
@@ -146,6 +167,35 @@ impl<'a> FindingRegistry<'a> {
         // TODO: is it faster to iterate like this, or do `find_by_max`
         // and then `extend`?
         for finding in results {
+            // Check for duplicate findings from YAML anchors.
+            // We deduplicate based on (audit_ident, input_key, location_hash, determinations) to handle
+            // cases where the same finding is reported for both anchor definitions
+            // and alias usages. YAML anchors cause the same content to appear at
+            // multiple symbolic routes but with the same concrete byte location and annotation.
+            //
+            // The location hash includes the byte range, annotation, feature text, and feature kind.
+            // This ensures two findings at the same location with different annotations
+            // (e.g., two different vulnerabilities on the same line) are NOT deduplicated.
+            if self.dedup {
+                let primary_loc = finding.primary_location();
+
+                let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                primary_loc.hash(&mut hasher);
+                let location_hash = hasher.finish();
+
+                let dedup_key = FindingKey {
+                    audit_ident: finding.ident,
+                    input_key: primary_loc.symbolic.key.clone(),
+                    location_hash,
+                    determinations: finding.determinations,
+                };
+
+                if !self.seen_findings.insert(dedup_key) {
+                    // This is a duplicate finding, skip it
+                    continue;
+                }
+            }
+
             if self.persona > finding.determinations.persona {
                 self.suppressed.push(finding);
             } else if finding.ignored
