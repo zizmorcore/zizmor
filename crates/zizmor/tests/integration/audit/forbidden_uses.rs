@@ -203,6 +203,50 @@ fn test_config_invalid_pattern() -> Result<()> {
 }
 
 #[test]
+fn test_allow_glob() -> Result<()> {
+    // Test glob patterns in allow list: "actions/*" and "pypa/gh-action-*"
+    // should allow all three actions in the menagerie
+    insta::assert_snapshot!(
+        zizmor()
+            .config(input_under_test("forbidden-uses/configs/allow-glob.yml"))
+            .input(input_under_test(
+                "forbidden-uses/forbidden-uses-menagerie.yml"
+            ))
+            .run()?,
+        @"No findings to report. Good job! (1 suppressed)"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_deny_glob() -> Result<()> {
+    // Test glob pattern in deny list: "pypa/*-pypi-publish"
+    // should deny pypa/gh-action-pypi-publish but allow actions/*
+    insta::assert_snapshot!(
+        zizmor()
+            .config(input_under_test("forbidden-uses/configs/deny-glob.yml"))
+            .input(input_under_test(
+                "forbidden-uses/forbidden-uses-menagerie.yml"
+            ))
+            .run()?,
+        @r"
+    error[forbidden-uses]: forbidden action used
+      --> @@INPUT@@:14:15
+       |
+    14 |       - uses: pypa/gh-action-pypi-publish@release/v1
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this action is forbidden
+       |
+       = note: audit confidence → High
+
+    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_config_invalid_variant() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
