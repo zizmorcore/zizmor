@@ -11,16 +11,18 @@ for concrete guidance on specific development tasks and style prescriptions.
 
 Here's a short list of steps you can follow to contribute:
 
+1. *Read our [AI Policy](https://github.com/zizmorcore/.github/blob/main/AI_POLICY.md)*.
+   You **must** follow this policy in order to contribute to `zizmor`.
 1. *Figure out what you want to contribute.* See the
    [contribution ideas](#contribution-ideas) section below if you're looking
    for ideas!
-2. *File or reply to an issue, if appropriate.* Some contributions require
+1. *File or reply to an issue, if appropriate.* Some contributions require
    new issues (like new bugs), while others involve an existing issue
    (like known documentation defects). Others don't require an issue at all,
    like small typo fixes. In general, if you aren't sure, *error on the side
    of making or replying to an issue* &mdash; it helps maintain shared
    development context.
-3. *Hack away.* Once you know what you're working on, refer to our
+1. *Hack away.* Once you know what you're working on, refer to our
    [development docs] for help with specific development tasks. And don't be
    afraid to ask for help!
 
@@ -81,4 +83,3 @@ beginning a pull request.
 ["false negative"]: https://github.com/zizmorcore/zizmor/issues?q=is%3Aopen+label%3Afalse-negative
 
 [development docs]: https://docs.zizmor.sh/development/
-

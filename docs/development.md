@@ -9,8 +9,15 @@ description: Development tasks and processes.
     This page contains information on specific development processes.
     For more general information on *how and what* to contribute to `zizmor`,
     see our [CONTRIBUTING.md].
+    
+!!! important
+
+    Before contributing to `zizmor`, you **must** read our [AI Policy].
+    Contributions that violate our policy will be rejected.
 
 [CONTRIBUTING.md]: https://github.com/zizmorcore/zizmor/blob/main/CONTRIBUTING.md
+
+[AI Policy]: https://github.com/zizmorcore/.github/blob/main/AI_POLICY.md
 
 ## General development practices
 
