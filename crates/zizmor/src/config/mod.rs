@@ -137,7 +137,8 @@ impl<'de> Deserialize<'de> for WorkflowRule {
 }
 
 /// Severity level for use in remap configuration.
-#[derive(Clone, Copy, Debug, Default, Deserialize, schemars::JsonSchema)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum RemapSeverity {
     Informational,
@@ -158,7 +159,8 @@ impl From<RemapSeverity> for Severity {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
+#[derive(Clone, Debug, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RemapConfig {
     /// Remaps the audit's severity to the given severity.
