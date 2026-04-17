@@ -1,0 +1,24 @@
+name: github-app
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  github-app:
+    name: github-app
+    runs-on: ubuntu-latest
+    steps:
+      - name: github-app-skips-token-revoke
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          skip-token-revoke: true
+
+      - name: github-app-skips-token-revoke-computed
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          skip-token-revoke: ${{ github.ref_name == 'main' }}
