@@ -20,6 +20,8 @@ apache/airflow#47258
 apache/airflow#50749
 apache/iceberg#15793
 apache/iceberg#15820
+apache/iceberg-cpp#618
+apache/iceberg-go#904
 apache/iceberg-python#3204
 apache/iceberg-rust#1123
 apache/iceberg-rust#2289
@@ -28,8 +30,10 @@ apache/lucene#15216
 apache/opendal-reqsign#687
 apache/opennlp#736
 apache/polaris#4097
+apache/ratis#1426
 apache/sedona#1976
 apache/sedona#2582
+arc53/DocsGPT#2383
 aquasecurity/trivy#10322
 aquasecurity/trivy-action#502
 aquasecurity/trivy-operator#2910
@@ -99,6 +103,7 @@ certbot/josepy#193
 chainguard-dev/apko#2166
 chainguard-dev/malcontent#1451
 chainguard-dev/melange#2463
+cheeriojs/cheerio#5212
 chatmail/core#7942
 coder/coder#19459
 conda/conda-lock#814
@@ -148,6 +153,7 @@ element-hq/element-x-ios#5161
 elixir-lang/elixir#15114
 emberjs/ember.js#21185
 EpicWink/proxpi@5e04d5e24bb8abfc6ad65721aea1c1781628ac9b
+erlang/otp#11000
 erlang/rebar3#3001
 esl/MongooseIM#4435
 ethereum/hevm#615
@@ -177,6 +183,7 @@ gitify-app/gitify#2763
 GitoxideLabs/gitoxide#2337
 gleam-lang/gleam#5559
 gophercloud/gophercloud#3659
+graelo/pumas#61
 grafana/agent#7148
 grafana/beyla#1868
 grafana/carbon-relay-ng#601
@@ -264,10 +271,16 @@ kubernetes-client/javascript#2814
 kubernetes-sigs/kubebuilder#5570
 kubernetes-sigs/kubebuilder#5578
 kubewarden/kubewarden-controller#1596
+langfuse/langfuse#13048
+langfuse/langfuse-js#783
+langfuse/langfuse-python#1623
 libssh2/libssh2#1609
 llvm/llvm-project#187905
 lmstudio-ai/venvstacks#51
 louislam/uptime-kuma#6575
+madnuttah/unbound-docker#119
+maennchen/ZipStream-PHP#414
+MAIF/yozefu#284
 maplibre/martin#2440
 matplotlib/matplotlib#29251
 matrix-org/matrix-js-sdk#5212
@@ -307,6 +320,8 @@ mozilla/fxa#18628
 mozilla/fx-private-relay#6364
 mozilla/neqo#2413
 mozilla/neqo#2721
+napari/napari#8811
+napari/napari#8885
 narwhals-dev/narwhals#1567
 nedbat/coveragepy@675c2f8c6c36771c85929ac9e1190b13e0269344
 neocmakelsp/neocmakelsp#216
@@ -345,6 +360,7 @@ oxc-project/oxc-resolver#373
 pallets/click#3304
 pallets/flask#5945
 pallets/werkzeug#3150
+pantsbuild/pants#23249
 paperless-ngx/paperless-ngx#12466
 pendulum-project/ntpd-rs#2139
 pentacent/keila@7eb6aeb61d0b191bc8fca13f4deef0bd422ac8d3
@@ -367,11 +383,13 @@ psf/requests#7314
 pubgrub-rs/pubgrub#389
 pyca/service-identity#75
 pydata/pydata-sphinx-theme#2077
+pydata/xarray#11294
 pylast/pylast#465
 pypa/cibuildwheel#2776
 pypa/packaging#1035
 pypa/packaging.python.org#1765
 pypa/pip-audit#851
+pypa/readme_renderer#354
 pypi/stdlib-list#138
 pypi/warehouse#16996
 pypi/warehouse#18103
@@ -419,11 +437,13 @@ rubygems/rubygems#8702
 rustsec/advisory-db#2444
 rustsec/rustsec#1449
 rust-bitcoin/rust-bitcoin#5234
+rust-lang/bors#732
 rust-lang/compiler-builtins#1113
 rust-lang/compiler-builtins#1115
 rust-lang/crates.io#10176
 rust-lang/crates.io#11203
 rust-lang/rust-clippy#13933
+rust-lang/team#2412
 rust-lang/this-week-in-rust#6721
 rustls/rustls#2261
 rustls/tokio-rustls#96
@@ -473,6 +493,8 @@ termux/termux-packages#22519
 textlint/textlint#1711
 theupdateframework/python-tuf#2798
 theupdateframework/tuf-on-ci#548
+thomaspoignant/go-feature-flag#5118
+toml-rs/toml#1145
 torchbox/wagtailmedia#252
 tornadoweb/tornado#3438
 tornadoweb/tornado#3463
@@ -480,6 +502,7 @@ trailofbits/fickling#144
 trailofbits/fickling#177
 trifectatechfoundation/sudo-rs#1488
 trifectatechfoundation/sudo-rs#1490
+trifectatechfoundation/teach-rs#162
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710

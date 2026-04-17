@@ -69,6 +69,8 @@
         - apache/airflow#50749
         - apache/iceberg#15793
         - apache/iceberg#15820
+        - apache/iceberg-cpp#618
+        - apache/iceberg-go#904
         - apache/iceberg-python#3204
         - apache/iceberg-rust#1123
         - apache/iceberg-rust#2289
@@ -77,6 +79,7 @@
         - apache/opendal-reqsign#687
         - apache/opennlp#736
         - apache/polaris#4097
+        - apache/ratis#1426
         - apache/sedona#1976
         - apache/sedona#2582
 
@@ -90,6 +93,14 @@
         - aquasecurity/trivy-action#502
         - aquasecurity/trivy-operator#2910
         - aquasecurity/vuln-list-update#411
+
+
+-   ![](https://github.com/arc53.png?size=40){ width="40" loading=lazy align=left } arc53
+
+    ---
+
+    ??? example "Examples"
+        - arc53/DocsGPT#2383
 
 
 -   ![](https://github.com/ariel-os.png?size=40){ width="40" loading=lazy align=left } ariel-os
@@ -373,6 +384,14 @@
 
     ??? example "Examples"
         - chatmail/core#7942
+
+
+-   ![](https://github.com/cheeriojs.png?size=40){ width="40" loading=lazy align=left } cheeriojs
+
+    ---
+
+    ??? example "Examples"
+        - cheeriojs/cheerio#5212
 
 
 -   ![](https://github.com/coder.png?size=40){ width="40" loading=lazy align=left } coder
@@ -659,6 +678,7 @@
     ---
 
     ??? example "Examples"
+        - erlang/otp#11000
         - erlang/rebar3#3001
 
 
@@ -883,6 +903,14 @@
 
     ??? example "Examples"
         - gophercloud/gophercloud#3659
+
+
+-   ![](https://github.com/graelo.png?size=40){ width="40" loading=lazy align=left } graelo
+
+    ---
+
+    ??? example "Examples"
+        - graelo/pumas#61
 
 
 -   ![](https://github.com/grafana.png?size=40){ width="40" loading=lazy align=left } grafana
@@ -1204,6 +1232,16 @@
         - kubewarden/kubewarden-controller#1596
 
 
+-   ![](https://github.com/langfuse.png?size=40){ width="40" loading=lazy align=left } langfuse
+
+    ---
+
+    ??? example "Examples"
+        - langfuse/langfuse#13048
+        - langfuse/langfuse-js#783
+        - langfuse/langfuse-python#1623
+
+
 -   ![](https://github.com/libssh2.png?size=40){ width="40" loading=lazy align=left } libssh2
 
     ---
@@ -1234,6 +1272,30 @@
 
     ??? example "Examples"
         - louislam/uptime-kuma#6575
+
+
+-   ![](https://github.com/madnuttah.png?size=40){ width="40" loading=lazy align=left } madnuttah
+
+    ---
+
+    ??? example "Examples"
+        - madnuttah/unbound-docker#119
+
+
+-   ![](https://github.com/maennchen.png?size=40){ width="40" loading=lazy align=left } maennchen
+
+    ---
+
+    ??? example "Examples"
+        - maennchen/ZipStream-PHP#414
+
+
+-   ![](https://github.com/MAIF.png?size=40){ width="40" loading=lazy align=left } MAIF
+
+    ---
+
+    ??? example "Examples"
+        - MAIF/yozefu#284
 
 
 -   ![](https://github.com/maplibre.png?size=40){ width="40" loading=lazy align=left } maplibre
@@ -1385,6 +1447,15 @@
         - mozilla/fx-private-relay#6364
         - mozilla/neqo#2413
         - mozilla/neqo#2721
+
+
+-   ![](https://github.com/napari.png?size=40){ width="40" loading=lazy align=left } napari
+
+    ---
+
+    ??? example "Examples"
+        - napari/napari#8811
+        - napari/napari#8885
 
 
 -   ![](https://github.com/narwhals-dev.png?size=40){ width="40" loading=lazy align=left } narwhals-dev
@@ -1593,6 +1664,14 @@
         - pallets/werkzeug#3150
 
 
+-   ![](https://github.com/pantsbuild.png?size=40){ width="40" loading=lazy align=left } pantsbuild
+
+    ---
+
+    ??? example "Examples"
+        - pantsbuild/pants#23249
+
+
 -   ![](https://github.com/paperless-ngx.png?size=40){ width="40" loading=lazy align=left } paperless-ngx
 
     ---
@@ -1718,6 +1797,7 @@
 
     ??? example "Examples"
         - pydata/pydata-sphinx-theme#2077
+        - pydata/xarray#11294
 
 
 -   ![](https://github.com/pylast.png?size=40){ width="40" loading=lazy align=left } pylast
@@ -1755,6 +1835,7 @@
         - pypa/packaging#1035
         - pypa/packaging.python.org#1765
         - pypa/pip-audit#851
+        - pypa/readme_renderer#354
 
 
 -   ![](https://github.com/pypi.png?size=40){ width="40" loading=lazy align=left } pypi
@@ -1971,11 +2052,13 @@
     ---
 
     ??? example "Examples"
+        - rust-lang/bors#732
         - rust-lang/compiler-builtins#1113
         - rust-lang/compiler-builtins#1115
         - rust-lang/crates.io#10176
         - rust-lang/crates.io#11203
         - rust-lang/rust-clippy#13933
+        - rust-lang/team#2412
         - rust-lang/this-week-in-rust#6721
 
 
@@ -2218,6 +2301,22 @@
         - theupdateframework/tuf-on-ci#548
 
 
+-   ![](https://github.com/thomaspoignant.png?size=40){ width="40" loading=lazy align=left } thomaspoignant
+
+    ---
+
+    ??? example "Examples"
+        - thomaspoignant/go-feature-flag#5118
+
+
+-   ![](https://github.com/toml-rs.png?size=40){ width="40" loading=lazy align=left } toml-rs
+
+    ---
+
+    ??? example "Examples"
+        - toml-rs/toml#1145
+
+
 -   ![](https://github.com/torchbox.png?size=40){ width="40" loading=lazy align=left } torchbox
 
     ---
@@ -2251,6 +2350,7 @@
     ??? example "Examples"
         - trifectatechfoundation/sudo-rs#1488
         - trifectatechfoundation/sudo-rs#1490
+        - trifectatechfoundation/teach-rs#162
 
 
 -   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser
