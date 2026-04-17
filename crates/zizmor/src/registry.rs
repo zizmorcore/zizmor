@@ -146,13 +146,11 @@ impl<'a> FindingRegistry<'a> {
         // TODO: is it faster to iterate like this, or do `find_by_max`
         // and then `extend`?
         for mut finding in results {
-            if let Some(remapped) = self
+            finding.determinations.severity = self
                 .input_registry
                 .get_config(finding.input_group())
                 .severity_remap(&finding)
-            {
-                finding.determinations.severity = remapped;
-            }
+                .unwrap_or(finding.determinations.severity);
 
             if self.persona > finding.determinations.persona {
                 self.suppressed.push(finding);
