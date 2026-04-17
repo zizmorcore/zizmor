@@ -12,27 +12,9 @@
 use schemars::JsonSchema;
 
 use super::{
-    DependabotCooldownConfig, ForbiddenUsesConfig, SecretsOutsideEnvConfig, UnpinnedUsesConfig,
-    WorkflowRule,
+    DependabotCooldownConfig, ForbiddenUsesConfig, RemapConfig, SecretsOutsideEnvConfig,
+    UnpinnedUsesConfig, WorkflowRule,
 };
-
-/// Severity level for use in remap configuration.
-#[derive(Clone, Debug, Default, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-enum SchemaRemapSeverity {
-    Informational,
-    Low,
-    #[default]
-    Medium,
-    High,
-}
-
-/// Remap configuration: overrides a rule's finding severities.
-#[derive(Clone, Debug, Default, JsonSchema)]
-#[serde(deny_unknown_fields)]
-struct SchemaRemapConfig {
-    severity: SchemaRemapSeverity,
-}
 
 /// Base configuration for all audit rules.
 #[derive(Clone, Debug, Default, JsonSchema)]
@@ -45,7 +27,7 @@ struct BaseRuleConfig {
     ignore: Vec<WorkflowRule>,
 
     #[serde(default)]
-    remap: Option<SchemaRemapConfig>,
+    remap: Option<RemapConfig>,
 }
 
 /// Configuration for the `dependabot-cooldown` audit.

@@ -60,14 +60,9 @@ pub(crate) enum Confidence {
 
 #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialOrd, PartialEq, Serialize, Deserialize)]
 pub(crate) enum Severity {
-    // We use aliases here to accept input in lowercase.
-    #[serde(alias = "informational")]
     Informational,
-    #[serde(alias = "low")]
     Low,
-    #[serde(alias = "medium")]
     Medium,
-    #[serde(alias = "high")]
     High,
 }
 

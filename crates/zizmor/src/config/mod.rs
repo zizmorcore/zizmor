@@ -136,10 +136,36 @@ impl<'de> Deserialize<'de> for WorkflowRule {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+/// Severity level for use in remap configuration.
+#[derive(Clone, Copy, Debug, Default, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum RemapSeverity {
+    Informational,
+    Low,
+    #[default]
+    Medium,
+    High,
+}
+
+impl From<RemapSeverity> for Severity {
+    fn from(value: RemapSeverity) -> Self {
+        match value {
+            RemapSeverity::Informational => Self::Informational,
+            RemapSeverity::Low => Self::Low,
+            RemapSeverity::Medium => Self::Medium,
+            RemapSeverity::High => Self::High,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RemapConfig {
-    pub(crate) severity: Severity,
+    /// Remaps the audit's severity to the given severity.
+    ///
+    /// It will apply this severity regardless of what the real severity is, including when an audit
+    /// can be multiple severities.
+    pub(crate) severity: RemapSeverity,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -154,7 +180,7 @@ pub(crate) struct AuditRuleConfig {
     /// Rule-specific configuration.
     #[serde(default)]
     config: Option<serde_yaml::Mapping>,
-    /// Remaps the rule's finding severities.
+    /// Remapping configuration.
     #[serde(default)]
     remap: Option<RemapConfig>,
 }
@@ -743,7 +769,7 @@ impl Config {
             .rules
             .get(finding.ident)
             .and_then(|rule_config| rule_config.remap.as_ref())
-            .map(|remap| remap.severity)
+            .map(|remap| remap.severity.into())
     }
 }
 

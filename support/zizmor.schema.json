@@ -27,7 +27,7 @@
         "remap": {
           "anyOf": [
             {
-              "$ref": "#/definitions/SchemaRemapConfig"
+              "$ref": "#/definitions/RemapConfig"
             },
             {
               "type": "null"
@@ -71,7 +71,7 @@
         "remap": {
           "anyOf": [
             {
-              "$ref": "#/definitions/SchemaRemapConfig"
+              "$ref": "#/definitions/RemapConfig"
             },
             {
               "type": "null"
@@ -143,7 +143,7 @@
         "remap": {
           "anyOf": [
             {
-              "$ref": "#/definitions/SchemaRemapConfig"
+              "$ref": "#/definitions/RemapConfig"
             },
             {
               "type": "null"
@@ -152,6 +152,33 @@
         }
       },
       "additionalProperties": false
+    },
+    "RemapConfig": {
+      "type": "object",
+      "properties": {
+        "severity": {
+          "description": "Remaps the audit's severity to the given severity.\n\nIt will apply this severity regardless of what the real severity is, including when an audit\ncan be multiple severities.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/RemapSeverity"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "severity"
+      ]
+    },
+    "RemapSeverity": {
+      "description": "Severity level for use in remap configuration.",
+      "type": "string",
+      "enum": [
+        "informational",
+        "low",
+        "medium",
+        "high"
+      ]
     },
     "RepositoryUsesPattern": {
       "title": "Represents a pattern for matching repository `uses` references.",
@@ -266,29 +293,6 @@
       },
       "additionalProperties": false
     },
-    "SchemaRemapConfig": {
-      "description": "Remap configuration: overrides a rule's finding severities.",
-      "type": "object",
-      "properties": {
-        "severity": {
-          "$ref": "#/definitions/SchemaRemapSeverity"
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "severity"
-      ]
-    },
-    "SchemaRemapSeverity": {
-      "description": "Severity level for use in remap configuration.",
-      "type": "string",
-      "enum": [
-        "informational",
-        "low",
-        "medium",
-        "high"
-      ]
-    },
     "SecretsOutsideEnvConfig": {
       "description": "Configuration for the `secrets-outside-env` audit.",
       "type": "object",
@@ -331,7 +335,7 @@
         "remap": {
           "anyOf": [
             {
-              "$ref": "#/definitions/SchemaRemapConfig"
+              "$ref": "#/definitions/RemapConfig"
             },
             {
               "type": "null"
@@ -376,7 +380,7 @@
         "remap": {
           "anyOf": [
             {
-              "$ref": "#/definitions/SchemaRemapConfig"
+              "$ref": "#/definitions/RemapConfig"
             },
             {
               "type": "null"
