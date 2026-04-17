@@ -237,6 +237,22 @@ to work.
 
 See @zizmorcore/zizmor-vscode for full installation and configuration instructions.
 
+### Neovim
+
+Support for `zizmor` in neovim is provided by
+[`nvim-lspconfig`](https://github.com/neovim/nvim-lspconfig). As with Visual
+Studio Code, you must install `zizmor` [separately](./installation.md) for the
+LSP server to work. Then [follow the
+instructions](https://github.com/neovim/nvim-lspconfig#install) for installing
+`nvim-lspconfig` with your neovim package manager, and enable the LSP server in
+your `init.lua`:
+
+```lua
+vim.lsp.enable('zizmor')
+```
+
+For more information about LSP configuration in neovim, see `:h lspconfig-all`.
+
 ### Generic LSP integration
 
 `zizmor` can be integrated with any editor or IDE that supports LSP.
@@ -253,7 +269,7 @@ with the editor over `stdin` and `stdout`. No other transports are supported.
 ## VCS integrations
 
 ### `pre-commit`
-  
+
 `zizmor` can be used with the [`pre-commit`](https://pre-commit.com/) framework.
 To do so, add the following to your `.pre-commit-config.yaml` `#!yaml repos:` section:
 
@@ -278,7 +294,7 @@ This will run `zizmor` on every commit.
     information on how to configure `pre-commit`.
 
 !!! tip
-  
+
     `zizmor-pre-commit` also works with [`prek`](https://github.com/j178/prek),
     a rewrite of `pre-commit` in Rust.
 

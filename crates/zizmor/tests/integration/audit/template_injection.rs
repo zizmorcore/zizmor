@@ -616,6 +616,34 @@ fn test_issue_1664() -> Result<()> {
     Ok(())
 }
 
+/// Repro case for #1903: parenthesized compound expressions in context
+/// position (e.g. `(a || b).foo`) should not crash zizmor.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/1903>
+#[test]
+fn test_issue_1903() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("template-injection/issue-1903-repro.yml"))
+            .run()?,
+        @r#"
+    info[template-injection]: code injection via template expansion
+      --> @@INPUT@@:21:24
+       |
+    21 |       - run: echo "${{ (github.event.pull_request || github.event.issue).number }}"
+       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         |
+       |         this run block
+       |
+       = note: audit confidence → Low
+
+    1 finding: 1 informational, 0 low, 0 medium, 0 high
+    "#
+    );
+
+    Ok(())
+}
+
 /// Repro case for #1802: `needs.*.result` expressions should not be considered injection risks in the default persona.
 ///
 /// See: <https://github.com/zizmorcore/zizmor/issues/1802>

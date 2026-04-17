@@ -94,18 +94,21 @@ impl<'src> Context<'src> {
     /// Returns None if the context doesn't have a sensible pattern
     /// equivalent, e.g. if it starts with a call.
     pub fn as_pattern(&self) -> Option<String> {
-        fn push_part(part: &Expr<'_>, pattern: &mut String) {
+        fn transform_part<'src>(part: &'src Expr<'src>) -> Option<&'src str> {
             match part {
-                Expr::Identifier(ident) => pattern.push_str(ident.0),
-                Expr::Star => pattern.push('*'),
+                Expr::Identifier(ident) => Some(ident.0),
+                Expr::Star => Some("*"),
                 Expr::Index(idx) => match &idx.inner {
                     // foo['bar'] -> foo.bar
-                    Expr::Literal(Literal::String(idx)) => pattern.push_str(idx),
+                    Expr::Literal(Literal::String(idx)) => Some(idx),
                     // any kind of numeric or computed index, e.g.:
                     // foo[0], foo[1 + 2], foo[bar]
-                    _ => pattern.push('*'),
+                    _ => Some("*"),
                 },
-                _ => unreachable!("unexpected part in context pattern"),
+                // Compound expressions like `(a || b).foo` could be expanded
+                // into multiple patterns (one per branch). For now, bail out
+                // and let the caller handle the `None` via its fallback path.
+                _ => None,
             }
         }
 
@@ -114,20 +117,17 @@ impl<'src> Context<'src> {
         //    identifiers? Problem: case normalization.
         // 2. Use `regex-automata` to return a case insensitive
         //    automation here?
-        let mut pattern = String::new();
-
-        let mut parts = self.parts.iter().peekable();
-
-        let head = parts.next()?;
+        let head = self.parts.first()?;
         if matches!(**head, Expr::Call { .. }) {
             return None;
         }
 
-        push_part(head, &mut pattern);
-        for part in parts {
-            pattern.push('.');
-            push_part(part, &mut pattern);
-        }
+        let mut pattern = self
+            .parts
+            .iter()
+            .map(|part| transform_part(part))
+            .collect::<Option<Vec<_>>>()?
+            .join(".");
 
         pattern.make_ascii_lowercase();
         Some(pattern)
@@ -385,6 +385,12 @@ mod tests {
             ("foo .* .*", Some("foo.*.*")),
             // Invalid cases
             ("fromJSON('{}').bar", None),
+            // Grouped/compound expressions in context position return None
+            // rather than panicking.
+            (
+                "(github.event.pull_request || github.event.issue).number",
+                None,
+            ),
         ] {
             let ctx = Context::parse(*case).unwrap();
             assert_eq!(ctx.as_pattern().as_deref(), *expected);
