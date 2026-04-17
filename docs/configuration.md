@@ -44,7 +44,7 @@ typically named `zizmor.yml` or `zizmor.yaml`.
       or `zizmor.yaml` file in the given directory, the `.github` child directory,
       or any parent, up to the filesystem root or the first `.git` directory.
 
-      !!! example
+        !!! example
 
             Given an invocation like `zizmor ./repo/`, `zizmor` will attempt
             to discover configuration files in the following order:
@@ -57,7 +57,7 @@ typically named `zizmor.yml` or `zizmor.yaml`.
             6. `./repo/../.github/zizmor.yaml`
             7. ...and so on, until the filesystem root or a `.git/` directory is found.
 
-      !!! note
+        !!! note
 
             `zizmor .github/workflows/` is a special case: in this case,
             discovery starts in `.github/`, the parent of the given directory.
@@ -208,7 +208,7 @@ The following patterns are supported, in order of specificity:
 - `owner/repo/subpath@ref`: matches the exact repository, including
   subpath (if given) and ref. The subpath is optional.
 
-  !!! example
+    !!! example
 
         `github/codeql-action/init@v2` matches
         `#!yaml uses: github/codeql-action/init@v2`, but **not**
@@ -218,7 +218,7 @@ The following patterns are supported, in order of specificity:
   for the `owner/repo/subpath` pattern. The `subpath` can be an arbitrarily
   deep subpath, but is not optional. Any ref is matched.
 
-  !!! example
+    !!! example
 
         `github/codeql-action/init` matches
         `#!yaml uses: github/codeql-action/init@v2`,
@@ -227,7 +227,7 @@ The following patterns are supported, in order of specificity:
 - `owner/repo`: match all `#!yaml uses:` clauses that are **exact** matches for the
   `owner/repo` pattern. Any ref is matched.
 
-  !!! example
+    !!! example
 
         `actions/cache` matches `#!yaml uses: actions/cache@v3`,
         but **not** `#!yaml uses: actions/cache/save@v3` or
@@ -236,7 +236,7 @@ The following patterns are supported, in order of specificity:
 - `owner/repo/*`: match all `#!yaml uses:` clauses that come from the given
   `owner/repo`. Any subpath or ref is matched.
 
-  !!! example
+    !!! example
 
         `github/codeql-action/*` matches
         `#!yaml uses: github/codeql-action/init@v2`,
@@ -246,7 +246,7 @@ The following patterns are supported, in order of specificity:
 - `owner/*`: match all `#!yaml uses:` clauses that have the given `owner`.
   Any repo, subpath, or ref is matched.
 
-  !!! example
+    !!! example
 
         `actions/*` matches both `#!yaml uses: actions/checkout@v4` and
         `#!yaml uses: actions/setup-node@v4`, but **not**
@@ -254,7 +254,7 @@ The following patterns are supported, in order of specificity:
 
 - `*`: match all `#!yaml uses:` clauses.
 
-  !!! example
+    !!! example
 
         `*` matches `#!yaml uses: actions/checkout` and
         `#!yaml uses: pypa/gh-action-pypi-publish@release/v1`.
