@@ -74,7 +74,7 @@ requested with `--config` or `ZIZMOR_CONFIG`.
 
 ## Settings
 
-### `rules.<id>.disable`
+### `rules.<id>.disable` {#rules-id-disable}
 
 _Type_: `boolean`
 
@@ -120,7 +120,7 @@ rules:
     disable: true
 ```
 
-### `rules.<id>.ignore`
+### `rules.<id>.ignore` {#rules-id-ignore}
 
 _Type_: `array`
 
@@ -159,7 +159,7 @@ rules:
       - pypi.yml:12:10
 ```
 
-### `rules.<id>.config`
+### `rules.<id>.config` {#rules-id-config}
 
 _Type_: `object`
 
@@ -168,7 +168,7 @@ Per-audit configuration, where `id` is the audit's name, e.g.
 
 Not all audits are configurable. See each audit's documentation for details.
 
-### `rules.<id>.remap`
+### `rules.<id>.remap` {#rules-id-remap}
 
 _Type_: `object`
 
@@ -178,6 +178,8 @@ Remap parts of the rule. Currently, only severity is supported.
 
     Remappings are applied in a blanket fashion. For example, if you remap an audit's severity to `high`, both `medium` _and_ `low` findings will be re-graded as `high`.
 
+#### `rules.<id>.remap.severity` {#rules-id-remap-severity}
+
 !!! important
 
     `rules.<id>.remap.severity` was added in `v1.25.0`.
@@ -186,7 +188,6 @@ For example, here is a configuration file with the rule severity remapped:
 
 ```yaml title="zizmor.yml"
 rules:
-  # As of writing, artipacked is a medium or low severity finding by default.
   artipacked:
     remap:
       severity: high # one of: informational, low, medium, high

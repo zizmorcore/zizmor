@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* zizmor's finding severities can now be remapped on a per-audit basis.
+  See [the configuration](./configuration.md#rules-id-remap) for details (#1913)
+
+    Many thanks to @Proximyst for proposing and implementing this improvement!
+
 ### Enhancements
 
 * @tibdex/github-app-token is now recognized as an archived action by
