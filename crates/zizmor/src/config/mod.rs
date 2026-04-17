@@ -137,13 +137,12 @@ impl<'de> Deserialize<'de> for WorkflowRule {
 }
 
 /// Severity level for use in remap configuration.
-#[derive(Clone, Copy, Debug, Default, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum RemapSeverity {
     Informational,
     Low,
-    #[default]
     Medium,
     High,
 }
