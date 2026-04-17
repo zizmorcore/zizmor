@@ -1,0 +1,4 @@
+rules:
+  artipacked:
+    remap:
+      severity: high

@@ -28,28 +28,27 @@ typically named `zizmor.yml` or `zizmor.yaml`.
 `zizmor` discovers configuration files in two conceptually distinct ways:
 
 1. **Global** discovery: when explicitly given a configuration file via
-   `--config` or `ZIZMOR_CONFIG`, that file is used for **all** inputs.
+    `--config` or `ZIZMOR_CONFIG`, that file is used for **all** inputs.
 
     In other words: when a global configuration file is used no other
     configuration files are discovered or loaded, even if they're present
     according to the local discovery rules below.
 
 2. **Local** discovery: when no global configuration file is given, `zizmor`
-   looks for configuration files *for each given input*. The rules for this
-   discovery are as follows:
-
-    * File inputs (e.g. `zizmor path/to/workflow.yml`): `zizmor` performs
+    looks for configuration files _for each given input_. The rules for this
+    discovery are as follows:
+    - File inputs (e.g. `zizmor path/to/workflow.yml`): `zizmor` performs
       directory discovery starting in the directory containing the given file.
 
-    * Directory inputs (e.g. `zizmor .`): `zizmor` looks for a `zizmor.yml`
+    - Directory inputs (e.g. `zizmor .`): `zizmor` looks for a `zizmor.yml`
       or `zizmor.yaml` file in the given directory, the `.github` child directory,
       or any parent, up to the filesystem root or the first `.git` directory.
-      
+
         !!! example
-        
+
             Given an invocation like `zizmor ./repo/`, `zizmor` will attempt
             to discover configuration files in the following order:
-            
+
             1. `./repo/.github/zizmor.yml`
             2. `./repo/.github/zizmor.yaml`
             3. `./repo/zizmor.yml`
@@ -57,9 +56,6 @@ typically named `zizmor.yml` or `zizmor.yaml`.
             5. `./repo/../.github/zizmor.yml`
             6. `./repo/../.github/zizmor.yaml`
             7. ...and so on, until the filesystem root or a `.git/` directory is found.
-            
-            
-            
 
         !!! note
 
@@ -69,7 +65,7 @@ typically named `zizmor.yml` or `zizmor.yaml`.
             This is done to avoid confusion between a `zizmor.yml` config
             file and a `zizmor.yml` workflow file.
 
-    * Remote repository inputs (e.g. `zizmor owner/repo`): `zizmor` looks for
+    - Remote repository inputs (e.g. `zizmor owner/repo`): `zizmor` looks for
       a `zizmor.yml` or `.github/zizmor.yml` in the root of the repository.
 
 In general, **most users will want to use local discovery**, which is the
@@ -78,7 +74,7 @@ requested with `--config` or `ZIZMOR_CONFIG`.
 
 ## Settings
 
-### `rules.<id>.disable`
+### `rules.<id>.disable` {#rules-id-disable}
 
 _Type_: `boolean`
 
@@ -124,13 +120,13 @@ rules:
     disable: true
 ```
 
-### `rules.<id>.ignore`
+### `rules.<id>.ignore` {#rules-id-ignore}
 
 _Type_: `array`
 
 Per-audit ignore rules.
 
-Each member of `rules.<id>.ignore` is a *workflow rule*, formatted as follows:
+Each member of `rules.<id>.ignore` is a _workflow rule_, formatted as follows:
 
 ```
 filename.yml[:line[:column]]
@@ -163,7 +159,7 @@ rules:
       - pypi.yml:12:10
 ```
 
-### `rules.<id>.config`
+### `rules.<id>.config` {#rules-id-config}
 
 _Type_: `object`
 
@@ -171,6 +167,31 @@ Per-audit configuration, where `id` is the audit's name, e.g.
 [`unpinned-uses`](./audits.md#unpinned-uses).
 
 Not all audits are configurable. See each audit's documentation for details.
+
+### `rules.<id>.remap` {#rules-id-remap}
+
+_Type_: `object`
+
+Remap parts of the rule. Currently, only severity is supported.
+
+!!! note
+
+    Remappings are applied in a blanket fashion. For example, if you remap an audit's severity to `high`, both `medium` _and_ `low` findings will be re-graded as `high`.
+
+#### `rules.<id>.remap.severity` {#rules-id-remap-severity}
+
+!!! important
+
+    `rules.<id>.remap.severity` was added in `v1.25.0`.
+
+For example, here is a configuration file with the rule severity remapped:
+
+```yaml title="zizmor.yml"
+rules:
+  artipacked:
+    remap:
+      severity: high # one of: informational, low, medium, high
+```
 
 ## Patterns
 
@@ -184,7 +205,7 @@ Repository patterns are used to match `#!yaml uses:` clauses.
 
 The following patterns are supported, in order of specificity:
 
-* `owner/repo/subpath@ref`: matches the exact repository, including
+- `owner/repo/subpath@ref`: matches the exact repository, including
   subpath (if given) and ref. The subpath is optional.
 
     !!! example
@@ -193,7 +214,7 @@ The following patterns are supported, in order of specificity:
         `#!yaml uses: github/codeql-action/init@v2`, but **not**
         `#!yaml uses: github/codeql-action/init@main`.
 
-* `owner/repo/subpath`: match all `#!yaml uses:` clauses that are **exact** matches
+- `owner/repo/subpath`: match all `#!yaml uses:` clauses that are **exact** matches
   for the `owner/repo/subpath` pattern. The `subpath` can be an arbitrarily
   deep subpath, but is not optional. Any ref is matched.
 
@@ -203,7 +224,7 @@ The following patterns are supported, in order of specificity:
         `#!yaml uses: github/codeql-action/init@v2`,
         but **not** `#!yaml uses: github/codeql-action@v2`.
 
-* `owner/repo`: match all `#!yaml uses:` clauses that are **exact** matches for the
+- `owner/repo`: match all `#!yaml uses:` clauses that are **exact** matches for the
   `owner/repo` pattern. Any ref is matched.
 
     !!! example
@@ -212,7 +233,7 @@ The following patterns are supported, in order of specificity:
         but **not** `#!yaml uses: actions/cache/save@v3` or
         `#!yaml uses: actions/cache/restore@v3`.
 
-* `owner/repo/*`: match all `#!yaml uses:` clauses that come from the given
+- `owner/repo/*`: match all `#!yaml uses:` clauses that come from the given
   `owner/repo`. Any subpath or ref is matched.
 
     !!! example
@@ -222,7 +243,7 @@ The following patterns are supported, in order of specificity:
         `#!yaml uses: github/codeql-action/upload-sarif@v2`, and
         `#!yaml uses: github/codeql-action@v2` itself.
 
-* `owner/*`: match all `#!yaml uses:` clauses that have the given `owner`.
+- `owner/*`: match all `#!yaml uses:` clauses that have the given `owner`.
   Any repo, subpath, or ref is matched.
 
     !!! example
@@ -231,7 +252,7 @@ The following patterns are supported, in order of specificity:
         `#!yaml uses: actions/setup-node@v4`, but **not**
         `#!yaml uses: pypa/gh-action-pypi-publish@release/v1`.
 
-* `*`: match all `#!yaml uses:` clauses.
+- `*`: match all `#!yaml uses:` clauses.
 
     !!! example
 

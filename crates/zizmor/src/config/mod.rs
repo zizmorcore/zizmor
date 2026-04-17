@@ -24,7 +24,7 @@ use crate::{
         AuditCore, dependabot_cooldown::DependabotCooldown, forbidden_uses::ForbiddenUses,
         secrets_outside_env::SecretsOutsideEnvironment, unpinned_uses::UnpinnedUses,
     },
-    finding::Finding,
+    finding::{Finding, Severity},
     github::{Client, ClientError},
     models::uses::RepositoryUsesPattern,
     registry::input::RepoSlug,
@@ -136,6 +136,39 @@ impl<'de> Deserialize<'de> for WorkflowRule {
     }
 }
 
+/// Severity level for use in remap configuration.
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum RemapSeverity {
+    Informational,
+    Low,
+    Medium,
+    High,
+}
+
+impl From<RemapSeverity> for Severity {
+    fn from(value: RemapSeverity) -> Self {
+        match value {
+            RemapSeverity::Informational => Self::Informational,
+            RemapSeverity::Low => Self::Low,
+            RemapSeverity::Medium => Self::Medium,
+            RemapSeverity::High => Self::High,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RemapConfig {
+    /// Remaps the audit's severity to the given severity.
+    ///
+    /// It will apply this severity regardless of what the real severity is, including when an audit
+    /// can be multiple severities.
+    pub(crate) severity: Option<RemapSeverity>,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct AuditRuleConfig {
@@ -148,6 +181,9 @@ pub(crate) struct AuditRuleConfig {
     /// Rule-specific configuration.
     #[serde(default)]
     config: Option<serde_yaml::Mapping>,
+    /// Remapping configuration.
+    #[serde(default)]
+    remap: Option<RemapConfig>,
 }
 
 /// Data model for zizmor's configuration file.
@@ -722,6 +758,20 @@ impl Config {
         }
 
         false
+    }
+
+    /// Returns the remapped [`Severity`] for the given finding's rule, if configured.
+    pub(crate) fn severity_remap(&self, finding: &Finding<'_>) -> Option<Severity> {
+        // We discussed in https://github.com/zizmorcore/zizmor/issues/1905 whether we should also
+        // permit remapping specific severities to others (e.g. low => medium, medium => high). We
+        // don't currently support this, but accepting &Finding here lets us potentially do this in
+        // the future.
+        self.raw
+            .rules
+            .get(finding.ident)
+            .and_then(|rule_config| rule_config.remap.as_ref())
+            .and_then(|remap| remap.severity)
+            .map(Into::into)
     }
 }
 

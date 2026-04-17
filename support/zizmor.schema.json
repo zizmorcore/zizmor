@@ -23,6 +23,16 @@
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -57,6 +67,16 @@
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -119,9 +139,46 @@
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
+    },
+    "RemapConfig": {
+      "type": "object",
+      "properties": {
+        "severity": {
+          "description": "Remaps the audit's severity to the given severity.\n\nIt will apply this severity regardless of what the real severity is, including when an audit\ncan be multiple severities.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RemapSeverity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "RemapSeverity": {
+      "description": "Severity level for use in remap configuration.",
+      "type": "string",
+      "enum": [
+        "informational",
+        "low",
+        "medium",
+        "high"
+      ]
     },
     "RepositoryUsesPattern": {
       "title": "Represents a pattern for matching repository `uses` references.",
@@ -274,6 +331,16 @@
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -309,6 +376,16 @@
           "items": {
             "$ref": "#/definitions/WorkflowRule"
           }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false

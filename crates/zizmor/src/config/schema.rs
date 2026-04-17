@@ -12,8 +12,8 @@
 use schemars::JsonSchema;
 
 use super::{
-    DependabotCooldownConfig, ForbiddenUsesConfig, SecretsOutsideEnvConfig, UnpinnedUsesConfig,
-    WorkflowRule,
+    DependabotCooldownConfig, ForbiddenUsesConfig, RemapConfig, SecretsOutsideEnvConfig,
+    UnpinnedUsesConfig, WorkflowRule,
 };
 
 /// Base configuration for all audit rules.
@@ -25,6 +25,9 @@ struct BaseRuleConfig {
 
     #[serde(default)]
     ignore: Vec<WorkflowRule>,
+
+    #[serde(default)]
+    remap: Option<RemapConfig>,
 }
 
 /// Configuration for the `dependabot-cooldown` audit.
@@ -322,5 +325,26 @@ mod tests {
         Validation errors:
         01: "unknown-policy" is not valid under any of the schemas listed in the 'oneOf' keyword
         "#);
+    }
+
+    #[test]
+    fn test_remap_severity() {
+        for sev in ["informational", "low", "medium", "high"] {
+            let yaml = format!("rules:\n  artipacked:\n    remap:\n      severity: {sev}");
+            let instance = serde_yaml::from_str::<serde_json::Value>(&yaml).unwrap();
+            SCHEMA_VALIDATOR
+                .validate(&instance)
+                .unwrap_or_else(|_| panic!("severity '{sev}' should be valid in remap"));
+        }
+    }
+
+    #[test]
+    fn test_remap_invalid_severity() {
+        let invalid = "rules:\n  artipacked:\n    remap:\n      severity: Ultra";
+        let instance = serde_yaml::from_str::<serde_json::Value>(invalid).unwrap();
+        assert!(
+            SCHEMA_VALIDATOR.validate(&instance).is_err(),
+            "unknown severity 'Ultra' should be invalid"
+        );
     }
 }
