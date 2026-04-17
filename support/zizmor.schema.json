@@ -158,17 +158,17 @@
       "properties": {
         "severity": {
           "description": "Remaps the audit's severity to the given severity.\n\nIt will apply this severity regardless of what the real severity is, including when an audit\ncan be multiple severities.",
-          "allOf": [
+          "anyOf": [
             {
               "$ref": "#/definitions/RemapSeverity"
+            },
+            {
+              "type": "null"
             }
           ]
         }
       },
-      "additionalProperties": false,
-      "required": [
-        "severity"
-      ]
+      "additionalProperties": false
     },
     "RemapSeverity": {
       "description": "Severity level for use in remap configuration.",

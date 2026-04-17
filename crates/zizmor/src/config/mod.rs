@@ -167,7 +167,7 @@ pub(crate) struct RemapConfig {
     ///
     /// It will apply this severity regardless of what the real severity is, including when an audit
     /// can be multiple severities.
-    pub(crate) severity: RemapSeverity,
+    pub(crate) severity: Option<RemapSeverity>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -771,7 +771,8 @@ impl Config {
             .rules
             .get(finding.ident)
             .and_then(|rule_config| rule_config.remap.as_ref())
-            .map(|remap| remap.severity.into())
+            .and_then(|remap| remap.severity)
+            .map(Into::into)
     }
 }
 
