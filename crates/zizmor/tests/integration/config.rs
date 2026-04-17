@@ -350,3 +350,19 @@ fn test_no_remap_filtered_by_min_severity() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Ensures that even if we remap the severity of a finding, it does not affect the output when we
+/// disable the configuration. This is the no-config counterpart to
+/// [`test_severity_remap_affects_min_severity`].
+#[test]
+fn test_severity_remap_is_negated_by_no_config() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("config-scenarios/severity-remap"))
+            .args(["--min-severity=high", "--no-config"])
+            .run()?,
+        @"No findings to report. Good job! (1 ignored, 1 suppressed)"
+    );
+
+    Ok(())
+}
