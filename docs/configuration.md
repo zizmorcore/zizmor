@@ -174,6 +174,10 @@ _Type_: `object`
 
 Remap parts of the rule. Currently, only severity is supported.
 
+!!! note
+
+    Remappings are applied in a blanket fashion. For example, if you remap an audit's severity to `high`, both `medium` _and_ `low` findings will be re-graded as `high`.
+
 !!! important
 
     `rules.<id>.remap.severity` was added in `v1.25.0`.
