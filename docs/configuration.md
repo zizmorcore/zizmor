@@ -28,28 +28,27 @@ typically named `zizmor.yml` or `zizmor.yaml`.
 `zizmor` discovers configuration files in two conceptually distinct ways:
 
 1. **Global** discovery: when explicitly given a configuration file via
-   `--config` or `ZIZMOR_CONFIG`, that file is used for **all** inputs.
+    `--config` or `ZIZMOR_CONFIG`, that file is used for **all** inputs.
 
     In other words: when a global configuration file is used no other
     configuration files are discovered or loaded, even if they're present
     according to the local discovery rules below.
 
 2. **Local** discovery: when no global configuration file is given, `zizmor`
-   looks for configuration files *for each given input*. The rules for this
-   discovery are as follows:
-
-    * File inputs (e.g. `zizmor path/to/workflow.yml`): `zizmor` performs
+    looks for configuration files _for each given input_. The rules for this
+    discovery are as follows:
+    - File inputs (e.g. `zizmor path/to/workflow.yml`): `zizmor` performs
       directory discovery starting in the directory containing the given file.
 
-    * Directory inputs (e.g. `zizmor .`): `zizmor` looks for a `zizmor.yml`
+    - Directory inputs (e.g. `zizmor .`): `zizmor` looks for a `zizmor.yml`
       or `zizmor.yaml` file in the given directory, the `.github` child directory,
       or any parent, up to the filesystem root or the first `.git` directory.
-      
-        !!! example
-        
+
+      !!! example
+
             Given an invocation like `zizmor ./repo/`, `zizmor` will attempt
             to discover configuration files in the following order:
-            
+
             1. `./repo/.github/zizmor.yml`
             2. `./repo/.github/zizmor.yaml`
             3. `./repo/zizmor.yml`
@@ -57,11 +56,8 @@ typically named `zizmor.yml` or `zizmor.yaml`.
             5. `./repo/../.github/zizmor.yml`
             6. `./repo/../.github/zizmor.yaml`
             7. ...and so on, until the filesystem root or a `.git/` directory is found.
-            
-            
-            
 
-        !!! note
+      !!! note
 
             `zizmor .github/workflows/` is a special case: in this case,
             discovery starts in `.github/`, the parent of the given directory.
@@ -69,7 +65,7 @@ typically named `zizmor.yml` or `zizmor.yaml`.
             This is done to avoid confusion between a `zizmor.yml` config
             file and a `zizmor.yml` workflow file.
 
-    * Remote repository inputs (e.g. `zizmor owner/repo`): `zizmor` looks for
+    - Remote repository inputs (e.g. `zizmor owner/repo`): `zizmor` looks for
       a `zizmor.yml` or `.github/zizmor.yml` in the root of the repository.
 
 In general, **most users will want to use local discovery**, which is the
@@ -130,7 +126,7 @@ _Type_: `array`
 
 Per-audit ignore rules.
 
-Each member of `rules.<id>.ignore` is a *workflow rule*, formatted as follows:
+Each member of `rules.<id>.ignore` is a _workflow rule_, formatted as follows:
 
 ```
 filename.yml[:line[:column]]
@@ -174,7 +170,7 @@ Not all audits are configurable. See each audit's documentation for details.
 
 ### `rules.<id>.remap`
 
-*Type*: `object`
+_Type_: `object`
 
 Remap parts of the rule. Currently, only severity is supported.
 
@@ -186,7 +182,7 @@ For example, here is a configuration file with the rule severity remapped:
 
 ```yaml title="zizmor.yml"
 rules:
-  # As of writing, artipacked is a medium severity finding by default.
+  # As of writing, artipacked is a medium or low severity finding by default.
   artipacked:
     remap:
       severity: high # one of: informational, low, medium, high
@@ -204,56 +200,56 @@ Repository patterns are used to match `#!yaml uses:` clauses.
 
 The following patterns are supported, in order of specificity:
 
-* `owner/repo/subpath@ref`: matches the exact repository, including
+- `owner/repo/subpath@ref`: matches the exact repository, including
   subpath (if given) and ref. The subpath is optional.
 
-    !!! example
+  !!! example
 
         `github/codeql-action/init@v2` matches
         `#!yaml uses: github/codeql-action/init@v2`, but **not**
         `#!yaml uses: github/codeql-action/init@main`.
 
-* `owner/repo/subpath`: match all `#!yaml uses:` clauses that are **exact** matches
+- `owner/repo/subpath`: match all `#!yaml uses:` clauses that are **exact** matches
   for the `owner/repo/subpath` pattern. The `subpath` can be an arbitrarily
   deep subpath, but is not optional. Any ref is matched.
 
-    !!! example
+  !!! example
 
         `github/codeql-action/init` matches
         `#!yaml uses: github/codeql-action/init@v2`,
         but **not** `#!yaml uses: github/codeql-action@v2`.
 
-* `owner/repo`: match all `#!yaml uses:` clauses that are **exact** matches for the
+- `owner/repo`: match all `#!yaml uses:` clauses that are **exact** matches for the
   `owner/repo` pattern. Any ref is matched.
 
-    !!! example
+  !!! example
 
         `actions/cache` matches `#!yaml uses: actions/cache@v3`,
         but **not** `#!yaml uses: actions/cache/save@v3` or
         `#!yaml uses: actions/cache/restore@v3`.
 
-* `owner/repo/*`: match all `#!yaml uses:` clauses that come from the given
+- `owner/repo/*`: match all `#!yaml uses:` clauses that come from the given
   `owner/repo`. Any subpath or ref is matched.
 
-    !!! example
+  !!! example
 
         `github/codeql-action/*` matches
         `#!yaml uses: github/codeql-action/init@v2`,
         `#!yaml uses: github/codeql-action/upload-sarif@v2`, and
         `#!yaml uses: github/codeql-action@v2` itself.
 
-* `owner/*`: match all `#!yaml uses:` clauses that have the given `owner`.
+- `owner/*`: match all `#!yaml uses:` clauses that have the given `owner`.
   Any repo, subpath, or ref is matched.
 
-    !!! example
+  !!! example
 
         `actions/*` matches both `#!yaml uses: actions/checkout@v4` and
         `#!yaml uses: actions/setup-node@v4`, but **not**
         `#!yaml uses: pypa/gh-action-pypi-publish@release/v1`.
 
-* `*`: match all `#!yaml uses:` clauses.
+- `*`: match all `#!yaml uses:` clauses.
 
-    !!! example
+  !!! example
 
         `*` matches `#!yaml uses: actions/checkout` and
         `#!yaml uses: pypa/gh-action-pypi-publish@release/v1`.
