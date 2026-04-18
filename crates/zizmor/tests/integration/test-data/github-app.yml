@@ -17,8 +17,29 @@ jobs:
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           skip-token-revoke: true
+          client-id: ${{ vars.GHES_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GHES_APP_PRIVATE_KEY }}
+          permission-issues: write
 
       - name: github-app-skips-token-revoke-computed
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           skip-token-revoke: ${{ github.ref_name == 'main' }}
+          client-id: ${{ vars.GHES_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GHES_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: github-app-owner-without-repositories
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          owner: github
+          client-id: ${{ vars.GHES_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GHES_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: github-app-owner-without-explicit-permissions
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          owner: github
+          client-id: ${{ vars.GHES_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GHES_APP_PRIVATE_KEY }}

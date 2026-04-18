@@ -111,6 +111,52 @@ impl GitHubApp {
             }
         }
 
+        // `owner: ...` without `repository: ...` grants the app token access to all
+        // repositories in the owner's account, which is likely more access than the
+        // user intended.
+        if with.contains_key("owner") && !with.contains_key("repository") {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(Severity::High)
+                    .persona(Persona::Regular)
+                    .add_location(
+                        step.location()
+                            .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, uses.raw()))
+                            .annotated("app token requested here"),
+                    )
+                    .add_location(
+                        step.location()
+                            .with_keys(["with".into(), "owner".into()])
+                            .annotated("token granted access to all repositories for this owner's app installation")
+                            .primary(),
+                    )
+                    .tip("use `repositories: 'repo1,repo2'` to scope the token to specific repositories")
+                    .build(step)?,
+            );
+        }
+
+        // If the user doesn't specify at least one `permission-<name>` input,
+        // then the action defaults to granting the token all installation permissions,
+        // which can be very broad.
+        if !with.keys().any(|k| k.starts_with("permission-")) {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(Severity::High)
+                    .persona(Persona::Regular)
+                    .add_location(
+                        step.location()
+                            .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, uses.raw()))
+                            .annotated("app token inherits blanket installation permissions"),
+                    )
+                    .tip("specify at least one `permission-<name>` input to limit the token's permissions")
+                    .build(step)?,
+            );
+        }
+
         Ok(findings)
     }
 }
