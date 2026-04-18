@@ -153,3 +153,32 @@ fn test_regular_persona() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Bug #1914: a bot condition should not be flagged if another bot
+/// condition neutralizes it.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/1914>
+#[test]
+fn test_issue_1914() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("bot-conditions/issue-1914-repro.yml"))
+            .run()?,
+        @"
+    error[bot-conditions]: spoofable bot actor check
+      --> @@INPUT@@:13:9
+       |
+    12 |   update-dist:
+       |   ----------- this job
+    13 |     if: github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == githu...
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+       |
+       = note: audit confidence → Medium
+       = note: this finding has an auto-fix
+
+    3 findings (2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
