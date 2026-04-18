@@ -37,6 +37,7 @@ impl GitHubApp {
         let findings = if uses.matches("actions/create-github-app-token") {
             self.process_create_github_app_token(step, uses, with)?
         } else {
+            // TODO: Maybe check tibdex/github-app-token as well?
             vec![]
         };
 
