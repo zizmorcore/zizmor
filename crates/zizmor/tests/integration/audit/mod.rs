@@ -11,6 +11,7 @@ mod dependabot_cooldown;
 mod dependabot_execution;
 mod excessive_permissions;
 mod forbidden_uses;
+mod github_app;
 mod github_env;
 // mod hardcoded_container_credentials; // TODO
 mod impostor_commit;

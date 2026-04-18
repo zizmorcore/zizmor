@@ -123,7 +123,8 @@ define_audit_rules! {
     concurrency_limits,
     archived_uses,
     misfeature,
-    superfluous_actions;
+    superfluous_actions,
+    github_app;
 
     [DependabotCooldownRuleConfig] dependabot_cooldown,
     [ForbiddenUsesRuleConfig] forbidden_uses,

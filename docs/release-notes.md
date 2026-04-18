@@ -16,6 +16,9 @@ of `zizmor`.
 
     Many thanks to @Proximyst for proposing and implementing this improvement!
 
+* **New audit**: [github-app] detects dangerous usages of GitHub App installation tokens
+  (#1926)
+
 ### Enhancements
 
 * @tibdex/github-app-token is now recognized as an archived action by
@@ -1721,5 +1724,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [misfeature]: ./audits.md#misfeature
 [secrets-outside-env]: ./audits.md#secrets-outside-env
 [superfluous-actions]: ./audits.md#superfluous-actions
+[github-app]: ./audits.md#github-app
 
 [exit code]: ./usage.md#exit-codes

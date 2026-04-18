@@ -221,6 +221,9 @@
         "forbidden-uses": {
           "$ref": "#/definitions/ForbiddenUsesRuleConfig"
         },
+        "github-app": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "github-env": {
           "$ref": "#/definitions/BaseRuleConfig"
         },

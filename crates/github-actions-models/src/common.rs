@@ -106,11 +106,26 @@ impl EnvValue {
     /// This follows the semantics of C#'s `Boolean.TryParse`, where
     /// the case-insensitive string "true" is considered true, but
     /// "1", "yes", etc. are not.
-    pub fn csharp_trueish(&self) -> bool {
+    pub fn csharp_bool(&self) -> bool {
         match self {
             EnvValue::Boolean(true) => true,
             EnvValue::String(maybe) => maybe.trim().eq_ignore_ascii_case("true"),
             _ => false,
+        }
+    }
+
+    /// Returns whether this [`EnvValue`] as a boolean according to the
+    /// rules for `getBooleanInput` in `actions/toolkit`.
+    ///
+    /// Returns `None` if this value cannot be interpreted as a boolean according to those rules.
+    ///
+    /// See: <https://github.com/actions/toolkit/blob/b68d04/packages/core/src/core.ts#L198>
+    pub fn actions_toolkit_bool(&self) -> Option<bool> {
+        match self {
+            EnvValue::Boolean(b) => Some(*b),
+            EnvValue::String(s) if matches!(s.trim(), "true" | "True" | "TRUE") => Some(true),
+            EnvValue::String(s) if matches!(s.trim(), "false" | "False" | "FALSE") => Some(false),
+            _ => None,
         }
     }
 }
@@ -614,7 +629,7 @@ mod tests {
         ];
 
         for (val, expected) in vectors {
-            assert_eq!(val.csharp_trueish(), expected, "failed for {val:?}");
+            assert_eq!(val.csharp_bool(), expected, "failed for {val:?}");
         }
     }
 

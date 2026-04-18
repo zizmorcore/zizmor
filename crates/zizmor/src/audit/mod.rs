@@ -31,6 +31,7 @@ pub(crate) mod dependabot_cooldown;
 pub(crate) mod dependabot_execution;
 pub(crate) mod excessive_permissions;
 pub(crate) mod forbidden_uses;
+pub(crate) mod github_app;
 pub(crate) mod github_env;
 pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;

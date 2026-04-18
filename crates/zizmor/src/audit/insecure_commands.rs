@@ -81,7 +81,7 @@ impl InsecureCommands {
 
     fn has_insecure_commands_enabled(&self, env: &Env) -> bool {
         match env.get("ACTIONS_ALLOW_UNSECURE_COMMANDS") {
-            Some(value) => value.csharp_trueish(),
+            Some(value) => value.csharp_bool(),
             None => false,
         }
     }
