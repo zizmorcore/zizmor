@@ -51,3 +51,5 @@ jobs:
         with:
           mode: walltime
           run: make bench
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
