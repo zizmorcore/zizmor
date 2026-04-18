@@ -35,7 +35,7 @@ impl Audit for SuperfluousActions {
         step: &Step<'doc>,
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step, Some(step.job()))
+        self.process_step(step, Some(step.job())).await
     }
 
     async fn audit_composite_step<'doc>(
@@ -44,7 +44,7 @@ impl Audit for SuperfluousActions {
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         // Composite steps don't have access to a workflow job context.
-        self.process_step(step, None)
+        self.process_step(step, None).await
     }
 }
 
@@ -132,8 +132,9 @@ impl SuperfluousActions {
         // On self-hosted runners, rustup/cargo may not be pre-installed, so
         // dtolnay/rust-toolchain is NOT superfluous.
         let is_self_hosted = job.map_or(false, |j| Self::is_self_hosted_runner(j));
-        let is_rust_toolchain = "dtolnay/rust-toolchain".parse::<RepositoryUsesPattern>().unwrap()
-            .matches(uses);
+        let rust_toolchain_pattern: RepositoryUsesPattern =
+            "dtolnay/rust-toolchain".parse().expect("valid pattern");
+        let is_rust_toolchain = rust_toolchain_pattern.matches(uses);
 
         let mut findings = vec![];
         for (pattern, recommendation, persona, confidence) in SUPERFLUOUS_ACTIONS.iter() {
@@ -165,7 +166,7 @@ impl SuperfluousActions {
     }
 
     /// Returns true if the job runs on a self-hosted runner.
-    fn is_self_hosted_runner(job: &NormalJob) -> bool {
+    fn is_self_hosted_runner<'doc>(job: &NormalJob<'doc>) -> bool {
         use github_actions_models::common::expr::LoE;
         use github_actions_models::workflow::job::RunsOn;
 
