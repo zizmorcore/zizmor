@@ -7,7 +7,9 @@ use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesPattern, workflow::Step},
+    models::{
+        StepCommon, action::CompositeStep, uses::RepositoryUsesPattern, workflow::{NormalJob, Step},
+    },
     state::AuditState,
 };
 
@@ -33,7 +35,7 @@ impl Audit for SuperfluousActions {
         step: &Step<'doc>,
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step).await
+        self.process_step(step, Some(step.job()))
     }
 
     async fn audit_composite_step<'doc>(
@@ -41,7 +43,8 @@ impl Audit for SuperfluousActions {
         step: &CompositeStep<'doc>,
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step).await
+        // Composite steps don't have access to a workflow job context.
+        self.process_step(step, None)
     }
 }
 
@@ -119,14 +122,27 @@ impl SuperfluousActions {
     async fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
+        job: Option<&NormalJob<'doc>>,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let Some(Uses::Repository(uses)) = step.uses() else {
             return Ok(vec![]);
         };
 
+        // For dtolnay/rust-toolchain, check if running on a self-hosted runner.
+        // On self-hosted runners, rustup/cargo may not be pre-installed, so
+        // dtolnay/rust-toolchain is NOT superfluous.
+        let is_self_hosted = job.map_or(false, |j| Self::is_self_hosted_runner(j));
+        let is_rust_toolchain = "dtolnay/rust-toolchain".parse::<RepositoryUsesPattern>().unwrap()
+            .matches(uses);
+
         let mut findings = vec![];
         for (pattern, recommendation, persona, confidence) in SUPERFLUOUS_ACTIONS.iter() {
             if pattern.matches(uses) {
+                // Skip dtolnay/rust-toolchain on self-hosted runners.
+                if is_self_hosted && is_rust_toolchain {
+                    continue;
+                }
+
                 findings.push(
                     Self::finding()
                         .confidence(*confidence)
@@ -146,5 +162,25 @@ impl SuperfluousActions {
         }
 
         Ok(findings)
+    }
+
+    /// Returns true if the job runs on a self-hosted runner.
+    fn is_self_hosted_runner(job: &NormalJob) -> bool {
+        use github_actions_models::common::expr::LoE;
+        use github_actions_models::workflow::job::RunsOn;
+
+        match &job.runs_on {
+            // Expression-based runs-on: conservatively assume self-hosted
+            // since we can't statically determine the runner type.
+            LoE::Expr(_) => true,
+            LoE::Literal(RunsOn::Group { labels, .. }) | LoE::Literal(RunsOn::Target(labels)) => {
+                // A runner is considered self-hosted if no label matches
+                // known GitHub-hosted runner patterns (ubuntu-*, macos*, windows-*).
+                !labels.iter().any(|label| {
+                    let l = label.as_str();
+                    l.contains("ubuntu-") || l.contains("macos") || l.contains("windows-")
+                })
+            }
+        }
     }
 }
