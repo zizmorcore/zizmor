@@ -1,4 +1,20 @@
 
+-   ![](https://github.com/0xMiden.png?size=40){ width="40" loading=lazy align=left } 0xMiden
+
+    ---
+
+    ??? example "Examples"
+        - 0xMiden/miden-vm#2999
+
+
+-   ![](https://github.com/actualbudget.png?size=40){ width="40" loading=lazy align=left } actualbudget
+
+    ---
+
+    ??? example "Examples"
+        - actualbudget/actual#7465
+
+
 -   ![](https://github.com/adafruit.png?size=40){ width="40" loading=lazy align=left } adafruit
 
     ---
@@ -221,6 +237,14 @@
         - basecamp/writebook#396
 
 
+-   ![](https://github.com/Bash-it.png?size=40){ width="40" loading=lazy align=left } Bash-it
+
+    ---
+
+    ??? example "Examples"
+        - Bash-it/bash-it#2381
+
+
 -   ![](https://github.com/ben-manes.png?size=40){ width="40" loading=lazy align=left } ben-manes
 
     ---
@@ -424,6 +448,14 @@
 
     ??? example "Examples"
         - cortex/ripasso#411
+
+
+-   ![](https://github.com/crate-ci.png?size=40){ width="40" loading=lazy align=left } crate-ci
+
+    ---
+
+    ??? example "Examples"
+        - crate-ci/cargo-release#956
 
 
 -   ![](https://github.com/cucumber.png?size=40){ width="40" loading=lazy align=left } cucumber
@@ -1636,6 +1668,14 @@
         - orion-rs/orion#490
 
 
+-   ![](https://github.com/ossf.png?size=40){ width="40" loading=lazy align=left } ossf
+
+    ---
+
+    ??? example "Examples"
+        - ossf/allstar#818
+
+
 -   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc
 
     ---
@@ -1994,6 +2034,7 @@
     ---
 
     ??? example "Examples"
+        - renovatebot/github-action#1025
         - renovatebot/renovate#42346
 
 
@@ -2351,6 +2392,14 @@
         - trifectatechfoundation/sudo-rs#1488
         - trifectatechfoundation/sudo-rs#1490
         - trifectatechfoundation/teach-rs#162
+
+
+-   ![](https://github.com/TritonVM.png?size=40){ width="40" loading=lazy align=left } TritonVM
+
+    ---
+
+    ??? example "Examples"
+        - TritonVM/triton-vm@670907d4bfe9b70d160c78403cd0ad1fb16757e8
 
 
 -   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser

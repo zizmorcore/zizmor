@@ -4,6 +4,7 @@
 # owner/repo#number for PRs
 # owner/repo@commit for individual commits
 
+actualbudget/actual#7465
 adafruit/circuitpython#9785
 ag2ai/faststream#2398
 aio-libs/aiobotocore#1344
@@ -72,6 +73,7 @@ basecamp/kamal#1805
 basecamp/lexxy#882
 basecamp/upright#50
 basecamp/writebook#396
+Bash-it/bash-it#2381
 ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
 BerkeleyLearnVerify/Scenic#320
 better-auth/better-auth#8879
@@ -109,6 +111,7 @@ coder/coder#19459
 conda/conda-lock#814
 containers/podman#27642
 cortex/ripasso#411
+crate-ci/cargo-release#956
 cucumber/cucumber-jvm#3172
 cucumber/cucumber-jvm-starter-maven-java@1c6575ba15d09110d5face60d4fe2e022c148581
 cucumber/cucumber-rails@c0f4842fe80db7a9d325242a6238ae7b72807957
@@ -350,6 +353,7 @@ open-policy-agent/opa#8356
 open-telemetry/opentelemetry-ebpf-instrumentation#1511
 openpubkey/opkssh#198
 openpubkey/opkssh#247
+ossf/allstar#818
 Ouranosinc/xclim#2023
 Orange-OpenSource/hurl#3574
 orion-rs/orion#441
@@ -426,6 +430,7 @@ quarkslab/quokka#46
 ranaroussi/yfinance#2735
 rancher/rancher#54439
 ratatui/ratatui#1961
+renovatebot/github-action#1025
 renovatebot/renovate#42346
 reubeno/brush#534
 reubeno/brush#535
@@ -503,6 +508,7 @@ trailofbits/fickling#177
 trifectatechfoundation/sudo-rs#1488
 trifectatechfoundation/sudo-rs#1490
 trifectatechfoundation/teach-rs#162
+TritonVM/triton-vm@670907d4bfe9b70d160c78403cd0ad1fb16757e8
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
 Unidata/MetPy#3710
@@ -533,3 +539,4 @@ ZcashFoundation/zebra#9110
 zkonduit/ezkl#907
 zkonduit/ezkl#906
 zulip/docker-zulip#568
+0xMiden/miden-vm#2999
