@@ -784,6 +784,49 @@ for details.
 Either remove the offending `#!yaml uses:` clause or, if intended, add it to
 your [configuration](#forbidden-uses-configuration).
 
+## `github-app`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------| ---------------|
+| Workflow, Action  | [github-app.yml]       | v1.25.0        | ✅             | ❌                 | ❌  |
+
+[github-app.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/github-app.yml
+
+Detects dangerous usages of GitHub App installation tokens.
+
+GitHub Apps provide an alternative authentication mechanism to
+GitHub Actions' built-in `secrets.GITHUB_TOKEN`. Typically, users request an
+installation token for a GitHub App via @actions/create-github-app-token
+and then use that token where the default `secrets.GITHUB_TOKEN` would have been
+used.
+
+There is nothing _inherently_ insecure about GitHub App installation tokens.
+However, there are a handful of ways to misuse actions (like @actions/create-github-app-token)
+that issue them:
+
+* Explicitly disabling revocation of the token, e.g. with `#!yaml skip-token-revoke: true`.
+  This prevents GitHub Actions from revoking the token as a post-run step,
+  which often unnecessarily extends the token's validity.
+
+* Issuing a token with access to _all_ of the installation's repositories,
+  instead of the specific repository (or repositories) being operated on.
+  By default, GitHub App installation token issuances are granted access to
+  all repositories that the GitHub App's installation has access to,
+  whereas typically only the current repository needs to be accessed for the
+  operation being performed.
+
+* Issuing a token with access to all of the installaton's permissions,
+  instead of the specific permissions needed for the operation being performed.
+  For example, by default, @actions/create-github-app-token issues tokens with
+  all permissions that the GitHub App has been granted during installation, which
+  can be much broader than what the operation being performed actually needs.
+
+### Remediation
+
+When using GitHub App installation tokens, ensure that your token only lives
+for as long as it absolutely needs to, and is only issued with access to the
+exact repositories and permissions it needs.
+
 ## `github-env`
 
 | Type     | Examples           | Introduced in | Works offline  | Auto-fixes available | Configurable |
