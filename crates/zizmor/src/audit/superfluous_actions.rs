@@ -131,8 +131,8 @@ impl SuperfluousActions {
         // For dtolnay/rust-toolchain, check if running on a self-hosted runner.
         // On self-hosted runners, rustup/cargo may not be pre-installed, so
         // dtolnay/rust-toolchain is NOT superfluous.
-        let is_self_hosted = job.map_or(false, |j| Self::is_self_hosted_runner(j));
-        let is_rust_toolchain = uses.repository() == "dtolnay/rust-toolchain";
+        let is_self_hosted = job.is_some_and(|j| Self::is_self_hosted_runner(j));
+        let is_rust_toolchain = uses.slug() == "dtolnay/rust-toolchain";
 
         let mut findings = vec![];
         for (pattern, recommendation, persona, confidence) in SUPERFLUOUS_ACTIONS.iter() {
@@ -164,21 +164,14 @@ impl SuperfluousActions {
     }
 
     /// Returns true if the job runs on a self-hosted runner.
-    fn is_self_hosted_runner(job: &NormalJob<'_>) -> bool {
+    fn is_self_hosted_runner<'doc>(job: &NormalJob<'doc>) -> bool {
         use github_actions_models::common::expr::LoE;
         use github_actions_models::workflow::job::RunsOn;
 
         match &job.runs_on {
-            // Expression-based runs-on: only treat as self-hosted if the
-            // matrix expansion actually contains "self-hosted".
-            LoE::Expr(exp) => {
-                let Some(matrix) = job.matrix() else {
-                    return false;
-                };
-                matrix.expansions().iter().any(|expansion| {
-                    exp.as_bare() == expansion.path && expansion.value.contains("self-hosted")
-                })
-            }
+            // Expression-based runs-on: conservatively treat as GitHub-hosted
+            // since we cannot determine the actual runner type at analysis time.
+            LoE::Expr(_exp) => false,
             // Runner groups always imply self-hosted runners.
             LoE::Literal(RunsOn::Group { .. }) => true,
             LoE::Literal(RunsOn::Target(labels)) => {
