@@ -280,28 +280,77 @@ impl BotConditions {
     /// a spoofable trust boundary — it's serving a different purpose (e.g.,
     /// suppressing follow-up re-runs). In this case, the bot condition should
     /// not be flagged.
+    ///
+    /// This function recursively searches for AND expressions that contain
+    /// the spoofable actor expression, then checks if the sibling operand
+    /// contains a safe PR-author comparison.
     fn has_safe_pr_author_alongside<'a, 'src>(
         spoofable_expr: &'a SpannedExpr<'src>,
         full_expr: &'a SpannedExpr<'src>,
     ) -> bool {
-        // Extract the sibling expression: the rest of the top-level AND expression
-        // that contains the spoofable actor check.
-        let top_level = full_expr.deref();
-        if let Expr::BinOp {
-            lhs,
-            op: BinOp::And,
-            rhs,
-        } = top_level
-        {
-            // Check if the spoofable expression is the left or right child
-            let sibling = if std::ptr::eq(spoofable_expr.as_ref() as *const _, lhs.as_ref() as *const _) {
-                rhs.as_ref()
-            } else {
-                lhs.as_ref()
-            };
-            return Self::sibling_has_safe_pr_author(sibling);
+        match full_expr.deref() {
+            Expr::BinOp { lhs, op: BinOp::And, rhs } => {
+                // Recursively search left branch for spoofable_expr
+                if Self::contains_expr(lhs, spoofable_expr) {
+                    // Check if right branch has safe PR-author
+                    if Self::sibling_has_safe_pr_author(rhs) {
+                        return true;
+                    }
+                }
+                // Recursively search right branch for spoofable_expr
+                if Self::contains_expr(rhs, spoofable_expr) {
+                    // Check if left branch has safe PR-author
+                    if Self::sibling_has_safe_pr_author(lhs) {
+                        return true;
+                    }
+                }
+                // Neither side directly contains spoofable_expr,
+                // recurse into both branches for nested ANDs
+                Self::has_safe_pr_author_alongside(spoofable_expr, lhs)
+                    || Self::has_safe_pr_author_alongside(spoofable_expr, rhs)
+            }
+            Expr::BinOp { lhs, op: BinOp::Or, rhs } => {
+                // When the top-level is OR, search inside both branches for
+                // an AND that contains the spoofable actor alongside a safe PR-author.
+                Self::has_safe_pr_author_alongside(spoofable_expr, lhs)
+                    || Self::has_safe_pr_author_alongside(spoofable_expr, rhs)
+            }
+            Expr::BinOp { lhs, rhs, .. } => {
+                // For other binops, recurse into both branches
+                Self::has_safe_pr_author_alongside(spoofable_expr, lhs)
+                    || Self::has_safe_pr_author_alongside(spoofable_expr, rhs)
+            }
+            Expr::Call(Call { args, .. }) | Expr::Context(Context { parts: args, .. }) => {
+                args.iter().any(|arg| Self::has_safe_pr_author_alongside(spoofable_expr, arg))
+            }
+            Expr::Index(expr) => Self::has_safe_pr_author_alongside(spoofable_expr, expr),
+            Expr::UnOp { expr, .. } => Self::has_safe_pr_author_alongside(spoofable_expr, expr),
+            _ => false,
         }
-        false
+    }
+
+    /// Checks if `container` contains `target` as a descendant (structural equality).
+    fn contains_expr<'a, 'src>(
+        container: &'a SpannedExpr<'src>,
+        target: &'a SpannedExpr<'src>,
+    ) -> bool {
+        if std::ptr::eq(container as *const _, target as *const _) {
+            return true;
+        }
+        match container.deref() {
+            Expr::BinOp { lhs, op: BinOp::And, rhs } => {
+                Self::contains_expr(lhs, target) || Self::contains_expr(rhs, target)
+            }
+            Expr::BinOp { lhs, rhs, .. } => {
+                Self::contains_expr(lhs, target) || Self::contains_expr(rhs, target)
+            }
+            Expr::Call(Call { args, .. }) | Expr::Context(Context { parts: args, .. }) => {
+                args.iter().any(|arg| Self::contains_expr(arg, target))
+            }
+            Expr::Index(expr) => Self::contains_expr(expr, target),
+            Expr::UnOp { expr, .. } => Self::contains_expr(expr, target),
+            _ => false,
+        }
     }
 
     /// Walks an expression to check if it contains a safe PR-author comparison.
@@ -644,6 +693,75 @@ mod tests {
             let result = BotConditions::bot_condition(&cond).unwrap();
             assert_eq!(result.1.origin.raw, *context);
             assert_eq!(result.2, *confidence);
+        }
+    }
+
+    #[test]
+    fn test_nested_and_expressions() {
+        // Nested AND expressions should also be handled correctly.
+        // When spoofable actor is in a nested AND with no safe PR-author, flag it.
+        for (cond, context, confidence) in &[
+            // Nested ANDs without safe PR-author
+            (
+                "(github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'someone') && github.event.sender.login == 'someone'",
+                "github.actor",
+                Confidence::Medium,
+            ),
+            (
+                "github.actor == 'dependabot[bot]' && (something && github.event.sender.login == 'someone')",
+                "github.actor",
+                Confidence::Medium,
+            ),
+        ] {
+            let cond = Expr::parse(cond).unwrap();
+            let result = BotConditions::bot_condition(&cond).unwrap();
+            assert_eq!(result.1.origin.raw, *context);
+            assert_eq!(result.2, *confidence);
+        }
+
+        // Nested ANDs WITH safe PR-author should be suppressed.
+        for cond in &[
+            // Safe PR-author in outer AND
+            "github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]' && something",
+            // Safe PR-author in inner AND
+            "(github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]')",
+            // Reversed order in nested expression
+            "something && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'",
+        ] {
+            let cond = Expr::parse(cond).unwrap();
+            assert!(
+                BotConditions::bot_condition(&cond).is_none(),
+                "Expected no finding for {cond:?} with safe PR-author present in nested AND"
+            );
+        }
+    }
+
+    #[test]
+    fn test_or_with_and_mixed() {
+        // Mixed OR/AND expressions: spoofable actor nested inside an AND sub-expression
+        // that has a safe PR-author should be suppressed.
+        for cond in &[
+            // Safe PR-author in inner AND (left side of OR)
+            "(github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]') || github.actor == 'renovate[bot]'",
+        ] {
+            let cond = Expr::parse(cond).unwrap();
+            assert!(
+                BotConditions::bot_condition(&cond).is_none(),
+                "Expected no finding for {cond:?} with safe PR-author in AND branch"
+            );
+        }
+
+
+        // Without safe PR-author in the AND, should still flag the nested bot
+        for (cond, context) in &[
+            (
+                "(github.actor == 'dependabot[bot]' && github.event.sender.login == 'someone') || github.actor == 'renovate[bot]'",
+                "github.actor",
+            ),
+        ] {
+            let cond = Expr::parse(cond).unwrap();
+            let result = BotConditions::bot_condition(&cond).unwrap();
+            assert_eq!(result.1.origin.raw, *context);
         }
     }
 
