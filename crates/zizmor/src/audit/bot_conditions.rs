@@ -58,6 +58,27 @@ const BOT_ACTOR_IDS: &[&str] = &[
     "29139614", // renovate[bot]
 ];
 
+/// Safe PR-author contexts for pull_request events.
+/// These are the non-spoofable equivalents of some spoofable actor contexts.
+/// When a safe PR-author check is present alongside a spoofable actor check in an
+/// AND expression, the actor check is not being used as a trust boundary — it is
+/// being used for a different purpose (e.g., suppressing follow-up re-runs).
+#[allow(clippy::unwrap_used)]
+static SAFE_PR_AUTHOR_NAME_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    vec![
+        // pull_request / pull_request_target
+        ContextPattern::try_new("github.event.pull_request.user.login").unwrap(),
+    ]
+});
+
+#[allow(clippy::unwrap_used)]
+static SAFE_PR_AUTHOR_ID_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    vec![
+        // pull_request / pull_request_target
+        ContextPattern::try_new("github.event.pull_request.user.id").unwrap(),
+    ]
+});
+
 #[async_trait::async_trait]
 impl Audit for BotConditions {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
@@ -252,6 +273,75 @@ impl BotConditions {
         }
     }
 
+    /// Checks whether the expression tree contains a safe PR-author context
+    /// alongside a spoofable actor context in an AND expression.
+    ///
+    /// When both are present, the spoofable actor check is not being used as
+    /// a spoofable trust boundary — it's serving a different purpose (e.g.,
+    /// suppressing follow-up re-runs). In this case, the bot condition should
+    /// not be flagged.
+    fn has_safe_pr_author_alongside<'a, 'src>(
+        spoofable_expr: &'a SpannedExpr<'src>,
+        full_expr: &'a SpannedExpr<'src>,
+    ) -> bool {
+        // Extract the sibling expression: the rest of the top-level AND expression
+        // that contains the spoofable actor check.
+        let top_level = full_expr.deref();
+        if let Expr::BinOp {
+            lhs,
+            op: BinOp::And,
+            rhs,
+        } = top_level
+        {
+            // Check if the spoofable expression is the left or right child
+            let sibling = if std::ptr::eq(spoofable_expr.as_ref() as *const _, lhs.as_ref() as *const _) {
+                rhs.as_ref()
+            } else {
+                lhs.as_ref()
+            };
+            return Self::sibling_has_safe_pr_author(sibling);
+        }
+        false
+    }
+
+    /// Walks an expression to check if it contains a safe PR-author comparison.
+    fn sibling_has_safe_pr_author<'a, 'src>(expr: &'a SpannedExpr<'src>) -> bool {
+        match expr.deref() {
+            Expr::BinOp { lhs, op: BinOp::Eq, rhs } => {
+                // Check if this is a safe PR-author == '*[bot]' comparison
+                let (ctx_expr, lit_expr) = match (lhs.as_ref().deref(), rhs.as_ref().deref()) {
+                    (Expr::Context(_), Expr::Literal(_)) => (lhs.as_ref(), rhs.as_ref()),
+                    (Expr::Literal(_), Expr::Context(_)) => (rhs.as_ref(), lhs.as_ref()),
+                    _ => return false,
+                };
+
+                if let Expr::Context(ctx) = ctx_expr.deref() {
+                    if let Expr::Literal(lit) = lit_expr.deref() {
+                        if (SAFE_PR_AUTHOR_NAME_CONTEXTS.iter().any(|x| x.matches(ctx))
+                            && lit.as_str().ends_with("[bot]"))
+                            || (SAFE_PR_AUTHOR_ID_CONTEXTS.iter().any(|x| x.matches(ctx))
+                                && BOT_ACTOR_IDS.contains(&lit.as_str().as_ref()))
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                // Recurse into both sides for nested expressions
+                Self::sibling_has_safe_pr_author(lhs) || Self::sibling_has_safe_pr_author(rhs)
+            }
+            Expr::BinOp { lhs, rhs, .. } => {
+                Self::sibling_has_safe_pr_author(lhs) || Self::sibling_has_safe_pr_author(rhs)
+            }
+            Expr::Call(Call { args, .. }) | Expr::Context(Context { parts: args, .. }) => {
+                args.iter().any(|arg| Self::sibling_has_safe_pr_author(arg))
+            }
+            Expr::Index(expr) => Self::sibling_has_safe_pr_author(expr),
+            Expr::UnOp { expr, .. } => Self::sibling_has_safe_pr_author(expr),
+            _ => false,
+        }
+    }
+
     /// Walks the expression tree to find a potentially dominating bot condition.
     ///
     /// Returns a two-tuple of `((expr, actor-expr), dominating)`, where
@@ -349,12 +439,26 @@ impl BotConditions {
         // always passes if the actor is dependabot[bot].
         match Self::walk_tree_for_bot_condition(expr, true) {
             // We have a bot condition and it dominates the expression.
-            (Some((expr, context_expr)), true) => {
-                Some((Subfeature::new(0, expr), context_expr, Confidence::High))
+            (Some((bot_expr, context_expr)), true) => {
+                // Even in a dominating expression, if a safe PR-author check is present
+                // alongside the spoofable actor check, suppress the finding.
+                if !Self::has_safe_pr_author_alongside(bot_expr, expr) {
+                    Some((Subfeature::new(0, bot_expr), context_expr, Confidence::High))
+                } else {
+                    None
+                }
             }
             // We have a bot condition but it doesn't dominate the expression.
-            (Some((expr, context_expr)), false) => {
-                Some((Subfeature::new(0, expr), context_expr, Confidence::Medium))
+            (Some((bot_expr, context_expr)), false) => {
+                // When the bot condition is non-dominating (AND expression), check if
+                // a safe PR-author context is present alongside it. If so, the actor
+                // check is not being used as a spoofable trust boundary — it's serving
+                // a different purpose (e.g., suppressing follow-up re-runs).
+                if !Self::has_safe_pr_author_alongside(bot_expr, expr) {
+                    Some((Subfeature::new(0, bot_expr), context_expr, Confidence::Medium))
+                } else {
+                    None
+                }
             }
             // No bot condition.
             (..) => None,
@@ -500,6 +604,46 @@ mod tests {
             let (_, found_context, found_confidence) = BotConditions::bot_condition(&cond).unwrap();
             assert_eq!(found_context.origin.raw, *context);
             assert_eq!(found_confidence, *confidence);
+        }
+    }
+
+    #[test]
+    fn test_safe_pr_author_suppresses_flag() {
+        // When both spoofable actor and safe PR-author are present in an AND expression,
+        // the spoofable actor should NOT be flagged.
+        for cond in &[
+            // Safe PR-author name alongside spoofable actor name
+            "github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]'",
+            "'dependabot[bot]' == github.actor && github.event.pull_request.user.login == 'dependabot[bot]'",
+            "github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'",
+            // Safe PR-author ID alongside spoofable actor ID
+            "github.actor_id == '49699333' && github.event.pull_request.user.id == '49699333'",
+            "'49699333' == github.actor_id && github.event.pull_request.user.id == '49699333'",
+        ] {
+            let cond = Expr::parse(cond).unwrap();
+            assert!(
+                BotConditions::bot_condition(&cond).is_none(),
+                "Expected no finding for {cond:?} with safe PR-author present"
+            );
+        }
+
+        // But spoofable actor WITHOUT safe PR-author should still be flagged
+        for (cond, context, confidence) in &[
+            (
+                "github.actor == 'dependabot[bot]' && github.event.sender.login == 'someone'",
+                "github.actor",
+                Confidence::Medium,
+            ),
+            (
+                "github.actor_id == '49699333' && github.event.sender.id == '123'",
+                "github.actor_id",
+                Confidence::Medium,
+            ),
+        ] {
+            let cond = Expr::parse(cond).unwrap();
+            let result = BotConditions::bot_condition(&cond).unwrap();
+            assert_eq!(result.1.origin.raw, *context);
+            assert_eq!(result.2, *confidence);
         }
     }
 
