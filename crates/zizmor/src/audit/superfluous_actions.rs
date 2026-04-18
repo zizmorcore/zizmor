@@ -132,9 +132,7 @@ impl SuperfluousActions {
         // On self-hosted runners, rustup/cargo may not be pre-installed, so
         // dtolnay/rust-toolchain is NOT superfluous.
         let is_self_hosted = job.map_or(false, |j| Self::is_self_hosted_runner(j));
-        let rust_toolchain_pattern: RepositoryUsesPattern =
-            "dtolnay/rust-toolchain".parse().expect("valid pattern");
-        let is_rust_toolchain = rust_toolchain_pattern.matches(uses);
+        let is_rust_toolchain = uses.repository() == "dtolnay/rust-toolchain";
 
         let mut findings = vec![];
         for (pattern, recommendation, persona, confidence) in SUPERFLUOUS_ACTIONS.iter() {
@@ -166,15 +164,24 @@ impl SuperfluousActions {
     }
 
     /// Returns true if the job runs on a self-hosted runner.
-    fn is_self_hosted_runner<'doc>(job: &NormalJob<'doc>) -> bool {
+    fn is_self_hosted_runner(job: &NormalJob<'_>) -> bool {
         use github_actions_models::common::expr::LoE;
         use github_actions_models::workflow::job::RunsOn;
 
         match &job.runs_on {
-            // Expression-based runs-on: conservatively assume self-hosted
-            // since we can't statically determine the runner type.
-            LoE::Expr(_) => true,
-            LoE::Literal(RunsOn::Group { labels, .. }) | LoE::Literal(RunsOn::Target(labels)) => {
+            // Expression-based runs-on: only treat as self-hosted if the
+            // matrix expansion actually contains "self-hosted".
+            LoE::Expr(exp) => {
+                let Some(matrix) = job.matrix() else {
+                    return false;
+                };
+                matrix.expansions().iter().any(|expansion| {
+                    exp.as_bare() == expansion.path && expansion.value.contains("self-hosted")
+                })
+            }
+            // Runner groups always imply self-hosted runners.
+            LoE::Literal(RunsOn::Group { .. }) => true,
+            LoE::Literal(RunsOn::Target(labels)) => {
                 // A runner is considered self-hosted if no label matches
                 // known GitHub-hosted runner patterns (ubuntu-*, macos*, windows-*).
                 !labels.iter().any(|label| {
