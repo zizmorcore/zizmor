@@ -388,11 +388,11 @@ impl InputGroup {
         match input {
             Ok(input) => self.register_input(input),
             Err(CollectionError::Syntax(e)) if !strict => {
-                tracing::warn!("failed to parse input: {e}");
+                tracing::warn!("failed to parse {key}: {e}");
                 Ok(())
             }
             Err(e @ CollectionError::Schema { .. }) if !strict => {
-                tracing::warn!("failed to validate input as {kind}: {e}");
+                tracing::warn!("failed to validate {key} as {kind}: {e}");
                 Ok(())
             }
             Err(e) => Err(CollectionError::Inner(e.into(), key.to_string(), kind)),
