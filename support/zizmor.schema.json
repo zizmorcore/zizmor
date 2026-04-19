@@ -278,6 +278,9 @@
         "unpinned-images": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
+        "unpinned-tools": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "unpinned-uses": {
           "$ref": "#/definitions/UnpinnedUsesRuleConfig"
         },
