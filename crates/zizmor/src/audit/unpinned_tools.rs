@@ -1,4 +1,5 @@
-use github_actions_models::common::{EnvValue, Uses};
+use github_actions_models::common::{EnvValue, Uses, expr::LoE};
+use subfeature::Subfeature;
 
 use crate::audit::{Audit, AuditError, audit_meta};
 use crate::config::Config;
@@ -7,6 +8,7 @@ use crate::models::StepBodyCommon;
 use crate::models::uses::RepositoryUsesExt;
 use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
 use crate::state::AuditState;
+use crate::utils::ExtractedExpr;
 
 use super::AuditLoadError;
 
@@ -30,7 +32,7 @@ impl UnpinnedTools {
 
         let StepBodyCommon::Uses {
             uses: Uses::Repository(uses),
-            with,
+            with: LoE::Literal(with),
         } = step.body()
         else {
             return Ok(findings);
@@ -62,6 +64,7 @@ impl UnpinnedTools {
                     .add_location(
                         step.location()
                             .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, uses.raw()))
                             .annotated("this action"),
                     )
                     .add_location(
@@ -69,6 +72,23 @@ impl UnpinnedTools {
                             .primary()
                             .with_keys(["with".into(), "version".into()])
                             .annotated("specifies `version: latest` which is unpinned"),
+                    ),
+            ),
+            Some(EnvValue::String(v)) if ExtractedExpr::from_fenced(v).is_some() => Some(
+                Self::finding()
+                    .confidence(Confidence::Low)
+                    .severity(Severity::Medium)
+                    .add_location(
+                        step.location()
+                            .with_keys(["uses".into()])
+                            .subfeature(Subfeature::new(0, uses.raw()))
+                            .annotated("this action"),
+                    )
+                    .add_location(
+                        step.location()
+                            .primary()
+                            .with_keys(["with".into(), "version".into()])
+                            .annotated("specifies `version` dynamically, which may be unpinned"),
                     ),
             ),
             Some(_) => None,

@@ -1858,6 +1858,33 @@ by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
               - run: "echo pinned container!"
         ```
 
+## `unpinned-tools`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action  |  | v1.25.0        | ✅            | ❌                | ❌          |
+
+
+Detects certain `#!yaml uses:` steps where the referenced action may use an unpinned underlying
+tool at runtime.
+
+Even though the referenced action may itself by pinned, the default configuration may still
+cause it to fetch the "latest" version of the tools used by it. At the moment, this audit only applies
+to a set of known actions with such behavior:
+
+- `aquasecurity/trivy-action`
+- `1password/load-secrets-action`
+
+For these actions, zizmor reports a finding when:
+
+- the action is used without a `with.version` input (causing `latest` to be used as a default)
+- `with.version` is set to `latest`
+
+### Remediation
+
+When using one of the known actions, set `with.version` to a specific tool version instead of relying on
+default versions or `latest`.
+
 ## `unpinned-uses`
 
 | Type             | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
