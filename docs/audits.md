@@ -1858,6 +1858,45 @@ by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
               - run: "echo pinned container!"
         ```
 
+## `unpinned-tools`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action  | [unpinned-tools.yml]  | v1.25.0        | ✅            |  ❌               | ❌          |
+
+[unpinned-tools.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned-tools.yml
+
+Detects certain `#!yaml uses:` steps where the referenced action may use an unpinned external
+tool at runtime.
+
+Even though the referenced action may itself by pinned, the action's configuration may still
+cause it to fetch the "latest" version of the tools used by it. At the moment, this audit only applies
+to a set of known actions with such behavior:
+
+- @aquasecurity/trivy-action
+- @1password/load-secrets-action
+
+For these actions, zizmor reports a finding when:
+
+- the action is used without a `with.version` input (causing `latest` to be used as a default)
+- `with.version` is set to `latest`
+
+!!! note
+  
+    This audit does not flag actions that perform *interior* hash-pinning, e.g.
+    that fetch the "latest" version of a tool but only after validating it against
+    a known-good hash.
+    
+    For example, @zizmorcore/zizmor-action defaults to the "latest" version of
+    `zizmor` relative to the action's release, and that "latest" version is
+    [pinned in the action itself](https://github.com/zizmorcore/zizmor-action/blob/main/support/versions),
+    so no `unpinned-tools` finding is emitted.
+
+### Remediation
+
+When using one of the known actions, set `with.version` to a specific tool version instead of relying on
+default versions or `latest`.
+
 ## `unpinned-uses`
 
 | Type             | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |

@@ -124,7 +124,8 @@ define_audit_rules! {
     archived_uses,
     misfeature,
     superfluous_actions,
-    github_app;
+    github_app,
+    unpinned_tools;
 
     [DependabotCooldownRuleConfig] dependabot_cooldown,
     [ForbiddenUsesRuleConfig] forbidden_uses,
