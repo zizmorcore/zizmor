@@ -54,7 +54,8 @@ impl UnpinnedTools {
                         step.location()
                             .primary()
                             .with_keys(["uses".into()])
-                            .annotated("this action's tool version is not pinned"),
+                            .subfeature(Subfeature::new(0, uses.raw()))
+                            .annotated("action implictly uses an unpinned latest version"),
                     ),
             ),
             Some(EnvValue::String(v)) if v == "latest" => Some(
