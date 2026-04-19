@@ -20,7 +20,7 @@ pub(crate) struct UnpinnedTools;
 audit_meta!(
     UnpinnedTools,
     "unpinned-tools",
-    "unpinned underlying tools used by action are potentially vulnerable"
+    "action installs an unpinned external tool"
 );
 
 impl UnpinnedTools {
