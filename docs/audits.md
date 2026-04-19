@@ -1862,7 +1862,7 @@ by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action  |  | v1.25.0        | ✅            | ❌                | ❌          |
+| Workflow, Action  |  | v1.25.0        | ✅            | ✅                | ❌          |
 
 
 Detects certain `#!yaml uses:` steps where the referenced action may use an unpinned underlying
@@ -1872,8 +1872,8 @@ Even though the referenced action may itself by pinned, the default configuratio
 cause it to fetch the "latest" version of the tools used by it. At the moment, this audit only applies
 to a set of known actions with such behavior:
 
-- `aquasecurity/trivy-action`
-- `1password/load-secrets-action`
+- @aquasecurity/trivy-action
+- @1password/load-secrets-action
 
 For these actions, zizmor reports a finding when:
 
