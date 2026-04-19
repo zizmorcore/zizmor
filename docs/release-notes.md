@@ -19,6 +19,9 @@ of `zizmor`.
 * **New audit**: [github-app] detects dangerous usages of GitHub App installation tokens
   (#1926)
 
+* **New audit**: [unpinned-tools] detects actions that install tools without pinning
+  to a specific version (#1820)
+
 ### Enhancements
 
 * @tibdex/github-app-token is now recognized as an archived action by
@@ -93,9 +96,6 @@ of `zizmor`.
   (#1849)
 
     Many thanks to @shaanmajid for proposing and implementing this improvement!
-
-* **New audit**: [unpinned-tools] detects actions that install tools without pinning
-  to a specific version (#1820)
 
 ### Bug Fixes 🐛
 
