@@ -386,6 +386,8 @@ psf/cachecontrol#345
 psf/requests#7314
 pubgrub-rs/pubgrub#389
 pyca/service-identity#75
+pydantic/monty#312
+pydantic/pydantic#13039
 pydata/pydata-sphinx-theme#2077
 pydata/xarray#11294
 pylast/pylast#465
