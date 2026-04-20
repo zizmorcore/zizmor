@@ -1831,6 +1831,15 @@
         - pyca/service-identity#75
 
 
+-   ![](https://github.com/pydantic.png?size=40){ width="40" loading=lazy align=left } pydantic
+
+    ---
+
+    ??? example "Examples"
+        - pydantic/monty#312
+        - pydantic/pydantic#13039
+
+
 -   ![](https://github.com/pydata.png?size=40){ width="40" loading=lazy align=left } pydata
 
     ---
