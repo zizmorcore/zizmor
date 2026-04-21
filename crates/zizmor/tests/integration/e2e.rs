@@ -736,3 +736,40 @@ fn test_show_urls() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_no_ignores() -> Result<()> {
+    // By default, the only finding should be ignored.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(true)
+            .input(input_under_test("ignore.yml"))
+            .run()?,
+        @"No findings to report. Good job! (1 ignored)"
+    );
+
+    // With `--no-ignores`, the ignored finding should be included in the output.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(true)
+            .input(input_under_test("ignore.yml"))
+            .args(["--no-ignores"])
+            .run()?,
+        @r#"
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:17:24
+       |
+    17 |         run: echo "${{ github.ref }}" # zizmor: ignore[template-injection]
+       |         ---            ^^^^^^^^^^ may expand into attacker-controllable code
+       |         |
+       |         this run block
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    1 findings (1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    "#
+    );
+
+    Ok(())
+}
