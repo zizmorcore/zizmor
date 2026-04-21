@@ -1,0 +1,17 @@
+name: ignore
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  ignore:
+    name: ignore
+    runs-on: ubuntu-latest
+    steps:
+      - name: ignore
+        run: echo "${{ github.ref }}" # zizmor: ignore[template-injection]

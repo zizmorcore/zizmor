@@ -22,6 +22,9 @@ of `zizmor`.
 * **New audit**: [unpinned-tools] detects actions that install tools without pinning
   to a specific version (#1820)
 
+* `zizmor` now accepts the `--no-ignores` flag to disable all ignore comments and
+  configurations when reporting findings (#1935)
+
 ### Enhancements
 
 * @tibdex/github-app-token is now recognized as an archived action by

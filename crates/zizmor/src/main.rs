@@ -179,6 +179,10 @@ struct AuditArgs {
     /// Filter all results below this confidence.
     #[arg(long, value_name = "LEVEL")]
     min_confidence: Option<CliConfidence>,
+
+    /// Don't honor ignore comments or ignore rules in configuration.
+    #[arg(long)]
+    no_ignores: bool,
 }
 
 #[derive(Debug, Args)]
@@ -955,8 +959,13 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     let audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;
 
-    let mut results =
-        FindingRegistry::new(&registry, min_severity, min_confidence, app.audit.persona);
+    let mut results = FindingRegistry::new(
+        &registry,
+        min_severity,
+        min_confidence,
+        app.audit.persona,
+        app.audit.no_ignores,
+    );
     {
         // Note: block here so that we drop the span here at the right time.
         let span = info_span!("audit");
