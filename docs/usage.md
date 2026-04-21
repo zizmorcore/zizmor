@@ -822,6 +822,23 @@ zizmor --config my-zizmor-config.yml /dir/to/audit
 See [Configuration: `rules.<id>.ignore`](./configuration.md#rulesidignore) for
 more details on writing ignore rules.
 
+### Disabling ignores
+
+!!! tip
+
+     `--no-ignores` is available in `v1.25.0` and later.
+
+Sometimes it's useful to disable ignores entirely. For example, if you're
+reviewing a repository that someone else has previously triaged with `zizmor`,
+you may want to temporarily disable their ignore rules to get a more complete
+picture of the repository's security posture.
+
+To do this, you can pass `--no-ignores` during audits:
+
+```bash
+zizmor --no-ignores example/example
+```
+
 ## Caching between runs
 
 !!! tip
