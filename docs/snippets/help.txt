@@ -13,6 +13,7 @@ Audit Options:
       --persona <PERSONA>       The persona to use while auditing [default: regular] [possible values: auditor, pedantic, regular]
       --min-severity <LEVEL>    Filter all results below this severity [possible values: informational, low, medium, high]
       --min-confidence <LEVEL>  Filter all results below this confidence [possible values: low, medium, high]
+      --no-ignores              Don't honor ignore comments or ignore rules in configuration
 
 Output Options:
   -v, --verbose...              Increase logging verbosity
