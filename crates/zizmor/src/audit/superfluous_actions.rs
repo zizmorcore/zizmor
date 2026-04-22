@@ -130,6 +130,24 @@ static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona, 
                 Persona::Pedantic,
                 Confidence::Medium,
             ),
+            (
+                "stefanzweifel/git-auto-commit-action".parse().unwrap(),
+                "use `git add`, `git commit`, and `git push` in a script step",
+                // NOTE: Currently pedantic because replicating this action's
+                // full behaviour (empty commit detection, auth setup, etc.)
+                // requires multiple git commands and some care.
+                Persona::Pedantic,
+                Confidence::Low,
+            ),
+            (
+                "EndBug/add-and-commit".parse().unwrap(),
+                "use `git add`, `git commit`, and `git push` in a script step",
+                // NOTE: Currently pedantic because replicating this action's
+                // full behaviour (empty commit detection, auth setup, etc.)
+                // requires multiple git commands and some care.
+                Persona::Pedantic,
+                Confidence::Low,
+            ),
         ]
     });
 

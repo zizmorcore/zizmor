@@ -1611,6 +1611,8 @@ The following table lists some common superfluous actions and their recommended 
 | @addnab/docker-run-action | `docker run` |
 | @sergeysova/jq-action | `jq <...>` |
 | @dtolnay/rust-toolchain | `rustup` |
+| @stefanzweifel/git-auto-commit-action | `git add`, `git commit`, and `git push` |
+| @EndBug/add-and-commit | `git add`, `git commit`, and `git push` |
 
 !!! example
 
