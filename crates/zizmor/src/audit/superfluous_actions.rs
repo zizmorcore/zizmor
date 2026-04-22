@@ -91,6 +91,18 @@ static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona, 
                 Confidence::High,
             ),
             (
+                "actions-ecosystem/action-add-labels".parse().unwrap(),
+                "use `gh issue edit --add-label` or `gh pr edit --add-label` in a script step",
+                Persona::Regular,
+                Confidence::High,
+            ),
+            (
+                "actions-ecosystem/action-remove-labels".parse().unwrap(),
+                "use `gh issue edit --remove-label` or `gh pr edit --remove-label` in a script step",
+                Persona::Regular,
+                Confidence::High,
+            ),
+            (
                 "svenstaro/upload-release-action".parse().unwrap(),
                 "use `gh release create` and `gh release upload` in a script step",
                 Persona::Regular,
