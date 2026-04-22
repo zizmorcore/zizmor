@@ -115,6 +115,12 @@ static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona, 
                 Confidence::High,
             ),
             (
+                "sergeysova/jq-action".parse().unwrap(),
+                "use `jq` in a script step",
+                Persona::Regular,
+                Confidence::High,
+            ),
+            (
                 "dtolnay/rust-toolchain".parse().unwrap(),
                 "use `rustup` and/or `cargo` in a script step",
                 // NOTE(ww): Currently pedantic because this action does

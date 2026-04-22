@@ -1609,6 +1609,7 @@ The following table lists some common superfluous actions and their recommended 
 | @actions-ecosystem/action-remove-labels | `gh issue edit --remove-label` or `gh pr edit --remove-label` |
 | @svenstaro/upload-release-action | `gh release create` and `gh release upload` |
 | @addnab/docker-run-action | `docker run` |
+| @sergeysova/jq-action | `jq <...>` |
 | @dtolnay/rust-toolchain | `rustup` |
 
 !!! example
