@@ -765,7 +765,10 @@ enum Error {
 async fn run(app: &mut App) -> Result<ExitCode, Error> {
     #[cfg(feature = "lsp")]
     if app.args.lsp.lsp {
-        lsp::run().await?;
+        lsp::run(lsp::LspOptions {
+            persona: app.audit.persona,
+        })
+        .await?;
         return Ok(ExitCode::SUCCESS);
     }
 
