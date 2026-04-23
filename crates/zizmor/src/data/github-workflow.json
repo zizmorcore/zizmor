@@ -62,16 +62,16 @@
         }
       ]
     },
-    "container": {
+    "jobContainer": {
       "type": "object",
       "properties": {
         "image": {
-          "$comment": "https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#jobsjob_idcontainerimage",
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idcontainerimage",
           "description": "The Docker image to use as the container to run the action. The value can be the Docker Hub image name or a registry name.",
           "type": "string"
         },
         "credentials": {
-          "$comment": "https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_idcontainercredentials",
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idcontainercredentials",
           "description": "If the image's container registry requires authentication to pull the image, you can use credentials to set a map of the username and password. The credentials are the same values that you would provide to the `docker login` command.",
           "type": "object",
           "properties": {
@@ -84,12 +84,12 @@
           }
         },
         "env": {
-          "$comment": "https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#jobsjob_idcontainerenv",
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idcontainerenv",
           "$ref": "#/definitions/env",
-          "description": "Sets an array of environment variables in the container."
+          "description": "Sets a map of environment variables in the container."
         },
         "ports": {
-          "$comment": "https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#jobsjob_idcontainerports",
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idcontainerports",
           "description": "Sets an array of ports to expose on the container.",
           "type": "array",
           "items": {
@@ -105,7 +105,7 @@
           "minItems": 1
         },
         "volumes": {
-          "$comment": "https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#jobsjob_idcontainervolumes",
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idcontainervolumes",
           "description": "Sets an array of volumes for the container to use. You can use volumes to share data between services or other steps in a job. You can specify named Docker volumes, anonymous Docker volumes, or bind mounts on the host.\nTo specify a volume, you specify the source and destination path: <source>:<destinationPath>\nThe <source> is a volume name or an absolute path on the host machine, and <destinationPath> is an absolute path in the container.",
           "type": "array",
           "items": {
@@ -114,8 +114,78 @@
           "minItems": 1
         },
         "options": {
-          "$comment": "https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#jobsjob_idcontaineroptions",
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idcontaineroptions",
           "description": "Additional Docker container resource options. For a list of options, see https://docs.docker.com/engine/reference/commandline/create/#options.",
+          "type": "string"
+        }
+      },
+      "required": ["image"],
+      "additionalProperties": false
+    },
+    "serviceContainer": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idservicesservice_idimage",
+          "description": "The Docker image to use as the service container to run the action. The value can be the Docker Hub image name or a registry name.",
+          "type": "string"
+        },
+        "credentials": {
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idservicesservice_idcredentials",
+          "description": "If the image's container registry requires authentication to pull the image, you can use credentials to set a map of the username and password. The credentials are the same values that you would provide to the `docker login` command.",
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            }
+          }
+        },
+        "env": {
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idservicesservice_idenv",
+          "$ref": "#/definitions/env",
+          "description": "Sets a map of environment variables in the service container."
+        },
+        "ports": {
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idservicesservice_idports",
+          "description": "Sets an array of ports to expose on the service container.",
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "minItems": 1
+        },
+        "volumes": {
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idservicesservice_idvolumes",
+          "description": "Sets an array of volumes for the service container to use. You can use volumes to share data between services or other steps in a job. You can specify named Docker volumes, anonymous Docker volumes, or bind mounts on the host.\nTo specify a volume, you specify the source and destination path: <source>:<destinationPath>\nThe <source> is a volume name or an absolute path on the host machine, and <destinationPath> is an absolute path in the container.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "options": {
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idservicesservice_idoptions",
+          "description": "Additional Docker container resource options. For a list of options, see https://docs.docker.com/engine/reference/commandline/create/#options.",
+          "type": "string"
+        },
+        "command": {
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idservicesservice_idcommand",
+          "description": "Overrides the Docker image's default command (`CMD`). The value is passed as arguments after the image name in the `docker create` command. If you also specify `entrypoint`, `command` provides the arguments to that entrypoint.",
+          "type": "string"
+        },
+        "entrypoint": {
+          "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idservicesservice_identrypoint",
+          "description": "Overrides the Docker image's default `ENTRYPOINT`. The value is a single string defining the executable to run. Use this when you need to replace the image's entrypoint entirely. You can combine `entrypoint` with `command` to pass arguments to the custom entrypoint.",
           "type": "string"
         }
       },
@@ -829,7 +899,7 @@
               "type": "string"
             },
             {
-              "$ref": "#/definitions/container"
+              "$ref": "#/definitions/jobContainer"
             }
           ]
         },
@@ -838,7 +908,7 @@
           "description": "Additional containers to host services for a job in a workflow. These are useful for creating databases or cache services like redis. The runner on the virtual machine will automatically create a network and manage the life cycle of the service containers.\nWhen you use a service container for a job or your step uses container actions, you don't need to set port information to access the service. Docker automatically exposes all ports between containers on the same network.\nWhen both the job and the action run in a container, you can directly reference the container by its hostname. The hostname is automatically mapped to the service name.\nWhen a step does not use a container action, you must access the service using localhost and bind the ports.",
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/definitions/container"
+            "$ref": "#/definitions/serviceContainer"
           }
         },
         "concurrency": {
