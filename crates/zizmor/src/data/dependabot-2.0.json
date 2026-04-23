@@ -865,7 +865,7 @@
         "directory": {
           "description": "Location of package manifests",
           "type": "string",
-          "default": "/"
+          "examples": ["/", "/ecosystem"]
         },
         "exclude-paths": {
           "description": "List of file paths to exclude from dependency updates",
