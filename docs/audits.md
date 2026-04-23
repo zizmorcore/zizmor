@@ -1605,9 +1605,14 @@ The following table lists some common superfluous actions and their recommended 
 | @peter-evans/create-pull-request | `gh pr create` |
 | @peter-evans/create-or-update-comment | `gh pr comment` or `gh issue comment` |
 | @dacbd/create-issue-action | `gh issue create` |
+| @actions-ecosystem/action-add-labels | `gh issue edit --add-label` or `gh pr edit --add-label` |
+| @actions-ecosystem/action-remove-labels | `gh issue edit --remove-label` or `gh pr edit --remove-label` |
 | @svenstaro/upload-release-action | `gh release create` and `gh release upload` |
 | @addnab/docker-run-action | `docker run` |
+| @sergeysova/jq-action | `jq <...>` |
 | @dtolnay/rust-toolchain | `rustup` |
+| @stefanzweifel/git-auto-commit-action | `git add`, `git commit`, and `git push` |
+| @EndBug/add-and-commit | `git add`, `git commit`, and `git push` |
 
 !!! example
 

@@ -27,6 +27,20 @@ of `zizmor`.
 
 ### Enhancements
 
+* Recommend `gh issue edit --add-label` / `gh pr edit --add-label` as a replacement for
+  @actions-ecosystem/action-add-labels in [superfluous-actions]
+
+* Recommend `gh issue edit --remove-label` / `gh pr edit --remove-label` as a replacement for
+  @actions-ecosystem/action-remove-labels in [superfluous-actions]
+
+* Recommend `jq` as a replacement for @sergeysova/jq-action in [superfluous-actions]
+
+* Recommend `git add`, `git commit`, and `git push` as a replacement for
+  @stefanzweifel/git-auto-commit-action in [superfluous-actions]
+
+* Recommend `git add`, `git commit`, and `git push` as a replacement for
+  @EndBug/add-and-commit in [superfluous-actions]
+
 * @tibdex/github-app-token is now recognized as an archived action by
   [archived-uses] (#1910)
 
