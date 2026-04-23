@@ -25,6 +25,8 @@ of `zizmor`.
 * `zizmor` now accepts the `--no-ignores` flag to disable all ignore comments and
   configurations when reporting findings (#1935)
 
+* `zizmor`'s lsp now supports configuring the audit persona (#1943)
+
 ### Enhancements
 
 * Recommend `gh issue edit --add-label` / `gh pr edit --add-label` as a replacement for
