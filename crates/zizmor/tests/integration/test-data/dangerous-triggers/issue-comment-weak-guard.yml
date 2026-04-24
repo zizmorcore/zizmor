@@ -1,0 +1,12 @@
+on: issue_comment
+
+name: issue-comment-weak-guard
+
+permissions: {}
+
+jobs:
+  respond:
+    runs-on: ubuntu-latest
+    if: github.event.comment.author_association == 'CONTRIBUTOR'
+    steps:
+      - run: echo "comment received"

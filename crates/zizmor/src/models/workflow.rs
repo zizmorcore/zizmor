@@ -154,6 +154,15 @@ impl Workflow {
         }
     }
 
+    /// Whether this workflow is triggered by issue_comment.
+    pub(crate) fn has_issue_comment(&self) -> bool {
+        match &self.on {
+            Trigger::BareEvent(event) => *event == BareEvent::IssueComment,
+            Trigger::BareEvents(events) => events.contains(&BareEvent::IssueComment),
+            Trigger::Events(events) => !matches!(events.issue_comment, OptionalBody::Missing),
+        }
+    }
+
     /// Whether this workflow is triggered by workflow_run.
     pub(crate) fn has_workflow_run(&self) -> bool {
         match &self.on {
