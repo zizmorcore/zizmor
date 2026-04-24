@@ -1096,6 +1096,14 @@ help[ref-version-mismatch]: action's hash pin has mismatched or missing version 
     = tip: add version comment '# v3.0.1'
     = note: this finding has an auto-fix
 
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/test-smoke.yml:78:5
+   |
+78 |     container: alpine:latest
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+   |
+   = note: audit confidence → High
+
 help[anonymous-definition]: workflow or action definition without a name
    --> .github/workflows/test-smoke.yml:1:1
     |
@@ -1118,6 +1126,38 @@ help[template-injection]: code injection via template expansion
     |         ---            ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
     |         |
     |         this run block
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/test-system.yml:138:5
+    |
+138 |     container: rockylinux/rockylinux:${{ matrix.rocky-version }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/test-system.yml:251:5
+    |
+251 |     container: pyston/pyston:2.3.5
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/test-system.yml:275:5
+    |
+275 |     container: alpine:latest
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/test-system.yml:687:5
+    |
+687 |     container: amazonlinux:2023
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
     |
     = note: audit confidence → High
 
@@ -1365,4 +1405,4 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-125 findings (2 suppressed): 24 informational, 81 low, 16 medium, 2 high
+130 findings (2 suppressed): 24 informational, 81 low, 16 medium, 7 high

@@ -201,3 +201,26 @@ fn test_matrix_in_image_regular() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_issue_1942_repro() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-images/issue-1942-repro.yml"))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @"
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:13:5
+       |
+    13 |     container: node:18
+       |     ^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
