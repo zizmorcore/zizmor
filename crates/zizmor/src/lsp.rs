@@ -32,10 +32,18 @@ struct LspDocumentCommon {
     version: Option<i32>,
 }
 
+#[derive(Debug, Clone, Copy)]
+/// Configuration options for the LSP
+pub(crate) struct LspOptions {
+    /// The audit persona to use for the lsp
+    pub(crate) persona: Persona,
+}
+
 #[derive(Debug)]
 struct Backend {
     audit_registry: AuditRegistry,
     client: Client,
+    options: LspOptions,
     /// Currently opened workspace directories.
     /// These directories are used to discover configuration files that
     /// apply to audits.
@@ -312,7 +320,7 @@ impl Backend {
         input_registry.groups.insert("lsp".into(), group);
 
         let mut registry =
-            FindingRegistry::new(&input_registry, None, None, Persona::Regular, false);
+            FindingRegistry::new(&input_registry, None, None, self.options.persona, false);
 
         for (input_key, input) in input_registry.iter_inputs() {
             for (ident, audit) in self.audit_registry.iter_audits() {
@@ -388,7 +396,7 @@ impl From<Point> for ls_types::Position {
     }
 }
 
-pub(crate) async fn run() -> Result<(), Error> {
+pub(crate) async fn run(options: LspOptions) -> Result<(), Error> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
@@ -398,6 +406,7 @@ pub(crate) async fn run() -> Result<(), Error> {
     let (service, socket) = LspService::new(|client| Backend {
         audit_registry: audits,
         client,
+        options,
         workspace_dirs: RwLock::new(vec![]),
     });
 
