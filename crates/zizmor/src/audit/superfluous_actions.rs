@@ -176,6 +176,7 @@ impl SuperfluousActions {
                                 .annotated(*recommendation)
                                 .primary(),
                         )
+                        .add_location(step.location().hidden())
                         .build(step)?,
                 );
             }

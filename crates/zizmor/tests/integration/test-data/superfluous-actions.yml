@@ -17,3 +17,8 @@ jobs:
 
       - name: update comment
         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
+
+      # the ignore comment works on `name:` because every superfluous-actions finding
+      # has a hidden span for the entire step.
+      - name: test ignore # zizmor: ignore[superfluous-actions]
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
