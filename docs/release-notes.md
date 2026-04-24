@@ -57,6 +57,9 @@ of `zizmor`.
 * Fixed a bug where the [unpinned-images] audit would miss images defined
   in `container: <image>` clauses (#1944)
 
+* Fixed a bug where inline ignore comments could not be easily applied
+  to [superfluous-actions] findings (#1945)
+
 ## 1.24.1
 
 ### Bug Fixes 🐛
