@@ -25,7 +25,7 @@ of `zizmor`.
 * `zizmor` now accepts the `--no-ignores` flag to disable all ignore comments and
   configurations when reporting findings (#1935)
 
-* `zizmor`'s lsp now supports configuring the audit persona (#1943)
+* `zizmor`'s LSP now honors the `--persona` flag on the CLI (#1943)
 
 ### Enhancements
 
