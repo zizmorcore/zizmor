@@ -98,13 +98,22 @@ impl Audit for UnpinnedImages {
         let mut image_refs_with_locations: Vec<(&'doc LoE<DockerUses>, SymbolicLocation<'doc>)> =
             vec![];
 
-        if let Some(Container::Container { image, .. }) = &job.container {
-            image_refs_with_locations.push((
-                image,
-                job.location()
-                    .primary()
-                    .with_keys(["container".into(), "image".into()]),
-            ));
+        match &job.container {
+            Some(Container::Name(image)) => {
+                image_refs_with_locations.push((
+                    image,
+                    job.location().primary().with_keys(["container".into()]),
+                ));
+            }
+            Some(Container::Container { image, .. }) => {
+                image_refs_with_locations.push((
+                    image,
+                    job.location()
+                        .primary()
+                        .with_keys(["container".into(), "image".into()]),
+                ));
+            }
+            None => {}
         }
 
         for (service, config) in job.services.iter() {

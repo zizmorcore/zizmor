@@ -54,6 +54,9 @@ of `zizmor`.
 * Fixed a bug where local directory input collection could miss workflows for
   relative-path invocations from within `.github` subdirectories (#1909)
 
+* Fixed a bug where the [unpinned-images] audit would miss images defined
+  in `container: <image>` clauses (#1944)
+
 ## 1.24.1
 
 ### Bug Fixes 🐛

@@ -163,7 +163,7 @@ pub struct Matrix {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case", untagged)]
 pub enum Container {
-    Name(String),
+    Name(LoE<DockerUses>),
     Container {
         image: LoE<DockerUses>,
         credentials: Option<DockerCredentials>,

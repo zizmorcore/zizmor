@@ -21,6 +21,56 @@ expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=
  INFO audit: zizmor: 🌈 completed .github/workflows/macos.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/non-native.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/windows.yml
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/linux-old.yml:58:5
+   |
+58 |     container: 'debian:stretch'
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/linux.yml:64:5
+    |
+ 64 |     container: ${{ matrix.build.container }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+...
+ 73 |       matrix:
+    |       ------ this matrix
+...
+390 |             container: 'andy5995/slackware-build-essential:15.0'
+    |             ---------------------------------------------------- this expansion of matrix.build.container
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/linux.yml:64:5
+    |
+ 64 |     container: ${{ matrix.build.container }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+...
+ 73 |       matrix:
+    |       ------ this matrix
+...
+394 |             container: 'alpine:3.20'
+    |             ------------------------ this expansion of matrix.build.container
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/linux.yml:64:5
+    |
+ 64 |     container: ${{ matrix.build.container }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+...
+ 73 |       matrix:
+    |       ------ this matrix
+...
+398 |             container: 'alpine:3.20'
+    |             ------------------------ this expansion of matrix.build.container
+    |
+    = note: audit confidence → High
+
 warning[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
   --> .github/workflows/windows.yml:57:87
    |
@@ -32,4 +82,4 @@ warning[ref-version-mismatch]: action's hash pin has mismatched or missing versi
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
-47 findings (2 ignored, 44 suppressed): 0 informational, 0 low, 1 medium, 0 high
+51 findings (2 ignored, 44 suppressed): 0 informational, 0 low, 1 medium, 4 high

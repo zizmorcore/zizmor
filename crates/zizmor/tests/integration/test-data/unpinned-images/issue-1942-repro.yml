@@ -1,0 +1,16 @@
+name: issue-1942-repro
+on:
+  push:
+    branches: [main]
+permissions: {}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  container-test-job:
+    name: issue-1942-repro
+    runs-on: ubuntu-latest
+    container: node:18
+    steps:
+      - name: Check for dockerenv file
+        run: (ls /.dockerenv && echo Found dockerenv) || (echo No dockerenv)

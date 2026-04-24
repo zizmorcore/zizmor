@@ -315,6 +315,14 @@ help[template-injection]: code injection via template expansion
     = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
    --> .github/workflows/ci.yml:215:7
     |
 215 |       image: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
@@ -781,4 +789,4 @@ info[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → Low
 
-79 findings (9 suppressed): 19 informational, 35 low, 7 medium, 9 high
+80 findings (9 suppressed): 19 informational, 35 low, 7 medium, 10 high
