@@ -60,9 +60,12 @@ pub struct Workflow {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case", untagged)]
 pub enum Trigger {
+    // NOTE: `Events` is before `BareEvent` because serde-yaml appears to capture
+    // `pull_request:` (an event with a missing body) as equivalent to `on: pull_request`
+    // (a bare event).
+    Events(Box<event::Events>),
     BareEvent(event::BareEvent),
     BareEvents(Vec<event::BareEvent>),
-    Events(Box<event::Events>),
 }
 
 #[derive(Deserialize, Debug)]

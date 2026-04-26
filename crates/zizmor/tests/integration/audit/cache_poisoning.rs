@@ -583,3 +583,37 @@ fn test_ramsey_composer_install_action() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Tests that we properly handle `on: ... release:` style triggers,
+/// i.e. where `release:` is a key rather than a bare trigger name.
+#[test]
+fn test_workflow_release_trigger_object() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "cache-poisoning/workflow-release-trigger-object.yml"
+            ))
+            .run()?,
+        @r#"
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:23:9
+       |
+     1 | / on:
+     2 | |   push:
+     3 | |     branches:
+     4 | |       - "main"
+     5 | |   release:
+       | |__________- generally used when publishing artifacts generated at runtime
+    ...
+    23 |           uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    4 findings (1 ignored, 2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    "#
+    );
+
+    Ok(())
+}

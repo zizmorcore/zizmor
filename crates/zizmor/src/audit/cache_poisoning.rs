@@ -286,8 +286,8 @@ impl CachePoisoning {
         match trigger {
             Trigger::BareEvent(event) => *event == BareEvent::Release,
             Trigger::BareEvents(events) => events.contains(&BareEvent::Release),
-            Trigger::Events(events) => match &events.push {
-                OptionalBody::Body(body) => {
+            Trigger::Events(events) => {
+                let push_is_release = if let OptionalBody::Body(body) = &events.push {
                     let pushing_new_tag = &body.tag_filters.is_some();
                     let pushing_to_release_branch =
                         if let Some(BranchFilters::Branches(branches)) = &body.branch_filters {
@@ -299,9 +299,12 @@ impl CachePoisoning {
                         };
 
                     *pushing_new_tag || pushing_to_release_branch
-                }
-                _ => false,
-            },
+                } else {
+                    false
+                };
+
+                push_is_release || !matches!(&events.release, OptionalBody::Missing)
+            }
         }
     }
 
