@@ -60,6 +60,9 @@ of `zizmor`.
 * Fixed a bug where inline ignore comments could not be easily applied
   to [superfluous-actions] findings (#1945)
 
+* Fixed a bug where the [cache-poisoning] audit would fail to detect
+  some release trigger patterns (#1946)
+
 ## 1.24.1
 
 ### Bug Fixes 🐛
