@@ -173,7 +173,23 @@ fn test_issue_418_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-418-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @r#"
+    warning[dangerous-triggers]: use of fundamentally insecure workflow trigger
+      --> @@INPUT@@:12:3
+       |
+    12 | /   stop:
+    13 | |     name: stop
+    14 | |     runs-on: ubuntu-latest
+    15 | |     env:
+    ...  |
+    19 | |         with:
+    20 | |           script: console.log("${{ env.COMMENT_ID }}")
+       | |_______________________________________________________^ issue_comment job lacks an author_association guard
+       |
+       = note: audit confidence → Medium
+
+    3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    "#
     );
 
     Ok(())

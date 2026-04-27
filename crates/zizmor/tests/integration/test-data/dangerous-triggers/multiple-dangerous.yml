@@ -1,0 +1,14 @@
+on:
+  pull_request_target:
+  issue_comment:
+    types: [created]
+
+name: multiple-dangerous
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "building"

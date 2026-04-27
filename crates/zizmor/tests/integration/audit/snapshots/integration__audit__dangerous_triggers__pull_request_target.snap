@@ -1,0 +1,13 @@
+---
+source: crates/zizmor/tests/integration/audit/dangerous_triggers.rs
+expression: "zizmor().input(input_under_test(\"dangerous-triggers/pull-request-target.yml\",)).run()?"
+---
+error[dangerous-triggers]: use of fundamentally insecure workflow trigger
+ --> @@INPUT@@:1:1
+  |
+1 | on: pull_request_target
+  | ^^^^^^^^^^^^^^^^^^^^^^^ pull_request_target is almost always used insecurely
+  |
+  = note: audit confidence → Medium
+
+3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high

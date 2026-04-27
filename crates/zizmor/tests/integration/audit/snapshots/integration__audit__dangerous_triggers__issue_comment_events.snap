@@ -1,0 +1,16 @@
+---
+source: crates/zizmor/tests/integration/audit/dangerous_triggers.rs
+expression: "zizmor().input(input_under_test(\"dangerous-triggers/issue-comment-events.yml\",)).run()?"
+---
+warning[dangerous-triggers]: use of fundamentally insecure workflow trigger
+  --> @@INPUT@@:10:3
+   |
+10 | /   respond:
+11 | |     runs-on: ubuntu-latest
+12 | |     steps:
+13 | |       - run: echo "comment created"
+   | |____________________________________^ issue_comment job lacks an author_association guard
+   |
+   = note: audit confidence → Medium
+
+3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high

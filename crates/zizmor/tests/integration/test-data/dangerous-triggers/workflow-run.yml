@@ -1,0 +1,13 @@
+on:
+  workflow_run:
+    workflows: [build]
+
+name: workflow-run
+
+permissions: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "deploying"
