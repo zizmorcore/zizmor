@@ -147,7 +147,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    13 findings (1 suppressed, 11 fixable): 0 informational, 0 low, 0 medium, 12 high
+    13 findings (1 suppressed, 11 safe fixes): 0 informational, 0 low, 0 medium, 12 high
     "
     );
 

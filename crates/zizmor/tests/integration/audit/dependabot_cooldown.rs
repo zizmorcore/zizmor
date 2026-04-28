@@ -20,7 +20,7 @@ fn test_missing_cooldown() -> anyhow::Result<()> {
       = note: audit confidence → High
       = note: this finding has an auto-fix
 
-    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    1 findings (1 safe fixes): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -45,7 +45,7 @@ fn test_no_default_days() -> anyhow::Result<()> {
       = note: audit confidence → High
       = note: this finding has an auto-fix
 
-    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    1 findings (1 safe fixes): 0 informational, 0 low, 1 medium, 0 high
     ");
 
     Ok(())
@@ -69,7 +69,7 @@ fn test_default_days_too_short() -> anyhow::Result<()> {
       = note: audit confidence → Medium
       = note: this finding has an auto-fix
 
-    1 findings (1 fixable): 0 informational, 1 low, 0 medium, 0 high
+    1 findings (1 safe fixes): 0 informational, 1 low, 0 medium, 0 high
     ");
 
     Ok(())
@@ -228,7 +228,7 @@ fn test_opentofu_cooldown() -> anyhow::Result<()> {
       = note: audit confidence → High
       = note: this finding has an auto-fix
 
-    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    1 findings (1 safe fixes): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 

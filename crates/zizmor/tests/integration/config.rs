@@ -303,7 +303,7 @@ fn test_severity_remap() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -329,7 +329,7 @@ fn test_severity_remap_affects_min_severity() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 

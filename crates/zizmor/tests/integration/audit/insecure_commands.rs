@@ -27,7 +27,7 @@ fn test_insecure_commands_auditor() -> Result<()> {
        |
        = note: audit confidence → Low
 
-    2 findings (1 fixable): 0 informational, 0 low, 0 medium, 2 high
+    2 findings (1 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 
@@ -51,7 +51,7 @@ fn test_insecure_commands_default() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -94,7 +94,7 @@ fn test_action_auditor() -> Result<()> {
        |
        = note: audit confidence → Low
 
-    3 findings (2 fixable): 0 informational, 0 low, 0 medium, 3 high
+    3 findings (2 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -127,7 +127,7 @@ fn test_issue_839_repro() -> Result<()> {
        |
        = note: audit confidence → Low
 
-    2 findings (1 fixable): 0 informational, 0 low, 0 medium, 2 high
+    2 findings (1 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 

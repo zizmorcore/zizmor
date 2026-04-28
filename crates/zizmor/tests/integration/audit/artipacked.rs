@@ -14,7 +14,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -38,7 +38,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -74,7 +74,7 @@ fn test_auditor_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (2 fixable): 0 informational, 0 low, 2 medium, 0 high
+    2 findings (2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 
@@ -107,7 +107,7 @@ fn test_issue_447() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    1 findings (1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
     "#
     );
 
@@ -138,7 +138,7 @@ fn test_issue_1709() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    1 findings (1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -204,7 +204,7 @@ fn test_composite_action() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (2 fixable): 0 informational, 0 low, 2 medium, 0 high
+    2 findings (2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 

@@ -49,7 +49,7 @@ fn test_template_injection_dynamic_matrix() -> Result<()> {
        = note: audit confidence → Medium
        = note: this finding has an auto-fix
 
-    1 findings (1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    1 findings (1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
     "#
     );
 
@@ -86,7 +86,7 @@ fn test_pr_317_repro() -> Result<()> {
        = note: audit confidence → Medium
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -133,7 +133,7 @@ fn test_static_env() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    7 findings (4 suppressed, 3 fixable): 0 informational, 3 low, 0 medium, 0 high
+    7 findings (4 suppressed, 3 unsafe fixes): 0 informational, 3 low, 0 medium, 0 high
     "
     );
 
@@ -244,7 +244,7 @@ fn test_pr_425_backstop_action() -> Result<()> {
        |
        = note: audit confidence → High
 
-    5 findings (1 fixable): 0 informational, 0 low, 0 medium, 5 high
+    5 findings (1 unsafe fixes): 0 informational, 0 low, 0 medium, 5 high
     "#
     );
 
