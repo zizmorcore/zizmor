@@ -3,6 +3,7 @@
 use anyhow::anyhow;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 use self::location::{Location, SymbolicLocation};
 use crate::{
@@ -75,7 +76,7 @@ pub(crate) struct Determinations {
 }
 
 /// Represents the "disposition" of a fix.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub(crate) enum FixDisposition {
     /// The fix is safe to apply automatically.
     #[allow(dead_code)]
@@ -83,6 +84,15 @@ pub(crate) enum FixDisposition {
     /// The fix should be applied with manual oversight.
     #[default]
     Unsafe,
+}
+
+impl fmt::Display for FixDisposition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            FixDisposition::Safe => write!(f, "safe"),
+            FixDisposition::Unsafe => write!(f, "unsafe"),
+        }
+    }
 }
 
 /// Represents a suggested fix for a finding.
