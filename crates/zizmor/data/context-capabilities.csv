@@ -1,4 +1,5 @@
 github.action_path,fixed
+github.actor,fixed
 github.event.action,arbitrary
 github.event.after,fixed
 github.event.answer.author_association,fixed
@@ -32,7 +33,7 @@ github.event.answer.user.gists_url,structured
 github.event.answer.user.gravatar_id,arbitrary
 github.event.answer.user.html_url,arbitrary
 github.event.answer.user.id,fixed
-github.event.answer.user.login,arbitrary
+github.event.answer.user.login,fixed
 github.event.answer.user.name,arbitrary
 github.event.answer.user.node_id,arbitrary
 github.event.answer.user.organizations_url,arbitrary
@@ -54,7 +55,7 @@ github.event.assignee.gists_url,structured
 github.event.assignee.gravatar_id,arbitrary
 github.event.assignee.html_url,arbitrary
 github.event.assignee.id,fixed
-github.event.assignee.login,arbitrary
+github.event.assignee.login,fixed
 github.event.assignee.name,arbitrary
 github.event.assignee.node_id,arbitrary
 github.event.assignee.organizations_url,arbitrary
@@ -88,7 +89,7 @@ github.event.build.pusher.gists_url,structured
 github.event.build.pusher.gravatar_id,arbitrary
 github.event.build.pusher.html_url,arbitrary
 github.event.build.pusher.id,fixed
-github.event.build.pusher.login,arbitrary
+github.event.build.pusher.login,fixed
 github.event.build.pusher.name,arbitrary
 github.event.build.pusher.node_id,arbitrary
 github.event.build.pusher.organizations_url,arbitrary
@@ -140,7 +141,7 @@ github.event.changes.new_discussion.answer_chosen_by.gists_url,structured
 github.event.changes.new_discussion.answer_chosen_by.gravatar_id,arbitrary
 github.event.changes.new_discussion.answer_chosen_by.html_url,arbitrary
 github.event.changes.new_discussion.answer_chosen_by.id,fixed
-github.event.changes.new_discussion.answer_chosen_by.login,arbitrary
+github.event.changes.new_discussion.answer_chosen_by.login,fixed
 github.event.changes.new_discussion.answer_chosen_by.name,arbitrary
 github.event.changes.new_discussion.answer_chosen_by.node_id,arbitrary
 github.event.changes.new_discussion.answer_chosen_by.organizations_url,arbitrary
@@ -205,7 +206,7 @@ github.event.changes.new_discussion.user.gists_url,structured
 github.event.changes.new_discussion.user.gravatar_id,arbitrary
 github.event.changes.new_discussion.user.html_url,arbitrary
 github.event.changes.new_discussion.user.id,fixed
-github.event.changes.new_discussion.user.login,arbitrary
+github.event.changes.new_discussion.user.login,fixed
 github.event.changes.new_discussion.user.name,arbitrary
 github.event.changes.new_discussion.user.node_id,arbitrary
 github.event.changes.new_discussion.user.organizations_url,arbitrary
@@ -228,7 +229,7 @@ github.event.changes.new_issue.assignee.gists_url,structured
 github.event.changes.new_issue.assignee.gravatar_id,arbitrary
 github.event.changes.new_issue.assignee.html_url,arbitrary
 github.event.changes.new_issue.assignee.id,fixed
-github.event.changes.new_issue.assignee.login,arbitrary
+github.event.changes.new_issue.assignee.login,fixed
 github.event.changes.new_issue.assignee.name,arbitrary
 github.event.changes.new_issue.assignee.node_id,arbitrary
 github.event.changes.new_issue.assignee.organizations_url,arbitrary
@@ -250,7 +251,7 @@ github.event.changes.new_issue.assignees.*.gists_url,structured
 github.event.changes.new_issue.assignees.*.gravatar_id,arbitrary
 github.event.changes.new_issue.assignees.*.html_url,arbitrary
 github.event.changes.new_issue.assignees.*.id,fixed
-github.event.changes.new_issue.assignees.*.login,arbitrary
+github.event.changes.new_issue.assignees.*.login,fixed
 github.event.changes.new_issue.assignees.*.name,arbitrary
 github.event.changes.new_issue.assignees.*.node_id,arbitrary
 github.event.changes.new_issue.assignees.*.organizations_url,arbitrary
@@ -305,7 +306,7 @@ github.event.changes.new_issue.milestone.creator.gists_url,structured
 github.event.changes.new_issue.milestone.creator.gravatar_id,arbitrary
 github.event.changes.new_issue.milestone.creator.html_url,arbitrary
 github.event.changes.new_issue.milestone.creator.id,fixed
-github.event.changes.new_issue.milestone.creator.login,arbitrary
+github.event.changes.new_issue.milestone.creator.login,fixed
 github.event.changes.new_issue.milestone.creator.name,arbitrary
 github.event.changes.new_issue.milestone.creator.node_id,arbitrary
 github.event.changes.new_issue.milestone.creator.organizations_url,arbitrary
@@ -349,7 +350,7 @@ github.event.changes.new_issue.performed_via_github_app.owner.gists_url,structur
 github.event.changes.new_issue.performed_via_github_app.owner.gravatar_id,arbitrary
 github.event.changes.new_issue.performed_via_github_app.owner.html_url,arbitrary
 github.event.changes.new_issue.performed_via_github_app.owner.id,fixed
-github.event.changes.new_issue.performed_via_github_app.owner.login,arbitrary
+github.event.changes.new_issue.performed_via_github_app.owner.login,fixed
 github.event.changes.new_issue.performed_via_github_app.owner.name,arbitrary
 github.event.changes.new_issue.performed_via_github_app.owner.node_id,arbitrary
 github.event.changes.new_issue.performed_via_github_app.owner.organizations_url,arbitrary
@@ -441,7 +442,7 @@ github.event.changes.new_issue.user.gists_url,structured
 github.event.changes.new_issue.user.gravatar_id,arbitrary
 github.event.changes.new_issue.user.html_url,arbitrary
 github.event.changes.new_issue.user.id,fixed
-github.event.changes.new_issue.user.login,arbitrary
+github.event.changes.new_issue.user.login,fixed
 github.event.changes.new_issue.user.name,arbitrary
 github.event.changes.new_issue.user.node_id,arbitrary
 github.event.changes.new_issue.user.organizations_url,arbitrary
@@ -538,7 +539,7 @@ github.event.changes.new_repository.organization.gists_url,arbitrary
 github.event.changes.new_repository.organization.gravatar_id,arbitrary
 github.event.changes.new_repository.organization.html_url,arbitrary
 github.event.changes.new_repository.organization.id,fixed
-github.event.changes.new_repository.organization.login,arbitrary
+github.event.changes.new_repository.organization.login,fixed
 github.event.changes.new_repository.organization.name,arbitrary
 github.event.changes.new_repository.organization.node_id,arbitrary
 github.event.changes.new_repository.organization.organizations_url,arbitrary
@@ -561,7 +562,7 @@ github.event.changes.new_repository.owner.gists_url,arbitrary
 github.event.changes.new_repository.owner.gravatar_id,arbitrary
 github.event.changes.new_repository.owner.html_url,arbitrary
 github.event.changes.new_repository.owner.id,fixed
-github.event.changes.new_repository.owner.login,arbitrary
+github.event.changes.new_repository.owner.login,fixed
 github.event.changes.new_repository.owner.name,arbitrary
 github.event.changes.new_repository.owner.node_id,arbitrary
 github.event.changes.new_repository.owner.organizations_url,arbitrary
@@ -669,7 +670,7 @@ github.event.changes.new_repository.template_repository.owner.gists_url,arbitrar
 github.event.changes.new_repository.template_repository.owner.gravatar_id,arbitrary
 github.event.changes.new_repository.template_repository.owner.html_url,arbitrary
 github.event.changes.new_repository.template_repository.owner.id,fixed
-github.event.changes.new_repository.template_repository.owner.login,arbitrary
+github.event.changes.new_repository.template_repository.owner.login,fixed
 github.event.changes.new_repository.template_repository.owner.node_id,arbitrary
 github.event.changes.new_repository.template_repository.owner.organizations_url,arbitrary
 github.event.changes.new_repository.template_repository.owner.received_events_url,arbitrary
@@ -729,7 +730,7 @@ github.event.changes.old_issue.assignee.gists_url,structured
 github.event.changes.old_issue.assignee.gravatar_id,arbitrary
 github.event.changes.old_issue.assignee.html_url,arbitrary
 github.event.changes.old_issue.assignee.id,fixed
-github.event.changes.old_issue.assignee.login,arbitrary
+github.event.changes.old_issue.assignee.login,fixed
 github.event.changes.old_issue.assignee.name,arbitrary
 github.event.changes.old_issue.assignee.node_id,arbitrary
 github.event.changes.old_issue.assignee.organizations_url,arbitrary
@@ -751,7 +752,7 @@ github.event.changes.old_issue.assignees.*.gists_url,structured
 github.event.changes.old_issue.assignees.*.gravatar_id,arbitrary
 github.event.changes.old_issue.assignees.*.html_url,arbitrary
 github.event.changes.old_issue.assignees.*.id,fixed
-github.event.changes.old_issue.assignees.*.login,arbitrary
+github.event.changes.old_issue.assignees.*.login,fixed
 github.event.changes.old_issue.assignees.*.name,arbitrary
 github.event.changes.old_issue.assignees.*.node_id,arbitrary
 github.event.changes.old_issue.assignees.*.organizations_url,arbitrary
@@ -806,7 +807,7 @@ github.event.changes.old_issue.milestone.creator.gists_url,structured
 github.event.changes.old_issue.milestone.creator.gravatar_id,arbitrary
 github.event.changes.old_issue.milestone.creator.html_url,arbitrary
 github.event.changes.old_issue.milestone.creator.id,fixed
-github.event.changes.old_issue.milestone.creator.login,arbitrary
+github.event.changes.old_issue.milestone.creator.login,fixed
 github.event.changes.old_issue.milestone.creator.name,arbitrary
 github.event.changes.old_issue.milestone.creator.node_id,arbitrary
 github.event.changes.old_issue.milestone.creator.organizations_url,arbitrary
@@ -850,7 +851,7 @@ github.event.changes.old_issue.performed_via_github_app.owner.gists_url,structur
 github.event.changes.old_issue.performed_via_github_app.owner.gravatar_id,arbitrary
 github.event.changes.old_issue.performed_via_github_app.owner.html_url,arbitrary
 github.event.changes.old_issue.performed_via_github_app.owner.id,fixed
-github.event.changes.old_issue.performed_via_github_app.owner.login,arbitrary
+github.event.changes.old_issue.performed_via_github_app.owner.login,fixed
 github.event.changes.old_issue.performed_via_github_app.owner.name,arbitrary
 github.event.changes.old_issue.performed_via_github_app.owner.node_id,arbitrary
 github.event.changes.old_issue.performed_via_github_app.owner.organizations_url,arbitrary
@@ -942,7 +943,7 @@ github.event.changes.old_issue.user.gists_url,structured
 github.event.changes.old_issue.user.gravatar_id,arbitrary
 github.event.changes.old_issue.user.html_url,arbitrary
 github.event.changes.old_issue.user.id,fixed
-github.event.changes.old_issue.user.login,arbitrary
+github.event.changes.old_issue.user.login,fixed
 github.event.changes.old_issue.user.name,arbitrary
 github.event.changes.old_issue.user.node_id,arbitrary
 github.event.changes.old_issue.user.organizations_url,arbitrary
@@ -1034,7 +1035,7 @@ github.event.changes.old_repository.owner.gists_url,structured
 github.event.changes.old_repository.owner.gravatar_id,arbitrary
 github.event.changes.old_repository.owner.html_url,arbitrary
 github.event.changes.old_repository.owner.id,fixed
-github.event.changes.old_repository.owner.login,arbitrary
+github.event.changes.old_repository.owner.login,fixed
 github.event.changes.old_repository.owner.name,arbitrary
 github.event.changes.old_repository.owner.node_id,arbitrary
 github.event.changes.old_repository.owner.organizations_url,arbitrary
@@ -1103,7 +1104,7 @@ github.event.check_run.app.owner.gists_url,arbitrary
 github.event.check_run.app.owner.gravatar_id,arbitrary
 github.event.check_run.app.owner.html_url,arbitrary
 github.event.check_run.app.owner.id,fixed
-github.event.check_run.app.owner.login,arbitrary
+github.event.check_run.app.owner.login,fixed
 github.event.check_run.app.owner.name,arbitrary
 github.event.check_run.app.owner.node_id,arbitrary
 github.event.check_run.app.owner.organizations_url,arbitrary
@@ -1149,7 +1150,7 @@ github.event.check_run.check_suite.app.owner.gists_url,arbitrary
 github.event.check_run.check_suite.app.owner.gravatar_id,arbitrary
 github.event.check_run.check_suite.app.owner.html_url,arbitrary
 github.event.check_run.check_suite.app.owner.id,fixed
-github.event.check_run.check_suite.app.owner.login,arbitrary
+github.event.check_run.check_suite.app.owner.login,fixed
 github.event.check_run.check_suite.app.owner.name,arbitrary
 github.event.check_run.check_suite.app.owner.node_id,arbitrary
 github.event.check_run.check_suite.app.owner.organizations_url,arbitrary
@@ -1271,7 +1272,7 @@ github.event.check_run.check_suite.repository.owner.gists_url,arbitrary
 github.event.check_run.check_suite.repository.owner.gravatar_id,arbitrary
 github.event.check_run.check_suite.repository.owner.html_url,arbitrary
 github.event.check_run.check_suite.repository.owner.id,fixed
-github.event.check_run.check_suite.repository.owner.login,arbitrary
+github.event.check_run.check_suite.repository.owner.login,fixed
 github.event.check_run.check_suite.repository.owner.name,arbitrary
 github.event.check_run.check_suite.repository.owner.node_id,arbitrary
 github.event.check_run.check_suite.repository.owner.organizations_url,arbitrary
@@ -1354,7 +1355,7 @@ github.event.check_run.deployment.performed_via_github_app.owner.gists_url,arbit
 github.event.check_run.deployment.performed_via_github_app.owner.gravatar_id,arbitrary
 github.event.check_run.deployment.performed_via_github_app.owner.html_url,arbitrary
 github.event.check_run.deployment.performed_via_github_app.owner.id,fixed
-github.event.check_run.deployment.performed_via_github_app.owner.login,arbitrary
+github.event.check_run.deployment.performed_via_github_app.owner.login,fixed
 github.event.check_run.deployment.performed_via_github_app.owner.name,arbitrary
 github.event.check_run.deployment.performed_via_github_app.owner.node_id,arbitrary
 github.event.check_run.deployment.performed_via_github_app.owner.organizations_url,arbitrary
@@ -1433,7 +1434,7 @@ github.event.check_suite.app.owner.gists_url,structured
 github.event.check_suite.app.owner.gravatar_id,arbitrary
 github.event.check_suite.app.owner.html_url,arbitrary
 github.event.check_suite.app.owner.id,fixed
-github.event.check_suite.app.owner.login,arbitrary
+github.event.check_suite.app.owner.login,fixed
 github.event.check_suite.app.owner.name,arbitrary
 github.event.check_suite.app.owner.node_id,arbitrary
 github.event.check_suite.app.owner.organizations_url,arbitrary
@@ -1490,11 +1491,11 @@ github.event.check_suite.head_branch,arbitrary
 github.event.check_suite.head_commit.author.date,fixed
 github.event.check_suite.head_commit.author.email,structured
 github.event.check_suite.head_commit.author.name,arbitrary
-github.event.check_suite.head_commit.author.username,arbitrary
+github.event.check_suite.head_commit.author.username,fixed
 github.event.check_suite.head_commit.committer.date,fixed
 github.event.check_suite.head_commit.committer.email,structured
 github.event.check_suite.head_commit.committer.name,arbitrary
-github.event.check_suite.head_commit.committer.username,arbitrary
+github.event.check_suite.head_commit.committer.username,fixed
 github.event.check_suite.head_commit.id,arbitrary
 github.event.check_suite.head_commit.message,arbitrary
 github.event.check_suite.head_commit.timestamp,arbitrary
@@ -1567,7 +1568,7 @@ github.event.comment.performed_via_github_app.owner.gists_url,arbitrary
 github.event.comment.performed_via_github_app.owner.gravatar_id,arbitrary
 github.event.comment.performed_via_github_app.owner.html_url,arbitrary
 github.event.comment.performed_via_github_app.owner.id,fixed
-github.event.comment.performed_via_github_app.owner.login,arbitrary
+github.event.comment.performed_via_github_app.owner.login,fixed
 github.event.comment.performed_via_github_app.owner.name,arbitrary
 github.event.comment.performed_via_github_app.owner.node_id,arbitrary
 github.event.comment.performed_via_github_app.owner.organizations_url,arbitrary
@@ -1621,7 +1622,7 @@ github.event.comment.user.gists_url,structured
 github.event.comment.user.gravatar_id,arbitrary
 github.event.comment.user.html_url,arbitrary
 github.event.comment.user.id,fixed
-github.event.comment.user.login,arbitrary
+github.event.comment.user.login,fixed
 github.event.comment.user.name,arbitrary
 github.event.comment.user.node_id,arbitrary
 github.event.comment.user.organizations_url,arbitrary
@@ -1643,7 +1644,7 @@ github.event.commit.author.gists_url,structured
 github.event.commit.author.gravatar_id,arbitrary
 github.event.commit.author.html_url,arbitrary
 github.event.commit.author.id,fixed
-github.event.commit.author.login,arbitrary
+github.event.commit.author.login,fixed
 github.event.commit.author.name,arbitrary
 github.event.commit.author.node_id,arbitrary
 github.event.commit.author.organizations_url,arbitrary
@@ -1658,12 +1659,12 @@ github.event.commit.comments_url,arbitrary
 github.event.commit.commit.author.date,arbitrary
 github.event.commit.commit.author.email,arbitrary
 github.event.commit.commit.author.name,arbitrary
-github.event.commit.commit.author.username,arbitrary
+github.event.commit.commit.author.username,fixed
 github.event.commit.commit.comment_count,fixed
 github.event.commit.commit.committer.date,arbitrary
 github.event.commit.commit.committer.email,arbitrary
 github.event.commit.commit.committer.name,arbitrary
-github.event.commit.commit.committer.username,arbitrary
+github.event.commit.commit.committer.username,fixed
 github.event.commit.commit.message,arbitrary
 github.event.commit.commit.tree.sha,arbitrary
 github.event.commit.commit.tree.url,arbitrary
@@ -1683,7 +1684,7 @@ github.event.commit.committer.gists_url,structured
 github.event.commit.committer.gravatar_id,arbitrary
 github.event.commit.committer.html_url,arbitrary
 github.event.commit.committer.id,fixed
-github.event.commit.committer.login,arbitrary
+github.event.commit.committer.login,fixed
 github.event.commit.committer.name,arbitrary
 github.event.commit.committer.node_id,arbitrary
 github.event.commit.committer.organizations_url,arbitrary
@@ -1705,11 +1706,11 @@ github.event.commits.*.added.*,arbitrary
 github.event.commits.*.author.date,fixed
 github.event.commits.*.author.email,structured
 github.event.commits.*.author.name,arbitrary
-github.event.commits.*.author.username,arbitrary
+github.event.commits.*.author.username,fixed
 github.event.commits.*.committer.date,fixed
 github.event.commits.*.committer.email,structured
 github.event.commits.*.committer.name,arbitrary
-github.event.commits.*.committer.username,arbitrary
+github.event.commits.*.committer.username,fixed
 github.event.commits.*.distinct,fixed
 github.event.commits.*.id,arbitrary
 github.event.commits.*.message,arbitrary
@@ -1734,7 +1735,7 @@ github.event.deployment.creator.gists_url,structured
 github.event.deployment.creator.gravatar_id,arbitrary
 github.event.deployment.creator.html_url,arbitrary
 github.event.deployment.creator.id,fixed
-github.event.deployment.creator.login,arbitrary
+github.event.deployment.creator.login,fixed
 github.event.deployment.creator.name,arbitrary
 github.event.deployment.creator.node_id,arbitrary
 github.event.deployment.creator.organizations_url,arbitrary
@@ -1770,7 +1771,7 @@ github.event.deployment.performed_via_github_app.owner.gists_url,structured
 github.event.deployment.performed_via_github_app.owner.gravatar_id,arbitrary
 github.event.deployment.performed_via_github_app.owner.html_url,arbitrary
 github.event.deployment.performed_via_github_app.owner.id,fixed
-github.event.deployment.performed_via_github_app.owner.login,arbitrary
+github.event.deployment.performed_via_github_app.owner.login,fixed
 github.event.deployment.performed_via_github_app.owner.name,arbitrary
 github.event.deployment.performed_via_github_app.owner.node_id,arbitrary
 github.event.deployment.performed_via_github_app.owner.organizations_url,arbitrary
@@ -1839,7 +1840,7 @@ github.event.deployment_status.creator.gists_url,structured
 github.event.deployment_status.creator.gravatar_id,arbitrary
 github.event.deployment_status.creator.html_url,arbitrary
 github.event.deployment_status.creator.id,fixed
-github.event.deployment_status.creator.login,arbitrary
+github.event.deployment_status.creator.login,fixed
 github.event.deployment_status.creator.name,arbitrary
 github.event.deployment_status.creator.node_id,arbitrary
 github.event.deployment_status.creator.organizations_url,arbitrary
@@ -1876,7 +1877,7 @@ github.event.deployment_status.performed_via_github_app.owner.gists_url,structur
 github.event.deployment_status.performed_via_github_app.owner.gravatar_id,arbitrary
 github.event.deployment_status.performed_via_github_app.owner.html_url,arbitrary
 github.event.deployment_status.performed_via_github_app.owner.id,fixed
-github.event.deployment_status.performed_via_github_app.owner.login,arbitrary
+github.event.deployment_status.performed_via_github_app.owner.login,fixed
 github.event.deployment_status.performed_via_github_app.owner.name,arbitrary
 github.event.deployment_status.performed_via_github_app.owner.node_id,arbitrary
 github.event.deployment_status.performed_via_github_app.owner.organizations_url,arbitrary
@@ -1943,7 +1944,7 @@ github.event.discussion.answer_chosen_by.gists_url,structured
 github.event.discussion.answer_chosen_by.gravatar_id,arbitrary
 github.event.discussion.answer_chosen_by.html_url,arbitrary
 github.event.discussion.answer_chosen_by.id,fixed
-github.event.discussion.answer_chosen_by.login,arbitrary
+github.event.discussion.answer_chosen_by.login,fixed
 github.event.discussion.answer_chosen_by.name,arbitrary
 github.event.discussion.answer_chosen_by.node_id,arbitrary
 github.event.discussion.answer_chosen_by.organizations_url,arbitrary
@@ -2008,7 +2009,7 @@ github.event.discussion.user.gists_url,structured
 github.event.discussion.user.gravatar_id,arbitrary
 github.event.discussion.user.html_url,arbitrary
 github.event.discussion.user.id,fixed
-github.event.discussion.user.login,arbitrary
+github.event.discussion.user.login,fixed
 github.event.discussion.user.name,arbitrary
 github.event.discussion.user.node_id,arbitrary
 github.event.discussion.user.organizations_url,arbitrary
@@ -2109,7 +2110,7 @@ github.event.forkee.owner.gists_url,arbitrary
 github.event.forkee.owner.gravatar_id,arbitrary
 github.event.forkee.owner.html_url,arbitrary
 github.event.forkee.owner.id,fixed
-github.event.forkee.owner.login,arbitrary
+github.event.forkee.owner.login,fixed
 github.event.forkee.owner.name,arbitrary
 github.event.forkee.owner.node_id,arbitrary
 github.event.forkee.owner.organizations_url,arbitrary
@@ -2155,11 +2156,11 @@ github.event.head_commit.added.*,arbitrary
 github.event.head_commit.author.date,fixed
 github.event.head_commit.author.email,structured
 github.event.head_commit.author.name,arbitrary
-github.event.head_commit.author.username,arbitrary
+github.event.head_commit.author.username,fixed
 github.event.head_commit.committer.date,fixed
 github.event.head_commit.committer.email,structured
 github.event.head_commit.committer.name,arbitrary
-github.event.head_commit.committer.username,arbitrary
+github.event.head_commit.committer.username,fixed
 github.event.head_commit.distinct,fixed
 github.event.head_commit.id,arbitrary
 github.event.head_commit.message,arbitrary
@@ -2185,7 +2186,7 @@ github.event.issue.assignee.gists_url,structured
 github.event.issue.assignee.gravatar_id,arbitrary
 github.event.issue.assignee.html_url,arbitrary
 github.event.issue.assignee.id,fixed
-github.event.issue.assignee.login,arbitrary
+github.event.issue.assignee.login,fixed
 github.event.issue.assignee.name,arbitrary
 github.event.issue.assignee.node_id,arbitrary
 github.event.issue.assignee.organizations_url,arbitrary
@@ -2208,7 +2209,7 @@ github.event.issue.assignees.*.gists_url,structured
 github.event.issue.assignees.*.gravatar_id,arbitrary
 github.event.issue.assignees.*.html_url,arbitrary
 github.event.issue.assignees.*.id,fixed
-github.event.issue.assignees.*.login,arbitrary
+github.event.issue.assignees.*.login,fixed
 github.event.issue.assignees.*.name,arbitrary
 github.event.issue.assignees.*.node_id,arbitrary
 github.event.issue.assignees.*.organizations_url,arbitrary
@@ -2265,7 +2266,7 @@ github.event.issue.milestone.creator.gists_url,structured
 github.event.issue.milestone.creator.gravatar_id,arbitrary
 github.event.issue.milestone.creator.html_url,arbitrary
 github.event.issue.milestone.creator.id,fixed
-github.event.issue.milestone.creator.login,arbitrary
+github.event.issue.milestone.creator.login,fixed
 github.event.issue.milestone.creator.name,arbitrary
 github.event.issue.milestone.creator.node_id,arbitrary
 github.event.issue.milestone.creator.organizations_url,arbitrary
@@ -2310,7 +2311,7 @@ github.event.issue.performed_via_github_app.owner.gists_url,structured
 github.event.issue.performed_via_github_app.owner.gravatar_id,arbitrary
 github.event.issue.performed_via_github_app.owner.html_url,arbitrary
 github.event.issue.performed_via_github_app.owner.id,fixed
-github.event.issue.performed_via_github_app.owner.login,arbitrary
+github.event.issue.performed_via_github_app.owner.login,fixed
 github.event.issue.performed_via_github_app.owner.name,arbitrary
 github.event.issue.performed_via_github_app.owner.node_id,arbitrary
 github.event.issue.performed_via_github_app.owner.organizations_url,arbitrary
@@ -2448,7 +2449,7 @@ github.event.milestone.creator.gists_url,arbitrary
 github.event.milestone.creator.gravatar_id,arbitrary
 github.event.milestone.creator.html_url,arbitrary
 github.event.milestone.creator.id,fixed
-github.event.milestone.creator.login,arbitrary
+github.event.milestone.creator.login,fixed
 github.event.milestone.creator.name,arbitrary
 github.event.milestone.creator.node_id,arbitrary
 github.event.milestone.creator.organizations_url,arbitrary
@@ -2506,7 +2507,7 @@ github.event.old_answer.user.gists_url,structured
 github.event.old_answer.user.gravatar_id,arbitrary
 github.event.old_answer.user.html_url,arbitrary
 github.event.old_answer.user.id,fixed
-github.event.old_answer.user.login,arbitrary
+github.event.old_answer.user.login,fixed
 github.event.old_answer.user.name,arbitrary
 github.event.old_answer.user.node_id,arbitrary
 github.event.old_answer.user.organizations_url,arbitrary
@@ -2524,7 +2525,7 @@ github.event.organization.events_url,arbitrary
 github.event.organization.hooks_url,arbitrary
 github.event.organization.id,fixed
 github.event.organization.issues_url,arbitrary
-github.event.organization.login,arbitrary
+github.event.organization.login,fixed
 github.event.organization.members_url,arbitrary
 github.event.organization.node_id,arbitrary
 github.event.organization.public_members_url,arbitrary
@@ -2559,7 +2560,7 @@ github.event.pull_request.assignee.gists_url,arbitrary
 github.event.pull_request.assignee.gravatar_id,arbitrary
 github.event.pull_request.assignee.html_url,arbitrary
 github.event.pull_request.assignee.id,fixed
-github.event.pull_request.assignee.login,arbitrary
+github.event.pull_request.assignee.login,fixed
 github.event.pull_request.assignee.name,arbitrary
 github.event.pull_request.assignee.node_id,arbitrary
 github.event.pull_request.assignee.organizations_url,arbitrary
@@ -2582,7 +2583,7 @@ github.event.pull_request.assignees.*.gists_url,arbitrary
 github.event.pull_request.assignees.*.gravatar_id,arbitrary
 github.event.pull_request.assignees.*.html_url,arbitrary
 github.event.pull_request.assignees.*.id,fixed
-github.event.pull_request.assignees.*.login,arbitrary
+github.event.pull_request.assignees.*.login,fixed
 github.event.pull_request.assignees.*.name,arbitrary
 github.event.pull_request.assignees.*.node_id,arbitrary
 github.event.pull_request.assignees.*.organizations_url,arbitrary
@@ -2608,7 +2609,7 @@ github.event.pull_request.auto_merge.enabled_by.gists_url,arbitrary
 github.event.pull_request.auto_merge.enabled_by.gravatar_id,arbitrary
 github.event.pull_request.auto_merge.enabled_by.html_url,arbitrary
 github.event.pull_request.auto_merge.enabled_by.id,fixed
-github.event.pull_request.auto_merge.enabled_by.login,arbitrary
+github.event.pull_request.auto_merge.enabled_by.login,fixed
 github.event.pull_request.auto_merge.enabled_by.name,arbitrary
 github.event.pull_request.auto_merge.enabled_by.node_id,arbitrary
 github.event.pull_request.auto_merge.enabled_by.organizations_url,arbitrary
@@ -2709,7 +2710,7 @@ github.event.pull_request.base.repo.owner.gists_url,arbitrary
 github.event.pull_request.base.repo.owner.gravatar_id,arbitrary
 github.event.pull_request.base.repo.owner.html_url,arbitrary
 github.event.pull_request.base.repo.owner.id,fixed
-github.event.pull_request.base.repo.owner.login,arbitrary
+github.event.pull_request.base.repo.owner.login,fixed
 github.event.pull_request.base.repo.owner.name,arbitrary
 github.event.pull_request.base.repo.owner.node_id,arbitrary
 github.event.pull_request.base.repo.owner.organizations_url,arbitrary
@@ -2768,7 +2769,7 @@ github.event.pull_request.base.user.gists_url,arbitrary
 github.event.pull_request.base.user.gravatar_id,arbitrary
 github.event.pull_request.base.user.html_url,arbitrary
 github.event.pull_request.base.user.id,fixed
-github.event.pull_request.base.user.login,arbitrary
+github.event.pull_request.base.user.login,fixed
 github.event.pull_request.base.user.name,arbitrary
 github.event.pull_request.base.user.node_id,arbitrary
 github.event.pull_request.base.user.organizations_url,arbitrary
@@ -2880,7 +2881,7 @@ github.event.pull_request.head.repo.owner.gists_url,arbitrary
 github.event.pull_request.head.repo.owner.gravatar_id,arbitrary
 github.event.pull_request.head.repo.owner.html_url,arbitrary
 github.event.pull_request.head.repo.owner.id,fixed
-github.event.pull_request.head.repo.owner.login,arbitrary
+github.event.pull_request.head.repo.owner.login,fixed
 github.event.pull_request.head.repo.owner.name,arbitrary
 github.event.pull_request.head.repo.owner.node_id,arbitrary
 github.event.pull_request.head.repo.owner.organizations_url,arbitrary
@@ -2939,7 +2940,7 @@ github.event.pull_request.head.user.gists_url,arbitrary
 github.event.pull_request.head.user.gravatar_id,arbitrary
 github.event.pull_request.head.user.html_url,arbitrary
 github.event.pull_request.head.user.id,fixed
-github.event.pull_request.head.user.login,arbitrary
+github.event.pull_request.head.user.login,fixed
 github.event.pull_request.head.user.name,arbitrary
 github.event.pull_request.head.user.node_id,arbitrary
 github.event.pull_request.head.user.organizations_url,arbitrary
@@ -2982,7 +2983,7 @@ github.event.pull_request.merged_by.gists_url,arbitrary
 github.event.pull_request.merged_by.gravatar_id,arbitrary
 github.event.pull_request.merged_by.html_url,arbitrary
 github.event.pull_request.merged_by.id,fixed
-github.event.pull_request.merged_by.login,arbitrary
+github.event.pull_request.merged_by.login,fixed
 github.event.pull_request.merged_by.name,arbitrary
 github.event.pull_request.merged_by.node_id,arbitrary
 github.event.pull_request.merged_by.organizations_url,arbitrary
@@ -3010,7 +3011,7 @@ github.event.pull_request.milestone.creator.gists_url,arbitrary
 github.event.pull_request.milestone.creator.gravatar_id,arbitrary
 github.event.pull_request.milestone.creator.html_url,arbitrary
 github.event.pull_request.milestone.creator.id,fixed
-github.event.pull_request.milestone.creator.login,arbitrary
+github.event.pull_request.milestone.creator.login,fixed
 github.event.pull_request.milestone.creator.name,arbitrary
 github.event.pull_request.milestone.creator.node_id,arbitrary
 github.event.pull_request.milestone.creator.organizations_url,arbitrary
@@ -3050,7 +3051,7 @@ github.event.pull_request.requested_reviewers.*.gists_url,arbitrary
 github.event.pull_request.requested_reviewers.*.gravatar_id,arbitrary
 github.event.pull_request.requested_reviewers.*.html_url,arbitrary
 github.event.pull_request.requested_reviewers.*.id,fixed
-github.event.pull_request.requested_reviewers.*.login,arbitrary
+github.event.pull_request.requested_reviewers.*.login,fixed
 github.event.pull_request.requested_reviewers.*.members_url,structured
 github.event.pull_request.requested_reviewers.*.name,arbitrary
 github.event.pull_request.requested_reviewers.*.node_id,arbitrary
@@ -3128,7 +3129,7 @@ github.event.pull_request.user.gists_url,arbitrary
 github.event.pull_request.user.gravatar_id,arbitrary
 github.event.pull_request.user.html_url,arbitrary
 github.event.pull_request.user.id,fixed
-github.event.pull_request.user.login,arbitrary
+github.event.pull_request.user.login,fixed
 github.event.pull_request.user.name,arbitrary
 github.event.pull_request.user.node_id,arbitrary
 github.event.pull_request.user.organizations_url,arbitrary
@@ -3144,7 +3145,7 @@ github.event.pull_request.user.user_view_type,arbitrary
 github.event.pusher.date,fixed
 github.event.pusher.email,structured
 github.event.pusher.name,arbitrary
-github.event.pusher.username,arbitrary
+github.event.pusher.username,fixed
 github.event.pusher_type,arbitrary
 github.event.reason,arbitrary
 github.event.ref,arbitrary
@@ -3164,7 +3165,7 @@ github.event.registry_package.owner.gists_url,arbitrary
 github.event.registry_package.owner.gravatar_id,arbitrary
 github.event.registry_package.owner.html_url,arbitrary
 github.event.registry_package.owner.id,fixed
-github.event.registry_package.owner.login,arbitrary
+github.event.registry_package.owner.login,fixed
 github.event.registry_package.owner.node_id,arbitrary
 github.event.registry_package.owner.organizations_url,arbitrary
 github.event.registry_package.owner.received_events_url,arbitrary
@@ -3184,7 +3185,7 @@ github.event.registry_package.package_version.author.gists_url,arbitrary
 github.event.registry_package.package_version.author.gravatar_id,arbitrary
 github.event.registry_package.package_version.author.html_url,arbitrary
 github.event.registry_package.package_version.author.id,fixed
-github.event.registry_package.package_version.author.login,arbitrary
+github.event.registry_package.package_version.author.login,fixed
 github.event.registry_package.package_version.author.node_id,arbitrary
 github.event.registry_package.package_version.author.organizations_url,arbitrary
 github.event.registry_package.package_version.author.received_events_url,arbitrary
@@ -3277,7 +3278,7 @@ github.event.registry_package.package_version.release.author.gists_url,arbitrary
 github.event.registry_package.package_version.release.author.gravatar_id,arbitrary
 github.event.registry_package.package_version.release.author.html_url,arbitrary
 github.event.registry_package.package_version.release.author.id,fixed
-github.event.registry_package.package_version.release.author.login,arbitrary
+github.event.registry_package.package_version.release.author.login,fixed
 github.event.registry_package.package_version.release.author.node_id,arbitrary
 github.event.registry_package.package_version.release.author.organizations_url,arbitrary
 github.event.registry_package.package_version.release.author.received_events_url,arbitrary
@@ -3345,7 +3346,7 @@ github.event.release.assets.*.uploader.gists_url,structured
 github.event.release.assets.*.uploader.gravatar_id,arbitrary
 github.event.release.assets.*.uploader.html_url,arbitrary
 github.event.release.assets.*.uploader.id,fixed
-github.event.release.assets.*.uploader.login,arbitrary
+github.event.release.assets.*.uploader.login,fixed
 github.event.release.assets.*.uploader.name,arbitrary
 github.event.release.assets.*.uploader.node_id,arbitrary
 github.event.release.assets.*.uploader.organizations_url,arbitrary
@@ -3368,7 +3369,7 @@ github.event.release.author.gists_url,structured
 github.event.release.author.gravatar_id,arbitrary
 github.event.release.author.html_url,arbitrary
 github.event.release.author.id,fixed
-github.event.release.author.login,arbitrary
+github.event.release.author.login,fixed
 github.event.release.author.name,arbitrary
 github.event.release.author.node_id,arbitrary
 github.event.release.author.organizations_url,arbitrary
@@ -3493,7 +3494,7 @@ github.event.repository.organization.gists_url,arbitrary
 github.event.repository.organization.gravatar_id,arbitrary
 github.event.repository.organization.html_url,arbitrary
 github.event.repository.organization.id,fixed
-github.event.repository.organization.login,arbitrary
+github.event.repository.organization.login,fixed
 github.event.repository.organization.name,arbitrary
 github.event.repository.organization.node_id,arbitrary
 github.event.repository.organization.organizations_url,arbitrary
@@ -3516,7 +3517,7 @@ github.event.repository.owner.gists_url,arbitrary
 github.event.repository.owner.gravatar_id,arbitrary
 github.event.repository.owner.html_url,arbitrary
 github.event.repository.owner.id,fixed
-github.event.repository.owner.login,arbitrary
+github.event.repository.owner.login,fixed
 github.event.repository.owner.name,arbitrary
 github.event.repository.owner.node_id,arbitrary
 github.event.repository.owner.organizations_url,arbitrary
@@ -3624,7 +3625,7 @@ github.event.repository.template_repository.owner.gists_url,arbitrary
 github.event.repository.template_repository.owner.gravatar_id,arbitrary
 github.event.repository.template_repository.owner.html_url,arbitrary
 github.event.repository.template_repository.owner.id,fixed
-github.event.repository.template_repository.owner.login,arbitrary
+github.event.repository.template_repository.owner.login,fixed
 github.event.repository.template_repository.owner.node_id,arbitrary
 github.event.repository.template_repository.owner.organizations_url,arbitrary
 github.event.repository.template_repository.owner.received_events_url,arbitrary
@@ -3684,7 +3685,7 @@ github.event.requested_reviewer.gists_url,structured
 github.event.requested_reviewer.gravatar_id,arbitrary
 github.event.requested_reviewer.html_url,arbitrary
 github.event.requested_reviewer.id,fixed
-github.event.requested_reviewer.login,arbitrary
+github.event.requested_reviewer.login,fixed
 github.event.requested_reviewer.name,arbitrary
 github.event.requested_reviewer.node_id,arbitrary
 github.event.requested_reviewer.organizations_url,arbitrary
@@ -3741,7 +3742,7 @@ github.event.review.user.gists_url,structured
 github.event.review.user.gravatar_id,arbitrary
 github.event.review.user.html_url,arbitrary
 github.event.review.user.id,fixed
-github.event.review.user.login,arbitrary
+github.event.review.user.login,fixed
 github.event.review.user.name,arbitrary
 github.event.review.user.node_id,arbitrary
 github.event.review.user.organizations_url,arbitrary
@@ -3790,7 +3791,7 @@ github.event.sender.gists_url,arbitrary
 github.event.sender.gravatar_id,arbitrary
 github.event.sender.html_url,arbitrary
 github.event.sender.id,fixed
-github.event.sender.login,arbitrary
+github.event.sender.login,fixed
 github.event.sender.name,arbitrary
 github.event.sender.node_id,arbitrary
 github.event.sender.organizations_url,arbitrary
@@ -3836,7 +3837,7 @@ github.event.workflow_run.actor.gists_url,structured
 github.event.workflow_run.actor.gravatar_id,arbitrary
 github.event.workflow_run.actor.html_url,arbitrary
 github.event.workflow_run.actor.id,fixed
-github.event.workflow_run.actor.login,arbitrary
+github.event.workflow_run.actor.login,fixed
 github.event.workflow_run.actor.name,arbitrary
 github.event.workflow_run.actor.node_id,arbitrary
 github.event.workflow_run.actor.organizations_url,arbitrary
@@ -3862,11 +3863,11 @@ github.event.workflow_run.head_commit,fixed
 github.event.workflow_run.head_commit.author.date,fixed
 github.event.workflow_run.head_commit.author.email,structured
 github.event.workflow_run.head_commit.author.name,arbitrary
-github.event.workflow_run.head_commit.author.username,arbitrary
+github.event.workflow_run.head_commit.author.username,fixed
 github.event.workflow_run.head_commit.committer.date,fixed
 github.event.workflow_run.head_commit.committer.email,structured
 github.event.workflow_run.head_commit.committer.name,arbitrary
-github.event.workflow_run.head_commit.committer.username,arbitrary
+github.event.workflow_run.head_commit.committer.username,fixed
 github.event.workflow_run.head_commit.id,arbitrary
 github.event.workflow_run.head_commit.message,arbitrary
 github.event.workflow_run.head_commit.timestamp,arbitrary
@@ -3915,7 +3916,7 @@ github.event.workflow_run.head_repository.owner.gists_url,arbitrary
 github.event.workflow_run.head_repository.owner.gravatar_id,arbitrary
 github.event.workflow_run.head_repository.owner.html_url,arbitrary
 github.event.workflow_run.head_repository.owner.id,fixed
-github.event.workflow_run.head_repository.owner.login,arbitrary
+github.event.workflow_run.head_repository.owner.login,fixed
 github.event.workflow_run.head_repository.owner.name,arbitrary
 github.event.workflow_run.head_repository.owner.node_id,arbitrary
 github.event.workflow_run.head_repository.owner.organizations_url,arbitrary
@@ -4007,7 +4008,7 @@ github.event.workflow_run.repository.owner.gists_url,arbitrary
 github.event.workflow_run.repository.owner.gravatar_id,arbitrary
 github.event.workflow_run.repository.owner.html_url,arbitrary
 github.event.workflow_run.repository.owner.id,fixed
-github.event.workflow_run.repository.owner.login,arbitrary
+github.event.workflow_run.repository.owner.login,fixed
 github.event.workflow_run.repository.owner.name,arbitrary
 github.event.workflow_run.repository.owner.node_id,arbitrary
 github.event.workflow_run.repository.owner.organizations_url,arbitrary
@@ -4045,7 +4046,7 @@ github.event.workflow_run.triggering_actor.gists_url,structured
 github.event.workflow_run.triggering_actor.gravatar_id,arbitrary
 github.event.workflow_run.triggering_actor.html_url,arbitrary
 github.event.workflow_run.triggering_actor.id,fixed
-github.event.workflow_run.triggering_actor.login,arbitrary
+github.event.workflow_run.triggering_actor.login,fixed
 github.event.workflow_run.triggering_actor.name,arbitrary
 github.event.workflow_run.triggering_actor.node_id,arbitrary
 github.event.workflow_run.triggering_actor.organizations_url,arbitrary
