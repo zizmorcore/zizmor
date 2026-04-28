@@ -76,7 +76,7 @@ pub(crate) struct Determinations {
 }
 
 /// Represents the "disposition" of a fix.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub(crate) enum FixDisposition {
     /// The fix is safe to apply automatically.
     #[allow(dead_code)]
