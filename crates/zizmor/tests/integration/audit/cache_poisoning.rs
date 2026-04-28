@@ -35,7 +35,7 @@ fn test_caching_enabled_by_default() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     ",
     );
 
@@ -67,7 +67,7 @@ fn test_caching_opt_in_boolean_toggle() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#,
     );
 
@@ -99,7 +99,7 @@ fn test_caching_opt_in_expression() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    3 findings (1 ignored, 1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (1 ignored, 1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#,
     );
 
@@ -184,7 +184,7 @@ fn test_workflow_tag_trigger() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -217,7 +217,7 @@ fn test_caching_opt_in_boolish_toggle() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#,
     );
 
@@ -243,7 +243,7 @@ fn test_publisher_step() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    3 findings (1 ignored, 1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (1 ignored, 1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -315,7 +315,7 @@ fn test_issue_343() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    5 findings (2 suppressed, 3 fixable): 0 informational, 0 low, 0 medium, 3 high
+    5 findings (2 suppressed, 3 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
     "#
     );
 
@@ -376,7 +376,7 @@ fn test_workflow_release_branch_trigger() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -466,7 +466,7 @@ fn test_issue_1081() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    3 findings (1 suppressed, 2 fixable): 0 informational, 0 low, 0 medium, 2 high
+    3 findings (1 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 
@@ -611,7 +611,7 @@ fn test_workflow_release_trigger_object() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 

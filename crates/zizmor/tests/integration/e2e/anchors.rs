@@ -61,7 +61,7 @@ fn test_basic() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    5 findings (1 suppressed, 4 fixable): 0 informational, 0 low, 0 medium, 4 high
+    5 findings (1 suppressed, 4 unsafe fixes): 0 informational, 0 low, 0 medium, 4 high
     "#
     );
 
@@ -87,7 +87,7 @@ fn test_scalar_cross_context() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    3 findings (2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -124,7 +124,7 @@ fn test_with_mapping_alias() -> Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (2 suppressed, 2 fixable): 0 informational, 0 low, 2 medium, 0 high
+    4 findings (2 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 
@@ -215,7 +215,7 @@ fn test_steps_list_alias() -> Result<()> {
       = note: audit confidence → High
       = note: this finding has an auto-fix
 
-    5 findings (3 suppressed, 2 fixable): 0 informational, 0 low, 0 medium, 2 high
+    5 findings (3 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 
@@ -363,7 +363,7 @@ fn test_dummy_job_anchors() -> Result<()> {
       = note: audit confidence → High
       = note: this finding has an auto-fix
 
-    6 findings (3 suppressed, 3 fixable): 0 informational, 1 low, 2 medium, 0 high
+    6 findings (3 suppressed, 1 safe fixes, 2 unsafe fixes): 0 informational, 1 low, 2 medium, 0 high
     "
     );
 
@@ -423,7 +423,7 @@ fn test_flow_mapping_step() -> Result<()> {
       |
       = note: audit confidence → High
 
-    6 findings (2 suppressed, 2 fixable): 0 informational, 0 low, 2 medium, 2 high
+    6 findings (2 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 2 high
     "#
     );
 
