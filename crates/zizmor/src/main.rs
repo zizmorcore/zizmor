@@ -2,7 +2,7 @@
 
 use std::{
     collections::HashSet,
-    env,
+    env, fmt,
     io::{Write, stdout},
     process::ExitCode,
 };
@@ -689,6 +689,16 @@ pub(crate) enum FixMode {
     UnsafeOnly,
     /// Apply all fixes, both safe and unsafe.
     All,
+}
+
+impl fmt::Display for FixMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            FixMode::Safe => write!(f, "safe"),
+            FixMode::UnsafeOnly => write!(f, "unsafe-only"),
+            FixMode::All => write!(f, "all"),
+        }
+    }
 }
 
 /// State used when collecting input groups.
