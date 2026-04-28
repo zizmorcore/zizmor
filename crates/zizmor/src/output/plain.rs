@@ -132,7 +132,9 @@ pub(crate) fn render_findings(
         .flat_map(|finding| &finding.fixes)
         .map(|fix| fix.disposition)
         .counts();
-    for (disposition, count) in fixes_by_disposition {
+    let mut sorted_fixes_by_disposition: Vec<_> = fixes_by_disposition.iter().collect();
+    sorted_fixes_by_disposition.sort_by_key(|a| a.0);
+    for (disposition, count) in sorted_fixes_by_disposition {
         qualifiers.push(format!(
             "{} {disposition} fixes",
             match disposition {
