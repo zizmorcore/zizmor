@@ -69,6 +69,9 @@ of `zizmor`.
 * Fixed a bug where inline ignore comments could not be easily applied
   to [cache-poisoning] findings (#1962)
 
+* Fixed a bug where the `cache-poisoning` audit would raise a finding
+  when the cache state can be statically determined (#1940)
+
 ## 1.24.1
 
 ### Bug Fixes 🐛
