@@ -1,0 +1,20 @@
+# repro case for https://github.com/zizmorcore/zizmor/issues/1940
+
+name: issue-1940
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - "*"
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}

@@ -84,6 +84,7 @@ impl ActionCoordinate {
     }
 }
 
+#[derive(Copy, Clone)]
 pub(crate) enum Toggle {
     /// Opt-in means that usage is **enabled** when the control value matches.
     OptIn,

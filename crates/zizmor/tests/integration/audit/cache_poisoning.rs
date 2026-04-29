@@ -617,3 +617,14 @@ fn test_workflow_release_trigger_object() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+// See: <https://github.com/zizmorcore/zizmor/issues/1940>
+#[test]
+fn test_issue_1940() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("cache-poisoning/issue-1940-repro.yml")).run()?, 
+        @r#"No findings to report. Good job! (2 suppressed)"#);
+
+    Ok(())
+}
