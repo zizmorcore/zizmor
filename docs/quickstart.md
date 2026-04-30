@@ -89,3 +89,24 @@ Here are some different ways you can run `zizmor` locally:
     ```
 
 See [Usage](./usage.md) for more examples, including examples of configuration.
+
+## Fixing findings
+
+Some findings can be fixed automatically by running `zizmor` with `--fix`.
+
+For findings that can't be fixed automatically, consult the documentation for the relevant [audit
+rule](./audits.md). In many modern terminals, the audit rule name in the terminal output is a link
+that goes directly to that rule's documentation. For example, in this output:
+
+```console
+error[template-injection]: code injection via template expansion
+```
+
+`template-injection` within the square brackets is a clickable link that takes you to
+the [template-injection](./audits#template-injection) audit documentation. See [Audit documentation
+links](./usage#audit-documentation-links) for more detail.
+
+For findings that aren't right for your use case that you want to ignore, you can add a `# zizmor:
+ignore[rulename]` comment to the relevant line. More details, including how to ignore multiple
+findings or entire files by using a `zizmor.yml` configuration file, are in the [Ignoring
+results](./usage#ignoring-results) section.
