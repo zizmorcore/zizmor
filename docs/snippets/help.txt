@@ -14,7 +14,6 @@ Audit Options:
       --min-severity <LEVEL>    Filter all results below this severity [possible values: informational, low, medium, high]
       --min-confidence <LEVEL>  Filter all results below this confidence [possible values: low, medium, high]
       --no-ignores              Don't honor ignore comments or ignore rules in configuration
-      --action-kb <FILE>        Path to a JSON file with additional action-permissions knowledge base entries [env: ZIZMOR_ACTION_KB=]
 
 Output Options:
   -v, --verbose...              Increase logging verbosity

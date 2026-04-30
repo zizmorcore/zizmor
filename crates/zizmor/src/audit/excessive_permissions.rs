@@ -84,8 +84,7 @@ fn merge_permission(current: &mut Permission, new: Permission) {
 /// or Docker/local `uses:` immediately return [`PermissionInference::Unknown`].
 /// `run:` steps are skipped, so the result may under-approximate real usage.
 /// All generated fixes carry [`FixDisposition::Unsafe`] to signal this.
-/// `extra_kb` entries take precedence over the built-in [`ACTION_PERMISSIONS`].
-fn infer_job_permissions(job: &NormalJob<'_>, extra_kb: &ActionKb) -> PermissionInference {
+fn infer_job_permissions(job: &NormalJob<'_>) -> PermissionInference {
     let mut required = PermissionMap::new();
 
     for step in job.steps() {
@@ -106,11 +105,7 @@ fn infer_job_permissions(job: &NormalJob<'_>, extra_kb: &ActionKb) -> Permission
             None => repo_uses.slug().to_lowercase(),
         };
 
-        // Extra KB takes precedence over the built-in KB.
-        // Both have type ActionKb so the lookup is identical.
-        let perms = extra_kb.get(&key).or_else(|| ACTION_PERMISSIONS.get(&key));
-
-        let Some(perms) = perms else {
+        let Some(perms) = ACTION_PERMISSIONS.get(&key) else {
             // Unknown action — cannot infer minimum permissions.
             return PermissionInference::Unknown;
         };
@@ -151,17 +146,12 @@ audit_meta!(
     "overly broad permissions"
 );
 
-pub(crate) struct ExcessivePermissions {
-    /// Extra action KB loaded from `--action-kb` / `ZIZMOR_ACTION_KB`.
-    extra_kb: ActionKb,
-}
+pub(crate) struct ExcessivePermissions;
 
 #[async_trait::async_trait]
 impl Audit for ExcessivePermissions {
-    fn new(state: &AuditState) -> Result<Self, AuditLoadError> {
-        Ok(Self {
-            extra_kb: state.action_kb.clone(),
-        })
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
+        Ok(Self)
     }
 
     async fn audit_workflow<'doc>(
@@ -230,7 +220,7 @@ impl Audit for ExcessivePermissions {
                         Persona::Regular
                     };
 
-                    let inference = infer_job_permissions(&job, &self.extra_kb);
+                    let inference = infer_job_permissions(&job);
                     (&job.permissions, job.location(), persona, inference)
                 }
                 Job::ReusableWorkflowCallJob(job) => {
@@ -476,34 +466,22 @@ mod tests {
         state::AuditState,
     };
 
-    macro_rules! test_workflow_audit {
-        ($filename:expr, $workflow_content:expr, $test_fn:expr) => {{
-            let key = InputKey::local("fakegroup".into(), $filename, None::<&str>);
-            let workflow = Workflow::from_string($workflow_content.to_string(), key).unwrap();
-            let audit_state = AuditState::default();
-            let audit = ExcessivePermissions::new(&audit_state).unwrap();
-            let findings = audit
-                .audit_workflow(&workflow, &Config::default())
-                .await
-                .unwrap();
-            $test_fn(&workflow, findings)
-        }};
+    async fn run_audit(yaml: &str, check: impl FnOnce(&Workflow, &[crate::finding::Finding])) {
+        let key = InputKey::local("fakegroup".into(), "test.yml", None::<&str>);
+        let workflow = Workflow::from_string(yaml.to_string(), key).unwrap();
+        let state = AuditState::default();
+        let audit = ExcessivePermissions::new(&state).unwrap();
+        let findings = audit.audit_workflow(&workflow, &Config::default()).await.unwrap();
+        check(&workflow, &findings);
     }
 
-    fn apply_first_fix(
-        document: &yamlpath::Document,
-        findings: &[crate::finding::Finding],
-    ) -> yamlpath::Document {
-        assert!(!findings.is_empty(), "Expected findings but got none");
+    fn fix_source(workflow: &Workflow, findings: &[crate::finding::Finding]) -> String {
         let finding = findings
             .iter()
             .find(|f| !f.fixes.is_empty())
-            .expect("Expected at least one finding with a fix");
-        let fix = &finding.fixes[0];
-        fix.apply(document).unwrap()
+            .expect("no fixable finding");
+        finding.fixes[0].apply(workflow.as_document()).unwrap().source().to_string()
     }
-
-    // --- workflow-level read-all ---
 
     const WORKFLOW_READ_ALL: &str = r#"
 on: push
@@ -516,42 +494,6 @@ jobs:
       - run: echo hello
 "#;
 
-    #[tokio::test]
-    async fn workflow_read_all_fix_title_mentions_read_all() {
-        test_workflow_audit!(
-            "workflow_read_all_fix_title.yml",
-            WORKFLOW_READ_ALL,
-            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                let finding = findings
-                    .iter()
-                    .find(|f| !f.fixes.is_empty())
-                    .expect("Expected a finding with a fix");
-                assert!(
-                    finding.fixes[0].title.contains("read-all"),
-                    "Expected fix title to mention read-all, got: {}",
-                    finding.fixes[0].title
-                );
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn workflow_read_all_fix_replaces_with_empty_mapping() {
-        test_workflow_audit!(
-            "workflow_read_all_fix_source.yml",
-            WORKFLOW_READ_ALL,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                let fixed = apply_first_fix(workflow.as_document(), &findings);
-                assert_eq!(
-                    fixed.source(),
-                    "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hello\n"
-                );
-            }
-        );
-    }
-
-    // --- workflow-level write-all ---
-
     const WORKFLOW_WRITE_ALL: &str = r#"
 on: push
 name: Test
@@ -563,42 +505,6 @@ jobs:
       - run: echo hello
 "#;
 
-    #[tokio::test]
-    async fn workflow_write_all_fix_title_mentions_write_all() {
-        test_workflow_audit!(
-            "workflow_write_all_fix_title.yml",
-            WORKFLOW_WRITE_ALL,
-            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                let finding = findings
-                    .iter()
-                    .find(|f| !f.fixes.is_empty())
-                    .expect("Expected a finding with a fix");
-                assert!(
-                    finding.fixes[0].title.contains("write-all"),
-                    "Expected fix title to mention write-all, got: {}",
-                    finding.fixes[0].title
-                );
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn workflow_write_all_fix_replaces_with_empty_mapping() {
-        test_workflow_audit!(
-            "workflow_write_all_fix_source.yml",
-            WORKFLOW_WRITE_ALL,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                let fixed = apply_first_fix(workflow.as_document(), &findings);
-                assert_eq!(
-                    fixed.source(),
-                    "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hello\n"
-                );
-            }
-        );
-    }
-
-    // --- workflow-level default permissions ---
-
     const WORKFLOW_DEFAULT_PERMISSIONS: &str = r#"
 on: push
 name: Test
@@ -608,77 +514,6 @@ jobs:
     steps:
       - run: echo hello
 "#;
-
-    #[tokio::test]
-    async fn workflow_default_permissions_fix_title_mentions_permissions() {
-        test_workflow_audit!(
-            "workflow_default_permissions_fix_title.yml",
-            WORKFLOW_DEFAULT_PERMISSIONS,
-            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                if let Some(finding) = findings.iter().find(|f| !f.fixes.is_empty()) {
-                    assert!(
-                        finding.fixes[0].title.contains("permissions"),
-                        "Expected fix title to mention permissions, got: {}",
-                        finding.fixes[0].title
-                    );
-                }
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn workflow_default_permissions_fix_adds_empty_block() {
-        test_workflow_audit!(
-            "workflow_default_permissions_fix_source.yml",
-            WORKFLOW_DEFAULT_PERMISSIONS,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                if findings.iter().any(|f| !f.fixes.is_empty()) {
-                    let fixed = apply_first_fix(workflow.as_document(), &findings);
-                    assert_eq!(
-                        fixed.source(),
-                        "\non: push\nname: Test\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hello\npermissions: {}\n"
-                    );
-                }
-            }
-        );
-    }
-
-    // --- workflow-level explicit write: no auto-fix ---
-
-    #[tokio::test]
-    async fn explicit_write_at_workflow_level_has_no_autofix() {
-        // Explicit write permissions at the workflow level should NOT have an
-        // auto-fix, since the correct remediation is to move the write permission
-        // to the specific job(s) that need it — which requires knowing the job
-        // structure.
-        let content = r#"
-on: push
-name: Test
-permissions:
-  contents: write
-  issues: read
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo hello
-"#;
-        test_workflow_audit!(
-            "explicit_write_no_fix.yml",
-            content,
-            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                assert!(!findings.is_empty(), "Expected findings for explicit write");
-                for finding in &findings {
-                    assert!(
-                        finding.fixes.is_empty(),
-                        "Expected no auto-fix for explicit write at workflow level"
-                    );
-                }
-            }
-        );
-    }
-
-    // --- job-level read-all ---
 
     const JOB_READ_ALL: &str = r#"
 on: push
@@ -691,34 +526,6 @@ jobs:
     steps:
       - run: echo hello
 "#;
-
-    #[tokio::test]
-    async fn job_read_all_produces_finding() {
-        test_workflow_audit!(
-            "job_read_all_finding.yml",
-            JOB_READ_ALL,
-            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                assert!(!findings.is_empty(), "Expected findings for job read-all");
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn job_read_all_fix_replaces_with_empty_mapping() {
-        test_workflow_audit!(
-            "job_read_all_fix_source.yml",
-            JOB_READ_ALL,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                let fixed = apply_first_fix(workflow.as_document(), &findings);
-                assert_eq!(
-                    fixed.source(),
-                    "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    permissions: {}\n    steps:\n      - run: echo hello\n"
-                );
-            }
-        );
-    }
-
-    // --- job-level write-all with known actions ---
 
     const JOB_WRITE_ALL_KNOWN_ACTIONS: &str = r#"
 on: push
@@ -734,44 +541,6 @@ jobs:
       - uses: github/codeql-action/analyze@v3
 "#;
 
-    #[tokio::test]
-    async fn job_write_all_known_actions_fix_title_is_precise() {
-        // When all steps use known actions, the fix should use inferred permissions
-        // rather than the generic `{}`.
-        test_workflow_audit!(
-            "job_write_all_known_actions_title.yml",
-            JOB_WRITE_ALL_KNOWN_ACTIONS,
-            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                let finding = findings
-                    .iter()
-                    .find(|f| !f.fixes.is_empty())
-                    .expect("Expected a finding with a fix");
-                assert!(
-                    finding.fixes[0].title.contains("minimum required"),
-                    "Expected precise fix title, got: {}",
-                    finding.fixes[0].title
-                );
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn job_write_all_known_actions_fix_infers_minimum_permissions() {
-        test_workflow_audit!(
-            "job_write_all_known_actions_source.yml",
-            JOB_WRITE_ALL_KNOWN_ACTIONS,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                let fixed = apply_first_fix(workflow.as_document(), &findings);
-                assert_eq!(
-                    fixed.source(),
-                    "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read\n      security-events: write\n    steps:\n      - uses: actions/checkout@v4\n      - uses: github/codeql-action/init@v3\n      - uses: github/codeql-action/analyze@v3\n"
-                );
-            }
-        );
-    }
-
-    // --- job-level write-all with unknown action: fallback fix ---
-
     const JOB_WRITE_ALL_UNKNOWN_ACTION: &str = r#"
 on: push
 name: Test
@@ -786,37 +555,100 @@ jobs:
 "#;
 
     #[tokio::test]
-    async fn job_write_all_unknown_action_fix_title_is_fallback() {
-        // When a job uses an unknown action, the fix falls back to `{}`.
-        test_workflow_audit!(
-            "job_write_all_unknown_action_title.yml",
-            JOB_WRITE_ALL_UNKNOWN_ACTION,
-            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                let finding = findings
-                    .iter()
-                    .find(|f| !f.fixes.is_empty())
-                    .expect("Expected a finding with a fix");
-                assert!(
-                    finding.fixes[0].title.contains("write-all"),
-                    "Expected fallback fix title, got: {}",
-                    finding.fixes[0].title
+    async fn workflow_read_all_fix_replaces_with_empty_mapping() {
+        run_audit(WORKFLOW_READ_ALL, |wf, findings| {
+            assert_eq!(
+                fix_source(wf, findings),
+                "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hello\n"
+            );
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn workflow_write_all_fix_replaces_with_empty_mapping() {
+        run_audit(WORKFLOW_WRITE_ALL, |wf, findings| {
+            assert_eq!(
+                fix_source(wf, findings),
+                "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hello\n"
+            );
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn workflow_default_permissions_fix_adds_empty_block() {
+        run_audit(WORKFLOW_DEFAULT_PERMISSIONS, |wf, findings| {
+            if findings.iter().any(|f| !f.fixes.is_empty()) {
+                assert_eq!(
+                    fix_source(wf, findings),
+                    "\non: push\nname: Test\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hello\npermissions: {}\n"
                 );
             }
-        );
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn explicit_write_at_workflow_level_has_no_autofix() {
+        // Explicit write at workflow level: no auto-fix because the correct
+        // remediation requires moving the permission to the specific job(s)
+        // that need it, which requires knowing the job structure.
+        let yaml = r#"
+on: push
+name: Test
+permissions:
+  contents: write
+  issues: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+"#;
+        run_audit(yaml, |_wf, findings| {
+            assert!(!findings.is_empty(), "expected findings for explicit write");
+            assert!(
+                findings.iter().all(|f| f.fixes.is_empty()),
+                "expected no auto-fix for explicit write at workflow level"
+            );
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn job_read_all_fix_replaces_with_empty_mapping() {
+        run_audit(JOB_READ_ALL, |wf, findings| {
+            assert_eq!(
+                fix_source(wf, findings),
+                "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    permissions: {}\n    steps:\n      - run: echo hello\n"
+            );
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn job_write_all_known_actions_fix_infers_minimum_permissions() {
+        run_audit(JOB_WRITE_ALL_KNOWN_ACTIONS, |wf, findings| {
+            let finding = findings
+                .iter()
+                .find(|f| !f.fixes.is_empty())
+                .expect("expected a finding with a fix");
+            assert!(
+                finding.fixes[0].title.contains("minimum required"),
+                "expected precise fix title, got: {}",
+                finding.fixes[0].title
+            );
+            assert_eq!(
+                finding.fixes[0].apply(wf.as_document()).unwrap().source(),
+                "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read\n      security-events: write\n    steps:\n      - uses: actions/checkout@v4\n      - uses: github/codeql-action/init@v3\n      - uses: github/codeql-action/analyze@v3\n"
+            );
+        }).await;
     }
 
     #[tokio::test]
     async fn job_write_all_unknown_action_fix_replaces_with_empty_mapping() {
-        test_workflow_audit!(
-            "job_write_all_unknown_action_source.yml",
-            JOB_WRITE_ALL_UNKNOWN_ACTION,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                let fixed = apply_first_fix(workflow.as_document(), &findings);
-                assert_eq!(
-                    fixed.source(),
-                    "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    permissions: {}\n    steps:\n      - uses: actions/checkout@v4\n      - uses: some-unknown-org/mystery-action@v1\n"
-                );
-            }
-        );
+        // When a job uses an unknown action, the fix falls back to `{}`.
+        run_audit(JOB_WRITE_ALL_UNKNOWN_ACTION, |wf, findings| {
+            assert_eq!(
+                fix_source(wf, findings),
+                "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    permissions: {}\n    steps:\n      - uses: actions/checkout@v4\n      - uses: some-unknown-org/mystery-action@v1\n"
+            );
+        }).await;
     }
 }
