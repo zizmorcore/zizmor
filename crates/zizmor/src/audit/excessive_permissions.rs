@@ -74,12 +74,10 @@ enum PermissionInference {
 }
 
 /// Merge `new` into `current`, keeping the higher of the two.
-fn merge_permission(current: &mut Permission, new: &Permission) {
-    *current = match (&*current, new) {
-        (Permission::Write, _) | (_, Permission::Write) => Permission::Write,
-        (Permission::Read, _) | (_, Permission::Read) => Permission::Read,
-        _ => Permission::None,
-    };
+///
+/// Relies on `Permission`'s derived `Ord` (`None < Read < Write`).
+fn merge_permission(current: &mut Permission, new: Permission) {
+    *current = (*current).max(new);
 }
 
 /// Attempt to infer the minimum GITHUB_TOKEN permissions required by a job.
@@ -129,7 +127,7 @@ fn infer_job_permissions(job: &NormalJob<'_>, extra_kb: &ActionKb) -> Permission
 
         for (scope, perm) in perms {
             let entry = required.entry(scope.clone()).or_insert(Permission::None);
-            merge_permission(entry, perm);
+            merge_permission(entry, *perm);
         }
     }
 
@@ -140,10 +138,6 @@ fn infer_job_permissions(job: &NormalJob<'_>, extra_kb: &ActionKb) -> Permission
 ///
 /// An empty map produces an empty mapping (`{}`).
 fn permissions_to_yaml(perms: &PermissionMap) -> serde_yaml::Value {
-    if perms.is_empty() {
-        return serde_yaml::Value::Mapping(Default::default());
-    }
-
     let mut map = serde_yaml::Mapping::new();
     for (scope, perm) in perms {
         let perm_str = match perm {
@@ -251,6 +245,10 @@ impl Audit for ExcessivePermissions {
                     // For reusable jobs: the caller is always responsible for
                     // permissions, so we emit regular findings even if
                     // the workflow is reusable-only.
+                    //
+                    // Permission inference is not possible here: the steps of the
+                    // called workflow are defined externally and are not visible
+                    // to the static analyser at this point.
                     (
                         &job.permissions,
                         job.location(),
@@ -286,6 +284,35 @@ impl Audit for ExcessivePermissions {
 }
 
 impl ExcessivePermissions {
+    /// Build a `(severity, confidence, annotated_location, fix)` tuple for a
+    /// `read-all` / `write-all` permission that should be replaced with either
+    /// an empty block (`{}`) or an inferred minimum set.
+    ///
+    /// Extracted to eliminate the repeated boilerplate in
+    /// [`check_workflow_permissions`] and [`check_job_permissions`].
+    fn make_replace_fix_result<'a>(
+        severity: Severity,
+        annotation: &'static str,
+        title: String,
+        perm_loc: SymbolicLocation<'a>,
+        value: serde_yaml::Value,
+    ) -> (Severity, Confidence, SymbolicLocation<'a>, Option<Fix<'a>>) {
+        (
+            severity,
+            Confidence::High,
+            perm_loc.clone().annotated(annotation),
+            Some(Fix {
+                title,
+                key: perm_loc.key,
+                disposition: FixDisposition::Unsafe,
+                patches: vec![Patch {
+                    route: perm_loc.route,
+                    operation: Op::Replace(value),
+                }],
+            }),
+        )
+    }
+
     fn check_workflow_permissions<'a>(
         &self,
         permissions: &'a Permissions,
@@ -315,41 +342,23 @@ impl ExcessivePermissions {
                     }),
                 )),
                 BasePermission::ReadAll => {
-                    let perm_loc = location.clone().with_keys(["permissions".into()]);
-                    results.push((
+                    let perm_loc = location.with_keys(["permissions".into()]);
+                    results.push(Self::make_replace_fix_result(
                         Severity::Medium,
-                        Confidence::High,
-                        perm_loc.clone().annotated("uses read-all permissions"),
-                        Some(Fix {
-                            title: "Replace `read-all` with empty permissions block".into(),
-                            key: perm_loc.key,
-                            disposition: FixDisposition::Unsafe,
-                            patches: vec![Patch {
-                                route: perm_loc.route.clone(),
-                                operation: Op::Replace(serde_yaml::Value::Mapping(
-                                    Default::default(),
-                                )),
-                            }],
-                        }),
+                        "uses read-all permissions",
+                        "Replace `read-all` with empty permissions block".into(),
+                        perm_loc,
+                        serde_yaml::Value::Mapping(Default::default()),
                     ))
                 }
                 BasePermission::WriteAll => {
-                    let perm_loc = location.clone().with_keys(["permissions".into()]);
-                    results.push((
+                    let perm_loc = location.with_keys(["permissions".into()]);
+                    results.push(Self::make_replace_fix_result(
                         Severity::High,
-                        Confidence::High,
-                        perm_loc.clone().annotated("uses write-all permissions"),
-                        Some(Fix {
-                            title: "Replace `write-all` with empty permissions block".into(),
-                            key: perm_loc.key,
-                            disposition: FixDisposition::Unsafe,
-                            patches: vec![Patch {
-                                route: perm_loc.route.clone(),
-                                operation: Op::Replace(serde_yaml::Value::Mapping(
-                                    Default::default(),
-                                )),
-                            }],
-                        }),
+                        "uses write-all permissions",
+                        "Replace `write-all` with empty permissions block".into(),
+                        perm_loc,
+                        serde_yaml::Value::Mapping(Default::default()),
                     ))
                 }
             },
@@ -429,49 +438,35 @@ impl ExcessivePermissions {
                 }
                 BasePermission::Default => None,
                 BasePermission::ReadAll => {
-                    let perm_loc = location.clone().with_keys(["permissions".into()]);
+                    let perm_loc = location.with_keys(["permissions".into()]);
                     let (title, value) = fix_title_and_value(
                         "Replace",
                         "`read-all` with empty permissions block",
                         "Replace `read-all` with minimum required permissions",
                         &inference,
                     );
-                    Some((
+                    Some(Self::make_replace_fix_result(
                         Severity::Medium,
-                        Confidence::High,
-                        perm_loc.clone().annotated("uses read-all permissions"),
-                        Some(Fix {
-                            title,
-                            key: perm_loc.key,
-                            disposition: FixDisposition::Unsafe,
-                            patches: vec![Patch {
-                                route: perm_loc.route.clone(),
-                                operation: Op::Replace(value),
-                            }],
-                        }),
+                        "uses read-all permissions",
+                        title,
+                        perm_loc,
+                        value,
                     ))
                 }
                 BasePermission::WriteAll => {
-                    let perm_loc = location.clone().with_keys(["permissions".into()]);
+                    let perm_loc = location.with_keys(["permissions".into()]);
                     let (title, value) = fix_title_and_value(
                         "Replace",
                         "`write-all` with empty permissions block",
                         "Replace `write-all` with minimum required permissions",
                         &inference,
                     );
-                    Some((
+                    Some(Self::make_replace_fix_result(
                         Severity::High,
-                        Confidence::High,
-                        perm_loc.clone().annotated("uses write-all permissions"),
-                        Some(Fix {
-                            title,
-                            key: perm_loc.key,
-                            disposition: FixDisposition::Unsafe,
-                            patches: vec![Patch {
-                                route: perm_loc.route.clone(),
-                                operation: Op::Replace(value),
-                            }],
-                        }),
+                        "uses write-all permissions",
+                        title,
+                        perm_loc,
+                        value,
                     ))
                 }
             },
@@ -541,9 +536,9 @@ mod tests {
         fix.apply(document).unwrap()
     }
 
-    #[tokio::test]
-    async fn test_fix_workflow_read_all() {
-        let content = r#"
+    // --- workflow-level read-all ---
+
+    const WORKFLOW_READ_ALL: &str = r#"
 on: push
 name: Test
 permissions: read-all
@@ -553,19 +548,32 @@ jobs:
     steps:
       - run: echo hello
 "#;
+
+    #[tokio::test]
+    async fn workflow_read_all_fix_title_mentions_read_all() {
         test_workflow_audit!(
-            "test_fix_workflow_read_all.yml",
-            content,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+            "workflow_read_all_fix_title.yml",
+            WORKFLOW_READ_ALL,
+            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 let finding = findings
                     .iter()
                     .find(|f| !f.fixes.is_empty())
                     .expect("Expected a finding with a fix");
                 assert!(
                     finding.fixes[0].title.contains("read-all"),
-                    "Expected fix title to mention read-all"
+                    "Expected fix title to mention read-all, got: {}",
+                    finding.fixes[0].title
                 );
+            }
+        );
+    }
 
+    #[tokio::test]
+    async fn workflow_read_all_fix_replaces_with_empty_mapping() {
+        test_workflow_audit!(
+            "workflow_read_all_fix_source.yml",
+            WORKFLOW_READ_ALL,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 let fixed = apply_first_fix(workflow.as_document(), &findings);
                 assert_eq!(
                     fixed.source(),
@@ -575,9 +583,9 @@ jobs:
         );
     }
 
-    #[tokio::test]
-    async fn test_fix_workflow_write_all() {
-        let content = r#"
+    // --- workflow-level write-all ---
+
+    const WORKFLOW_WRITE_ALL: &str = r#"
 on: push
 name: Test
 permissions: write-all
@@ -587,19 +595,32 @@ jobs:
     steps:
       - run: echo hello
 "#;
+
+    #[tokio::test]
+    async fn workflow_write_all_fix_title_mentions_write_all() {
         test_workflow_audit!(
-            "test_fix_workflow_write_all.yml",
-            content,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+            "workflow_write_all_fix_title.yml",
+            WORKFLOW_WRITE_ALL,
+            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 let finding = findings
                     .iter()
                     .find(|f| !f.fixes.is_empty())
                     .expect("Expected a finding with a fix");
                 assert!(
                     finding.fixes[0].title.contains("write-all"),
-                    "Expected fix title to mention write-all"
+                    "Expected fix title to mention write-all, got: {}",
+                    finding.fixes[0].title
                 );
+            }
+        );
+    }
 
+    #[tokio::test]
+    async fn workflow_write_all_fix_replaces_with_empty_mapping() {
+        test_workflow_audit!(
+            "workflow_write_all_fix_source.yml",
+            WORKFLOW_WRITE_ALL,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 let fixed = apply_first_fix(workflow.as_document(), &findings);
                 assert_eq!(
                     fixed.source(),
@@ -609,9 +630,9 @@ jobs:
         );
     }
 
-    #[tokio::test]
-    async fn test_fix_workflow_default_permissions() {
-        let content = r#"
+    // --- workflow-level default permissions ---
+
+    const WORKFLOW_DEFAULT_PERMISSIONS: &str = r#"
 on: push
 name: Test
 jobs:
@@ -620,16 +641,31 @@ jobs:
     steps:
       - run: echo hello
 "#;
+
+    #[tokio::test]
+    async fn workflow_default_permissions_fix_title_mentions_permissions() {
         test_workflow_audit!(
-            "test_fix_workflow_default_permissions.yml",
-            content,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                let finding_with_fix = findings.iter().find(|f| !f.fixes.is_empty());
-                if let Some(finding) = finding_with_fix {
+            "workflow_default_permissions_fix_title.yml",
+            WORKFLOW_DEFAULT_PERMISSIONS,
+            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                if let Some(finding) = findings.iter().find(|f| !f.fixes.is_empty()) {
                     assert!(
                         finding.fixes[0].title.contains("permissions"),
-                        "Expected fix title to mention permissions"
+                        "Expected fix title to mention permissions, got: {}",
+                        finding.fixes[0].title
                     );
+                }
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn workflow_default_permissions_fix_adds_empty_block() {
+        test_workflow_audit!(
+            "workflow_default_permissions_fix_source.yml",
+            WORKFLOW_DEFAULT_PERMISSIONS,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                if findings.iter().any(|f| !f.fixes.is_empty()) {
                     let fixed = apply_first_fix(workflow.as_document(), &findings);
                     assert_eq!(
                         fixed.source(),
@@ -640,8 +676,10 @@ jobs:
         );
     }
 
+    // --- workflow-level explicit write: no auto-fix ---
+
     #[tokio::test]
-    async fn test_fix_explicit_write_permissions_no_fix() {
+    async fn explicit_write_at_workflow_level_has_no_autofix() {
         // Explicit write permissions at the workflow level should NOT have an
         // auto-fix, since the correct remediation is to move the write permission
         // to the specific job(s) that need it — which requires knowing the job
@@ -659,11 +697,10 @@ jobs:
       - run: echo hello
 "#;
         test_workflow_audit!(
-            "test_fix_explicit_write_no_fix.yml",
+            "explicit_write_no_fix.yml",
             content,
             |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 assert!(!findings.is_empty(), "Expected findings for explicit write");
-                // All findings for explicit write should have no fix.
                 for finding in &findings {
                     assert!(
                         finding.fixes.is_empty(),
@@ -674,9 +711,9 @@ jobs:
         );
     }
 
-    #[tokio::test]
-    async fn test_fix_job_read_all() {
-        let content = r#"
+    // --- job-level read-all ---
+
+    const JOB_READ_ALL: &str = r#"
 on: push
 name: Test
 permissions: {}
@@ -687,11 +724,24 @@ jobs:
     steps:
       - run: echo hello
 "#;
+
+    #[tokio::test]
+    async fn job_read_all_produces_finding() {
         test_workflow_audit!(
-            "test_fix_job_read_all.yml",
-            content,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+            "job_read_all_finding.yml",
+            JOB_READ_ALL,
+            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 assert!(!findings.is_empty(), "Expected findings for job read-all");
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn job_read_all_fix_replaces_with_empty_mapping() {
+        test_workflow_audit!(
+            "job_read_all_fix_source.yml",
+            JOB_READ_ALL,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 let fixed = apply_first_fix(workflow.as_document(), &findings);
                 assert_eq!(
                     fixed.source(),
@@ -701,11 +751,9 @@ jobs:
         );
     }
 
-    #[tokio::test]
-    async fn test_fix_job_write_all_known_actions() {
-        // When all steps use known actions, the fix should use inferred permissions
-        // rather than the generic `{}`.
-        let content = r#"
+    // --- job-level write-all with known actions ---
+
+    const JOB_WRITE_ALL_KNOWN_ACTIONS: &str = r#"
 on: push
 name: Test
 permissions: {}
@@ -718,11 +766,15 @@ jobs:
       - uses: github/codeql-action/init@v3
       - uses: github/codeql-action/analyze@v3
 "#;
+
+    #[tokio::test]
+    async fn job_write_all_known_actions_fix_title_is_precise() {
+        // When all steps use known actions, the fix should use inferred permissions
+        // rather than the generic `{}`.
         test_workflow_audit!(
-            "test_fix_job_write_all_known_actions.yml",
-            content,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                assert!(!findings.is_empty(), "Expected findings for job write-all");
+            "job_write_all_known_actions_title.yml",
+            JOB_WRITE_ALL_KNOWN_ACTIONS,
+            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 let finding = findings
                     .iter()
                     .find(|f| !f.fixes.is_empty())
@@ -732,6 +784,16 @@ jobs:
                     "Expected precise fix title, got: {}",
                     finding.fixes[0].title
                 );
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn job_write_all_known_actions_fix_infers_minimum_permissions() {
+        test_workflow_audit!(
+            "job_write_all_known_actions_source.yml",
+            JOB_WRITE_ALL_KNOWN_ACTIONS,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 let fixed = apply_first_fix(workflow.as_document(), &findings);
                 assert_eq!(
                     fixed.source(),
@@ -741,10 +803,9 @@ jobs:
         );
     }
 
-    #[tokio::test]
-    async fn test_fix_job_write_all_unknown_action() {
-        // When a job uses an unknown action, the fix falls back to `{}`.
-        let content = r#"
+    // --- job-level write-all with unknown action: fallback fix ---
+
+    const JOB_WRITE_ALL_UNKNOWN_ACTION: &str = r#"
 on: push
 name: Test
 permissions: {}
@@ -756,21 +817,33 @@ jobs:
       - uses: actions/checkout@v4
       - uses: some-unknown-org/mystery-action@v1
 "#;
+
+    #[tokio::test]
+    async fn job_write_all_unknown_action_fix_title_is_fallback() {
+        // When a job uses an unknown action, the fix falls back to `{}`.
         test_workflow_audit!(
-            "test_fix_job_write_all_unknown_action.yml",
-            content,
-            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
-                assert!(!findings.is_empty(), "Expected findings for job write-all");
+            "job_write_all_unknown_action_title.yml",
+            JOB_WRITE_ALL_UNKNOWN_ACTION,
+            |_workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 let finding = findings
                     .iter()
                     .find(|f| !f.fixes.is_empty())
                     .expect("Expected a finding with a fix");
-                // Should fall back to the generic empty-block fix
                 assert!(
                     finding.fixes[0].title.contains("write-all"),
                     "Expected fallback fix title, got: {}",
                     finding.fixes[0].title
                 );
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn job_write_all_unknown_action_fix_replaces_with_empty_mapping() {
+        test_workflow_audit!(
+            "job_write_all_unknown_action_source.yml",
+            JOB_WRITE_ALL_UNKNOWN_ACTION,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
                 let fixed = apply_first_fix(workflow.as_document(), &findings);
                 assert_eq!(
                     fixed.source(),

@@ -70,7 +70,7 @@ serde_yaml = "0.9.34"
 tar = "0.4.45"
 terminal-link = "0.1.0"
 thiserror = "2.0.18"
-tokio = { version = "1.52.1", features = ["rt-multi-thread", "io-std"] }
+tokio = { version = "1.52.1", features = ["rt-multi-thread", "io-std", "fs"] }
 tower-lsp-server = "0.23"
 tracing = "0.1.44"
 tracing-indicatif = "0.3.14"

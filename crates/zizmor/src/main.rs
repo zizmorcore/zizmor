@@ -1005,8 +1005,9 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     let mut state = AuditState::new(app.network.no_online_audits, gh_client);
 
     if let Some(kb_path) = &app.audit.action_kb {
-        let kb_content =
-            std::fs::read_to_string(kb_path).map_err(|source| ActionKbError::Read {
+        let kb_content = tokio::fs::read_to_string(kb_path)
+            .await
+            .map_err(|source| ActionKbError::Read {
                 path: kb_path.to_string(),
                 source,
             })?;

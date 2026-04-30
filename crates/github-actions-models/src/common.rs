@@ -45,18 +45,21 @@ pub enum BasePermission {
 }
 
 /// A singular permission setting.
-#[derive(Deserialize, Debug, Default, PartialEq, Clone, Copy)]
+///
+/// Variants are ordered from least to most privileged (`None < Read < Write`),
+/// which allows `Ord::max` to be used when merging permission requirements.
+#[derive(Deserialize, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum Permission {
+    /// No access.
+    #[default]
+    None,
+
     /// Read access.
     Read,
 
     /// Write access.
     Write,
-
-    /// No access.
-    #[default]
-    None,
 }
 
 /// An environment mapping.
