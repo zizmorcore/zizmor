@@ -114,6 +114,7 @@ warning[excessive-permissions]: overly broad permissions
    | |________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 help[undocumented-permissions]: permissions without explanatory comments
   --> .github/workflows/auto-close-stale.yml:12:7
@@ -124,6 +125,7 @@ help[undocumented-permissions]: permissions without explanatory comments
    |       ^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 info[anonymous-definition]: workflow or action definition without a name
  --> .github/workflows/auto-close-stale.yml:8:3
@@ -478,6 +480,7 @@ warning[excessive-permissions]: overly broad permissions
    | |_______________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 help[undocumented-permissions]: permissions without explanatory comments
   --> .github/workflows/lock.yml:12:7
@@ -486,6 +489,7 @@ help[undocumented-permissions]: permissions without explanatory comments
    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 info[anonymous-definition]: workflow or action definition without a name
  --> .github/workflows/lock.yml:8:3
