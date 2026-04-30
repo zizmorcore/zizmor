@@ -1,0 +1,14 @@
+# No dangerous-triggers finding for this workflow, since the only job
+# contains one step and that step is considered safe (actions/labeler).
+
+on:
+  pull_request_target:
+
+permissions: {}
+
+jobs:
+  vulnerable:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/labeler@634933edcd8ababfe52f92936142cc22ac488b1b # v6.0.1
