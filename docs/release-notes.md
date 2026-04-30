@@ -46,6 +46,9 @@ of `zizmor`.
 * @tibdex/github-app-token is now recognized as an archived action by
   [archived-uses] (#1910)
 
+* The [dangerous-triggers] audit now explicitly exempts workflows that only
+  invoke @actions/labeler (#1956)
+
 ### Bug Fixes 🐛
 
 * Fixed a crash in the [template-injection] audit when a workflow uses
