@@ -120,9 +120,7 @@ fn infer_job_permissions(job: &NormalJob<'_>, extra_kb: &ActionKb) -> Permission
 
         // Extra KB takes precedence over the built-in KB.
         // Both have type ActionKb so the lookup is identical.
-        let perms = extra_kb
-            .get(&key)
-            .or_else(|| ACTION_PERMISSIONS.get(&key));
+        let perms = extra_kb.get(&key).or_else(|| ACTION_PERMISSIONS.get(&key));
 
         let Some(perms) = perms else {
             // Unknown action — cannot infer minimum permissions.
@@ -361,11 +359,13 @@ impl ExcessivePermissions {
                         continue;
                     }
 
-                    let severity = WRITE_SCOPE_SEVERITIES.get(name.as_str()).unwrap_or_else(|| {
-                        tracing::warn!("unknown permission: {name}");
+                    let severity = WRITE_SCOPE_SEVERITIES
+                        .get(name.as_str())
+                        .unwrap_or_else(|| {
+                            tracing::warn!("unknown permission: {name}");
 
-                        &Severity::Medium
-                    });
+                            &Severity::Medium
+                        });
 
                     let perm_loc = location
                         .clone()
@@ -494,10 +494,9 @@ fn fix_title_and_value(
     inference: &PermissionInference,
 ) -> (String, serde_yaml::Value) {
     match inference {
-        PermissionInference::Known(map) if !map.is_empty() => (
-            precise_title.into(),
-            permissions_to_yaml(map),
-        ),
+        PermissionInference::Known(map) if !map.is_empty() => {
+            (precise_title.into(), permissions_to_yaml(map))
+        }
         _ => (
             format!("{fallback_verb} {fallback_rest}"),
             serde_yaml::Value::Mapping(Default::default()),

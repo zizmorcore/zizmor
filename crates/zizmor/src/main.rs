@@ -906,7 +906,10 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     // HACK: The current alpha release of http-cache (via http-cache-reqwest)
     // emits a lot of noisy WARN-level logs about invalid cache entries
     // due to their bincode -> postcard migration. These aren't actionable for us.
-    #[expect(clippy::unwrap_used, reason = "hard-coded filter directive always parses")]
+    #[expect(
+        clippy::unwrap_used,
+        reason = "hard-coded filter directive always parses"
+    )]
     let filter = filter.add_directive("http_cache::managers::cacache=error".parse().unwrap());
 
     let reg = tracing_subscriber::registry()
@@ -1002,16 +1005,16 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     let mut state = AuditState::new(app.network.no_online_audits, gh_client);
 
     if let Some(kb_path) = &app.audit.action_kb {
-        let kb_content = std::fs::read_to_string(kb_path).map_err(|source| ActionKbError::Read {
-            path: kb_path.to_string(),
-            source,
-        })?;
-        state.action_kb = serde_json::from_str(&kb_content).map_err(|source| {
-            ActionKbError::Parse {
+        let kb_content =
+            std::fs::read_to_string(kb_path).map_err(|source| ActionKbError::Read {
                 path: kb_path.to_string(),
                 source,
-            }
-        })?;
+            })?;
+        state.action_kb =
+            serde_json::from_str(&kb_content).map_err(|source| ActionKbError::Parse {
+                path: kb_path.to_string(),
+                source,
+            })?;
     }
 
     let audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;

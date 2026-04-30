@@ -1108,7 +1108,7 @@ fn apply_value_replacement(
                         _ => {
                             return Err(Error::InvalidOperation(
                                 "non-string mapping key in Op::Replace value".into(),
-                            ))
+                            ));
                         }
                     };
                     let v_str = serialize_yaml_value(v)?;
