@@ -73,27 +73,17 @@ enum PermissionInference {
     Unknown,
 }
 
-/// Merge `new` into `current`, keeping the higher of the two.
-///
-/// Relies on `Permission`'s derived `Ord` (`None < Read < Write`).
+/// Merge `new` into `current`, keeping the higher of the two (`None < Read < Write`).
 fn merge_permission(current: &mut Permission, new: Permission) {
     *current = (*current).max(new);
 }
 
 /// Attempt to infer the minimum GITHUB_TOKEN permissions required by a job.
 ///
-/// Iterates over every step:
-/// - `uses:` steps pointing to a known action contribute that action's
-///   required permissions to the aggregate set.
-/// - `uses:` steps pointing to an **unknown** action cause the function to
-///   return [`PermissionInference::Unknown`] immediately.
-/// - `run:` steps and Docker/local `uses:` are **skipped** (we cannot
-///   statically determine what permissions a shell script may use).
-///
-/// Note: because `run:` steps are skipped, the inferred set may be an
-/// under-approximation for jobs that also call the GitHub API via scripts.
+/// Known `uses:` steps contribute their required permissions; unknown actions
+/// or Docker/local `uses:` immediately return [`PermissionInference::Unknown`].
+/// `run:` steps are skipped, so the result may under-approximate real usage.
 /// All generated fixes carry [`FixDisposition::Unsafe`] to signal this.
-///
 /// `extra_kb` entries take precedence over the built-in [`ACTION_PERMISSIONS`].
 fn infer_job_permissions(job: &NormalJob<'_>, extra_kb: &ActionKb) -> PermissionInference {
     let mut required = PermissionMap::new();
@@ -138,18 +128,20 @@ fn infer_job_permissions(job: &NormalJob<'_>, extra_kb: &ActionKb) -> Permission
 ///
 /// An empty map produces an empty mapping (`{}`).
 fn permissions_to_yaml(perms: &PermissionMap) -> serde_yaml::Value {
-    let mut map = serde_yaml::Mapping::new();
-    for (scope, perm) in perms {
-        let perm_str = match perm {
-            Permission::Read => "read",
-            Permission::Write => "write",
-            Permission::None => "none",
-        };
-        map.insert(
-            serde_yaml::Value::String(scope.clone()),
-            serde_yaml::Value::String(perm_str.into()),
-        );
-    }
+    let map: serde_yaml::Mapping = perms
+        .iter()
+        .map(|(scope, perm)| {
+            let s = match perm {
+                Permission::Read => "read",
+                Permission::Write => "write",
+                Permission::None => "none",
+            };
+            (
+                serde_yaml::Value::String(scope.clone()),
+                serde_yaml::Value::String(s.into()),
+            )
+        })
+        .collect();
     serde_yaml::Value::Mapping(map)
 }
 
@@ -284,12 +276,9 @@ impl Audit for ExcessivePermissions {
 }
 
 impl ExcessivePermissions {
-    /// Build a `(severity, confidence, annotated_location, fix)` tuple for a
-    /// `read-all` / `write-all` permission that should be replaced with either
-    /// an empty block (`{}`) or an inferred minimum set.
+    /// Build a result tuple for replacing a `read-all`/`write-all` permission.
     ///
-    /// Extracted to eliminate the repeated boilerplate in
-    /// [`check_workflow_permissions`] and [`check_job_permissions`].
+    /// Extracted to reduce boilerplate in [`check_workflow_permissions`] and [`check_job_permissions`].
     fn make_replace_fix_result<'a>(
         severity: Severity,
         annotation: &'static str,
@@ -341,22 +330,18 @@ impl ExcessivePermissions {
                         }],
                     }),
                 )),
-                BasePermission::ReadAll => {
+                BasePermission::ReadAll | BasePermission::WriteAll => {
+                    let (severity, base_str, annotation) = match base {
+                        BasePermission::WriteAll => {
+                            (Severity::High, "write-all", "uses write-all permissions")
+                        }
+                        _ => (Severity::Medium, "read-all", "uses read-all permissions"),
+                    };
                     let perm_loc = location.with_keys(["permissions".into()]);
                     results.push(Self::make_replace_fix_result(
-                        Severity::Medium,
-                        "uses read-all permissions",
-                        "Replace `read-all` with empty permissions block".into(),
-                        perm_loc,
-                        serde_yaml::Value::Mapping(Default::default()),
-                    ))
-                }
-                BasePermission::WriteAll => {
-                    let perm_loc = location.with_keys(["permissions".into()]);
-                    results.push(Self::make_replace_fix_result(
-                        Severity::High,
-                        "uses write-all permissions",
-                        "Replace `write-all` with empty permissions block".into(),
+                        severity,
+                        annotation,
+                        format!("Replace `{base_str}` with empty permissions block"),
                         perm_loc,
                         serde_yaml::Value::Mapping(Default::default()),
                     ))
@@ -437,36 +422,21 @@ impl ExcessivePermissions {
                     ))
                 }
                 BasePermission::Default => None,
-                BasePermission::ReadAll => {
+                base @ (BasePermission::ReadAll | BasePermission::WriteAll) => {
+                    let (severity, base_str, annotation) = match base {
+                        BasePermission::WriteAll => {
+                            (Severity::High, "write-all", "uses write-all permissions")
+                        }
+                        _ => (Severity::Medium, "read-all", "uses read-all permissions"),
+                    };
+                    let fallback_rest = format!("`{base_str}` with empty permissions block");
+                    let precise_title =
+                        format!("Replace `{base_str}` with minimum required permissions");
                     let perm_loc = location.with_keys(["permissions".into()]);
-                    let (title, value) = fix_title_and_value(
-                        "Replace",
-                        "`read-all` with empty permissions block",
-                        "Replace `read-all` with minimum required permissions",
-                        &inference,
-                    );
+                    let (title, value) =
+                        fix_title_and_value("Replace", &fallback_rest, &precise_title, &inference);
                     Some(Self::make_replace_fix_result(
-                        Severity::Medium,
-                        "uses read-all permissions",
-                        title,
-                        perm_loc,
-                        value,
-                    ))
-                }
-                BasePermission::WriteAll => {
-                    let perm_loc = location.with_keys(["permissions".into()]);
-                    let (title, value) = fix_title_and_value(
-                        "Replace",
-                        "`write-all` with empty permissions block",
-                        "Replace `write-all` with minimum required permissions",
-                        &inference,
-                    );
-                    Some(Self::make_replace_fix_result(
-                        Severity::High,
-                        "uses write-all permissions",
-                        title,
-                        perm_loc,
-                        value,
+                        severity, annotation, title, perm_loc, value,
                     ))
                 }
             },
@@ -477,11 +447,8 @@ impl ExcessivePermissions {
     }
 }
 
-/// Choose the fix title and YAML value based on the permission inference result.
-///
-/// Returns the fallback title/value when inference yielded `Unknown` or an
-/// empty permission set, and the precise title/value when a non-empty minimum
-/// permission set was inferred.
+/// Choose fix title and YAML value from inference: precise when known non-empty,
+/// fallback `"{verb} {rest}"` with `{}` value otherwise.
 fn fix_title_and_value(
     fallback_verb: &str,
     fallback_rest: &str,
