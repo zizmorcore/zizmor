@@ -471,7 +471,8 @@ mod tests {
         let workflow = Workflow::from_string(yaml.to_string(), key).unwrap();
         let state = AuditState::default();
         let audit = ExcessivePermissions::new(&state).unwrap();
-        let findings = audit.audit_workflow(&workflow, &Config::default()).await.unwrap();
+        let result = audit.audit_workflow(&workflow, &Config::default()).await;
+        let findings = result.unwrap();
         check(&workflow, &findings);
     }
 
@@ -480,7 +481,8 @@ mod tests {
             .iter()
             .find(|f| !f.fixes.is_empty())
             .expect("no fixable finding");
-        finding.fixes[0].apply(workflow.as_document()).unwrap().source().to_string()
+        let patched = finding.fixes[0].apply(workflow.as_document()).unwrap();
+        patched.source().to_string()
     }
 
     const WORKFLOW_READ_ALL: &str = r#"
@@ -588,9 +590,6 @@ jobs:
 
     #[tokio::test]
     async fn explicit_write_at_workflow_level_has_no_autofix() {
-        // Explicit write at workflow level: no auto-fix because the correct
-        // remediation requires moving the permission to the specific job(s)
-        // that need it, which requires knowing the job structure.
         let yaml = r#"
 on: push
 name: Test
@@ -609,7 +608,8 @@ jobs:
                 findings.iter().all(|f| f.fixes.is_empty()),
                 "expected no auto-fix for explicit write at workflow level"
             );
-        }).await;
+        })
+        .await;
     }
 
     #[tokio::test]
@@ -643,7 +643,6 @@ jobs:
 
     #[tokio::test]
     async fn job_write_all_unknown_action_fix_replaces_with_empty_mapping() {
-        // When a job uses an unknown action, the fix falls back to `{}`.
         run_audit(JOB_WRITE_ALL_UNKNOWN_ACTION, |wf, findings| {
             assert_eq!(
                 fix_source(wf, findings),
