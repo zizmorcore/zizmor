@@ -396,6 +396,7 @@ jobs:
                 )
                 .unwrap(),
             ),
+            action_kb: std::collections::HashMap::new(),
         };
 
         let audit = ImpostorCommit::new(&state).unwrap();
@@ -457,6 +458,7 @@ jobs:
                 )
                 .unwrap(),
             ),
+            action_kb: std::collections::HashMap::new(),
         };
 
         let audit = ImpostorCommit::new(&state).unwrap();
