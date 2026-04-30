@@ -372,7 +372,6 @@ help[anonymous-definition]: workflow or action definition without a name
    | |______________________________________^ this workflow
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
    = tip: use 'name: ...' to give this workflow a name
 
 help[undocumented-permissions]: permissions without explanatory comments
@@ -382,7 +381,6 @@ help[undocumented-permissions]: permissions without explanatory comments
    |       ^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
 
 help[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/check-zizmor.yml:1:1
@@ -396,7 +394,6 @@ help[anonymous-definition]: workflow or action definition without a name
    | |_________________________________________________________________________________________^ this workflow
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
    = tip: use 'name: ...' to give this workflow a name
 
 info[anonymous-definition]: workflow or action definition without a name
@@ -596,7 +593,6 @@ help[template-injection]: code injection via template expansion
    |         --- this run block         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
 
 info[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/publish-versions.yml:17:3

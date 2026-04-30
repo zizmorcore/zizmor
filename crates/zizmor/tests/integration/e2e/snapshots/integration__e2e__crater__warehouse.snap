@@ -155,7 +155,6 @@ help[undocumented-permissions]: permissions without explanatory comments
    |       ^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
 
 help[concurrency-limits]: insufficient job-level concurrency limits
   --> .github/workflows/codeql-analysis.yml:14:1
@@ -173,7 +172,6 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |       ------------- job affected by missing workflow concurrency
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/combine-prs.yml:3:1
@@ -203,7 +201,6 @@ help[undocumented-permissions]: permissions without explanatory comments
    |       ^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
 
 info[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/combine-prs.yml:17:3
@@ -299,7 +296,6 @@ help[undocumented-permissions]: permissions without explanatory comments
    |       ^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
 
 info[anonymous-definition]: workflow or action definition without a name
  --> .github/workflows/not-this-repo.yml:7:3
@@ -349,7 +345,6 @@ help[undocumented-permissions]: permissions without explanatory comments
    |       ^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
 
 help[concurrency-limits]: insufficient job-level concurrency limits
   --> .github/workflows/zizmor.yml:4:1
@@ -365,7 +360,5 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |       ------------ job affected by missing workflow concurrency
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
 
 34 findings (2 suppressed): 4 informational, 14 low, 8 medium, 6 high
-

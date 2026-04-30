@@ -125,7 +125,6 @@ help[undocumented-permissions]: permissions without explanatory comments
    |       ^^^^^^^^^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
 
 info[anonymous-definition]: workflow or action definition without a name
  --> .github/workflows/auto-close-stale.yml:8:3
@@ -489,7 +488,6 @@ help[undocumented-permissions]: permissions without explanatory comments
    |       ^^^^^^^^^^^^^^^ needs an explanatory comment
    |
    = note: audit confidence → High
-   = note: this finding has an auto-fix
 
 info[anonymous-definition]: workflow or action definition without a name
  --> .github/workflows/lock.yml:8:3
