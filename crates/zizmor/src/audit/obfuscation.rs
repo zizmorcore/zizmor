@@ -355,6 +355,7 @@ mod tests {
         let audit_state = AuditState {
             no_online_audits: false,
             gh_client: None,
+            action_kb: Default::default(),
         };
         let audit = Obfuscation::new(&audit_state).unwrap();
         let findings = audit

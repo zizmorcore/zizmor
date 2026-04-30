@@ -76,8 +76,22 @@ fn do_archived_action_repos() {
     build.finish().unwrap();
 }
 
+fn do_action_permissions() {
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let source = Path::new(&manifest_dir).join("data/action-permissions.json");
+    let target = Path::new(&env::var("OUT_DIR").unwrap()).join("action-permissions.json");
+
+    println!(
+        "cargo::rerun-if-changed={source}",
+        source = source.display()
+    );
+
+    fs::copy(source, target).unwrap();
+}
+
 fn main() {
     do_context_capabilities();
     do_codeql_injection_sinks();
     do_archived_action_repos();
+    do_action_permissions();
 }

@@ -45,7 +45,7 @@ pub enum BasePermission {
 }
 
 /// A singular permission setting.
-#[derive(Deserialize, Debug, Default, PartialEq)]
+#[derive(Deserialize, Debug, Default, PartialEq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum Permission {
     /// Read access.

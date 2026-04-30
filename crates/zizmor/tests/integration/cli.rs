@@ -39,6 +39,7 @@ jobs:
       |                                    default permissions used due to no permissions: block
       |
       = note: audit confidence → Medium
+      = note: this finding has an auto-fix
 
     error[unpinned-uses]: unpinned action reference
      --> <stdin>:6:15

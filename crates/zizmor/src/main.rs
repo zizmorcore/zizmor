@@ -183,6 +183,27 @@ struct AuditArgs {
     /// Don't honor ignore comments or ignore rules in configuration.
     #[arg(long)]
     no_ignores: bool,
+
+    /// Path to a JSON file with additional action-permissions knowledge base entries.
+    ///
+    /// Entries in this file take precedence over the built-in knowledge base.
+    /// The format is a JSON object mapping action slugs (e.g. `"owner/repo"`)
+    /// to objects mapping permission scopes to levels (`"read"`, `"write"`, or `"none"`).
+    ///
+    /// Example:
+    /// ```json
+    /// {
+    ///   "my-org/my-action": {"contents": "read"},
+    ///   "my-org/no-perms-action": {}
+    /// }
+    /// ```
+    #[arg(
+        long,
+        env = "ZIZMOR_ACTION_KB",
+        value_name = "FILE",
+        value_hint = ValueHint::FilePath
+    )]
+    action_kb: Option<Utf8PathBuf>,
 }
 
 #[derive(Debug, Args)]
@@ -729,6 +750,23 @@ fn completions<G: clap_complete::Generator>(generator: G, cmd: &mut clap::Comman
     );
 }
 
+/// Errors that can occur while loading the external action knowledge base.
+#[derive(Debug, Error)]
+enum ActionKbError {
+    #[error("failed to read '{path}': {source}")]
+    Read {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to parse '{path}': {source}")]
+    Parse {
+        path: String,
+        #[source]
+        source: serde_json::Error,
+    },
+}
+
 /// Top-level errors.
 #[derive(Debug, Error)]
 enum Error {
@@ -747,6 +785,9 @@ enum Error {
     /// An error while loading audit rules.
     #[error("failed to load audit rules")]
     AuditLoad(#[source] anyhow::Error),
+    /// An error while loading the external action KB.
+    #[error("failed to load action knowledge base")]
+    ActionKb(#[from] ActionKbError),
     /// An error while running an audit.
     #[error("'{ident}' audit failed on {input}")]
     Audit {
@@ -865,7 +906,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     // HACK: The current alpha release of http-cache (via http-cache-reqwest)
     // emits a lot of noisy WARN-level logs about invalid cache entries
     // due to their bincode -> postcard migration. These aren't actionable for us.
-    #[allow(clippy::unwrap_used)]
+    #[expect(clippy::unwrap_used, reason = "hard-coded filter directive always parses")]
     let filter = filter.add_directive("http_cache::managers::cacache=error".parse().unwrap());
 
     let reg = tracing_subscriber::registry()
@@ -958,7 +999,20 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     )
     .await?;
 
-    let state = AuditState::new(app.network.no_online_audits, gh_client);
+    let mut state = AuditState::new(app.network.no_online_audits, gh_client);
+
+    if let Some(kb_path) = &app.audit.action_kb {
+        let kb_content = std::fs::read_to_string(kb_path).map_err(|source| ActionKbError::Read {
+            path: kb_path.to_string(),
+            source,
+        })?;
+        state.action_kb = serde_json::from_str(&kb_content).map_err(|source| {
+            ActionKbError::Parse {
+                path: kb_path.to_string(),
+                source,
+            }
+        })?;
+    }
 
     let audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;
 
