@@ -50,12 +50,13 @@ pub fn apply_fixes(
     if fixes_by_input.is_empty() {
         if total_fixes > 0 {
             let suggestion = match fix_mode {
-                FixMode::Safe => "Use --fix=unsafe or --fix=all to apply unsafe fixes.",
-                FixMode::UnsafeOnly => "Use --fix=safe or --fix=all to apply safe fixes.",
-                FixMode::All => unreachable!(),
+                FixMode::Safe => Some("Use --fix=unsafe or --fix=all to apply unsafe fixes."),
+                FixMode::UnsafeOnly => Some("Use --fix=safe or --fix=all to apply safe fixes."),
+                FixMode::All => None,
             };
             anstream::eprintln!(
-                "No fixes available to apply ({total_fixes} held back by {fix_mode} mode). {suggestion}",
+                "No fixes available to apply ({total_fixes} held back by {fix_mode} mode).{}",
+                suggestion.map(|s| format!(" {s}")).unwrap_or_default()
             );
         } else {
             anstream::eprintln!("No fixes available to apply.");
