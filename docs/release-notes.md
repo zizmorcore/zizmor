@@ -66,6 +66,9 @@ of `zizmor`.
 * Fixed a bug where the [cache-poisoning] audit would fail to detect
   some release trigger patterns (#1946)
 
+* Fixed a bug where inline ignore comments could not be easily applied
+  to [cache-poisoning] findings (#1962)
+
 ## 1.24.1
 
 ### Bug Fixes 🐛
