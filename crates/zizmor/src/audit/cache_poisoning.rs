@@ -546,29 +546,31 @@ impl CachePoisoning {
         scenario: &PublishingScenario<'doc>,
         cache_usage: Usage,
     ) -> Option<Usage> {
-        let PublishingScenario::UsingReleaseTrigger(ReleaseTrigger::TagPush) = scenario else {
-            return Some(cache_usage);
-        };
-        let Some(control) = CacheControlField::extract(coord, step) else {
-            return Some(cache_usage);
-        };
+        // Heuristic: if our release workflow is triggered by a tag push and the
+        // cache control field is driven by an expression like `${{ startsWith(github.ref, 'refs/tags/') }}`,
+        // then we can infer that caching is effectively enabled in this workflow, and upgrade the usage
+        // confidence accordingly.
+        // TODO: We probably need to make this even more precise, e.g. for pushes with tag patterns.
+        if let PublishingScenario::UsingReleaseTrigger(ReleaseTrigger::TagPush) = scenario
+            && let Some(control) = CacheControlField::extract(coord, step)
+            && let Some(expr) = CacheControlExpr::parse(&control.raw_value.to_string())
+            && let control_value = expr.eval_for_tag_push()
+        {
+            let cache_enabled = match control.toggle {
+                Toggle::OptIn => control_value,
+                Toggle::OptOut => !control_value,
+            };
 
-        let raw = control.raw_value.to_string();
-        let Some(expr) = CacheControlExpr::parse(&raw) else {
-            return Some(cache_usage);
-        };
-
-        let control_value = expr.eval_for_tag_push();
-        let cache_enabled = match control.toggle {
-            Toggle::OptIn => control_value,
-            Toggle::OptOut => !control_value,
-        };
-
-        if cache_enabled {
-            // If we've inferred that caching is enabled, we can upgrade the usage's confidence.
-            Some(Usage::DirectOptIn)
+            if cache_enabled {
+                // Caching is enabled; upgrade the confidence.
+                Some(Usage::DirectOptIn)
+            } else {
+                // Caching is disabled; rule out this usage.
+                None
+            }
         } else {
-            None
+            // No heuristics apply; return the original usage.
+            Some(cache_usage)
         }
     }
 
