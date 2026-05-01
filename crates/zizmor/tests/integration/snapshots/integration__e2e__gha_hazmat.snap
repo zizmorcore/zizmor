@@ -93,7 +93,6 @@ warning[excessive-permissions]: overly broad permissions
    | |________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/artipacked.yml:30:3
@@ -272,7 +271,6 @@ warning[excessive-permissions]: overly broad permissions
    | |_________________________________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/cache-poisoning.yml:25:3
@@ -796,7 +794,6 @@ warning[excessive-permissions]: overly broad permissions
    | |________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/secrets-inherit.yml:15:3
@@ -811,7 +808,6 @@ warning[excessive-permissions]: overly broad permissions
    |                      default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/secrets-inherit.yml:20:3
@@ -827,7 +823,6 @@ warning[excessive-permissions]: overly broad permissions
    |                                                     default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/secrets-inherit.yml:26:3
@@ -841,7 +836,6 @@ warning[excessive-permissions]: overly broad permissions
    |                                default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/secrets-inherit.yml:30:3
@@ -856,7 +850,6 @@ warning[excessive-permissions]: overly broad permissions
    |                  default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/secrets-inherit.yml:16:11
@@ -1116,7 +1109,6 @@ warning[excessive-permissions]: overly broad permissions
    |                                                  default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
 
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   --> .github/workflows/workflow-run.yml:17:1

@@ -339,7 +339,6 @@ warning[excessive-permissions]: overly broad permissions
    | |______________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
-   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/check-release.yml:5:3
