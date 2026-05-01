@@ -289,8 +289,8 @@ enum ReleaseTrigger {
 
 /// The release 'scenario' in which a cache-aware step is used.
 enum PublishingScenario<'doc> {
-    /// The surrounding workflow is triggered by an event typically used for creating releases.
-    UsingReleaseTrigger(ReleaseTrigger),
+    /// The surrounding workflow is triggered by event(s) typically used for creating releases.
+    UsingReleaseTriggers(Vec<ReleaseTrigger>),
     /// The release is performed by a well-known action like `pypa/gh-action-pypi-publish`.
     UsingReleaseAction(Step<'doc>),
 }
@@ -392,26 +392,20 @@ audit_meta!(
 );
 
 impl CachePoisoning {
-    fn trigger_used_when_publishing_artifacts(&self, trigger: &Trigger) -> Option<ReleaseTrigger> {
+    fn triggers_used_when_publishing_artifacts(&self, trigger: &Trigger) -> Vec<ReleaseTrigger> {
         match trigger {
-            Trigger::BareEvent(event) => {
-                if *event == BareEvent::Release {
-                    Some(ReleaseTrigger::ReleaseEvent)
-                } else {
-                    None
-                }
+            Trigger::BareEvent(BareEvent::Release) => {
+                vec![ReleaseTrigger::ReleaseEvent]
             }
-            Trigger::BareEvents(events) => {
-                if events.contains(&BareEvent::Release) {
-                    Some(ReleaseTrigger::ReleaseEvent)
-                } else {
-                    None
-                }
+            Trigger::BareEvents(events) if events.contains(&BareEvent::Release) => {
+                vec![ReleaseTrigger::ReleaseEvent]
             }
             Trigger::Events(events) => {
+                let mut triggers = vec![];
+
                 if let OptionalBody::Body(body) = &events.push {
                     if body.tag_filters.is_some() {
-                        return Some(ReleaseTrigger::TagPush);
+                        triggers.push(ReleaseTrigger::TagPush);
                     }
 
                     if let Some(BranchFilters::Branches(branches)) = &body.branch_filters
@@ -419,16 +413,17 @@ impl CachePoisoning {
                             .iter()
                             .any(|branch| branch.to_lowercase().contains("release"))
                     {
-                        return Some(ReleaseTrigger::ReleaseBranchPush);
+                        triggers.push(ReleaseTrigger::ReleaseBranchPush);
                     }
                 }
 
                 if !matches!(events.release, OptionalBody::Missing) {
-                    return Some(ReleaseTrigger::ReleaseEvent);
+                    triggers.push(ReleaseTrigger::ReleaseEvent);
                 }
 
-                None
+                triggers
             }
+            _ => vec![],
         }
     }
 
@@ -447,8 +442,10 @@ impl CachePoisoning {
         trigger: &Trigger,
         steps: Steps<'doc>,
     ) -> Option<PublishingScenario<'doc>> {
-        if let Some(workflow_trigger) = self.trigger_used_when_publishing_artifacts(trigger) {
-            return Some(PublishingScenario::UsingReleaseTrigger(workflow_trigger));
+        if let triggers = self.triggers_used_when_publishing_artifacts(trigger)
+            && !triggers.is_empty()
+        {
+            return Some(PublishingScenario::UsingReleaseTriggers(triggers));
         };
 
         let well_know_publisher = CachePoisoning::detected_well_known_publisher_step(steps)?;
@@ -546,12 +543,13 @@ impl CachePoisoning {
         scenario: &PublishingScenario<'doc>,
         cache_usage: Usage,
     ) -> Option<Usage> {
-        // Heuristic: if our release workflow is triggered by a tag push and the
+        // Heuristic: if our release workflow is triggered by (only) a tag push and the
         // cache control field is driven by an expression like `${{ startsWith(github.ref, 'refs/tags/') }}`,
         // then we can infer that caching is effectively enabled in this workflow, and upgrade the usage
         // confidence accordingly.
         // TODO: We probably need to make this even more precise, e.g. for pushes with tag patterns.
-        if let PublishingScenario::UsingReleaseTrigger(ReleaseTrigger::TagPush) = scenario
+        if let PublishingScenario::UsingReleaseTriggers(triggers) = scenario
+            && let [ReleaseTrigger::TagPush] = triggers.as_slice()
             && let Some(control) = CacheControlField::extract(coord, step)
             && let Some(expr) = CacheControlExpr::parse(&control.raw_value.to_string())
         {
@@ -622,7 +620,7 @@ impl CachePoisoning {
         };
 
         let mut finding_builder = match scenario {
-            PublishingScenario::UsingReleaseTrigger(_) => Self::finding()
+            PublishingScenario::UsingReleaseTriggers(_) => Self::finding()
                 .confidence(Confidence::Low)
                 .severity(Severity::High)
                 .add_location(
