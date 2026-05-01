@@ -1,40 +1,18 @@
 use std::{collections::HashMap, sync::LazyLock};
 
-use github_actions_models::common::{BasePermission, Permission, Permissions, Uses};
-use indexmap::IndexMap;
+use github_actions_models::common::{BasePermission, Permission, Permissions, Uses, expr::LoE};
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::audit::AuditError;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Fix, FixDisposition};
-use crate::models::StepCommon as _;
 use crate::models::workflow::NormalJob;
+use crate::models::{StepBodyCommon, StepCommon as _, uses::RepositoryUsesExt as _};
 use crate::{
     AuditState,
     finding::{Confidence, Persona, Severity, location::SymbolicLocation},
 };
 use yamlpatch::{Op, Patch};
-
-/// Type alias for an action knowledge base: action slug → scope → minimum permission.
-///
-/// Keys are `"owner/repo"` or `"owner/repo/subpath"` (lowercase, no `@version`).
-/// An empty inner map means the action is known to require no special token permissions.
-type ActionKb = HashMap<String, HashMap<String, Permission>>;
-
-/// Built-in action knowledge base, loaded from `data/action-permissions.json` at compile time.
-///
-/// Absent actions cause inference to return [`PermissionInference::Unknown`], so an entry
-/// with an empty map is always better than no entry (it lets inference continue for other steps).
-static ACTION_PERMISSIONS: LazyLock<ActionKb> = LazyLock::new(|| {
-    serde_json::from_slice(include_bytes!(concat!(
-        env!("OUT_DIR"),
-        "/action-permissions.json"
-    )))
-    .expect("internal error: action-permissions.json is not valid JSON")
-});
-
-/// A map of permission scope → minimum required permission level.
-type PermissionMap = IndexMap<String, Permission>;
 
 /// Subjective mapping of write-capable permission scopes to severity.
 ///
@@ -64,80 +42,60 @@ static WRITE_SCOPE_SEVERITIES: LazyLock<HashMap<&str, Severity>> = LazyLock::new
     .into()
 });
 
-/// Outcome of attempting to infer minimum required permissions for a job.
-enum PermissionInference {
-    /// Minimum permissions computed from all `uses:` steps in the job.
-    Known(PermissionMap),
-    /// At least one `uses:` step references an action absent from the KB;
-    /// we cannot produce a precise minimum.
-    Unknown,
-}
-
-/// Merge `new` into `current`, keeping the higher of the two (`None < Read < Write`).
-fn merge_permission(current: &mut Permission, new: Permission) {
-    *current = (*current).max(new);
-}
-
-/// Attempt to infer the minimum GITHUB_TOKEN permissions required by a job.
+/// Returns `true` if it is safe to emit a `permissions: {}` auto-fix for this job.
 ///
-/// Known `uses:` steps contribute their required permissions; unknown actions
-/// or Docker/local `uses:` immediately return [`PermissionInference::Unknown`].
-/// `run:` steps are skipped, so the result may under-approximate real usage.
-/// All generated fixes carry [`FixDisposition::Unsafe`] to signal this.
-fn infer_job_permissions(job: &NormalJob<'_>) -> PermissionInference {
-    let mut required = PermissionMap::new();
-
+/// The fix is considered safe when:
+/// - No step uses `actions/checkout` with `persist-credentials: true` (which would
+///   break downstream git operations that rely on the persisted credential).
+/// - No step (run script, `with:` input, or `env:` value) explicitly references
+///   `secrets.GITHUB_TOKEN` or `github.token`, because those references imply the
+///   job needs at least the default token permissions.
+fn job_can_safely_drop_permissions(job: &NormalJob<'_>) -> bool {
     for step in job.steps() {
-        let Some(uses) = step.uses() else {
-            // run: step — skip; we can't infer permissions from shell scripts.
-            continue;
-        };
-
-        let Uses::Repository(repo_uses) = uses else {
-            // Docker (`docker://…`) or local (`./.github/actions/…`) uses —
-            // we can't look these up in the KB, treat as unknown.
-            return PermissionInference::Unknown;
-        };
-
-        // Build lookup key: "owner/repo" or "owner/repo/subpath", lowercase.
-        let key = match repo_uses.subpath() {
-            Some(sub) => format!("{}/{}", repo_uses.slug(), sub).to_lowercase(),
-            None => repo_uses.slug().to_lowercase(),
-        };
-
-        let Some(perms) = ACTION_PERMISSIONS.get(&key) else {
-            // Unknown action — cannot infer minimum permissions.
-            return PermissionInference::Unknown;
-        };
-
-        for (scope, perm) in perms {
-            let entry = required.entry(scope.clone()).or_insert(Permission::None);
-            merge_permission(entry, *perm);
+        match step.body() {
+            StepBodyCommon::Uses { uses, with } => {
+                // Check for persist-credentials: true in checkout steps.
+                if let Uses::Repository(repo_uses) = uses
+                    && repo_uses.matches("actions/checkout")
+                    && let LoE::Literal(with_map) = with
+                    && with_map
+                        .get("persist-credentials")
+                        .map(|v| v.to_string().eq_ignore_ascii_case("true"))
+                        .unwrap_or(false)
+                {
+                    return false;
+                }
+                // Check for token references in with: values.
+                if let LoE::Literal(with_map) = with {
+                    for val in with_map.values() {
+                        if contains_token_ref(&val.to_string()) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            StepBodyCommon::Run { run, .. } => {
+                if contains_token_ref(run) {
+                    return false;
+                }
+            }
+        }
+        // Check step-level env values.
+        if let LoE::Literal(env_map) = &step.env {
+            for val in env_map.values() {
+                if contains_token_ref(&val.to_string()) {
+                    return false;
+                }
+            }
         }
     }
-
-    PermissionInference::Known(required)
+    true
 }
 
-/// Build a `serde_yaml::Value` from a `PermissionMap`.
-///
-/// An empty map produces an empty mapping (`{}`).
-fn permissions_to_yaml(perms: &PermissionMap) -> serde_yaml::Value {
-    let map: serde_yaml::Mapping = perms
-        .iter()
-        .map(|(scope, perm)| {
-            let s = match perm {
-                Permission::Read => "read",
-                Permission::Write => "write",
-                Permission::None => "none",
-            };
-            (
-                serde_yaml::Value::String(scope.clone()),
-                serde_yaml::Value::String(s.into()),
-            )
-        })
-        .collect();
-    serde_yaml::Value::Mapping(map)
+/// Returns `true` if the string contains an explicit reference to the GitHub token.
+fn contains_token_ref(s: &str) -> bool {
+    let lower = s.to_lowercase();
+    lower.contains("secrets.github_token") || lower.contains("github.token")
 }
 
 audit_meta!(
@@ -193,9 +151,11 @@ impl Audit for ExcessivePermissions {
         // Handle top-level permissions.
         let location = workflow.location().primary();
 
-        for (severity, confidence, perm_location, fix) in
-            self.check_workflow_permissions(&workflow.permissions, location)
-        {
+        for (severity, confidence, perm_location, fix) in self.check_workflow_permissions(
+            &workflow.permissions,
+            location,
+            all_jobs_have_permissions,
+        ) {
             let mut builder = Self::finding()
                 .severity(severity)
                 .confidence(confidence)
@@ -210,7 +170,7 @@ impl Audit for ExcessivePermissions {
         }
 
         for job in workflow.jobs() {
-            let (permissions, job_location, job_finding_persona, inference) = match job {
+            let (permissions, job_location, job_finding_persona, can_fix) = match job {
                 Job::NormalJob(job) => {
                     // For normal jobs: if the workflow is reusable-only, we
                     // emit pedantic findings.
@@ -219,9 +179,8 @@ impl Audit for ExcessivePermissions {
                     } else {
                         Persona::Regular
                     };
-
-                    let inference = infer_job_permissions(&job);
-                    (&job.permissions, job.location(), persona, inference)
+                    let can_fix = job_can_safely_drop_permissions(&job);
+                    (&job.permissions, job.location(), persona, can_fix)
                 }
                 Job::ReusableWorkflowCallJob(job) => {
                     // For reusable jobs: the caller is always responsible for
@@ -231,12 +190,7 @@ impl Audit for ExcessivePermissions {
                     // Permission inference is not possible here: the steps of the
                     // called workflow are defined externally and are not visible
                     // to the static analyser at this point.
-                    (
-                        &job.permissions,
-                        job.location(),
-                        Persona::Regular,
-                        PermissionInference::Unknown,
-                    )
+                    (&job.permissions, job.location(), Persona::Regular, false)
                 }
             };
 
@@ -244,7 +198,7 @@ impl Audit for ExcessivePermissions {
                 permissions,
                 explicit_parent_permissions,
                 job_location.clone(),
-                inference,
+                can_fix,
             ) {
                 let mut builder = Self::finding()
                     .severity(severity)
@@ -272,7 +226,7 @@ impl ExcessivePermissions {
     fn make_replace_fix_result<'a>(
         severity: Severity,
         annotation: &'static str,
-        title: String,
+        title: &str,
         perm_loc: SymbolicLocation<'a>,
         value: serde_yaml::Value,
     ) -> (Severity, Confidence, SymbolicLocation<'a>, Option<Fix<'a>>) {
@@ -281,7 +235,7 @@ impl ExcessivePermissions {
             Confidence::High,
             perm_loc.clone().annotated(annotation),
             Some(Fix {
-                title,
+                title: title.into(),
                 key: perm_loc.key,
                 disposition: FixDisposition::Unsafe,
                 patches: vec![Patch {
@@ -296,30 +250,39 @@ impl ExcessivePermissions {
         &self,
         permissions: &'a Permissions,
         location: SymbolicLocation<'a>,
+        add_default_fix: bool,
     ) -> Vec<(Severity, Confidence, SymbolicLocation<'a>, Option<Fix<'a>>)> {
         let mut results = vec![];
 
         match &permissions {
             Permissions::Base(base) => match base {
-                BasePermission::Default => results.push((
-                    Severity::Medium,
-                    Confidence::Medium,
-                    location
-                        .clone()
-                        .annotated("default permissions used due to no permissions: block"),
-                    Some(Fix {
-                        title: "Add `permissions: {}` to restrict GITHUB_TOKEN permissions".into(),
-                        key: location.key,
-                        disposition: FixDisposition::Unsafe,
-                        patches: vec![Patch {
-                            route: location.route.clone(),
-                            operation: Op::Add {
-                                key: "permissions".into(),
-                                value: serde_yaml::Value::Mapping(Default::default()),
-                            },
-                        }],
-                    }),
-                )),
+                BasePermission::Default => {
+                    let fix = if add_default_fix {
+                        Some(Fix {
+                            title: "Add `permissions: {}` to restrict GITHUB_TOKEN permissions"
+                                .into(),
+                            key: location.key,
+                            disposition: FixDisposition::Unsafe,
+                            patches: vec![Patch {
+                                route: location.route.clone(),
+                                operation: Op::Add {
+                                    key: "permissions".into(),
+                                    value: serde_yaml::Value::Mapping(Default::default()),
+                                },
+                            }],
+                        })
+                    } else {
+                        None
+                    };
+                    results.push((
+                        Severity::Medium,
+                        Confidence::Medium,
+                        location
+                            .clone()
+                            .annotated("default permissions used due to no permissions: block"),
+                        fix,
+                    ));
+                }
                 BasePermission::ReadAll | BasePermission::WriteAll => {
                     let (severity, base_str, annotation) = match base {
                         BasePermission::WriteAll => {
@@ -331,7 +294,7 @@ impl ExcessivePermissions {
                     results.push(Self::make_replace_fix_result(
                         severity,
                         annotation,
-                        format!("Replace `{base_str}` with empty permissions block"),
+                        &format!("Replace `{base_str}` with empty permissions block"),
                         perm_loc,
                         serde_yaml::Value::Mapping(Default::default()),
                     ))
@@ -377,7 +340,7 @@ impl ExcessivePermissions {
         permissions: &Permissions,
         explicit_parent_permissions: bool,
         location: SymbolicLocation<'a>,
-        inference: PermissionInference,
+        can_fix: bool,
     ) -> Option<(Severity, Confidence, SymbolicLocation<'a>, Option<Fix<'a>>)> {
         match permissions {
             Permissions::Base(base) => match base {
@@ -385,30 +348,30 @@ impl ExcessivePermissions {
                 // the default $GITHUB_TOKEN *if* the workflow doesn't
                 // set any permissions.
                 BasePermission::Default if !explicit_parent_permissions => {
-                    let (title, value) = fix_title_and_value(
-                        "Add",
-                        "permissions: {}",
-                        "Add minimum required permissions to restrict GITHUB_TOKEN",
-                        &inference,
-                    );
-                    Some((
-                        Severity::Medium,
-                        Confidence::Medium,
-                        location
-                            .clone()
-                            .annotated("default permissions used due to no permissions: block"),
+                    let fix = if can_fix {
                         Some(Fix {
-                            title,
+                            title: "Add `permissions: {}` to restrict GITHUB_TOKEN permissions"
+                                .into(),
                             key: location.key,
                             disposition: FixDisposition::Unsafe,
                             patches: vec![Patch {
                                 route: location.route.clone(),
                                 operation: Op::Add {
                                     key: "permissions".into(),
-                                    value,
+                                    value: serde_yaml::Value::Mapping(Default::default()),
                                 },
                             }],
-                        }),
+                        })
+                    } else {
+                        None
+                    };
+                    Some((
+                        Severity::Medium,
+                        Confidence::Medium,
+                        location
+                            .clone()
+                            .annotated("default permissions used due to no permissions: block"),
+                        fix,
                     ))
                 }
                 BasePermission::Default => None,
@@ -419,40 +382,35 @@ impl ExcessivePermissions {
                         }
                         _ => (Severity::Medium, "read-all", "uses read-all permissions"),
                     };
-                    let fallback_rest = format!("`{base_str}` with empty permissions block");
-                    let precise_title =
-                        format!("Replace `{base_str}` with minimum required permissions");
                     let perm_loc = location.with_keys(["permissions".into()]);
-                    let (title, value) =
-                        fix_title_and_value("Replace", &fallback_rest, &precise_title, &inference);
-                    Some(Self::make_replace_fix_result(
-                        severity, annotation, title, perm_loc, value,
-                    ))
+                    let fix_opt = if can_fix {
+                        Some(Self::make_replace_fix_result(
+                            severity,
+                            annotation,
+                            &format!("Replace `{base_str}` with empty permissions block"),
+                            perm_loc.clone(),
+                            serde_yaml::Value::Mapping(Default::default()),
+                        ))
+                    } else {
+                        None
+                    };
+                    // If we couldn't build a fix, still return the finding (no fix).
+                    Some(if let Some(result) = fix_opt {
+                        result
+                    } else {
+                        (
+                            severity,
+                            Confidence::High,
+                            perm_loc.annotated(annotation),
+                            None,
+                        )
+                    })
                 }
             },
             // In the general case, it's impossible to tell whether a job-level
             // permission block is over-scoped.
             Permissions::Explicit(_) => None,
         }
-    }
-}
-
-/// Choose fix title and YAML value from inference: precise when known non-empty,
-/// fallback `"{verb} {rest}"` with `{}` value otherwise.
-fn fix_title_and_value(
-    fallback_verb: &str,
-    fallback_rest: &str,
-    precise_title: &str,
-    inference: &PermissionInference,
-) -> (String, serde_yaml::Value) {
-    match inference {
-        PermissionInference::Known(map) if !map.is_empty() => {
-            (precise_title.into(), permissions_to_yaml(map))
-        }
-        _ => (
-            format!("{fallback_verb} {fallback_rest}"),
-            serde_yaml::Value::Mapping(Default::default()),
-        ),
     }
 }
 
@@ -507,7 +465,23 @@ jobs:
       - run: echo hello
 "#;
 
-    const WORKFLOW_DEFAULT_PERMISSIONS: &str = r#"
+    const WORKFLOW_DEFAULT_ALL_JOBS_HAVE_PERMS: &str = r#"
+on: push
+name: Test
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - run: echo hello
+  test:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - run: echo test
+"#;
+
+    const WORKFLOW_DEFAULT_NOT_ALL_JOBS_HAVE_PERMS: &str = r#"
 on: push
 name: Test
 jobs:
@@ -529,7 +503,7 @@ jobs:
       - run: echo hello
 "#;
 
-    const JOB_WRITE_ALL_KNOWN_ACTIONS: &str = r#"
+    const JOB_WRITE_ALL_SAFE: &str = r#"
 on: push
 name: Test
 permissions: {}
@@ -539,11 +513,10 @@ jobs:
     permissions: write-all
     steps:
       - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
-      - uses: github/codeql-action/analyze@v3
+      - run: echo hello
 "#;
 
-    const JOB_WRITE_ALL_UNKNOWN_ACTION: &str = r#"
+    const JOB_WRITE_ALL_PERSIST_CREDENTIALS: &str = r#"
 on: push
 name: Test
 permissions: {}
@@ -553,7 +526,45 @@ jobs:
     permissions: write-all
     steps:
       - uses: actions/checkout@v4
-      - uses: some-unknown-org/mystery-action@v1
+        with:
+          persist-credentials: "true"
+      - run: echo hello
+"#;
+
+    const JOB_WRITE_ALL_GITHUB_TOKEN: &str = r#"
+on: push
+name: Test
+permissions: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - run: |
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com
+"#;
+
+    const JOB_DEFAULT_SAFE: &str = r#"
+on: push
+name: Test
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo hello
+"#;
+
+    const JOB_DEFAULT_GITHUB_TOKEN_WITH: &str = r#"
+on: push
+name: Test
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: some-action/deploy@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 "#;
 
     #[tokio::test]
@@ -577,15 +588,33 @@ jobs:
     }
 
     #[tokio::test]
-    async fn workflow_default_permissions_fix_adds_empty_block() {
-        run_audit(WORKFLOW_DEFAULT_PERMISSIONS, |wf, findings| {
-            if findings.iter().any(|f| !f.fixes.is_empty()) {
-                assert_eq!(
-                    fix_source(wf, findings),
-                    "\non: push\nname: Test\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hello\npermissions: {}\n"
-                );
-            }
+    async fn workflow_default_with_all_job_perms_has_fix() {
+        run_audit(WORKFLOW_DEFAULT_ALL_JOBS_HAVE_PERMS, |wf, findings| {
+            assert!(
+                findings.iter().any(|f| !f.fixes.is_empty()),
+                "expected a fixable finding when all jobs have explicit permissions"
+            );
+            assert_eq!(
+                fix_source(wf, findings),
+                "\non: push\nname: Test\njobs:\n  build:\n    runs-on: ubuntu-latest\n    permissions: {}\n    steps:\n      - run: echo hello\n  test:\n    runs-on: ubuntu-latest\n    permissions: {}\n    steps:\n      - run: echo test\npermissions: {}\n"
+            );
         }).await;
+    }
+
+    #[tokio::test]
+    async fn job_level_default_gets_fix_regardless_of_workflow_perms() {
+        // Even when the workflow-level finding has no fix (because not all jobs
+        // have explicit permissions), the job-level finding should still get
+        // an auto-fix if the job itself is safe (no token refs, no persist-creds).
+        run_audit(WORKFLOW_DEFAULT_NOT_ALL_JOBS_HAVE_PERMS, |_wf, findings| {
+            // In non-pedantic mode, the workflow-level finding is suppressed.
+            // The job-level finding is regular and should have a fix.
+            assert!(
+                findings.iter().any(|f| !f.fixes.is_empty()),
+                "expected at least one fixable finding (job-level)"
+            );
+        })
+        .await;
     }
 
     #[tokio::test]
@@ -623,31 +652,61 @@ jobs:
     }
 
     #[tokio::test]
-    async fn job_write_all_known_actions_fix_infers_minimum_permissions() {
-        run_audit(JOB_WRITE_ALL_KNOWN_ACTIONS, |wf, findings| {
-            let finding = findings
-                .iter()
-                .find(|f| !f.fixes.is_empty())
-                .expect("expected a finding with a fix");
-            assert!(
-                finding.fixes[0].title.contains("minimum required"),
-                "expected precise fix title, got: {}",
-                finding.fixes[0].title
-            );
+    async fn job_write_all_safe_has_fix() {
+        run_audit(JOB_WRITE_ALL_SAFE, |wf, findings| {
             assert_eq!(
-                finding.fixes[0].apply(wf.as_document()).unwrap().source(),
-                "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read\n      security-events: write\n    steps:\n      - uses: actions/checkout@v4\n      - uses: github/codeql-action/init@v3\n      - uses: github/codeql-action/analyze@v3\n"
+                fix_source(wf, findings),
+                "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    permissions: {}\n    steps:\n      - uses: actions/checkout@v4\n      - run: echo hello\n"
             );
         }).await;
     }
 
     #[tokio::test]
-    async fn job_write_all_unknown_action_fix_replaces_with_empty_mapping() {
-        run_audit(JOB_WRITE_ALL_UNKNOWN_ACTION, |wf, findings| {
-            assert_eq!(
-                fix_source(wf, findings),
-                "\non: push\nname: Test\npermissions: {}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    permissions: {}\n    steps:\n      - uses: actions/checkout@v4\n      - uses: some-unknown-org/mystery-action@v1\n"
+    async fn job_write_all_persist_credentials_has_no_fix() {
+        run_audit(JOB_WRITE_ALL_PERSIST_CREDENTIALS, |_wf, findings| {
+            assert!(
+                !findings.is_empty(),
+                "expected at least one finding for write-all job"
             );
-        }).await;
+            assert!(
+                findings.iter().all(|f| f.fixes.is_empty()),
+                "expected no auto-fix when persist-credentials: true is set"
+            );
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn job_write_all_github_token_run_has_no_fix() {
+        run_audit(JOB_WRITE_ALL_GITHUB_TOKEN, |_wf, findings| {
+            assert!(
+                findings.iter().all(|f| f.fixes.is_empty()),
+                "expected no auto-fix when run: references secrets.GITHUB_TOKEN"
+            );
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn job_default_safe_has_fix() {
+        run_audit(JOB_DEFAULT_SAFE, |wf, findings| {
+            assert!(
+                findings.iter().any(|f| !f.fixes.is_empty()),
+                "expected a fixable finding for safe job with default permissions"
+            );
+            let _ = fix_source(wf, findings); // just ensure it applies without panic
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn job_default_github_token_with_has_no_fix() {
+        run_audit(JOB_DEFAULT_GITHUB_TOKEN_WITH, |_wf, findings| {
+            assert!(
+                findings.iter().all(|f| f.fixes.is_empty()),
+                "expected no auto-fix when with: passes secrets.GITHUB_TOKEN"
+            );
+        })
+        .await;
     }
 }

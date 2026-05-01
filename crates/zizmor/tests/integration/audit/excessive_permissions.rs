@@ -62,7 +62,6 @@ fn test_workflow_default_perms_pedantic() -> Result<()> {
        | |_____________________________________^ default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
-       = note: this finding has an auto-fix
 
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:14:3
@@ -82,7 +81,7 @@ fn test_workflow_default_perms_pedantic() -> Result<()> {
        = note: audit confidence → Medium
        = note: this finding has an auto-fix
 
-    2 findings (2 fixable): 0 informational, 0 low, 2 medium, 0 high
+    2 findings (1 fixable): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 
@@ -279,9 +278,8 @@ fn test_issue_472_repro() -> Result<()> {
        |                                         default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
-       = note: this finding has an auto-fix
 
-    3 findings (2 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    3 findings (2 suppressed): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -310,9 +308,8 @@ fn test_reusable_workflow_call() -> Result<()> {
        |                                                 default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
-       = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    2 findings (1 suppressed): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -341,7 +338,6 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
        | |_______________________________________^ default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
-       = note: this finding has an auto-fix
 
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:11:3
@@ -375,9 +371,8 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
        |                                         default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
-       = note: this finding has an auto-fix
 
-    4 findings (1 suppressed, 3 fixable): 0 informational, 0 low, 3 medium, 0 high
+    4 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 3 medium, 0 high
     "
     );
 
