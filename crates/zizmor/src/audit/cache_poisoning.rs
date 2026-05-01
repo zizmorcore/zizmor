@@ -474,6 +474,10 @@ impl CachePoisoning {
             finding_builder = finding_builder.add_location(location);
         }
 
+        // Add a hidden location that spans the entire step, to ensure people
+        // can put ignore comments anywhere in the step's body.
+        finding_builder = finding_builder.add_location(step.location().hidden());
+
         // Add fix if available
         if let Some(fix) = self.create_cache_disable_fix(coord, step) {
             finding_builder = finding_builder.fix(fix);
