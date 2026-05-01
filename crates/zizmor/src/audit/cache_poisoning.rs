@@ -277,26 +277,40 @@ static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(
     ]
 });
 
-enum WorkflowTrigger {
+/// Kinds of triggers that are known to be used with publishing workflows.
+enum PublishingWorkflowTrigger {
+    /// Workflows triggered by pushing a tag.
     TagPush,
+    /// Workflows triggered by pushing to a release branch.
     ReleaseBranchPush,
+    /// Workflows triggered by the `release` event.
     ReleaseEvent,
 }
 
-enum PublishingArtifactsScenario<'doc> {
-    UsingTypicalWorkflowTrigger(WorkflowTrigger),
+/// The publishing 'scenario' in which a cache-aware step is used.
+enum PublishingScenario<'doc> {
+    /// The publishing action is initiated by a workflow trigger.
+    UsingTypicalWorkflowTrigger(PublishingWorkflowTrigger),
+    /// The publishing action is performed by a well-known action,
+    /// like `pypa/gh-action-pypi-publish`.
     UsingWellKnowPublisherAction(Step<'doc>),
 }
 
-enum SupportedExpr {
+/// An expression that controls the behavior of a cache-aware action,
+/// typically within an action input.
+///
+/// This is used to provide (very rough) analysis of cases like
+/// `enable-cache: ${{ ... }}`.
+enum CacheControlExpr {
+    /// A literal `${{ true }}` or `${{ false }}`.
     Bool(bool),
-    Not(Box<SupportedExpr>),
+    Not(Box<CacheControlExpr>),
     // At the moment, this is the only combination of cache control expression and workflow trigger
     // that we recognize.
     StartsWithGithubRefTagPrefix,
 }
 
-impl SupportedExpr {
+impl CacheControlExpr {
     fn parse(raw: &str) -> Option<Self> {
         let extracted = ExtractedExpr::from_fenced(raw)?;
         let parsed = Expr::parse(extracted.as_bare()).ok()?;
@@ -314,27 +328,18 @@ impl SupportedExpr {
                 func: Function::StartsWith,
                 args,
             }) => {
-                let [lhs, rhs] = args.as_slice() else {
-                    return None;
-                };
-
-                let Expr::Context(ctx) = &lhs.inner else {
-                    return None;
-                };
-                if !ctx.matches("github.ref") {
-                    return None;
+                if let [lhs, rhs] = args.as_slice()
+                    && let Expr::Context(ctx) = &lhs.inner
+                    && ctx.matches("github.ref")
+                    && let Expr::Literal(Literal::String(prefix)) = &rhs.inner
+                    && prefix.eq_ignore_ascii_case(TAG_REF_PREFIX)
+                {
+                    return Some(Self::StartsWithGithubRefTagPrefix);
                 }
 
-                let Expr::Literal(Literal::String(prefix)) = &rhs.inner else {
-                    return None;
-                };
-
-                if !prefix.eq_ignore_ascii_case(TAG_REF_PREFIX) {
-                    return None;
-                }
-
-                Some(Self::StartsWithGithubRefTagPrefix)
+                None
             }
+            // TODO: At some point we might want to add heuristics for `case(...)` here as well.
             _ => None,
         }
     }
@@ -355,33 +360,26 @@ struct CacheControlField<'a> {
 
 impl<'a> CacheControlField<'a> {
     fn extract(coord: &'a ActionCoordinate, step: &'a impl StepCommon<'a>) -> Option<Self> {
-        let ActionCoordinate::Configurable { control, .. } = coord else {
-            return None;
-        };
+        if let ActionCoordinate::Configurable { control, .. } = coord
+            && let ControlExpr::Single {
+                toggle,
+                field_name,
+                field_type: ControlFieldType::Boolean,
+                ..
+            } = control
+            && let StepBodyCommon::Uses {
+                with: LoE::Literal(with),
+                ..
+            } = step.body()
+            && let Some(raw_value) = with.get(*field_name)
+        {
+            return Some(CacheControlField {
+                toggle: *toggle,
+                raw_value,
+            });
+        }
 
-        let ControlExpr::Single {
-            toggle,
-            field_name,
-            field_type: ControlFieldType::Boolean,
-            ..
-        } = control
-        else {
-            return None;
-        };
-
-        let StepBodyCommon::Uses { with, .. } = step.body() else {
-            return None;
-        };
-
-        let LoE::Literal(with) = with else {
-            return None;
-        };
-
-        let raw_value = with.get(*field_name)?;
-        Some(CacheControlField {
-            toggle: *toggle,
-            raw_value,
-        })
+        None
     }
 }
 
@@ -394,18 +392,21 @@ audit_meta!(
 );
 
 impl CachePoisoning {
-    fn trigger_used_when_publishing_artifacts(&self, trigger: &Trigger) -> Option<WorkflowTrigger> {
+    fn trigger_used_when_publishing_artifacts(
+        &self,
+        trigger: &Trigger,
+    ) -> Option<PublishingWorkflowTrigger> {
         match trigger {
             Trigger::BareEvent(event) => {
                 if *event == BareEvent::Release {
-                    Some(WorkflowTrigger::ReleaseEvent)
+                    Some(PublishingWorkflowTrigger::ReleaseEvent)
                 } else {
                     None
                 }
             }
             Trigger::BareEvents(events) => {
                 if events.contains(&BareEvent::Release) {
-                    Some(WorkflowTrigger::ReleaseEvent)
+                    Some(PublishingWorkflowTrigger::ReleaseEvent)
                 } else {
                     None
                 }
@@ -413,7 +414,7 @@ impl CachePoisoning {
             Trigger::Events(events) => {
                 if let OptionalBody::Body(body) = &events.push {
                     if body.tag_filters.is_some() {
-                        return Some(WorkflowTrigger::TagPush);
+                        return Some(PublishingWorkflowTrigger::TagPush);
                     }
 
                     if let Some(BranchFilters::Branches(branches)) = &body.branch_filters
@@ -421,12 +422,12 @@ impl CachePoisoning {
                             .iter()
                             .any(|branch| branch.to_lowercase().contains("release"))
                     {
-                        return Some(WorkflowTrigger::ReleaseBranchPush);
+                        return Some(PublishingWorkflowTrigger::ReleaseBranchPush);
                     }
                 }
 
                 if !matches!(events.release, OptionalBody::Missing) {
-                    return Some(WorkflowTrigger::ReleaseEvent);
+                    return Some(PublishingWorkflowTrigger::ReleaseEvent);
                 }
 
                 None
@@ -448,16 +449,16 @@ impl CachePoisoning {
         &self,
         trigger: &Trigger,
         steps: Steps<'doc>,
-    ) -> Option<PublishingArtifactsScenario<'doc>> {
+    ) -> Option<PublishingScenario<'doc>> {
         if let Some(workflow_trigger) = self.trigger_used_when_publishing_artifacts(trigger) {
-            return Some(PublishingArtifactsScenario::UsingTypicalWorkflowTrigger(
+            return Some(PublishingScenario::UsingTypicalWorkflowTrigger(
                 workflow_trigger,
             ));
         };
 
         let well_know_publisher = CachePoisoning::detected_well_known_publisher_step(steps)?;
 
-        Some(PublishingArtifactsScenario::UsingWellKnowPublisherAction(
+        Some(PublishingScenario::UsingWellKnowPublisherAction(
             well_know_publisher,
         ))
     }
@@ -545,10 +546,10 @@ impl CachePoisoning {
         &self,
         coord: &ActionCoordinate,
         step: &Step<'doc>,
-        scenario: &PublishingArtifactsScenario<'doc>,
+        scenario: &PublishingScenario<'doc>,
         cache_usage: Usage,
     ) -> Option<Usage> {
-        let PublishingArtifactsScenario::UsingTypicalWorkflowTrigger(WorkflowTrigger::TagPush) =
+        let PublishingScenario::UsingTypicalWorkflowTrigger(PublishingWorkflowTrigger::TagPush) =
             scenario
         else {
             return Some(cache_usage);
@@ -558,7 +559,7 @@ impl CachePoisoning {
         };
 
         let raw = control.raw_value.to_string();
-        let Some(expr) = SupportedExpr::parse(&raw) else {
+        let Some(expr) = CacheControlExpr::parse(&raw) else {
             return Some(cache_usage);
         };
 
@@ -578,7 +579,7 @@ impl CachePoisoning {
     fn uses_cache_aware_step<'doc>(
         &self,
         step: &Step<'doc>,
-        scenario: &PublishingArtifactsScenario<'doc>,
+        scenario: &PublishingScenario<'doc>,
     ) -> Result<Option<Finding<'doc>>, AuditError> {
         let Some((coord, cache_usage)) = self.evaluate_cache_usage(step) else {
             return Ok(None);
@@ -622,7 +623,7 @@ impl CachePoisoning {
         };
 
         let mut finding_builder = match scenario {
-            PublishingArtifactsScenario::UsingTypicalWorkflowTrigger(_) => Self::finding()
+            PublishingScenario::UsingTypicalWorkflowTrigger(_) => Self::finding()
                 .confidence(Confidence::Low)
                 .severity(Severity::High)
                 .add_location(
@@ -631,7 +632,7 @@ impl CachePoisoning {
                         .with_keys(["on".into()])
                         .annotated("generally used when publishing artifacts generated at runtime"),
                 ),
-            PublishingArtifactsScenario::UsingWellKnowPublisherAction(publisher) => Self::finding()
+            PublishingScenario::UsingWellKnowPublisherAction(publisher) => Self::finding()
                 .confidence(Confidence::Low)
                 .severity(Severity::High)
                 .add_location(
