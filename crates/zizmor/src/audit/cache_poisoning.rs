@@ -442,14 +442,12 @@ impl CachePoisoning {
         trigger: &Trigger,
         steps: Steps<'doc>,
     ) -> Option<PublishingScenario<'doc>> {
-        if let triggers = self.triggers_used_when_publishing_artifacts(trigger)
-            && !triggers.is_empty()
-        {
+        let triggers = self.triggers_used_when_publishing_artifacts(trigger);
+        if !triggers.is_empty() {
             return Some(PublishingScenario::UsingReleaseTriggers(triggers));
         };
 
         let well_know_publisher = CachePoisoning::detected_well_known_publisher_step(steps)?;
-
         Some(PublishingScenario::UsingReleaseAction(well_know_publisher))
     }
 
