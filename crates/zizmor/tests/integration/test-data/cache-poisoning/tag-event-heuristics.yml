@@ -1,0 +1,21 @@
+name: tag-event-heuristics
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - "*"
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          # this is the opposite of #1940: caching is explicitly enabled here,
+          # but *only* for tag events, which we consider unsafe becaue we assume that
+          # tag events correspond to releases.
+          sccache: ${{ startsWith(github.ref, 'refs/tags/') }}

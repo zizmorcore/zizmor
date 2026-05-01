@@ -565,7 +565,8 @@ impl CachePoisoning {
         };
 
         if cache_enabled {
-            Some(cache_usage)
+            // If we've inferred that caching is enabled, we can upgrade the usage's confidence.
+            Some(Usage::DirectOptIn)
         } else {
             None
         }
