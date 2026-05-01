@@ -226,12 +226,11 @@ impl<'a> SpannedExpr<'a> {
                     index_exprs.extend(arg.computed_indices());
                 }
             }
-            Expr::Index(spanned_expr) => {
+            Expr::Index(spanned_expr)
                 // NOTE: We consider any non-literal, non-star index computed.
-                if !spanned_expr.is_literal() && !matches!(spanned_expr.inner, Expr::Star) {
+                if !spanned_expr.is_literal() && !matches!(spanned_expr.inner, Expr::Star) => {
                     index_exprs.push(self);
                 }
-            }
             Expr::Context(context) => {
                 for part in &context.parts {
                     index_exprs.extend(part.computed_indices());

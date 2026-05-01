@@ -334,10 +334,10 @@ impl CacheControlExpr {
                     && let Expr::Literal(Literal::String(prefix)) = &rhs.inner
                     && prefix.eq_ignore_ascii_case(TAG_REF_PREFIX)
                 {
-                    return Some(Self::StartsWithGithubRefTagPrefix);
+                    Some(Self::StartsWithGithubRefTagPrefix)
+                } else {
+                    None
                 }
-
-                None
             }
             // TODO: At some point we might want to add heuristics for `case(...)` here as well.
             _ => None,
@@ -373,13 +373,13 @@ impl<'a> CacheControlField<'a> {
             } = step.body()
             && let Some(raw_value) = with.get(*field_name)
         {
-            return Some(CacheControlField {
+            Some(CacheControlField {
                 toggle: *toggle,
                 raw_value,
-            });
+            })
+        } else {
+            None
         }
-
-        None
     }
 }
 
