@@ -4,6 +4,12 @@
 # owner/repo#number for PRs
 # owner/repo@commit for individual commits
 
+actix/actix#693
+actix/actix-extras#720
+actix/actix-net#869
+actix/actix-web#4054
+actix/actix-website#731
+actix/examples#1302
 actualbudget/actual#7465
 adafruit/circuitpython#9785
 ag2ai/faststream#2398
@@ -19,6 +25,7 @@ anthropics/claude-code-action#729
 apache/airflow#45408
 apache/airflow#47258
 apache/airflow#50749
+apache/arrow-adbc#4270
 apache/iceberg#15793
 apache/iceberg#15820
 apache/iceberg-cpp#618
@@ -30,6 +37,7 @@ apache/iceberg-rust#2290
 apache/lucene#15216
 apache/opendal-reqsign#687
 apache/opennlp#736
+apache/ozone#10102
 apache/polaris#4097
 apache/ratis#1426
 apache/sedona#1976
@@ -40,6 +48,7 @@ aquasecurity/trivy-action#502
 aquasecurity/trivy-operator#2910
 aquasecurity/vuln-list-update#411
 ariel-os/ariel-os#1738
+aristocratos/btop#1590
 artichoke/artichoke#2825
 artichoke/boba#265
 artichoke/project-infrastructure#683
@@ -92,6 +101,7 @@ boto/s3transfer#374
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 bw2/ConfigArgParse#336
 cachix/git-hooks.nix#606
+cactus/go-camo#87
 cakephp/cakephp#18081
 Calysto/metakernel#344
 Calysto/octave_kernel#263
@@ -105,6 +115,7 @@ certbot/josepy#193
 chainguard-dev/apko#2166
 chainguard-dev/malcontent#1451
 chainguard-dev/melange#2463
+chainguard-images/images#3076
 cheeriojs/cheerio#5212
 chatmail/core#7942
 coder/coder#19459
@@ -129,7 +140,10 @@ DataDog/dd-trace-py#11640
 DataDog/dd-trace-rb#4456
 datalens-tech/datalens-backend#777
 davidlattimore/wild#450
+deltachat/deltachat-android#4390
 deltachat/deltachat-core-rust#6539
+deltachat/deltachat-desktop#6307
+deltachat/deltachat-desktop#6308
 dependabot/dependabot-core#13531
 developmentseed/titiler#1354
 digitalbazaar/pyld#211
@@ -145,9 +159,11 @@ dubzzz/fast-check#6369
 dubzzz/fast-check#6370
 Dynatrace/dynatrace-operator#6154
 earthobservations/wetterdienst#1440
+eclipse-ditto/ditto#2421
 eclipse-transformer/transformer#867
 edgelesssys/contrast#1604
 EFForg/rayhunter#711
+egbakou/RESTCountries.NET#55
 Electric-Coin-Company/zcash-light-client-ffi#186
 element-hq/element-call#3797
 element-hq/element-desktop#2877
@@ -185,6 +201,7 @@ github-aws-runners/terraform-aws-github-runner#4808
 gitify-app/gitify#2763
 GitoxideLabs/gitoxide#2337
 gleam-lang/gleam#5559
+golangci/golangci-lint#6500
 gophercloud/gophercloud#3659
 graelo/pumas#61
 grafana/agent#7148
@@ -215,6 +232,7 @@ hexpm/hex#1110
 hexpm/hexpm#1383
 h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
 h5py/h5py#2824
+holoviz/holoviews#6860
 Homebrew/actions#630
 Homebrew/actions#631
 Homebrew/brew#18662
@@ -259,6 +277,7 @@ ispc/ispc#3589
 jazzband/pip-tools#2327
 jj-vcs/jj#5076
 JOML-CI/JOML@98290c379f54d05d6d27afb11ae88dfd86e35c9d
+js-cookie/js-cookie#946
 Julian/lean.nvim@4f9d48499b002ab361a4351142cae2f6f5403646
 junit-team/junit-framework#4838
 junit-team/junit-framework#4840
@@ -300,6 +319,8 @@ maxmind/geoipupdate#354
 maxmind/geoip2-csv-converter#87
 maxmind/mmdbwriter#104
 maxmind/GeoIP2-node#1387
+mccutchen/go-httpbin#252
+medic/cht-core#10559
 MeteorDevelopment/meteor-client#5091
 mfussenegger/nvim-lint#710
 michaelbull/kotlin-retry@b030616942c72812b892fec4950f3eca0813cb07
@@ -338,6 +359,8 @@ NixOS/infra#613
 NixOS/nixpkgs#396451
 NLnetLabs/nsd#413
 NLnetLabs/unbound#1204
+notify-rs/notify#911
+npmx-dev/npmx.dev#2632
 numpy/numpy#27931
 numpy/numpy.org#797
 octobox/octobox#4377
@@ -345,6 +368,9 @@ octo-sts/app#1294
 onnx/onnx#6661
 onnx/onnx#6662
 onnx/onnx#7363
+onnx/onnxmltools#763
+onnx/optimizer#300
+onnx/tensorflow-onnx#2456
 onyx-dot-app/onyx#6344
 openbao/openbao#924
 open-edge-platform/geti#162
@@ -452,6 +478,7 @@ rust-lang/crates.io#11203
 rust-lang/rust-clippy#13933
 rust-lang/team#2412
 rust-lang/this-week-in-rust#6721
+rust-phf/rust-phf#404
 rustls/rustls#2261
 rustls/tokio-rustls#96
 rustls/webpki#299
@@ -482,6 +509,7 @@ slackapi/node-slack-sdk#2246
 slackapi/manifest-schema#14
 slackapi/slack-cli#100
 slackapi/python-slack-events-api#110
+Stebalien/tempfile#402
 stravalib/stravalib#645
 stravalib/stravalib#648
 stravalib/stravalib#649
@@ -495,8 +523,10 @@ TecharoHQ/anubis#188
 tektoncd/operator#3300
 tektoncd/operator#3324
 tektoncd/pipeline#9667
+tensorzero/tensorzero#7402
 termcolor/termcolor#89
 termux/termux-packages#22519
+theopenconversationkit/tock@85face9458cd6f9676d647cabc00de7be74ecac5
 textlint/textlint#1711
 theupdateframework/python-tuf#2798
 theupdateframework/tuf-on-ci#548
@@ -523,11 +553,13 @@ urllib3/urllib3#3528
 uutils/coreutils#6973
 ViaVersion/ViaVersion#4315
 vlang/v#22681
+VSCodium/vscodium#2795
 wagtail/wagtail-localize#843
 wntrblm/nox#925
 WordPress/gutenberg#69126
 WordPress/wordpress-develop#8007
 wgsl-analyzer/wgsl-analyzer#844
+xgcm/xgcm#700
 yamadashy/repomix#1212
 yt-dlp/ejs#40
 yt-dlp/yt-dlp#15324
