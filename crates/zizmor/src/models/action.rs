@@ -84,6 +84,17 @@ impl Action {
         })
     }
 
+    /// Returns a [`DockerAction`] if this action is a Docker action, or `None` otherwise.
+    pub(crate) fn docker(&self) -> Option<DockerAction<'_>> {
+        match &self.inner.runs {
+            action::Runs::Docker(docker) => Some(DockerAction {
+                inner: docker,
+                parent: self,
+            }),
+            _ => None,
+        }
+    }
+
     /// Returns a [`CompositeSteps`] iterator over this actions's constituent
     /// [`CompositeStep`]s, or `None` if the action is not a composite action.
     pub(crate) fn steps(&self) -> Option<CompositeSteps<'_>> {
@@ -114,6 +125,37 @@ impl Action {
             .into_iter()
             .flatten()
             .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location())))
+    }
+}
+
+/// A wrapper around [`action::Docker`] that also provides access to the parent [`Action`].
+pub(crate) struct DockerAction<'a> {
+    inner: &'a action::Docker,
+    parent: &'a Action,
+}
+
+impl<'a> std::ops::Deref for DockerAction<'a> {
+    type Target = &'a action::Docker;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<'doc> Locatable<'doc> for DockerAction<'doc> {
+    fn location(&self) -> SymbolicLocation<'doc> {
+        self.parent
+            .location()
+            .annotated("this Docker action")
+            .with_keys(["runs".into()])
+    }
+
+    // TODO(ww): Reasonable location_with_grip here?
+}
+
+impl<'a> AsDocument<'a, 'a> for DockerAction<'a> {
+    fn as_document(&'a self) -> &'a yamlpath::Document {
+        self.parent.as_document()
     }
 }
 

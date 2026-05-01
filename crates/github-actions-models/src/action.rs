@@ -11,7 +11,7 @@ use indexmap::IndexMap;
 use serde::Deserialize;
 
 use crate::common::{
-    Env, If, Uses,
+    DockerUses, Env, If, Uses,
     expr::{BoE, LoE},
 };
 
@@ -167,7 +167,7 @@ pub struct Docker {
     pub using: String,
 
     /// The Docker image to use.
-    pub image: String,
+    pub image: LoE<DockerUses>,
 
     /// An optional environment mapping for this step.
     #[serde(default)]
