@@ -69,8 +69,11 @@ of `zizmor`.
 * Fixed a bug where inline ignore comments could not be easily applied
   to [cache-poisoning] findings (#1962)
 
-* Fixed a bug where the `cache-poisoning` audit would raise a finding
-  when the cache state can be statically determined (#1940)
+* Fixed a class of imprecisions where the [cache-poisoning] audit would
+  incorrectly flag cache usage that doesn't actually occur on release events
+  (#1940)
+
+    Many thanks to @reubenwong97 for implementing this fix!
 
 ## 1.24.1
 
