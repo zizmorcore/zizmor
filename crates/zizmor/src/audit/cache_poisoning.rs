@@ -554,8 +554,9 @@ impl CachePoisoning {
         if let PublishingScenario::UsingReleaseTrigger(ReleaseTrigger::TagPush) = scenario
             && let Some(control) = CacheControlField::extract(coord, step)
             && let Some(expr) = CacheControlExpr::parse(&control.raw_value.to_string())
-            && let control_value = expr.eval_for_tag_push()
         {
+            let control_value = expr.eval_for_tag_push();
+
             let cache_enabled = match control.toggle {
                 Toggle::OptIn => control_value,
                 Toggle::OptOut => !control_value,
