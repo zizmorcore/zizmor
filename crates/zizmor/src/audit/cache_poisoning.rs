@@ -277,23 +277,22 @@ static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(
     ]
 });
 
-/// Kinds of triggers that are known to be used with publishing workflows.
-enum PublishingWorkflowTrigger {
-    /// Workflows triggered by pushing a tag.
+/// Kinds of triggers that are known to be used with release workflows.
+enum ReleaseTrigger {
+    /// Release triggered by pushing a tag.
     TagPush,
-    /// Workflows triggered by pushing to a release branch.
+    /// Release triggered by pushing to a release branch.
     ReleaseBranchPush,
-    /// Workflows triggered by the `release` event.
+    /// Release triggered by the `release` event.
     ReleaseEvent,
 }
 
-/// The publishing 'scenario' in which a cache-aware step is used.
+/// The release 'scenario' in which a cache-aware step is used.
 enum PublishingScenario<'doc> {
-    /// The publishing action is initiated by a workflow trigger.
-    UsingTypicalWorkflowTrigger(PublishingWorkflowTrigger),
-    /// The publishing action is performed by a well-known action,
-    /// like `pypa/gh-action-pypi-publish`.
-    UsingWellKnowPublisherAction(Step<'doc>),
+    /// The surrounding workflow is triggered by an event typically used for creating releases.
+    UsingReleaseTrigger(ReleaseTrigger),
+    /// The release is performed by a well-known action like `pypa/gh-action-pypi-publish`.
+    UsingReleaseAction(Step<'doc>),
 }
 
 /// An expression that controls the behavior of a cache-aware action,
@@ -304,10 +303,11 @@ enum PublishingScenario<'doc> {
 enum CacheControlExpr {
     /// A literal `${{ true }}` or `${{ false }}`.
     Bool(bool),
-    Not(Box<CacheControlExpr>),
     // At the moment, this is the only combination of cache control expression and workflow trigger
     // that we recognize.
     StartsWithGithubRefTagPrefix,
+    /// A negation of another cache control expression.
+    Not(Box<CacheControlExpr>),
 }
 
 impl CacheControlExpr {
@@ -392,21 +392,18 @@ audit_meta!(
 );
 
 impl CachePoisoning {
-    fn trigger_used_when_publishing_artifacts(
-        &self,
-        trigger: &Trigger,
-    ) -> Option<PublishingWorkflowTrigger> {
+    fn trigger_used_when_publishing_artifacts(&self, trigger: &Trigger) -> Option<ReleaseTrigger> {
         match trigger {
             Trigger::BareEvent(event) => {
                 if *event == BareEvent::Release {
-                    Some(PublishingWorkflowTrigger::ReleaseEvent)
+                    Some(ReleaseTrigger::ReleaseEvent)
                 } else {
                     None
                 }
             }
             Trigger::BareEvents(events) => {
                 if events.contains(&BareEvent::Release) {
-                    Some(PublishingWorkflowTrigger::ReleaseEvent)
+                    Some(ReleaseTrigger::ReleaseEvent)
                 } else {
                     None
                 }
@@ -414,7 +411,7 @@ impl CachePoisoning {
             Trigger::Events(events) => {
                 if let OptionalBody::Body(body) = &events.push {
                     if body.tag_filters.is_some() {
-                        return Some(PublishingWorkflowTrigger::TagPush);
+                        return Some(ReleaseTrigger::TagPush);
                     }
 
                     if let Some(BranchFilters::Branches(branches)) = &body.branch_filters
@@ -422,12 +419,12 @@ impl CachePoisoning {
                             .iter()
                             .any(|branch| branch.to_lowercase().contains("release"))
                     {
-                        return Some(PublishingWorkflowTrigger::ReleaseBranchPush);
+                        return Some(ReleaseTrigger::ReleaseBranchPush);
                     }
                 }
 
                 if !matches!(events.release, OptionalBody::Missing) {
-                    return Some(PublishingWorkflowTrigger::ReleaseEvent);
+                    return Some(ReleaseTrigger::ReleaseEvent);
                 }
 
                 None
@@ -451,16 +448,12 @@ impl CachePoisoning {
         steps: Steps<'doc>,
     ) -> Option<PublishingScenario<'doc>> {
         if let Some(workflow_trigger) = self.trigger_used_when_publishing_artifacts(trigger) {
-            return Some(PublishingScenario::UsingTypicalWorkflowTrigger(
-                workflow_trigger,
-            ));
+            return Some(PublishingScenario::UsingReleaseTrigger(workflow_trigger));
         };
 
         let well_know_publisher = CachePoisoning::detected_well_known_publisher_step(steps)?;
 
-        Some(PublishingScenario::UsingWellKnowPublisherAction(
-            well_know_publisher,
-        ))
+        Some(PublishingScenario::UsingReleaseAction(well_know_publisher))
     }
 
     fn evaluate_cache_usage<'doc>(
@@ -542,16 +535,18 @@ impl CachePoisoning {
         }
     }
 
-    fn known_conditional_cache_usage<'doc>(
+    /// Apply heuristics to a `Usage::ConditionalOptIn` to attempt to refine it into
+    /// a more precise usage.
+    ///
+    /// Returns `None` if the heuristics determine that caching is effectively disabled.
+    fn conditional_cache_usage_heuristics<'doc>(
         &self,
         coord: &ActionCoordinate,
         step: &Step<'doc>,
         scenario: &PublishingScenario<'doc>,
         cache_usage: Usage,
     ) -> Option<Usage> {
-        let PublishingScenario::UsingTypicalWorkflowTrigger(PublishingWorkflowTrigger::TagPush) =
-            scenario
-        else {
+        let PublishingScenario::UsingReleaseTrigger(ReleaseTrigger::TagPush) = scenario else {
             return Some(cache_usage);
         };
         let Some(control) = CacheControlField::extract(coord, step) else {
@@ -586,7 +581,7 @@ impl CachePoisoning {
         };
 
         let cache_usage = if matches!(cache_usage, Usage::ConditionalOptIn) {
-            self.known_conditional_cache_usage(coord, step, scenario, cache_usage)
+            self.conditional_cache_usage_heuristics(coord, step, scenario, cache_usage)
         } else {
             Some(cache_usage)
         };
@@ -623,7 +618,7 @@ impl CachePoisoning {
         };
 
         let mut finding_builder = match scenario {
-            PublishingScenario::UsingTypicalWorkflowTrigger(_) => Self::finding()
+            PublishingScenario::UsingReleaseTrigger(_) => Self::finding()
                 .confidence(Confidence::Low)
                 .severity(Severity::High)
                 .add_location(
@@ -632,7 +627,7 @@ impl CachePoisoning {
                         .with_keys(["on".into()])
                         .annotated("generally used when publishing artifacts generated at runtime"),
                 ),
-            PublishingScenario::UsingWellKnowPublisherAction(publisher) => Self::finding()
+            PublishingScenario::UsingReleaseAction(publisher) => Self::finding()
                 .confidence(Confidence::Low)
                 .severity(Severity::High)
                 .add_location(
