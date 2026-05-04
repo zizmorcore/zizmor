@@ -319,6 +319,13 @@ You can use `zizmor` with @super-linter/super-linter.
 Refer to the [super-linter documentation](https://github.com/super-linter/super-linter)
 for additional details.
 
+### megalinter
+
+You can use `zizmor` with @oxsecurity/megalinter.
+
+Refer to the [megalinter documentation](https://github.com/oxsecurity/megalinter)
+for additional details.
+
 ## Tab completion { #integration-tab-completion }
 
 !!! note
