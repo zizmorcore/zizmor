@@ -85,7 +85,7 @@ impl Action {
     }
 
     /// Returns a [`DockerAction`] if this action is a Docker action, or `None` otherwise.
-    pub(crate) fn docker(&self) -> Option<DockerAction<'_>> {
+    pub(crate) fn docker<'doc>(&'doc self) -> Option<DockerAction<'doc>> {
         match &self.inner.runs {
             action::Runs::Docker(docker) => Some(DockerAction {
                 inner: docker,
@@ -153,8 +153,8 @@ impl<'doc> Locatable<'doc> for DockerAction<'doc> {
     // TODO(ww): Reasonable location_with_grip here?
 }
 
-impl<'a> AsDocument<'a, 'a> for DockerAction<'a> {
-    fn as_document(&'a self) -> &'a yamlpath::Document {
+impl<'a, 'doc> AsDocument<'a, 'doc> for DockerAction<'doc> {
+    fn as_document(&'a self) -> &'doc yamlpath::Document {
         self.parent.as_document()
     }
 }

@@ -159,6 +159,18 @@ pub enum StepBody {
     },
 }
 
+/// A `uses` field for a Docker action step, which can be either a literal 'Dockerfile' or a
+/// Docker image (potentially via an expression).
+///
+/// This is essentially a specialization of the common [`DockerUses`] type,
+/// since only actions (and not workflows) allow a 'Dockerfile' "image".
+#[derive(Deserialize, Debug)]
+pub enum DockerActionUses {
+    Dockerfile,
+    #[serde(untagged)]
+    Image(LoE<DockerUses>),
+}
+
 /// A `runs` definition for a Docker action.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
@@ -167,7 +179,7 @@ pub struct Docker {
     pub using: String,
 
     /// The Docker image to use.
-    pub image: LoE<DockerUses>,
+    pub image: DockerActionUses,
 
     /// An optional environment mapping for this step.
     #[serde(default)]
@@ -193,4 +205,18 @@ pub struct Docker {
     ///
     /// If not present, defaults to `always()`
     pub post_if: Option<If>,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::action::DockerActionUses;
+
+    #[test]
+    fn test_docker_action_uses_deserialization() {
+        let uses: DockerActionUses = serde_yaml::from_str("Dockerfile").unwrap();
+        assert!(matches!(uses, DockerActionUses::Dockerfile));
+
+        let uses: DockerActionUses = serde_yaml::from_str("ubuntu:latest").unwrap();
+        assert!(matches!(uses, DockerActionUses::Image(_)));
+    }
 }
