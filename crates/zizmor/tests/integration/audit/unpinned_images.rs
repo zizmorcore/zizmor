@@ -224,3 +224,28 @@ fn test_issue_1942_repro() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Tests that `unpinned-images` handles Docker-style action definitions, not just images
+/// in jobs/steps within workflows.
+#[test]
+fn test_docker_action() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-images/docker-action/"))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @r#"
+    error[unpinned-images]: unpinned image references
+     --> @@INPUT@@action.yml:7:3
+      |
+    7 |   image: "docker://ghcr.io/super-linter/super-linter:slim-v8.5.0" # x-release-please-version
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    "#
+    );
+
+    Ok(())
+}
