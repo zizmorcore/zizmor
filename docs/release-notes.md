@@ -27,6 +27,9 @@ of `zizmor`.
 
 * `zizmor`'s LSP now honors the `--persona` flag on the CLI (#1943)
 
+* `zizmor` is now aware of Docker-based action definitions, in addition to the
+  pre-existing support for "composite" actions (#1965)
+
 ### Enhancements
 
 * Recommend `gh issue edit --add-label` / `gh pr edit --add-label` as a replacement for
@@ -48,6 +51,9 @@ of `zizmor`.
 
 * The [dangerous-triggers] audit now explicitly exempts workflows that only
   invoke @actions/labeler (#1956)
+
+* The [unpinned-images] audit now detects unpinned image references in
+  Docker-based action definitions (#1965)
 
 ### Bug Fixes 🐛
 
