@@ -181,7 +181,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
             }
           ],
           "message": {
-            "text": "overly broad permissions"
+            "text": "overly broad permissions: uses write-all permissions"
           },
           "properties": {
             "zizmor/confidence": "High",
@@ -297,7 +297,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
             }
           ],
           "message": {
-            "text": "use of fundamentally insecure workflow trigger"
+            "text": "use of fundamentally insecure workflow trigger: pull_request_target is almost always used insecurely"
           },
           "properties": {
             "zizmor/confidence": "Medium",
@@ -510,7 +510,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
             }
           ],
           "message": {
-            "text": "code injection via template expansion"
+            "text": "code injection via template expansion: may expand into attacker-controllable code"
           },
           "properties": {
             "zizmor/confidence": "High",

@@ -395,7 +395,7 @@ jobs:
                 }
               ],
               "message": {
-                "text": "credential persistence through GitHub Actions artifacts"
+                "text": "credential persistence through GitHub Actions artifacts: does not set persist-credentials: false"
               },
               "properties": {
                 "zizmor/confidence": "Low",
@@ -558,7 +558,7 @@ jobs:
                 }
               ],
               "message": {
-                "text": "overly broad permissions"
+                "text": "overly broad permissions: default permissions used due to no permissions: block"
               },
               "properties": {
                 "zizmor/confidence": "Medium",
@@ -706,7 +706,7 @@ jobs:
                 }
               ],
               "message": {
-                "text": "unpinned action reference"
+                "text": "unpinned action reference: action is not pinned to a hash (required by blanket policy)"
               },
               "properties": {
                 "zizmor/confidence": "High",
