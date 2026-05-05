@@ -659,7 +659,7 @@ fn test_trigger_heuristics_tag_only() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    3 findings (2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -699,7 +699,7 @@ fn test_trigger_heuristics_tag_and_release() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    3 findings (2 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 

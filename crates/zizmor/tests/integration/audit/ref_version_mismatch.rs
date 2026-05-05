@@ -10,7 +10,7 @@ fn test_ref_version_mismatch() -> Result<()> {
             .output(crate::common::OutputMode::Both)
             .input(input_under_test("ref-version-mismatch.yml"))
             .run()?,
-        @r"
+        @"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
      INFO audit: zizmor: 🌈 completed @@INPUT@@
     error[unpinned-uses]: unpinned action reference
@@ -44,7 +44,7 @@ fn test_ref_version_mismatch() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    6 findings (3 suppressed, 3 fixable): 0 informational, 0 low, 2 medium, 1 high
+    6 findings (3 suppressed, 3 unsafe fixes): 0 informational, 0 low, 2 medium, 1 high
     "
     );
 
@@ -123,7 +123,7 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
       |
       = note: audit confidence → High
 
-    6 findings (4 fixable): 0 informational, 3 low, 2 medium, 1 high
+    6 findings (4 unsafe fixes): 0 informational, 3 low, 2 medium, 1 high
     "
     );
 
@@ -155,7 +155,7 @@ fn test_issue_1853() -> Result<()> {
             .offline(false)
             .input(input_under_test("ref-version-mismatch/issue-1853-repro.yml"))
             .run()?,
-        @r"
+        @"
     warning[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
       --> @@INPUT@@:14:75
        |
@@ -167,7 +167,7 @@ fn test_issue_1853() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
