@@ -66,7 +66,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde-sarif = "0.8.0"
 serde_json = "1.0.149"
 serde_json_path = "0.7.2"
-serde_yaml = "0.9.34"
+serde_yaml = { package = "yaml_serde", version = "0.10" }
 tar = "0.4.45"
 terminal-link = "0.1.0"
 thiserror = "2.0.18"
