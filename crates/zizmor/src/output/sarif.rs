@@ -135,7 +135,15 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
         // code security alert titles when the primary annotation was
         // terse. So now we use the finding's description again, like
         // we did before 1.4.0.
-        .message(Message::builder().text(finding.desc).build())
+        .message(
+            Message::builder()
+                .text(format!(
+                    "{desc}: {annotation}",
+                    desc = finding.desc,
+                    annotation = primary.symbolic.annotation
+                ))
+                .build(),
+        )
         .locations(vec![build_location(primary, None)])
         .code_flows(code_flows)
         .level(ResultLevel::from(finding.determinations.severity))
