@@ -55,6 +55,9 @@ of `zizmor`.
 * The [unpinned-images] audit now detects unpinned image references in
   Docker-based action definitions (#1965)
 
+* zizmor's SARIF output now provides slightly more detailed finding messages
+  (#1972)
+
 ### Bug Fixes 🐛
 
 * Fixed a crash in the [template-injection] audit when a workflow uses
