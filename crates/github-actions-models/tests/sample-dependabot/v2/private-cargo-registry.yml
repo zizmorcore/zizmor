@@ -1,0 +1,31 @@
+version: 2
+
+registries:
+  private-rust:
+    type: "cargo-registry"
+    registry: "Private_Rust"
+    url: "https://pkgs.dev.azure.com/company-name/_packaging/Private_Rust/Cargo/index/"
+    token: "${{secrets.PRIVATE_RUST_TOKEN_B64}}"
+
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    registries:
+      - "private-rust"
+    schedule:
+      interval: "weekly"
+    groups:
+      security-updates: # Group 1: Security updates grouped, major versions excluded
+        applies-to: security-updates
+        update-types:
+          - "patch"
+          - "minor"
+      minor-and-patch: # Group 2: Minor and patch version updates grouped, major versions excluded
+        applies-to: version-updates
+        update-types:
+          - "patch"
+          - "minor"
+      major: # Group 3: Major updates only
+        applies-to: version-updates
+        update-types:
+          - "major"
