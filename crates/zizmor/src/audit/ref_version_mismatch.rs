@@ -36,6 +36,8 @@ static VERSION_COMMENT_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
         Regex::new(r"#\s*(v?\d+(?:\.\d+)*(?:-?[\w.-]+)?)").unwrap(),
         // More flexible: "# version: 2.8.0"
         Regex::new(r"#\s*(?:version|ver)\s*[:=]\s*(v?\d+(?:\.\d+)*(?:-?[\w.-]+)?)").unwrap(),
+        // Matches # <name>/<version> such as create-github-app-token/v0.2.2.
+        Regex::new(r"#\s*([^\s#]+/v?\d+(?:\.\d+)*(?:-[\w.-]+)?)").unwrap(),
     ]
 });
 

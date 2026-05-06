@@ -29,6 +29,10 @@ of `zizmor`.
 
 * Fixed a bug where [ref-version-mismatch] would fail to fully match some version comments (#2040)
 
+* Fixed a bug where [ref-version-mismatch] would incorrectly flag refs with a `<name>/<version>` (#1938)
+
+    Many thanks to @reubenwong97 for implementing this fix!
+
 ## 1.25.2
 
 ### Bug Fixes 🐛
