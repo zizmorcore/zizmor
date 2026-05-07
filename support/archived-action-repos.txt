@@ -52,7 +52,12 @@ cedrickring/golang-action
 
 cirrus-actions/rebase
 
+contributor-assistant/github-action
+
+cpcloud/flake-update-action
+
 crazy-max/ghaction-docker-buildx
+crazy-max/ghaction-hugo
 
 Decathlon/pull-request-labeler-action
 
@@ -84,6 +89,8 @@ helaili/jekyll-action
 
 Ilshidur/action-slack
 
+irgolic/AutoPR
+
 jakejarvis/backblaze-b2-action
 jakejarvis/cloudflare-purge-action
 jakejarvis/firebase-deploy-action
@@ -101,6 +108,8 @@ kxxt/chatgpt-action
 
 lapras-inc/resume-sync-action
 
+liskin/gh-pipx
+
 machine-learning-apps/wandb-action
 
 MansaGroup/gcs-cache-action
@@ -109,6 +118,11 @@ marvinpinto/actions
 marvinpinto/action-automatic-releases
 
 maxheld83/ghpages
+
+MeilCli/danger-action
+MeilCli/gradle-update-check-action
+MeilCli/npm-update-check-action
+MeilCli/nuget-update-check-action
 
 micnncim/action-lgtm-reaction
 
@@ -139,9 +153,22 @@ semgrep/semgrep-action
 
 ShaunLWM/action-release-debugapk
 
+stefafafan/psi-action
+
 stefanprodan/kube-tools
 
+soichisumi/issue-copy-action
+
 SonarSource/sonarcloud-github-action
+
+suzuki-shunsuke/github-action-format
+suzuki-shunsuke/github-action-tflint
+suzuki-shunsuke/github-action-tfsec
+suzuki-shunsuke/required-status-check-action
+suzuki-shunsuke/trivy-config-action
+suzuki-shunsuke/validate-pr-review-action
+
+svenstaro/upx-action
 
 SwiftDocOrg/github-wiki-publish-action
 
@@ -156,11 +183,15 @@ tibdex/github-app-token
 
 trmcnvn/chrome-addon
 
+VeryGoodOpenSource/very_good_coverage
+
 whelk-io/maven-settings-xml-action
 
 yeslayla/build-godot-action
 
 youyo/aws-cdk-github-actions
+
+yumemi-inc/clean-cache-action
 
 z0al/dependent-issues
 
