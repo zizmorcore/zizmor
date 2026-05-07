@@ -41,6 +41,7 @@ impl GitHubApp {
             // TODO: Flag getsentry/action-github-app-token as well? It doesn't support any of
             //       the scoping that create-github-app-token does, so we could perhaps
             //       nudge users away from it.
+            // TODO: Flag wow-actions/use-app-token for similar reasons.
             vec![]
         };
 
