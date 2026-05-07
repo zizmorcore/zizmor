@@ -85,7 +85,7 @@ of `zizmor`.
     Many thanks to @reubenwong97 for implementing this fix!
 
 * Fixed a bug where `dependabot.yml` files containing a private cargo
-  repository couldn't be parsed.
+  repository couldn't be parsed (#1976)
 
 ## 1.24.1
 
