@@ -58,6 +58,8 @@ of `zizmor`.
 * zizmor's SARIF output now provides slightly more detailed finding messages
   (#1972)
 
+* The [archived-uses] audit now detects more archived actions (#1978)
+
 ### Bug Fixes 🐛
 
 * Fixed a crash in the [template-injection] audit when a workflow uses
