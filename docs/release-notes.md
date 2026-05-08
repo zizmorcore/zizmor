@@ -89,6 +89,9 @@ of `zizmor`.
 * Fixed a bug where `dependabot.yml` files containing a private cargo
   repository couldn't be parsed (#1976)
 
+* Fixed a bug where zizmor's input validation warnings lacked
+  a mention of which files failed to validate (#1980)
+
 ## 1.24.1
 
 ### Bug Fixes 🐛
