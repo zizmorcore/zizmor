@@ -306,6 +306,7 @@
 
     ??? example "Examples"
         - bevyengine/bevy#22294
+        - bevyengine/bevy#22817
 
 
 -   ![](https://github.com/bitcoindevkit.png?size=40){ width="40" loading=lazy align=left } bitcoindevkit
@@ -465,6 +466,14 @@
         - coder/coder#19459
 
 
+-   ![](https://github.com/composer.png?size=40){ width="40" loading=lazy align=left } composer
+
+    ---
+
+    ??? example "Examples"
+        - composer/packagist#1711
+
+
 -   ![](https://github.com/conda.png?size=40){ width="40" loading=lazy align=left } conda
 
     ---
@@ -526,6 +535,15 @@
         - curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
         - curl/curl@17a669426f36b467dfd945b4b35f6211598b7977
         - curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
+
+
+-   ![](https://github.com/CycloneDX.png?size=40){ width="40" loading=lazy align=left } CycloneDX
+
+    ---
+
+    ??? example "Examples"
+        - CycloneDX/cyclonedx-python#1054
+        - CycloneDX/specification#925
 
 
 -   ![](https://github.com/dani-garcia.png?size=40){ width="40" loading=lazy align=left } dani-garcia
@@ -1346,6 +1364,14 @@
         - kubewarden/kubewarden-controller#1596
 
 
+-   ![](https://github.com/labd.png?size=40){ width="40" loading=lazy align=left } labd
+
+    ---
+
+    ??? example "Examples"
+        - labd/nextjs-basic-auth-middleware#44
+
+
 -   ![](https://github.com/langfuse.png?size=40){ width="40" loading=lazy align=left } langfuse
 
     ---
@@ -1515,6 +1541,14 @@
         - microsoft/vscode-python#25047
         - microsoft/vscode-python-debugger#709
         - microsoft/vscode-jupyter#16622
+
+
+-   ![](https://github.com/miguelgrinberg.png?size=40){ width="40" loading=lazy align=left } miguelgrinberg
+
+    ---
+
+    ??? example "Examples"
+        - miguelgrinberg/microdot#362
 
 
 -   ![](https://github.com/miketheman.png?size=40){ width="40" loading=lazy align=left } miketheman
@@ -1853,6 +1887,14 @@
         - pentacent/keila@7eb6aeb61d0b191bc8fca13f4deef0bd422ac8d3
 
 
+-   ![](https://github.com/pgautoupgrade.png?size=40){ width="40" loading=lazy align=left } pgautoupgrade
+
+    ---
+
+    ??? example "Examples"
+        - pgautoupgrade/docker-pgautoupgrade#221
+
+
 -   ![](https://github.com/philips-software.png?size=40){ width="40" loading=lazy align=left } philips-software
 
     ---
@@ -2131,6 +2173,14 @@
         - quarkslab/quokka#46
 
 
+-   ![](https://github.com/quay.png?size=40){ width="40" loading=lazy align=left } quay
+
+    ---
+
+    ??? example "Examples"
+        - quay/quay#5887
+
+
 -   ![](https://github.com/ranaroussi.png?size=40){ width="40" loading=lazy align=left } ranaroussi
 
     ---
@@ -2272,6 +2322,15 @@
         - Saghen/blink.cmp#991
 
 
+-   ![](https://github.com/SAP.png?size=40){ width="40" loading=lazy align=left } SAP
+
+    ---
+
+    ??? example "Examples"
+        - SAP/ai-sdk-js#1822
+        - SAP/cloud-sdk-js#6564
+
+
 -   ![](https://github.com/scientific-python.png?size=40){ width="40" loading=lazy align=left } scientific-python
 
     ---
@@ -2331,6 +2390,14 @@
 
     ??? example "Examples"
         - simpeg/simpeg#1592
+
+
+-   ![](https://github.com/sinonjs.png?size=40){ width="40" loading=lazy align=left } sinonjs
+
+    ---
+
+    ??? example "Examples"
+        - sinonjs/sinon#2686
 
 
 -   ![](https://github.com/Skyscanner.png?size=40){ width="40" loading=lazy align=left } Skyscanner
@@ -2533,6 +2600,14 @@
         - tornadoweb/tornado#3463
 
 
+-   ![](https://github.com/tradingview.png?size=40){ width="40" loading=lazy align=left } tradingview
+
+    ---
+
+    ??? example "Examples"
+        - tradingview/lightweight-charts#2085
+
+
 -   ![](https://github.com/trailofbits.png?size=40){ width="40" loading=lazy align=left } trailofbits
 
     ---
@@ -2550,6 +2625,14 @@
         - trifectatechfoundation/sudo-rs#1488
         - trifectatechfoundation/sudo-rs#1490
         - trifectatechfoundation/teach-rs#162
+
+
+-   ![](https://github.com/triggerdotdev.png?size=40){ width="40" loading=lazy align=left } triggerdotdev
+
+    ---
+
+    ??? example "Examples"
+        - triggerdotdev/trigger.dev#3506
 
 
 -   ![](https://github.com/TritonVM.png?size=40){ width="40" loading=lazy align=left } TritonVM
@@ -2635,6 +2718,14 @@
         - vlang/v#22681
 
 
+-   ![](https://github.com/VowpalWabbit.png?size=40){ width="40" loading=lazy align=left } VowpalWabbit
+
+    ---
+
+    ??? example "Examples"
+        - VowpalWabbit/vowpal_wabbit#4918
+
+
 -   ![](https://github.com/VSCodium.png?size=40){ width="40" loading=lazy align=left } VSCodium
 
     ---
@@ -2649,6 +2740,14 @@
 
     ??? example "Examples"
         - wagtail/wagtail-localize#843
+
+
+-   ![](https://github.com/wasmCloud.png?size=40){ width="40" loading=lazy align=left } wasmCloud
+
+    ---
+
+    ??? example "Examples"
+        - wasmCloud/wasmCloud#5129
 
 
 -   ![](https://github.com/wgsl-analyzer.png?size=40){ width="40" loading=lazy align=left } wgsl-analyzer

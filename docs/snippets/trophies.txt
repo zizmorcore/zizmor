@@ -88,6 +88,7 @@ BerkeleyLearnVerify/Scenic#320
 better-auth/better-auth#8879
 BerriAI/litellm#24663
 bevyengine/bevy#22294
+bevyengine/bevy#22817
 bitcoindevkit/bdk#1778
 bitcoindevkit/bdk#1813
 bitwarden/ios#2124
@@ -119,6 +120,7 @@ chainguard-images/images#3076
 cheeriojs/cheerio#5212
 chatmail/core#7942
 coder/coder#19459
+composer/packagist#1711
 conda/conda-lock#814
 containers/podman#27642
 cortex/ripasso#411
@@ -133,6 +135,8 @@ curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
 curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
 curl/curl@17a669426f36b467dfd945b4b35f6211598b7977
 curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
+CycloneDX/cyclonedx-python#1054
+CycloneDX/specification#925
 dani-garcia/vaultwarden#5537
 danmar/cppcheck#7044
 DataDog/datadog-agent#30871
@@ -293,6 +297,7 @@ kubernetes-client/javascript#2814
 kubernetes-sigs/kubebuilder#5570
 kubernetes-sigs/kubebuilder#5578
 kubewarden/kubewarden-controller#1596
+labd/nextjs-basic-auth-middleware#44
 langfuse/langfuse#13048
 langfuse/langfuse-js#783
 langfuse/langfuse-python#1623
@@ -331,6 +336,7 @@ microsoft/linux-package-repositories#208
 microsoft/vscode-python#25047
 microsoft/vscode-python-debugger#709
 microsoft/vscode-jupyter#16622
+miguelgrinberg/microdot#362
 miketheman/pytest-socket#462
 mkuf/prind#183
 mne-tools/mne-python#13011
@@ -394,6 +400,7 @@ pantsbuild/pants#23249
 paperless-ngx/paperless-ngx#12466
 pendulum-project/ntpd-rs#2139
 pentacent/keila@7eb6aeb61d0b191bc8fca13f4deef0bd422ac8d3
+pgautoupgrade/docker-pgautoupgrade#221
 philips-software/amp-devcontainer#830
 PlasmaPy/PlasmaPy#2975
 PowerDNS/pdns#15600
@@ -455,6 +462,7 @@ pyvista/pyvista#7006
 PyVRP/PyVRP#670
 PyO3/pyo3#4774
 quarkslab/quokka#46
+quay/quay#5887
 ranaroussi/yfinance#2735
 rancher/rancher#54439
 ratatui/ratatui#1961
@@ -484,6 +492,8 @@ rustls/tokio-rustls#96
 rustls/webpki#299
 RustPython/RustPython#7463
 Saghen/blink.cmp#991
+SAP/ai-sdk-js#1822
+SAP/cloud-sdk-js#6564
 scientific-python/repo-review#257
 scikit-build/scikit-build-core#983
 scikit-image/scikit-image#7662
@@ -495,6 +505,7 @@ sigstore/gitsign#602
 sigstore/model-transparency#369
 sigstore/sigstore-rs#424
 sigstore/sigstore-rs#519
+sinonjs/sinon#2686
 simpeg/simpeg#1592
 Skyscanner/backpack#4124
 Skyscanner/backpack-android#2561
@@ -535,11 +546,13 @@ toml-rs/toml#1145
 torchbox/wagtailmedia#252
 tornadoweb/tornado#3438
 tornadoweb/tornado#3463
+tradingview/lightweight-charts#2085
 trailofbits/fickling#144
 trailofbits/fickling#177
 trifectatechfoundation/sudo-rs#1488
 trifectatechfoundation/sudo-rs#1490
 trifectatechfoundation/teach-rs#162
+triggerdotdev/trigger.dev#3506
 TritonVM/triton-vm@670907d4bfe9b70d160c78403cd0ad1fb16757e8
 ua-parser/uap-python#250
 ultrajson/ultrajson#650
@@ -553,8 +566,10 @@ urllib3/urllib3#3528
 uutils/coreutils#6973
 ViaVersion/ViaVersion#4315
 vlang/v#22681
+VowpalWabbit/vowpal_wabbit#4918
 VSCodium/vscodium#2795
 wagtail/wagtail-localize#843
+wasmCloud/wasmCloud#5129
 wntrblm/nox#925
 WordPress/gutenberg#69126
 WordPress/wordpress-develop#8007
