@@ -244,18 +244,18 @@
     ---
 
     ??? example "Examples"
-        - basecamp/fizzy#2645
-        - basecamp/trix#1284
-        - basecamp/once-campfire#185
-        - basecamp/once#20
-        - basecamp/marginalia#146
-        - basecamp/kamal-proxy#200
-        - basecamp/console1984#146
-        - basecamp/geared_pagination#58
-        - basecamp/audits1984#73
         - basecamp/activerecord-tenanted#284
+        - basecamp/audits1984#73
+        - basecamp/console1984#146
+        - basecamp/fizzy#2645
+        - basecamp/geared_pagination#58
         - basecamp/kamal#1805
+        - basecamp/kamal-proxy#200
         - basecamp/lexxy#882
+        - basecamp/marginalia#146
+        - basecamp/once#20
+        - basecamp/once-campfire#185
+        - basecamp/trix#1284
         - basecamp/upright#50
         - basecamp/writebook#396
 
@@ -401,11 +401,11 @@
     ---
 
     ??? example "Examples"
-        - canonical/ubuntu.com#16128
         - canonical/lxd#17961
         - canonical/operator#1656
         - canonical/operator#1721
         - canonical/testflinger#630
+        - canonical/ubuntu.com#16128
 
 
 -   ![](https://github.com/cerbos.png?size=40){ width="40" loading=lazy align=left } cerbos
@@ -530,11 +530,11 @@
     ---
 
     ??? example "Examples"
-        - curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
-        - curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
-        - curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
-        - curl/curl@17a669426f36b467dfd945b4b35f6211598b7977
         - curl/curl-for-win@05ca7551743b936656033352be0d796cf56e5c0c
+        - curl/curl@17a669426f36b467dfd945b4b35f6211598b7977
+        - curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
+        - curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
+        - curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
 
 
 -   ![](https://github.com/CycloneDX.png?size=40){ width="40" loading=lazy align=left } CycloneDX
@@ -637,8 +637,8 @@
 
     ??? example "Examples"
         - django/django@09d4bf5cd9c95c588d3ec22edea5db1f5f146900
-        - django/django@e8958c4690faef27b6715524ecb5c49c3ecb6a09
         - django/django@86b8058b40145fb5ba4fd859676225f533eca986
+        - django/django@e8958c4690faef27b6715524ecb5c49c3ecb6a09
 
 
 -   ![](https://github.com/django-commons.png?size=40){ width="40" loading=lazy align=left } django-commons
@@ -851,8 +851,8 @@
     ---
 
     ??? example "Examples"
-        - fpgmaas/deptry#972
         - fpgmaas/deptry#1161
+        - fpgmaas/deptry#972
 
 
 -   ![](https://github.com/freeCodeCamp.png?size=40){ width="40" loading=lazy align=left } freeCodeCamp
@@ -885,8 +885,8 @@
 
     ??? example "Examples"
         - freqtrade/freqtrade@5efad94d3de54d7c33731a40113f7218d46dd801
-        - freqtrade/technical@63037a14d72be329dd35d4dced122705333af133
         - freqtrade/technical@5fcb81bb1fcf269702de1634e59bb0ba87953ef2
+        - freqtrade/technical@63037a14d72be329dd35d4dced122705333af133
 
 
 -   ![](https://github.com/gaphor.png?size=40){ width="40" loading=lazy align=left } gaphor
@@ -1006,8 +1006,8 @@
     ---
 
     ??? example "Examples"
-        - google/osv.dev#4969
         - google/osv-scanner#2591
+        - google/osv.dev#4969
         - google/zerocop#2810
         - google/zx#1067
         - google/zx#1126
@@ -1132,10 +1132,10 @@
         - Homebrew/brew#18662
         - Homebrew/brew.sh#1107
         - Homebrew/formulae.brew.sh#1621
-        - Homebrew/homebrew-cask#195318
-        - Homebrew/homebrew-cask#195310
-        - Homebrew/homebrew-cask#195309
         - Homebrew/homebrew-cask#195308
+        - Homebrew/homebrew-cask#195309
+        - Homebrew/homebrew-cask#195310
+        - Homebrew/homebrew-cask#195318
         - Homebrew/homebrew-command-not-found#203
         - Homebrew/homebrew-core#195961
         - Homebrew/homebrew-core#201306
@@ -1147,8 +1147,8 @@
     ---
 
     ??? example "Examples"
-        - huggingface/peft#2288
         - huggingface/lerobot#732
+        - huggingface/peft#2288
 
 
 -   ![](https://github.com/hugovk.png?size=40){ width="40" loading=lazy align=left } hugovk
@@ -1476,17 +1476,17 @@
     ---
 
     ??? example "Examples"
-        - maxmind/mmdbinspect#82
-        - maxmind/MaxMind-DB-Reader-python#178
-        - maxmind/GeoIP2-php#233
-        - maxmind/MaxMind-DB-Reader-dotnet#198
-        - maxmind/libmaxminddb#365
-        - maxmind/GeoIP2-java#517
-        - maxmind/MaxMind-DB-Reader-java#221
-        - maxmind/geoipupdate#354
         - maxmind/geoip2-csv-converter#87
-        - maxmind/mmdbwriter#104
+        - maxmind/GeoIP2-java#517
         - maxmind/GeoIP2-node#1387
+        - maxmind/GeoIP2-php#233
+        - maxmind/geoipupdate#354
+        - maxmind/libmaxminddb#365
+        - maxmind/MaxMind-DB-Reader-dotnet#198
+        - maxmind/MaxMind-DB-Reader-java#221
+        - maxmind/MaxMind-DB-Reader-python#178
+        - maxmind/mmdbinspect#82
+        - maxmind/mmdbwriter#104
 
 
 -   ![](https://github.com/mccutchen.png?size=40){ width="40" loading=lazy align=left } mccutchen
@@ -1526,8 +1526,8 @@
     ---
 
     ??? example "Examples"
-        - michaelbull/kotlin-retry@b030616942c72812b892fec4950f3eca0813cb07
         - michaelbull/kotlin-result@7f213175f2bf525463fa4e8642956d14aebddc69
+        - michaelbull/kotlin-retry@b030616942c72812b892fec4950f3eca0813cb07
 
 
 -   ![](https://github.com/microsoft.png?size=40){ width="40" loading=lazy align=left } microsoft
@@ -1538,9 +1538,9 @@
         - microsoft/azurelinux#15733
         - microsoft/component-detection#1532
         - microsoft/linux-package-repositories#208
+        - microsoft/vscode-jupyter#16622
         - microsoft/vscode-python#25047
         - microsoft/vscode-python-debugger#709
-        - microsoft/vscode-jupyter#16622
 
 
 -   ![](https://github.com/miguelgrinberg.png?size=40){ width="40" loading=lazy align=left } miguelgrinberg
@@ -1589,8 +1589,8 @@
 
     ??? example "Examples"
         - mongodb/django-mongodb-backend#315
-        - mongodb/motor#312
         - mongodb/mongo-python-driver#2001
+        - mongodb/motor#312
 
 
 -   ![](https://github.com/mongodb-labs.png?size=40){ width="40" loading=lazy align=left } mongodb-labs
@@ -1607,8 +1607,8 @@
 
     ??? example "Examples"
         - mozilla/addons#15751
-        - mozilla/fxa#18628
         - mozilla/fx-private-relay#6364
+        - mozilla/fxa#18628
         - mozilla/neqo#2413
         - mozilla/neqo#2721
 
@@ -1667,9 +1667,9 @@
     ---
 
     ??? example "Examples"
+        - nextcloud/.github#477
         - nextcloud/news#3560
         - nextcloud/user_saml#947
-        - nextcloud/.github#477
 
 
 -   ![](https://github.com/nextest-rs.png?size=40){ width="40" loading=lazy align=left } nextest-rs
@@ -2120,8 +2120,8 @@
         - python-poetry/cleo#462
         - python-poetry/poetry#9895
         - python-poetry/poetry-core#799
-        - python-poetry/poetry-plugin-export#308
         - python-poetry/poetry-plugin-bundle#125
+        - python-poetry/poetry-plugin-export#308
 
 
 -   ![](https://github.com/python-social-auth.png?size=40){ width="40" loading=lazy align=left } python-social-auth
@@ -2252,8 +2252,8 @@
     ---
 
     ??? example "Examples"
-        - rubygems/rubygems.org#5350
         - rubygems/rubygems#8702
+        - rubygems/rubygems.org#5350
 
 
 -   ![](https://github.com/rust-bitcoin.png?size=40){ width="40" loading=lazy align=left } rust-bitcoin
@@ -2423,15 +2423,15 @@
     ---
 
     ??? example "Examples"
-        - slackapi/python-slack-hooks#58
-        - slackapi/bolt-python#1303
-        - slackapi/python-slack-sdk#1691
         - slackapi/bolt-js#2537
+        - slackapi/bolt-python#1303
         - slackapi/java-slack-sdk#1474
-        - slackapi/node-slack-sdk#2246
         - slackapi/manifest-schema#14
-        - slackapi/slack-cli#100
+        - slackapi/node-slack-sdk#2246
         - slackapi/python-slack-events-api#110
+        - slackapi/python-slack-hooks#58
+        - slackapi/python-slack-sdk#1691
+        - slackapi/slack-cli#100
 
 
 -   ![](https://github.com/Stebalien.png?size=40){ width="40" loading=lazy align=left } Stebalien
@@ -2840,8 +2840,8 @@
     ---
 
     ??? example "Examples"
-        - zkonduit/ezkl#907
         - zkonduit/ezkl#906
+        - zkonduit/ezkl#907
 
 
 -   ![](https://github.com/zulip.png?size=40){ width="40" loading=lazy align=left } zulip
