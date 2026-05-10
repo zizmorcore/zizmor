@@ -11,7 +11,7 @@ use crate::{
     config::Config,
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
-        location::{Comment, Feature, Location, Routable},
+        location::{Feature, Location, Routable},
     },
     github,
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt, workflow::Step},
@@ -36,38 +36,19 @@ static VERSION_COMMENT_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
         Regex::new(r"#\s*(v?\d+(?:\.\d+)*(?:-?[\w.-]+)?)").unwrap(),
         // More flexible: "# version: 2.8.0"
         Regex::new(r"#\s*(?:version|ver)\s*[:=]\s*(v?\d+(?:\.\d+)*(?:-?[\w.-]+)?)").unwrap(),
-        // Matches # <name>/<version> such as create-github-app-token/v0.2.2.
-        Regex::new(r"#\s*([^\s#]+/v?\d+(?:\.\d+)*(?:-[\w.-]+)?)").unwrap(),
     ]
 });
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum CommentVersionState<'doc> {
-    Missing,
-    Version(&'doc str),
-    NonVersionComments,
-}
-
 impl RefVersionMismatch {
-    fn extract_version_from_comments<'doc>(comments: &'doc [Comment<'doc>]) -> Option<&'doc str> {
-        for comment in comments {
-            for pattern in VERSION_COMMENT_PATTERNS.iter() {
-                if let Some(captures) = pattern.captures(comment.as_ref())
-                    && let Some(version_match) = captures.get(1)
-                {
-                    return Some(version_match.as_str());
-                }
+    fn extract_version_from_comment(comment: &str) -> Option<&str> {
+        for pattern in VERSION_COMMENT_PATTERNS.iter() {
+            if let Some(captures) = pattern.captures(comment)
+                && let Some(version_match) = captures.get(1)
+            {
+                return Some(version_match.as_str());
             }
         }
         None
-    }
-
-    fn comment_version_state<'doc>(comments: &'doc [Comment<'doc>]) -> CommentVersionState<'doc> {
-        match Self::extract_version_from_comments(comments) {
-            Some(version) => CommentVersionState::Version(version),
-            None if comments.is_empty() => CommentVersionState::Missing,
-            None => CommentVersionState::NonVersionComments,
-        }
     }
 
     /// Create a Fix for updating the version comment to match the pinned hash
@@ -125,102 +106,124 @@ impl RefVersionMismatch {
             .concretize(step.document())
             .map_err(Self::err)?;
 
-        let comment_version_state = Self::comment_version_state(&uses_location.concrete.comments);
+        let comments = &uses_location.concrete.comments;
 
-        let version_from_comment = match comment_version_state {
-            CommentVersionState::Version(version) => version,
-            CommentVersionState::Missing | CommentVersionState::NonVersionComments => {
-                // SHA-pinned action without a recognized version comment.
-                let Some(tag) = self
-                    .client
-                    .longest_tag_for_commit(uses.owner(), uses.repo(), commit_sha)
-                    .await
-                    .map_err(Self::err)?
-                else {
-                    return Ok(findings);
+        // Try each comment as a potential ref candidate.
+        // Track the first mismatch: (ref_candidate, resolved_commit).
+        let mut first_mismatch: Option<(&str, Option<String>)> = None;
+
+        for comment in comments {
+            if !comment.is_meaningful() {
+                continue;
+            }
+
+            // Prefer the regex-extracted version since there is a greater chance of intent.
+            let (candidate, regex_matched) =
+                match Self::extract_version_from_comment(comment.as_ref()) {
+                    Some(version) => (version, true),
+                    None => (
+                        comment
+                            .as_ref()
+                            .strip_prefix('#')
+                            .unwrap_or(comment.as_ref())
+                            .trim(),
+                        false,
+                    ),
                 };
 
-                let (annotation, tip) = match comment_version_state {
-                    CommentVersionState::Missing => (
-                        "missing version comment",
-                        format!("add version comment '# {}'", tag.name),
-                    ),
-                    CommentVersionState::NonVersionComments => (
-                        "comment does not contain a version",
-                        format!("rewrite comment to include '# {}'", tag.name),
-                    ),
-                    CommentVersionState::Version(_) => unreachable!(),
-                };
+            let commit = self
+                .client
+                .commit_for_ref(uses.owner(), uses.repo(), candidate)
+                .await
+                .map_err(Self::err)?;
 
-                let mut builder = Self::finding()
-                    .severity(Severity::Low)
-                    .confidence(Confidence::High)
-                    .persona(Persona::Pedantic)
-                    .add_location(uses_location.symbolic.primary().annotated(annotation))
-                    .tip(tip);
-
-                if matches!(comment_version_state, CommentVersionState::Missing) {
-                    builder = builder.fix(Self::add_version_comment_fix(step, &tag.name));
-                }
-
-                findings.push(builder.build(step).map_err(Self::err)?);
+            if commit.as_deref() == Some(commit_sha) {
                 return Ok(findings);
             }
-        };
 
-        let commit_for_ref = self
-            .client
-            .commit_for_ref(uses.owner(), uses.repo(), version_from_comment)
-            .await
-            .map_err(Self::err)?;
-
-        // If the ref matches, there's nothing to do.
-        if commit_for_ref.as_deref() == Some(commit_sha) {
-            return Ok(findings);
+            if first_mismatch.is_none() && (regex_matched || commit.is_some()) {
+                first_mismatch = Some((candidate, commit));
+            }
         }
 
-        let subfeature = Subfeature::new(
-            uses_location.concrete.location.offset_span.end,
-            version_from_comment,
-        );
+        if let Some((ref_candidate, commit_for_ref)) = first_mismatch {
+            let subfeature = Subfeature::new(
+                uses_location.concrete.location.offset_span.end,
+                ref_candidate,
+            );
 
-        let comment_location = match commit_for_ref {
-            Some(commit_for_ref) => Location::new(
-                uses_location.symbolic.clone().primary().annotated(format!(
-                    "points to commit {short_commit}",
-                    short_commit = &commit_for_ref[..12]
-                )),
-                Feature::from_subfeature(&subfeature, step),
-            ),
-            None => Location::new(
+            let annotation = match &commit_for_ref {
+                Some(sha) => format!("points to commit {}", &sha[..12]),
+                None => "points to unknown ref".into(),
+            };
+
+            let comment_location = Location::new(
                 uses_location
                     .symbolic
                     .clone()
                     .primary()
-                    .annotated("points to unknown ref"),
+                    .annotated(annotation),
                 Feature::from_subfeature(&subfeature, step),
-            ),
-        };
+            );
 
-        let mut builder = Self::finding()
-            .severity(Severity::Medium)
-            .confidence(Confidence::High)
-            .add_raw_location(comment_location);
+            let mut builder = Self::finding()
+                .severity(Severity::Medium)
+                .confidence(Confidence::High)
+                .add_raw_location(comment_location);
 
-        if let Some(suggestion) = self
+            if let Some(suggestion) = self
+                .client
+                .longest_tag_for_commit(uses.owner(), uses.repo(), commit_sha)
+                .await
+                .map_err(Self::err)?
+            {
+                builder = builder.add_location(
+                    uses_location
+                        .symbolic
+                        .annotated(format!("is pointed to by tag {tag}", tag = suggestion.name)),
+                );
+                builder = builder.fix(self.update_version_comment_fix(step, &suggestion.name));
+            }
+
+            findings.push(builder.build(step).map_err(Self::err)?);
+            return Ok(findings);
+        }
+
+        // Could not resolve any comments to a SHA, so treat as missing version comments
+        let Some(tag) = self
             .client
             .longest_tag_for_commit(uses.owner(), uses.repo(), commit_sha)
             .await
             .map_err(Self::err)?
-        {
-            builder = builder.add_location(
-                uses_location
-                    .symbolic
-                    .annotated(format!("is pointed to by tag {tag}", tag = suggestion.name)),
-            );
-            // Add auto-fix to update the version comment to match the pinned hash
-            builder = builder.fix(self.update_version_comment_fix(step, &suggestion.name));
+        else {
+            return Ok(findings);
+        };
+
+        let (annotation, tip, fix) = if comments.is_empty() {
+            (
+                "missing version comment",
+                format!("add version comment '# {}'", tag.name),
+                Some(Self::add_version_comment_fix(step, &tag.name)),
+            )
+        } else {
+            (
+                "comment does not contain a version",
+                format!("rewrite comment to include '# {}'", tag.name),
+                None,
+            )
+        };
+
+        let mut builder = Self::finding()
+            .severity(Severity::Low)
+            .confidence(Confidence::High)
+            .persona(Persona::Pedantic)
+            .add_location(uses_location.symbolic.primary().annotated(annotation))
+            .tip(tip);
+
+        if let Some(fix) = fix {
+            builder = builder.fix(fix);
         }
+
         findings.push(builder.build(step).map_err(Self::err)?);
 
         Ok(findings)
@@ -321,23 +324,16 @@ mod tests {
         ];
 
         for (comment, expected) in test_cases {
-            // Test the pattern matching directly
-            let comment_text = comment;
-            let mut found_version = None;
-            for pattern in VERSION_COMMENT_PATTERNS.iter() {
-                if let Some(captures) = pattern.captures(comment_text) {
-                    if let Some(version_match) = captures.get(1) {
-                        found_version = Some(version_match.as_str());
-                        break;
-                    }
-                }
-            }
-            assert_eq!(found_version, expected, "Failed for comment: {}", comment);
+            assert_eq!(
+                RefVersionMismatch::extract_version_from_comment(comment),
+                expected,
+                "failed for comment: {comment}",
+            );
         }
     }
 
     #[test]
-    fn test_comment_version_state_with_unrelated_comment() {
+    fn test_unrelated_comment_is_not_a_version() {
         let action_content = r#"
 name: Test Missing Version Comment
 description: Test Missing Version Comment
@@ -357,9 +353,10 @@ runs:
             .concretize(step.document())
             .unwrap();
 
+        let comment = &uses_location.concrete.comments[0];
         assert_eq!(
-            RefVersionMismatch::comment_version_state(&uses_location.concrete.comments),
-            CommentVersionState::NonVersionComments,
+            RefVersionMismatch::extract_version_from_comment(comment.as_ref()),
+            None,
         );
     }
 
