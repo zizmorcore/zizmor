@@ -53,7 +53,7 @@ ignore = "0.4.25"
 indexmap = { version = "2.13.1", features = ["serde"] }
 indicatif = "0.18"
 insta = "1.47.1"
-jsonschema = { version = "0.46.2", default-features = false }
+jsonschema = { version = "0.46.4", default-features = false }
 line-index = "0.1.2"
 memchr = "2.8.0"
 owo-colors = "4.3.0"
@@ -70,7 +70,7 @@ serde_yaml = { package = "yaml_serde", version = "0.10" }
 tar = "0.4.45"
 terminal-link = "0.1.0"
 thiserror = "2.0.18"
-tokio = { version = "1.52.1", features = ["rt-multi-thread", "io-std"] }
+tokio = { version = "1.52.2", features = ["rt-multi-thread", "io-std"] }
 tower-lsp-server = "0.23"
 tracing = "0.1.44"
 tracing-indicatif = "0.3.14"
@@ -79,7 +79,7 @@ tree-sitter = "0.26.8"
 tree-sitter-bash = "0.25.1"
 # Exact version since the upstream performed a breaking change outside of semver.
 # See: https://github.com/zizmorcore/zizmor/pull/1427
-tree-sitter-powershell = "=0.26.3"
+tree-sitter-powershell = "=0.26.4"
 tree-sitter-yaml = "0.7.2"
 tikv-jemallocator = "0.6"
 
