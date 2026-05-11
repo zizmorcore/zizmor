@@ -82,6 +82,7 @@ tree-sitter-bash = "0.25.1"
 tree-sitter-powershell = "=0.26.4"
 tree-sitter-yaml = "0.7.2"
 tikv-jemallocator = "0.6"
+typomania = { version = "0.1.2", default-features = false }
 
 [workspace.lints.clippy]
 dbg_macro = "warn"

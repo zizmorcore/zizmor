@@ -28,6 +28,7 @@ mod self_hosted_runner;
 mod stale_action_refs;
 mod superfluous_actions;
 mod template_injection;
+mod typosquat_uses;
 mod undocumented_permissions;
 mod unpinned_images;
 mod unpinned_tools;

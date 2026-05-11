@@ -1,0 +1,35 @@
+name: typosquat-uses
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  typosquat-uses:
+    name: typosquat-uses
+    runs-on: ubuntu-latest
+    steps:
+      - name: omission
+        uses: action/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: transposition
+        uses: cations/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: homoglyph
+        uses: acti0ns/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: repetition
+        uses: actiions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: owner transposition
+        uses: dokcer/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+
+      - name: not a squat (same owner)
+        uses: actions/chckout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: not a squat (unrelated)
+        uses: example/totally-different-thing@11bd71901bbe5b1630ceea73d27597364c9af683 # v1.0.0

@@ -675,6 +675,19 @@ impl Client {
     }
 
     #[instrument(skip(self))]
+    pub(crate) async fn repo_exists(&self, owner: &str, repo: &str) -> Result<bool, ClientError> {
+        let url = format!("{api_base}/repos/{owner}/{repo}", api_base = self.api_base);
+
+        let resp = self.api_client.get(url).send().await?;
+
+        match resp.error_for_status() {
+            Ok(_) => Ok(true),
+            Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => Ok(false),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    #[instrument(skip(self))]
     pub(crate) async fn compare_commits(
         &self,
         owner: &str,

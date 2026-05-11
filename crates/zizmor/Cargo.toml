@@ -76,6 +76,7 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tree-sitter.workspace = true
 tree-sitter-bash.workspace = true
 tree-sitter-powershell.workspace = true
+typomania.workspace = true
 yamlpath.workspace = true
 yamlpatch.workspace = true
 
