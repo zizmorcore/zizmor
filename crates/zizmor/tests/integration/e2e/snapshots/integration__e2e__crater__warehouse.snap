@@ -143,6 +143,7 @@ warning[excessive-permissions]: overly broad permissions
    | |___________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 help[undocumented-permissions]: permissions without explanatory comments
   --> .github/workflows/codeql-analysis.yml:28:7
@@ -185,6 +186,7 @@ warning[excessive-permissions]: overly broad permissions
    | |____________________________________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 help[undocumented-permissions]: permissions without explanatory comments
   --> .github/workflows/combine-prs.yml:20:7
@@ -238,6 +240,7 @@ warning[excessive-permissions]: overly broad permissions
    | |________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 info[anonymous-definition]: workflow or action definition without a name
  --> .github/workflows/dev-env-test.yml:9:3
@@ -284,6 +287,7 @@ warning[excessive-permissions]: overly broad permissions
    | |_____________________________________________________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 help[undocumented-permissions]: permissions without explanatory comments
   --> .github/workflows/not-this-repo.yml:11:7
@@ -329,6 +333,7 @@ warning[excessive-permissions]: overly broad permissions
    | |___________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 help[undocumented-permissions]: permissions without explanatory comments
   --> .github/workflows/zizmor.yml:17:7
@@ -357,4 +362,3 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    = note: audit confidence → High
 
 34 findings (2 suppressed): 4 informational, 14 low, 8 medium, 6 high
-

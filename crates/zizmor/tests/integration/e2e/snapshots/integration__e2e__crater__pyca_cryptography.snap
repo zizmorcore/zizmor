@@ -114,6 +114,7 @@ warning[excessive-permissions]: overly broad permissions
    | |________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 help[undocumented-permissions]: permissions without explanatory comments
   --> .github/workflows/auto-close-stale.yml:12:7
@@ -478,6 +479,7 @@ warning[excessive-permissions]: overly broad permissions
    | |_______________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 help[undocumented-permissions]: permissions without explanatory comments
   --> .github/workflows/lock.yml:12:7

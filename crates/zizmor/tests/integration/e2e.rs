@@ -454,6 +454,7 @@ fn issue_1065() -> Result<()> {
        |                                                                             default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
+       = note: this finding has an auto-fix
 
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:17:15
@@ -463,7 +464,7 @@ fn issue_1065() -> Result<()> {
        |
        = note: audit confidence → High
 
-    5 findings (3 suppressed): 0 informational, 0 low, 1 medium, 1 high
+    5 findings (3 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 1 high
     "
     );
 

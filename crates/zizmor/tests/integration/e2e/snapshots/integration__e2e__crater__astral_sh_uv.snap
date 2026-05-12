@@ -356,6 +356,7 @@ warning[excessive-permissions]: overly broad permissions
    |                                        default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 help[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/check-release.yml:1:1
@@ -512,6 +513,7 @@ warning[excessive-permissions]: overly broad permissions
    | |____________________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> .github/workflows/publish-crates.yml:31:14
@@ -581,6 +583,7 @@ warning[excessive-permissions]: overly broad permissions
    | |_____________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 help[template-injection]: code injection via template expansion
   --> .github/workflows/publish-versions.yml:30:36

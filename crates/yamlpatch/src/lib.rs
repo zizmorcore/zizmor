@@ -1087,6 +1087,41 @@ fn apply_value_replacement(
             }
         }
 
+        // Special case: non-empty mapping → format as block sub-mapping
+        //
+        //   permissions: write-all
+        //
+        // becomes:
+        //
+        //   permissions:
+        //     contents: read
+        //     security-events: write
+        if let serde_yaml::Value::Mapping(mapping) = value
+            && !mapping.is_empty()
+        {
+            // Determine child indentation from the key's leading whitespace.
+            let leading_ws: String = key_part.chars().take_while(|c| *c == ' ').collect();
+            let child_indent = format!("{}  ", leading_ws);
+            let mut result = key_part.to_string(); // e.g. "    permissions:"
+            for (k, v) in mapping.iter() {
+                let k_str = match k {
+                    serde_yaml::Value::String(s) => s.as_str(),
+                    _ => {
+                        return Err(Error::InvalidOperation(
+                            "non-string mapping key in Op::Replace value".into(),
+                        ));
+                    }
+                };
+                let v_str = serialize_yaml_value(v)?;
+                result.push('\n');
+                result.push_str(&child_indent);
+                result.push_str(k_str);
+                result.push_str(": ");
+                result.push_str(v_str.trim());
+            }
+            return Ok(result);
+        }
+
         // Regular block style - use standard formatting
         let val_str = serialize_yaml_value(value)?;
         format!("{} {}", key_part, val_str.trim())

@@ -79,8 +79,9 @@ fn test_workflow_default_perms_pedantic() -> Result<()> {
        |                                       default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
+       = note: this finding has an auto-fix
 
-    2 findings: 0 informational, 0 low, 2 medium, 0 high
+    2 findings (1 fixable): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 
@@ -103,8 +104,9 @@ fn test_workflow_read_all() -> Result<()> {
       | ^^^^^^^^^^^^^^^^^^^^^ uses read-all permissions
       |
       = note: audit confidence → High
+      = note: this finding has an auto-fix
 
-    2 findings (1 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -127,8 +129,9 @@ fn test_workflow_write_all() -> Result<()> {
       | ^^^^^^^^^^^^^^^^^^^^^^ uses write-all permissions
       |
       = note: audit confidence → High
+      = note: this finding has an auto-fix
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -172,6 +175,7 @@ fn test_jobs_broaden_permissions() -> Result<()> {
        | |____________________________________- this job
        |
        = note: audit confidence → High
+       = note: this finding has an auto-fix
 
     error[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:20:5
@@ -187,8 +191,9 @@ fn test_jobs_broaden_permissions() -> Result<()> {
        | |_____________________________________- this job
        |
        = note: audit confidence → High
+       = note: this finding has an auto-fix
 
-    3 findings (1 suppressed): 0 informational, 0 low, 1 medium, 1 high
+    3 findings (1 suppressed, 2 fixable): 0 informational, 0 low, 1 medium, 1 high
     "
     );
 
@@ -350,6 +355,7 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
        |                         default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
+       = note: this finding has an auto-fix
 
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:19:3
@@ -366,7 +372,7 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
        |
        = note: audit confidence → Medium
 
-    4 findings (1 suppressed): 0 informational, 0 low, 3 medium, 0 high
+    4 findings (1 suppressed, 1 fixable): 0 informational, 0 low, 3 medium, 0 high
     "
     );
 

@@ -110,6 +110,7 @@ warning[excessive-permissions]: overly broad permissions
    |                                                                                                  default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/artipacked.yml:48:3
@@ -127,6 +128,7 @@ warning[excessive-permissions]: overly broad permissions
    |                                                                                 default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/artipacked.yml:73:3
@@ -144,6 +146,7 @@ warning[excessive-permissions]: overly broad permissions
    |                                          default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:35:15
@@ -285,6 +288,7 @@ warning[excessive-permissions]: overly broad permissions
    |                                                                       default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/cache-poisoning.yml:44:3
@@ -302,6 +306,7 @@ warning[excessive-permissions]: overly broad permissions
    |                                                                           default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> .github/workflows/cache-poisoning.yml:58:14
@@ -370,6 +375,7 @@ error[excessive-permissions]: overly broad permissions
    | |_________________________- this job
    |
    = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   --> .github/workflows/github-env.yml:19:1
@@ -408,6 +414,7 @@ warning[excessive-permissions]: overly broad permissions
    |                                  default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 error[hardcoded-container-credentials]: hardcoded credential in GitHub Actions container configurations
   --> .github/workflows/hardcoded-credentials.yml:27:7
@@ -471,6 +478,7 @@ warning[excessive-permissions]: overly broad permissions
    |                               default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/insecure-commands.yml:10:3
@@ -488,6 +496,7 @@ warning[excessive-permissions]: overly broad permissions
    |                                                  default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 error[insecure-commands]: execution of insecure workflow commands is enabled
  --> .github/workflows/insecure-commands.yml:5:1
@@ -538,6 +547,7 @@ warning[excessive-permissions]: overly broad permissions
    |                                                     default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 error[unpinned-uses]: unpinned action reference
   --> .github/workflows/known-vulnerable-actions.yml:19:15
@@ -598,6 +608,7 @@ warning[excessive-permissions]: overly broad permissions
    |                      default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
   --> .github/workflows/pull-request-target.yml:20:1
@@ -1008,6 +1019,7 @@ warning[excessive-permissions]: overly broad permissions
    |                         default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
+   = note: this finding has an auto-fix
 
 warning[unpinned-uses]: unpinned action reference
   --> .github/workflows/unpinned.yml:20:24
