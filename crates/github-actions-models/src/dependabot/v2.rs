@@ -366,6 +366,8 @@ pub enum PackageEcosystem {
     Composer,
     /// `conda`
     Conda,
+    /// `deno`
+    Deno,
     /// `devcontainers`
     Devcontainers,
     /// `docker`
