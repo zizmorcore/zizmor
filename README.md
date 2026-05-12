@@ -85,6 +85,13 @@ Shipfox
 Kusari
 </a>
 </td>
+<td align="center" valign="top" width="15%">
+<a href="https://tracebit.com">
+<img src="https://avatars.githubusercontent.com/u/104151585?s=100&v=4" width="100px">
+<br>
+Tracebit
+</a>
+</td>
 </tr>
 </tbody>
 </table>
