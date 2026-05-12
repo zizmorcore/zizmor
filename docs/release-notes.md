@@ -60,6 +60,8 @@ of `zizmor`.
 
 * The [archived-uses] audit now detects more archived actions (#1978)
 
+* `deno` is now recognized as a `package-ecosystem` in `dependabot.yml` (#1991)
+
 ### Bug Fixes 🐛
 
 * Fixed a crash in the [template-injection] audit when a workflow uses
