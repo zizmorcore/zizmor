@@ -16,6 +16,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |               ^^^^^^^^^^^^^^^ action/checkout omits characters in actions/checkout
        |
        = note: audit confidence → Low
+       = tip: run with a GitHub token to check whether this repository actually exists
 
     error[typosquat-uses]: action reference resembles a popular action
       --> @@INPUT@@:20:15
@@ -26,6 +27,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |               ^^^^^^^^^^^^^^^^ cations/checkout swaps characters in actions/checkout
        |
        = note: audit confidence → Low
+       = tip: run with a GitHub token to check whether this repository actually exists
 
     error[typosquat-uses]: action reference resembles a popular action
       --> @@INPUT@@:23:15
@@ -36,6 +38,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |               ^^^^^^^^^^^^^^^^ acti0ns/checkout uses a common typo for actions/checkout
        |
        = note: audit confidence → Low
+       = tip: run with a GitHub token to check whether this repository actually exists
 
     error[typosquat-uses]: action reference resembles a popular action
       --> @@INPUT@@:26:15
@@ -46,6 +49,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |               ^^^^^^^^^^^^^^^^^ actiions/checkout repeats characters in actions/checkout
        |
        = note: audit confidence → Low
+       = tip: run with a GitHub token to check whether this repository actually exists
 
     error[typosquat-uses]: action reference resembles a popular action
       --> @@INPUT@@:29:15
@@ -56,6 +60,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |               ^^^^^^^^^^^^^^^^^^^ dokcer/login-action swaps characters in docker/login-action
        |
        = note: audit confidence → Low
+       = tip: run with a GitHub token to check whether this repository actually exists
 
     5 findings: 0 informational, 0 low, 0 medium, 5 high
     "

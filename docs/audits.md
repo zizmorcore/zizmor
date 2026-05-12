@@ -1778,9 +1778,6 @@ Correct the `#!yaml uses:` reference to point at the intended action.
       uses: actions/checkout@v4
     ```
 
-If the reference is intentional (for example, a legitimate fork with a similar
-name), suppress the finding with an [ignore comment](./usage.md#ignoring-results).
-
 ## `undocumented-permissions`
 
 | Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |

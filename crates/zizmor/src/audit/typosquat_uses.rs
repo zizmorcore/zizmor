@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::LazyLock,
-};
+use std::{collections::HashMap, sync::LazyLock};
 
 use github_actions_models::common::{RepositoryUses, Uses};
 use subfeature::Subfeature;
@@ -25,6 +22,9 @@ use crate::{
 
 const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyz0123456789-_./";
 
+// Keyboard-adjacency substitutions plus a handful of visual confusables
+// (e.g. `m` -> `rn`, `1` -> `l`). Lifted from typomania's example, which
+// in turn comes from the crates.io typosquat checker.
 static TYPOS: &[(char, &[&str])] = &[
     ('1', &["2", "q", "i", "l"]),
     ('2', &["1", "q", "w", "3"]),
@@ -106,15 +106,13 @@ impl Corpus for PopularActions {
 }
 
 struct ActionSlug {
-    owners: HashSet<String>,
+    owner: String,
 }
 
 impl ActionSlug {
     fn new(slug: &str) -> Self {
         let owner = slug.split('/').next().unwrap_or(slug).to_lowercase();
-        Self {
-            owners: HashSet::from([owner]),
-        }
+        Self { owner }
     }
 }
 
@@ -128,13 +126,13 @@ impl Package for ActionSlug {
     }
 
     fn shared_authors(&self, other: &dyn AuthorSet) -> bool {
-        self.owners.iter().any(|o| other.contains(o))
+        other.contains(&self.owner)
     }
 }
 
 impl AuthorSet for ActionSlug {
     fn contains(&self, author: &str) -> bool {
-        self.owners.contains(author)
+        self.owner == author
     }
 }
 
@@ -163,6 +161,10 @@ impl TyposquatUses {
         let squats = HARNESS.check_package(&slug, candidate).ok()?;
         let squat = squats.into_iter().next()?;
 
+        let mut finding = Self::finding()
+            .severity(Severity::High)
+            .persona(Persona::Regular);
+
         let (confidence, annotation) = match &self.client {
             Some(client) => match client.repo_exists(uses.owner(), uses.repo()).await {
                 Ok(true) => (
@@ -175,16 +177,15 @@ impl TyposquatUses {
                 ),
                 Err(_) => (Confidence::Low, format!("{slug} {squat}")),
             },
-            None => (Confidence::Low, format!("{slug} {squat}")),
+            None => {
+                finding = finding.tip(
+                    "run with a GitHub token to check whether this repository actually exists",
+                );
+                (Confidence::Low, format!("{slug} {squat}"))
+            }
         };
 
-        Some((
-            Self::finding()
-                .confidence(confidence)
-                .severity(Severity::High)
-                .persona(Persona::Regular),
-            annotation,
-        ))
+        Some((finding.confidence(confidence), annotation))
     }
 }
 

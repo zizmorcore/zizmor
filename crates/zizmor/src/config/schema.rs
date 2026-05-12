@@ -122,6 +122,7 @@ define_audit_rules! {
     dependabot_execution,
     concurrency_limits,
     archived_uses,
+    typosquat_uses,
     misfeature,
     superfluous_actions,
     github_app,

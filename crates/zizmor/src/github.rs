@@ -676,14 +676,15 @@ impl Client {
 
     #[instrument(skip(self))]
     pub(crate) async fn repo_exists(&self, owner: &str, repo: &str) -> Result<bool, ClientError> {
-        let url = format!("{api_base}/repos/{owner}/{repo}", api_base = self.api_base);
-
-        let resp = self.api_client.get(url).send().await?;
-
-        match resp.error_for_status() {
+        match self.list_refs(owner, repo).await {
             Ok(_) => Ok(true),
-            Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => Ok(false),
-            Err(e) => Err(e.into()),
+            Err(ClientError::Inner(inner))
+                if matches!(inner.as_ref(), ClientError::RepoMissingOrPrivate { .. }) =>
+            {
+                Ok(false)
+            }
+            Err(ClientError::RepoMissingOrPrivate { .. }) => Ok(false),
+            Err(e) => Err(e),
         }
     }
 
