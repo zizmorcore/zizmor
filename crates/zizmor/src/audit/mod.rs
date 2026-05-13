@@ -224,6 +224,13 @@ impl AuditError {
     pub(crate) fn ident(&self) -> &'static str {
         self.ident
     }
+
+    pub(crate) fn is_repo_missing_or_private(&self) -> bool {
+        self.source.chain().any(|err| {
+            err.downcast_ref::<crate::github::ClientError>()
+                .is_some_and(crate::github::ClientError::is_repo_missing_or_private)
+        })
+    }
 }
 
 /// Auditing trait.
@@ -395,5 +402,34 @@ pub(crate) trait Audit: AuditCore {
         results.extend(self.audit_raw(input, config).await?);
 
         Ok(results)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AuditError;
+
+    #[test]
+    fn audit_error_detects_missing_or_private_repo_source() {
+        let err = AuditError::new(
+            "test-audit",
+            crate::github::ClientError::ListTags {
+                source: Box::new(crate::github::ClientError::RepoMissingOrPrivate {
+                    owner: "octo-org".into(),
+                    repo: "private-action".into(),
+                }),
+                owner: "octo-org".into(),
+                repo: "private-action".into(),
+            },
+        );
+
+        assert!(err.is_repo_missing_or_private());
+    }
+
+    #[test]
+    fn audit_error_rejects_unrelated_sources() {
+        let err = AuditError::new("test-audit", anyhow::anyhow!("ordinary failure"));
+
+        assert!(!err.is_repo_missing_or_private());
     }
 }

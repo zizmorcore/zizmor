@@ -159,6 +159,19 @@ pub(crate) enum ClientError {
     Inner(#[from] Arc<ClientError>),
 }
 
+impl ClientError {
+    pub(crate) fn is_repo_missing_or_private(&self) -> bool {
+        match self {
+            Self::RepoMissingOrPrivate { .. } => true,
+            Self::ListBranches { source, .. } | Self::ListTags { source, .. } => {
+                source.is_repo_missing_or_private()
+            }
+            Self::Inner(source) => source.is_repo_missing_or_private(),
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 enum CacheType {
     File,

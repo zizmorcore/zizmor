@@ -558,6 +558,35 @@ fn issue_1286() -> Result<()> {
     Ok(())
 }
 
+/// Regression test for #1350.
+///
+/// Ensures that `--warn-on-github-api-failures` lets audits continue when
+/// an online audit can't access a private (or missing) referenced repository.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_1350_warn_on_github_api_failures() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .args(["--warn-on-github-api-failures"])
+            .input(input_under_test("issue-1286.yml"))
+            .run()?,
+        @"
+    error[unpinned-uses]: unpinned action reference
+      --> @@INPUT@@:19:15
+       |
+    19 |         uses: woodruffw-experiments/this-does-not-exist@v1.0.0
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
 /// Regression test for #1300.
 ///
 /// Ensures that we produce a useful error when a user specifies

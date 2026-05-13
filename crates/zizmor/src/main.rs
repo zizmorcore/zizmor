@@ -183,6 +183,10 @@ struct AuditArgs {
     /// Don't honor ignore comments or ignore rules in configuration.
     #[arg(long)]
     no_ignores: bool,
+
+    /// Warn instead of failing when online audits cannot access a referenced GitHub repository.
+    #[arg(long)]
+    warn_on_github_api_failures: bool,
 }
 
 #[derive(Debug, Args)]
@@ -1008,13 +1012,26 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             }
 
             while let Some(findings) = completion_stream.next().await {
-                let findings = findings.map_err(|err| Error::Audit {
-                    ident: err.ident(),
-                    source: err,
-                    input: input.key().to_string(),
-                })?;
-
-                results.extend(findings);
+                match findings {
+                    Ok(findings) => results.extend(findings),
+                    Err(err)
+                        if app.audit.warn_on_github_api_failures
+                            && err.is_repo_missing_or_private() =>
+                    {
+                        warn!(
+                            "continuing after GitHub API failure in '{}' audit on {} due to --warn-on-github-api-failures: {err:#}",
+                            err.ident(),
+                            input.key(),
+                        );
+                    }
+                    Err(err) => {
+                        return Err(Error::Audit {
+                            ident: err.ident(),
+                            source: err,
+                            input: input.key().to_string(),
+                        });
+                    }
+                }
 
                 Span::current().pb_inc(1);
             }
