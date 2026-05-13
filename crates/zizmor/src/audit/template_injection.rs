@@ -15,7 +15,13 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{env, ops::Deref, sync::LazyLock, vec};
+use std::{
+    borrow::Cow,
+    env,
+    ops::{Deref, Range},
+    sync::LazyLock,
+    vec,
+};
 
 use fst::Map;
 use github_actions_expressions::{Expr, context::Context, literal::Literal};
@@ -41,6 +47,11 @@ use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
 pub(crate) struct TemplateInjection;
+
+type ShellWordRewrite<'doc> = (
+    (Subfeature<'doc>, Cow<'doc, str>),
+    indexmap::IndexMap<String, serde_yaml::Value>,
+);
 
 audit_meta!(
     TemplateInjection,
@@ -289,6 +300,8 @@ impl TemplateInjection {
         &self,
         raw: &ExtractedExpr<'doc>,
         parsed: &Expr,
+        expr_span: Range<usize>,
+        script: &'doc str,
         step: &impl StepCommon<'doc>,
     ) -> Option<Fix<'doc>> {
         // We can only fix `run:` steps for now.
@@ -323,12 +336,25 @@ impl TemplateInjection {
         // For example, `VAR` becomes `${VAR}` in bash/sh/zsh,
         let var_expansion = Self::variable_expansion_for_shell(&env_var, step)?;
 
+        let (rewrite, mut extra_env_updates) = Self::single_quoted_shell_word_rewrite(
+            raw, expr_span, script, step,
+        )
+        .unwrap_or_else(|| {
+            (
+                (
+                    subfeature::Subfeature::new(0, raw.as_raw()),
+                    var_expansion.into(),
+                ),
+                indexmap::IndexMap::new(),
+            )
+        });
+
         let mut patches = vec![];
         patches.push(Patch {
             route: step.route().with_key("run"),
             operation: Op::RewriteFragment {
-                from: subfeature::Subfeature::new(0, raw.as_raw()),
-                to: var_expansion.into(),
+                from: rewrite.0,
+                to: rewrite.1,
             },
         });
 
@@ -342,14 +368,18 @@ impl TemplateInjection {
             && !ctx.child_of("env");
 
         if needs_new_env {
+            extra_env_updates.insert(
+                env_var.clone(),
+                serde_yaml::Value::String(raw.as_raw().into()),
+            );
+        }
+
+        if !extra_env_updates.is_empty() {
             patches.push(Patch {
                 route: step.route(),
                 operation: Op::MergeInto {
                     key: "env".to_string(),
-                    updates: indexmap::IndexMap::from_iter([(
-                        env_var.clone(),
-                        serde_yaml::Value::String(raw.as_raw().into()),
-                    )]),
+                    updates: extra_env_updates,
                 },
             });
         }
@@ -360,6 +390,81 @@ impl TemplateInjection {
             disposition: Default::default(),
             patches,
         })
+    }
+
+    fn single_quoted_shell_word_rewrite<'doc>(
+        raw: &ExtractedExpr<'doc>,
+        expr_span: Range<usize>,
+        script: &'doc str,
+        step: &impl StepCommon<'doc>,
+    ) -> Option<ShellWordRewrite<'doc>> {
+        let shell = utils::normalize_shell(step.shell()?.0);
+        if !matches!(shell, "bash" | "sh" | "zsh") {
+            return None;
+        }
+
+        let line_start = script[..expr_span.start]
+            .rfind('\n')
+            .map_or(0, |idx| idx + 1);
+        let line_end = script[expr_span.end..]
+            .find('\n')
+            .map_or(script.len(), |idx| expr_span.end + idx);
+
+        let before_expr = &script[line_start..expr_span.start];
+        if before_expr.bytes().filter(|byte| *byte == b'\'').count() % 2 == 0 {
+            return None;
+        }
+
+        let quote_start = line_start + before_expr.rfind('\'')?;
+        let quote_end = expr_span.end + script[expr_span.end..line_end].find('\'')?;
+        let quoted = &script[quote_start..=quote_end];
+        let quoted_inner = &script[quote_start + 1..quote_end];
+
+        if quoted_inner.matches(raw.as_raw()).count() != 1 {
+            return None;
+        }
+
+        let mut literal_surrounding = quoted_inner.replace(raw.as_raw(), "");
+        for (expr, _) in extract_fenced_expressions(quoted_inner) {
+            literal_surrounding = literal_surrounding.replace(expr.as_raw(), "");
+        }
+
+        if literal_surrounding
+            .bytes()
+            .any(|byte| matches!(byte, b'\'' | b'"' | b'\\' | b'$' | b'`' | b'\n' | b'\r'))
+        {
+            return None;
+        }
+
+        let mut replacement = quoted_inner.to_string();
+        let mut env_updates = indexmap::IndexMap::new();
+        for (expr, _) in extract_fenced_expressions(quoted_inner) {
+            let parsed = Expr::parse(expr.as_bare()).ok()?;
+            let Expr::Context(ctx) = &*parsed else {
+                return None;
+            };
+            let env_var = Self::context_to_env_var(ctx)?;
+            let expansion = Self::variable_expansion_for_shell(&env_var, step)?;
+            replacement = replacement.replace(expr.as_raw(), &expansion);
+
+            let needs_new_env = !DEFAULT_ENVIRONMENT_VARIABLES
+                .iter()
+                .map(|t| t.0)
+                .contains(&env_var.as_str())
+                && !ctx.child_of("env");
+
+            if needs_new_env {
+                env_updates.insert(env_var, serde_yaml::Value::String(expr.as_raw().into()));
+            }
+        }
+
+        Some((
+            (
+                subfeature::Subfeature::new(0, quoted),
+                format!("\"{replacement}\"").into(),
+            ),
+            env_updates,
+        ))
     }
 
     fn injectable_template_expressions<'doc>(
@@ -379,6 +484,7 @@ impl TemplateInjection {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_raw());
                 continue;
             };
+            let fix = || self.attempt_fix(&expr, &parsed, expr_span.clone(), script, step);
             let mut bad_expressions = vec![];
 
             for (context, origin) in parsed.dataflow_contexts() {
@@ -398,7 +504,7 @@ impl TemplateInjection {
                                         expr_span.start + origin.span.start,
                                         origin.raw,
                                     ),
-                                    self.attempt_fix(&expr, &parsed, step),
+                                    fix(),
                                     Severity::Medium,
                                     Confidence::High,
                                     Persona::default(),
@@ -412,7 +518,7 @@ impl TemplateInjection {
                                         expr_span.start + origin.span.start,
                                         origin.raw,
                                     ),
-                                    self.attempt_fix(&expr, &parsed, step),
+                                    fix(),
                                     Severity::High,
                                     Confidence::High,
                                     Persona::default(),
@@ -450,7 +556,7 @@ impl TemplateInjection {
                                             expr_span.start + origin.span.start,
                                             origin.raw,
                                         ),
-                                        self.attempt_fix(&expr, &parsed, step),
+                                        fix(),
                                         severity,
                                         confidence,
                                         persona,
@@ -464,7 +570,7 @@ impl TemplateInjection {
                                                 expr_span.start + origin.span.start,
                                                 origin.raw,
                                             ),
-                                            self.attempt_fix(&expr, &parsed, step),
+                                            fix(),
                                             Severity::Low,
                                             Confidence::High,
                                             Persona::default(),
@@ -477,7 +583,7 @@ impl TemplateInjection {
                                                 expr_span.start + origin.span.start,
                                                 origin.raw,
                                             ),
-                                            self.attempt_fix(&expr, &parsed, step),
+                                            fix(),
                                             Severity::Low,
                                             Confidence::High,
                                             Persona::Pedantic,
@@ -491,7 +597,7 @@ impl TemplateInjection {
                                             expr_span.start + origin.span.start,
                                             origin.raw,
                                         ),
-                                        self.attempt_fix(&expr, &parsed, step),
+                                        fix(),
                                         Severity::High,
                                         Confidence::High,
                                         Persona::default(),
@@ -510,7 +616,7 @@ impl TemplateInjection {
                                                 expr_span.start + origin.span.start,
                                                 origin.raw,
                                             ),
-                                            self.attempt_fix(&expr, &parsed, step),
+                                            fix(),
                                             Severity::Medium,
                                             Confidence::Medium,
                                             Persona::default(),
@@ -524,7 +630,7 @@ impl TemplateInjection {
                                             expr_span.start + origin.span.start,
                                             origin.raw,
                                         ),
-                                        self.attempt_fix(&expr, &parsed, step),
+                                        fix(),
                                         Severity::Informational,
                                         Confidence::Low,
                                         Persona::default(),
@@ -539,7 +645,7 @@ impl TemplateInjection {
                         // `call(...).foo.bar`.
                         bad_expressions.push((
                             Subfeature::new(expr_span.start + origin.span.start, origin.raw),
-                            self.attempt_fix(&expr, &parsed, step),
+                            fix(),
                             Severity::Informational,
                             Confidence::Low,
                             Persona::default(),
@@ -1438,6 +1544,75 @@ jobs:
                             run: echo "User is ${GITHUB_ACTOR}"
                     "#);
                 }
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn test_template_injection_fix_bash_single_quoted_shell_word() {
+        let workflow_content = r#"
+name: Test Template Injection - Bash Single Quotes
+on: pull_request
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+      - name: Vulnerable step with single quotes
+        shell: bash
+        run: |
+          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+"#;
+
+        test_workflow_audit!(
+            TemplateInjection,
+            "test_template_injection_fix_bash_single_quoted_shell_word.yml",
+            workflow_content,
+            |workflow: &Workflow, findings: Vec<crate::finding::Finding>| {
+                assert!(!findings.is_empty());
+
+                let mut current_document = workflow.as_document().clone();
+                let findings_with_fixes: Vec<_> =
+                    findings.iter().filter(|f| !f.fixes.is_empty()).collect();
+
+                assert!(
+                    !findings_with_fixes.is_empty(),
+                    "Expected at least one finding with a fix"
+                );
+
+                for finding in findings_with_fixes {
+                    if let Some(fix) = finding
+                        .fixes
+                        .iter()
+                        .find(|f| f.title == "replace expression with environment variable")
+                    {
+                        if let Ok(new_document) = fix.apply(&current_document) {
+                            current_document = new_document;
+                        }
+                    }
+                }
+
+                insta::assert_snapshot!(current_document.source(), @r#"
+
+                    name: Test Template Injection - Bash Single Quotes
+                    on: pull_request
+                    jobs:
+                      test:
+                        runs-on: ubuntu-latest
+                        steps:
+                          - uses: actions/create-github-app-token@v2
+                            id: app-token
+                          - name: Vulnerable step with single quotes
+                            shell: bash
+                            run: |
+                              git config --global user.name "${STEPS_APP_TOKEN_OUTPUTS_APP_SLUG}[bot]"
+                              git config --global user.email "${STEPS_GET_USER_ID_OUTPUTS_USER_ID}+${STEPS_APP_TOKEN_OUTPUTS_APP_SLUG}[bot]@users.noreply.github.com"
+                            env:
+                              STEPS_APP_TOKEN_OUTPUTS_APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+                              STEPS_GET_USER_ID_OUTPUTS_USER_ID: ${{ steps.get-user-id.outputs.user-id }}
+                    "#);
             }
         );
     }
