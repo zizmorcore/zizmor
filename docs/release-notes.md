@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.25.0
+
 ### New Features 🌈
 
 * zizmor's finding severities can now be remapped on a per-audit basis.
