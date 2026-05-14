@@ -5,6 +5,8 @@
 //!
 //! [`clank`]: https://github.com/chainguard-dev/clank
 
+use std::borrow::Cow;
+
 use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
 use subfeature::Subfeature;
@@ -77,6 +79,22 @@ impl ImpostorCommit {
             return Ok(false);
         };
 
+        // `head_ref` might actually been the object ID for a tag,
+        // or even further indirected (e.g. an annotated tag), so we
+        // need to peel it to find the real underlying commit SHA
+        // for the checks below.
+        // TODO: We really shouldn't block the fast paths below
+        // on this, since it's a relatively uncommon case.
+        let head_ref: Cow<'_, str> = match self
+            .client
+            .tag_sha_to_commit_sha(uses.owner(), uses.repo(), head_ref)
+            .await
+            .map_err(Self::err)?
+        {
+            Some(sha) => sha.into(),
+            None => head_ref.into(),
+        };
+
         // Fastest path: almost all commit refs will be at the tip of
         // the branch or tag's history, so check those first.
         // Check tags before branches, since in practice version tags
@@ -111,7 +129,7 @@ impl ImpostorCommit {
         // to the slow(er) paths if it fails.
         match self
             .client
-            .branch_commits(uses.owner(), uses.repo(), head_ref)
+            .branch_commits(uses.owner(), uses.repo(), &head_ref)
             .await
         {
             Ok(branch_commits) => return Ok(branch_commits.is_empty()),
@@ -122,7 +140,7 @@ impl ImpostorCommit {
         // history for presence of the commit.
         for branch in &branches {
             if self
-                .named_ref_contains_commit(uses, &format!("refs/heads/{}", &branch.name), head_ref)
+                .named_ref_contains_commit(uses, &format!("refs/heads/{}", &branch.name), &head_ref)
                 .await?
             {
                 return Ok(false);
@@ -131,7 +149,7 @@ impl ImpostorCommit {
 
         for tag in &tags {
             if self
-                .named_ref_contains_commit(uses, &format!("refs/tags/{}", &tag.name), head_ref)
+                .named_ref_contains_commit(uses, &format!("refs/tags/{}", &tag.name), &head_ref)
                 .await?
             {
                 return Ok(false);

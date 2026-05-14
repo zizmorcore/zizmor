@@ -555,6 +555,76 @@ impl Client {
         Ok(None)
     }
 
+    /// Map a tag SHA to its corresponding commit SHA.
+    ///
+    /// This API "unpeels" annotated tags (of which there may be more than one)
+    /// until the final tag referent is a commit object rather than a tag object.
+    #[instrument(skip(self))]
+    pub(crate) async fn tag_sha_to_commit_sha(
+        &self,
+        owner: &str,
+        repo: &str,
+        maybe_tag_sha: &str,
+    ) -> Result<Option<String>, ClientError> {
+        #[derive(Deserialize)]
+        struct TagLookup {
+            /// The object the tag refers to.
+            object: TagReferent,
+            /// The tag's name.
+            tag: String,
+        }
+
+        #[derive(Deserialize)]
+        struct TagReferent {
+            sha: String,
+            r#type: ReferentType,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(rename_all = "lowercase")]
+        enum ReferentType {
+            /// The tag points to a commit.
+            Commit,
+            /// The tag points to another tag.
+            Tag,
+        }
+
+        let mut next_tag_sha = maybe_tag_sha.to_string();
+        loop {
+            let url = format!(
+                "{api_base}/repos/{owner}/{repo}/git/tags/{tag_sha}",
+                api_base = self.api_base,
+                owner = owner,
+                repo = repo,
+                tag_sha = next_tag_sha
+            );
+
+            match self.api_client.get(url).send().await?.error_for_status() {
+                Ok(resp) => {
+                    let lookup: TagLookup = resp.json().await?;
+
+                    match lookup.object.r#type {
+                        // Our tag is pointing directly at a commit.
+                        ReferentType::Commit => return Ok(Some(lookup.object.sha)),
+                        // Our tag is pointing at another tag; continue.
+                        ReferentType::Tag => {
+                            tracing::trace!(
+                                "{next_tag_sha} points to {next} ({next_tag})",
+                                next = lookup.object.sha,
+                                next_tag = lookup.tag
+                            );
+                            next_tag_sha = lookup.object.sha;
+                        }
+                    }
+                }
+                // Tag lookup failed; this either means that the SHA doesn't exist at all
+                // *or* the user gave us a commit SHA, which this endpoint doesn't accept.
+                Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => return Ok(None),
+                Err(e) => return Err(e.into()),
+            }
+        }
+    }
+
     #[instrument(skip(self))]
     pub(crate) async fn longest_tag_for_commit(
         &self,
@@ -953,7 +1023,7 @@ pub(crate) struct File {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::{GitHubHost, GitHubToken};
+    use crate::github::{Client, GitHubHost, GitHubToken};
 
     #[test]
     fn test_github_host() {
@@ -986,5 +1056,75 @@ mod tests {
         for token in ["", " ", "\r", "\n", "\t", "     "] {
             assert!(GitHubToken::new(token).is_err());
         }
+    }
+
+    #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+    #[tokio::test]
+    async fn test_tag_sha_to_commit_sha() {
+        let client = Client::new(
+            &GitHubHost::default(),
+            &GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+            "/tmp".into(),
+        )
+        .unwrap();
+
+        // No hop: 3fdd4fca8fc76b254cefefca92381c41b28d1f0d is already a
+        // commit SHA, so we get `Ok(None)`.
+        assert_eq!(
+            client
+                .tag_sha_to_commit_sha(
+                    "woodruffw-experiments",
+                    "zizmor-recursive-tags",
+                    "3fdd4fca8fc76b254cefefca92381c41b28d1f0d"
+                )
+                .await
+                .unwrap(),
+            None
+        );
+
+        // One hop: 06f9d47abf340b709b412900a7b3ce33557d32b5 (v1.0.0) points directly
+        // at commit 3fdd4fca8fc76b254cefefca92381c41b28d1f0d.
+        assert_eq!(
+            client
+                .tag_sha_to_commit_sha(
+                    "woodruffw-experiments",
+                    "zizmor-recursive-tags",
+                    "06f9d47abf340b709b412900a7b3ce33557d32b5"
+                )
+                .await
+                .unwrap(),
+            Some("3fdd4fca8fc76b254cefefca92381c41b28d1f0d".into())
+        );
+
+        // Two hops: bcb36f3d551340e11b88c376e74e8ae77fc6cf0b (v1.0) points at
+        // 06f9d47abf340b709b412900a7b3ce33557d32b5 (v1.0.0), which points at
+        // 3fdd4fca8fc76b254cefefca92381.
+        assert_eq!(
+            client
+                .tag_sha_to_commit_sha(
+                    "woodruffw-experiments",
+                    "zizmor-recursive-tags",
+                    "bcb36f3d551340e11b88c376e74e8ae77fc6cf0b"
+                )
+                .await
+                .unwrap(),
+            Some("3fdd4fca8fc76b254cefefca92381c41b28d1f0d".into())
+        );
+
+        // Three hops: 1accca34bff60347d96faaf713d328ca1250d37b (v1) points at
+        // bcb36f3d551340e11b88c376e74e8ae77fc6cf0b (v1.0), which points at
+        // 06f9d47abf340b709b412900a7b3ce33557d32b5 (v1.0.0), which points at
+        // 3fdd4fca8fc76b254cefefca92381c41b.
+        assert_eq!(
+            client
+                .tag_sha_to_commit_sha(
+                    "woodruffw-experiments",
+                    "zizmor-recursive-tags",
+                    "1accca34bff60347d96faaf713d328ca1250d37b"
+                )
+                .await
+                .unwrap(),
+            Some("3fdd4fca8fc76b254cefefca92381c41b28d1f0d".into())
+        );
     }
 }

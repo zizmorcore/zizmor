@@ -29,3 +29,20 @@ fn test_regular_persona() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Test for #1997: if a user does something like `uses: foo/bar@sha`
+/// where `sha` is a tag SHA, then we should correctly "peel" that tag
+/// back to its original commit SHA rather than emitting a false positive.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_peels_tag_sha_to_commit_sha() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+    zizmor()
+        .input(input_under_test("impostor-commit/sha-is-tag.yml"))
+        .offline(false)
+        .run()?,
+    @"No findings to report. Good job! (3 suppressed)"
+    );
+
+    Ok(())
+}

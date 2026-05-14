@@ -1,0 +1,17 @@
+name: example
+on: [push]
+
+permissions: {}
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      # OK: 1accca34bff60347d96faaf713d328ca1250d37b is the object ID of a legitimate tag (v1),
+      # which points to a legitimate commit. `impostor-commit` should resolve this back to its
+      # underlying commit and not produce a finding, while also not taking the slow path.
+      - uses: woodruffw-experiments/zizmor-recursive-tags@1accca34bff60347d96faaf713d328ca1250d37b
+      - shell: bash
+        run: |
+          echo 'hello world!'
