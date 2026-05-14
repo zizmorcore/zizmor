@@ -44,6 +44,18 @@ audit_meta!(
     "commit with no history in referenced repository"
 );
 
+/// An intermediate result type for the impostor check. This is used to
+/// encode our fallthroughs from fastest -> fast -> slow paths for
+/// impostor checks.
+enum IntermediateDetermination {
+    /// Definitely an impostor.
+    NotImpostor,
+    /// Definitely not an impostor.
+    Impostor,
+    /// Not sure yet.
+    Indeterminate,
+}
+
 impl ImpostorCommit {
     async fn named_ref_contains_commit(
         &self,
@@ -70,46 +82,146 @@ impl ImpostorCommit {
         )
     }
 
+    /// Our "fastest path" impostor check: iterate through the remote's tags and branches
+    /// and see if any of them point directly at `candidate_sha`. This is fast for two reasons:
+    ///
+    /// 1. We expect the majority of users to be on the happy path where their hash-pin
+    ///    is directly at the tip of some tag or branch.
+    /// 2. Internally, listing refs is very cheap within zizmor (since we GitHub's
+    ///    Git backend directly, not the REST API), at least compared to a REST API roundtrip.
+    async fn fastest_path_impostor_check(
+        &self,
+        tags: &[github::Tag],
+        branches: &[github::Branch],
+        candidate_sha: &str,
+    ) -> Result<IntermediateDetermination, AuditError> {
+        for tag in tags {
+            if tag.commit.sha == candidate_sha {
+                return Ok(IntermediateDetermination::NotImpostor);
+            }
+        }
+
+        for branch in branches {
+            if branch.commit.sha == candidate_sha {
+                return Ok(IntermediateDetermination::NotImpostor);
+            }
+        }
+
+        Ok(IntermediateDetermination::Indeterminate)
+    }
+
+    /// Our second fastest impostor check: we use GitHub's undocumented
+    /// `branch_commits` API, which is what GitHub's own frontend uses to
+    /// perform a fast check for which tags and/or branches a commit SHA
+    /// appears on.
+    ///
+    /// TODO: Benchmark this more; this might actually be faster than listing refs?
+    /// We currently assume this is slower because it's through the REST API.
+    async fn fast_path_impostor_check(
+        &self,
+        uses: &RepositoryUses,
+        candidate_sha: &str,
+    ) -> IntermediateDetermination {
+        match self
+            .client
+            .branch_commits(uses.owner(), uses.repo(), candidate_sha)
+            .await
+        {
+            Ok(branch_commits) => {
+                if branch_commits.is_empty() {
+                    IntermediateDetermination::Impostor
+                } else {
+                    IntermediateDetermination::NotImpostor
+                }
+            }
+            Err(e) => {
+                tracing::warn!("fast path impostor check failed for {uses}: {e}");
+                IntermediateDetermination::Indeterminate
+            }
+        }
+    }
+
+    /// Perform both our fastest path and fast path impostor check on the candidate SHA.
+    async fn combined_fast_paths_impostor_check(
+        &self,
+        uses: &RepositoryUses,
+        tags: &[github::Tag],
+        branches: &[github::Branch],
+        candidate_sha: &str,
+    ) -> Result<IntermediateDetermination, AuditError> {
+        match self
+            .fastest_path_impostor_check(tags, branches, candidate_sha)
+            .await?
+        {
+            IntermediateDetermination::Indeterminate => {
+                Ok(self.fast_path_impostor_check(uses, candidate_sha).await)
+            }
+            determination => Ok(determination),
+        }
+    }
+
+    /// Our slow path for impostor checks: we use GitHub's comparison API
+    /// to see whether any tag or branch in the repo has the candidate SHA
+    /// in its history.
+    ///
+    /// This is ludicrously slow, both because this endpoint is slow
+    /// and because in the worst case it requires pathological numbers
+    /// of requests (thousands for repos with thousands of branches or tags).
+    async fn slow_path_impostor_check(
+        &self,
+        uses: &RepositoryUses,
+        tags: &[github::Tag],
+        branches: &[github::Branch],
+        candidate_sha: &str,
+    ) -> Result<IntermediateDetermination, AuditError> {
+        for branch in branches {
+            if self
+                .named_ref_contains_commit(
+                    uses,
+                    &format!("refs/heads/{}", &branch.name),
+                    candidate_sha,
+                )
+                .await?
+            {
+                return Ok(IntermediateDetermination::NotImpostor);
+            }
+        }
+
+        for tag in tags {
+            if self
+                .named_ref_contains_commit(uses, &format!("refs/tags/{}", &tag.name), candidate_sha)
+                .await?
+            {
+                return Ok(IntermediateDetermination::NotImpostor);
+            }
+        }
+
+        // At this point we pretty much know it's an impostor commit,
+        // but we don't make that classification here.
+        Ok(IntermediateDetermination::Indeterminate)
+    }
+
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
     async fn impostor(&self, uses: &RepositoryUses) -> Result<bool, AuditError> {
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
-        let Some(head_ref) = uses.commit_ref() else {
+        let Some(initial_candidate_sha) = uses.commit_ref() else {
             return Ok(false);
         };
 
-        // `head_ref` might actually been the object ID for a tag,
-        // or even further indirected (e.g. an annotated tag), so we
-        // need to peel it to find the real underlying commit SHA
-        // for the checks below.
-        // TODO: We really shouldn't block the fast paths below
-        // on this, since it's a relatively uncommon case.
-        let head_ref: Cow<'_, str> = match self
-            .client
-            .tag_sha_to_commit_sha(uses.owner(), uses.repo(), head_ref)
-            .await
-            .map_err(Self::err)?
-        {
-            Some(sha) => sha.into(),
-            None => head_ref.into(),
-        };
+        // Our logic is a little nuanced here: we have two fast paths, and we want to try
+        // both fast paths on the commit SHA before we fall back to the slow path.
+        // So what we do is first try the fast paths while *assuming* that the user has
+        // hash-pinned to a commit SHA. If that fails we then treat their hash-pin
+        // as a tag SHA, try the fast paths again, and then only fall through
+        // to the slow path after that.
 
-        // Fastest path: almost all commit refs will be at the tip of
-        // the branch or tag's history, so check those first.
-        // Check tags before branches, since in practice version tags
-        // are more commonly pinned.
         let tags = self
             .client
             .list_tags(uses.owner(), uses.repo())
             .await
             .map_err(Self::err)?;
-
-        for tag in &tags {
-            if tag.commit.sha == head_ref {
-                return Ok(false);
-            }
-        }
 
         let branches = self
             .client
@@ -117,48 +229,54 @@ impl ImpostorCommit {
             .await
             .map_err(Self::err)?;
 
-        for branch in &branches {
-            if branch.commit.sha == head_ref {
-                return Ok(false);
-            }
-        }
-
-        // Fast path: attempt to use GitHub's undocumented `branch_commits`
-        // API to see if the commit is present in any branch/tag.
-        // There are no stabilitiy guarantees for this API, so we fall back
-        // to the slow(er) paths if it fails.
         match self
-            .client
-            .branch_commits(uses.owner(), uses.repo(), &head_ref)
-            .await
+            .combined_fast_paths_impostor_check(uses, &tags, &branches, initial_candidate_sha)
+            .await?
         {
-            Ok(branch_commits) => return Ok(branch_commits.is_empty()),
-            Err(e) => tracing::warn!("fast path impostor check failed for {uses}: {e}"),
-        }
-
-        // Slow path: use GitHub's comparison API to check each branch and tag's
-        // history for presence of the commit.
-        for branch in &branches {
-            if self
-                .named_ref_contains_commit(uses, &format!("refs/heads/{}", &branch.name), &head_ref)
-                .await?
-            {
-                return Ok(false);
+            IntermediateDetermination::NotImpostor => return Ok(false),
+            IntermediateDetermination::Impostor => return Ok(true),
+            IntermediateDetermination::Indeterminate => {
+                // Fall through.
             }
         }
 
-        for tag in &tags {
-            if self
-                .named_ref_contains_commit(uses, &format!("refs/tags/{}", &tag.name), &head_ref)
+        // If our first set of fast paths didn't work then `initial_candidate_sha`
+        // might actually be a tag SHA, so we need to peel it to find the real
+        // underlying commit SHA for the checks below.
+        let final_candidate_sha: Cow<'_, str> = match self
+            .client
+            .tag_sha_to_commit_sha(uses.owner(), uses.repo(), initial_candidate_sha)
+            .await
+            .map_err(Self::err)?
+        {
+            Some(sha) => sha.into(),
+            None => initial_candidate_sha.into(),
+        };
+
+        // At this point we definitely have a commit SHA, so try the fast
+        // paths again if the SHA has changed.
+        if initial_candidate_sha != final_candidate_sha {
+            match self
+                .combined_fast_paths_impostor_check(uses, &tags, &branches, &final_candidate_sha)
                 .await?
             {
-                return Ok(false);
+                IntermediateDetermination::NotImpostor => return Ok(false),
+                IntermediateDetermination::Impostor => return Ok(true),
+                IntermediateDetermination::Indeterminate => {
+                    // Fall through.
+                }
             }
         }
 
-        // If we've made it here, the commit isn't present in any commit or tag's history,
-        // strongly suggesting that it's an impostor.
-        Ok(true)
+        match self
+            .slow_path_impostor_check(uses, &tags, &branches, &final_candidate_sha)
+            .await?
+        {
+            IntermediateDetermination::NotImpostor => Ok(false),
+            // If we've made it here, the commit isn't present in any commit or tag's history,
+            // strongly suggesting that it's an impostor.
+            _ => Ok(true),
+        }
     }
 
     /// Return the highest semantically versioned tag in the repository.
