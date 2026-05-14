@@ -87,7 +87,16 @@ impl PopularActions {
             include_str!("../../data/popular-actions.txt")
                 .lines()
                 .filter(|l| !l.is_empty())
-                .map(|slug| (slug.to_lowercase(), ActionOwner::new(slug)))
+                .map(|slug| {
+                    (
+                        slug.to_lowercase(),
+                        ActionOwner::new(
+                            slug.split('/')
+                                .next()
+                                .expect("couldn't initialize popular actions corpus"),
+                        ),
+                    )
+                })
                 .collect(),
         )
     }
