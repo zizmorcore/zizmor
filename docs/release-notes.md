@@ -1799,5 +1799,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [secrets-outside-env]: ./audits.md#secrets-outside-env
 [superfluous-actions]: ./audits.md#superfluous-actions
 [github-app]: ./audits.md#github-app
+[unpinned-tools]: ./audits.md#unpinned-tools
 
 [exit code]: ./usage.md#exit-codes
