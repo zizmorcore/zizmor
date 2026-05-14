@@ -73,15 +73,13 @@ static HARNESS: LazyLock<Harness<PopularActions>> = LazyLock::new(|| {
     Harness::builder()
         .with_check(Omitted::new(ALPHABET))
         .with_check(SwappedWords::new("-_/"))
-        .with_check(Typos::new(
-            TYPOS
-                .iter()
-                .map(|(c, typos)| (*c, typos.iter().map(|s| s.to_string()).collect())),
-        ))
+        .with_check(Typos::new(TYPOS.iter().map(|(c, typos)| {
+            (*c, typos.iter().map(|s| s.to_string()).collect())
+        })))
         .build(corpus)
 });
 
-struct PopularActions(HashMap<String, ActionSlug>);
+struct PopularActions(HashMap<String, ActionOwner>);
 
 impl PopularActions {
     fn load() -> Self {
@@ -89,7 +87,7 @@ impl PopularActions {
             include_str!("../../data/popular-actions.txt")
                 .lines()
                 .filter(|l| !l.is_empty())
-                .map(|slug| (slug.to_lowercase(), ActionSlug::new(slug)))
+                .map(|slug| (slug.to_lowercase(), ActionOwner::new(slug)))
                 .collect(),
         )
     }
@@ -105,18 +103,19 @@ impl Corpus for PopularActions {
     }
 }
 
-struct ActionSlug {
+struct ActionOwner {
     owner: String,
 }
 
-impl ActionSlug {
-    fn new(slug: &str) -> Self {
-        let owner = slug.split('/').next().unwrap_or(slug).to_lowercase();
-        Self { owner }
+impl ActionOwner {
+    fn new(owner: &str) -> Self {
+        Self {
+            owner: owner.to_owned(),
+        }
     }
 }
 
-impl Package for ActionSlug {
+impl Package for ActionOwner {
     fn authors(&self) -> &dyn AuthorSet {
         self
     }
@@ -130,7 +129,7 @@ impl Package for ActionSlug {
     }
 }
 
-impl AuthorSet for ActionSlug {
+impl AuthorSet for ActionOwner {
     fn contains(&self, author: &str) -> bool {
         self.owner == author
     }
@@ -151,14 +150,9 @@ impl TyposquatUses {
         &self,
         uses: &RepositoryUses,
     ) -> Option<(FindingBuilder<'doc>, String)> {
-        let slug = format!(
-            "{}/{}",
-            uses.owner().to_lowercase(),
-            uses.repo().to_lowercase()
-        );
-
-        let candidate: Box<dyn Package> = Box::new(ActionSlug::new(&slug));
-        let squats = HARNESS.check_package(&slug, candidate).ok()?;
+        let candidate: Box<dyn Package> = Box::new(ActionOwner::new(uses.owner()));
+        let slug = uses.slug();
+        let squats = HARNESS.check_package(slug, candidate).ok()?;
         let squat = squats.into_iter().next()?;
 
         let mut finding = Self::finding()
