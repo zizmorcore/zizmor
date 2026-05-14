@@ -1016,7 +1016,7 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 
 [[package]]
 name = "github-actions-expressions"
-version = "1.24.1"
+version = "1.25.0"
 dependencies = [
  "itertools",
  "pest",
@@ -1030,7 +1030,7 @@ dependencies = [
 
 [[package]]
 name = "github-actions-models"
-version = "1.24.1"
+version = "1.25.0"
 dependencies = [
  "indexmap",
  "insta",
@@ -2931,7 +2931,7 @@ dependencies = [
 
 [[package]]
 name = "subfeature"
-version = "1.24.1"
+version = "1.25.0"
 dependencies = [
  "memchr",
  "regex",
@@ -3445,7 +3445,7 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-iter"
-version = "1.24.1"
+version = "1.25.0"
 dependencies = [
  "tree-sitter",
  "tree-sitter-yaml",
@@ -4376,7 +4376,7 @@ dependencies = [
 
 [[package]]
 name = "yamlpatch"
-version = "1.24.1"
+version = "1.25.0"
 dependencies = [
  "indexmap",
  "insta",
@@ -4392,7 +4392,7 @@ dependencies = [
 
 [[package]]
 name = "yamlpath"
-version = "1.24.1"
+version = "1.25.0"
 dependencies = [
  "line-index",
  "self_cell",
@@ -4516,7 +4516,7 @@ dependencies = [
 
 [[package]]
 name = "zizmor"
-version = "1.24.1"
+version = "1.25.0"
 dependencies = [
  "annotate-snippets",
  "anstream",
