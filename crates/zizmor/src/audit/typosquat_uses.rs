@@ -110,7 +110,7 @@ struct ActionOwner {
 impl ActionOwner {
     fn new(owner: &str) -> Self {
         Self {
-            owner: owner.to_owned(),
+            owner: owner.to_lowercase(),
         }
     }
 }
@@ -151,7 +151,7 @@ impl TyposquatUses {
         uses: &RepositoryUses,
     ) -> Option<(FindingBuilder<'doc>, String)> {
         let candidate: Box<dyn Package> = Box::new(ActionOwner::new(uses.owner()));
-        let slug = uses.slug();
+        let slug = &uses.slug().to_lowercase();
         let squats = HARNESS.check_package(slug, candidate).ok()?;
         let squat = squats.into_iter().next()?;
 
