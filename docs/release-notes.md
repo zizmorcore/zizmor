@@ -62,6 +62,12 @@ of `zizmor`.
 
 * `deno` is now recognized as a `package-ecosystem` in `dependabot.yml` (#1991)
 
+### Performance Improvements 🚄
+
+* The [impostor-commit] audit is now significantly faster (in addition to being
+  more correct) when the user has pinned their action to a tag SHA instead of
+  a commit SHA (#1998)
+
 ### Bug Fixes 🐛
 
 * Fixed a crash in the [template-injection] audit when a workflow uses
@@ -93,6 +99,10 @@ of `zizmor`.
 
 * Fixed a bug where zizmor's input validation warnings lacked
   a mention of which files failed to validate (#1980)
+
+* Fixed a bug where the [impostor-commit] audit would falsely indicate
+  impostor commits if an action was pinned to a tag SHA instead of a commit SHA
+  (#1998)
 
 ## 1.24.1
 
