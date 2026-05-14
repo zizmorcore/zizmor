@@ -1732,7 +1732,7 @@ shell quoting/expansion rules.
 
 | Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action | [typosquat-uses.yml] | v1.25.0        | ✅             | ❌                 | ❌           |
+| Workflow, Action | [typosquat-uses.yml] | v1.26.0        | ✅             | ❌                 | ❌           |
 
 [typosquat-uses.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/typosquat-uses.yml
 
