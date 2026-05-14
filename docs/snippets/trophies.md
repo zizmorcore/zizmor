@@ -150,6 +150,14 @@
         - aristocratos/btop#1590
 
 
+-   ![](https://github.com/Arize-ai.png?size=40){ width="40" loading=lazy align=left } Arize-ai
+
+    ---
+
+    ??? example "Examples"
+        - Arize-ai/phoenix#13202
+
+
 -   ![](https://github.com/artichoke.png?size=40){ width="40" loading=lazy align=left } artichoke
 
     ---
@@ -361,6 +369,14 @@
 
     ??? example "Examples"
         - bw2/ConfigArgParse#336
+
+
+-   ![](https://github.com/c15t.png?size=40){ width="40" loading=lazy align=left } c15t
+
+    ---
+
+    ??? example "Examples"
+        - c15t/c15t#853
 
 
 -   ![](https://github.com/cachix.png?size=40){ width="40" loading=lazy align=left } cachix
@@ -680,6 +696,7 @@
     ??? example "Examples"
         - dubzzz/fast-check#6369
         - dubzzz/fast-check#6370
+        - dubzzz/fast-check#6978
 
 
 -   ![](https://github.com/Dynatrace.png?size=40){ width="40" loading=lazy align=left } Dynatrace
@@ -720,6 +737,14 @@
 
     ??? example "Examples"
         - edgelesssys/contrast#1604
+
+
+-   ![](https://github.com/edrlab.png?size=40){ width="40" loading=lazy align=left } edrlab
+
+    ---
+
+    ??? example "Examples"
+        - edrlab/thorium-reader@18974d39db0baea5a713b2b269681ff48bc1b22f
 
 
 -   ![](https://github.com/EFForg.png?size=40){ width="40" loading=lazy align=left } EFForg
@@ -771,6 +796,23 @@
 
     ??? example "Examples"
         - emberjs/ember.js#21185
+
+
+-   ![](https://github.com/endevco.png?size=40){ width="40" loading=lazy align=left } endevco
+
+    ---
+
+    ??? example "Examples"
+        - endevco/aube#631
+        - endevco/pitchfork#434
+
+
+-   ![](https://github.com/endojs.png?size=40){ width="40" loading=lazy align=left } endojs
+
+    ---
+
+    ??? example "Examples"
+        - endojs/endo#3252
 
 
 -   ![](https://github.com/EpicWink.png?size=40){ width="40" loading=lazy align=left } EpicWink
@@ -1119,7 +1161,13 @@
     ---
 
     ??? example "Examples"
+        - holoviz/colorcet#155
+        - holoviz/datashader#1497
+        - holoviz/geoviews#841
         - holoviz/holoviews#6860
+        - holoviz/hvplot#1726
+        - holoviz/panel#8584
+        - holoviz/param#1143
 
 
 -   ![](https://github.com/Homebrew.png?size=40){ width="40" loading=lazy align=left } Homebrew
@@ -1254,6 +1302,18 @@
 
     ??? example "Examples"
         - jazzband/pip-tools#2327
+
+
+-   ![](https://github.com/jdx.png?size=40){ width="40" loading=lazy align=left } jdx
+
+    ---
+
+    ??? example "Examples"
+        - jdx/fnox#480
+        - jdx/hk#925
+        - jdx/mise#9804
+        - jdx/mise-action#471
+        - jdx/usage#633
 
 
 -   ![](https://github.com/jj-vcs.png?size=40){ width="40" loading=lazy align=left } jj-vcs
@@ -1567,6 +1627,14 @@
         - mkuf/prind#183
 
 
+-   ![](https://github.com/MLCIL.png?size=40){ width="40" loading=lazy align=left } MLCIL
+
+    ---
+
+    ??? example "Examples"
+        - MLCIL/scikit-fingerprints#553
+
+
 -   ![](https://github.com/mne-tools.png?size=40){ width="40" loading=lazy align=left } mne-tools
 
     ---
@@ -1802,6 +1870,14 @@
         - openpubkey/opkssh#247
 
 
+-   ![](https://github.com/opf.png?size=40){ width="40" loading=lazy align=left } opf
+
+    ---
+
+    ??? example "Examples"
+        - opf/openproject#23067
+
+
 -   ![](https://github.com/Orange-OpenSource.png?size=40){ width="40" loading=lazy align=left } Orange-OpenSource
 
     ---
@@ -1911,6 +1987,14 @@
         - PlasmaPy/PlasmaPy#2975
 
 
+-   ![](https://github.com/pnpm.png?size=40){ width="40" loading=lazy align=left } pnpm
+
+    ---
+
+    ??? example "Examples"
+        - pnpm/pnpm#11608
+
+
 -   ![](https://github.com/PowerDNS.png?size=40){ width="40" loading=lazy align=left } PowerDNS
 
     ---
@@ -1949,6 +2033,14 @@
 
     ??? example "Examples"
         - prometheus/prometheus#16530
+
+
+-   ![](https://github.com/prosekit.png?size=40){ width="40" loading=lazy align=left } prosekit
+
+    ---
+
+    ??? example "Examples"
+        - prosekit/prosekit#1609
 
 
 -   ![](https://github.com/prowler-cloud.png?size=40){ width="40" loading=lazy align=left } prowler-cloud
@@ -2239,6 +2331,14 @@
         - rolldown/rolldown#3861
 
 
+-   ![](https://github.com/rsyslog.png?size=40){ width="40" loading=lazy align=left } rsyslog
+
+    ---
+
+    ??? example "Examples"
+        - rsyslog/rsyslog#6808
+
+
 -   ![](https://github.com/ruby.png?size=40){ width="40" loading=lazy align=left } ruby
 
     ---
@@ -2434,6 +2534,14 @@
         - slackapi/slack-cli#100
 
 
+-   ![](https://github.com/stanfordnlp.png?size=40){ width="40" loading=lazy align=left } stanfordnlp
+
+    ---
+
+    ??? example "Examples"
+        - stanfordnlp/dspy#9743
+
+
 -   ![](https://github.com/Stebalien.png?size=40){ width="40" loading=lazy align=left } Stebalien
 
     ---
@@ -2490,6 +2598,24 @@
 
     ??? example "Examples"
         - sympy/sympy#29641
+
+
+-   ![](https://github.com/TanStack.png?size=40){ width="40" loading=lazy align=left } TanStack
+
+    ---
+
+    ??? example "Examples"
+        - TanStack/cli#450
+        - TanStack/config#387
+        - TanStack/db#1525
+        - TanStack/devtools#440
+        - TanStack/form#2176
+        - TanStack/pacer#212
+        - TanStack/query#10700
+        - TanStack/router#7389
+        - TanStack/store#326
+        - TanStack/table#6251
+        - TanStack/tanstack.com#919
 
 
 -   ![](https://github.com/target.png?size=40){ width="40" loading=lazy align=left } target
@@ -2575,6 +2701,14 @@
         - thomaspoignant/go-feature-flag#5118
 
 
+-   ![](https://github.com/tiangolo.png?size=40){ width="40" loading=lazy align=left } tiangolo
+
+    ---
+
+    ??? example "Examples"
+        - tiangolo/library-skills#31
+
+
 -   ![](https://github.com/toml-rs.png?size=40){ width="40" loading=lazy align=left } toml-rs
 
     ---
@@ -2643,12 +2777,29 @@
         - TritonVM/triton-vm@670907d4bfe9b70d160c78403cd0ad1fb16757e8
 
 
+-   ![](https://github.com/tstyche.png?size=40){ width="40" loading=lazy align=left } tstyche
+
+    ---
+
+    ??? example "Examples"
+        - tstyche/tstyche@477b8b9c52f59c141918e1c164ad59644d64f81f
+
+
 -   ![](https://github.com/ua-parser.png?size=40){ width="40" loading=lazy align=left } ua-parser
 
     ---
 
     ??? example "Examples"
         - ua-parser/uap-python#250
+
+
+-   ![](https://github.com/UKGovernmentBEIS.png?size=40){ width="40" loading=lazy align=left } UKGovernmentBEIS
+
+    ---
+
+    ??? example "Examples"
+        - UKGovernmentBEIS/inspect_evals#1597
+        - UKGovernmentBEIS/inspect_evals#1599
 
 
 -   ![](https://github.com/ultrajson.png?size=40){ width="40" loading=lazy align=left } ultrajson
@@ -2708,6 +2859,14 @@
 
     ??? example "Examples"
         - ViaVersion/ViaVersion#4315
+
+
+-   ![](https://github.com/vitejs.png?size=40){ width="40" loading=lazy align=left } vitejs
+
+    ---
+
+    ??? example "Examples"
+        - vitejs/vite#22442
 
 
 -   ![](https://github.com/vlang.png?size=40){ width="40" loading=lazy align=left } vlang

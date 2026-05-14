@@ -50,6 +50,7 @@ aquasecurity/vuln-list-update#411
 arc53/DocsGPT#2383
 ariel-os/ariel-os#1738
 aristocratos/btop#1590
+Arize-ai/phoenix#13202
 artichoke/artichoke#2825
 artichoke/boba#265
 artichoke/project-infrastructure#683
@@ -102,6 +103,7 @@ boto/botocore#3665
 boto/s3transfer#374
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 bw2/ConfigArgParse#336
+c15t/c15t#853
 cachix/git-hooks.nix#606
 cactus/go-camo#87
 cakephp/cakephp#18081
@@ -162,11 +164,13 @@ docker/compose#12737
 dry-rb/dry-validation@44db170688d78e301d1e2d5f4e7dc260047f6fa5
 dubzzz/fast-check#6369
 dubzzz/fast-check#6370
+dubzzz/fast-check#6978
 Dynatrace/dynatrace-operator#6154
 earthobservations/wetterdienst#1440
 eclipse-ditto/ditto#2421
 eclipse-transformer/transformer#867
 edgelesssys/contrast#1604
+edrlab/thorium-reader@18974d39db0baea5a713b2b269681ff48bc1b22f
 EFForg/rayhunter#711
 egbakou/RESTCountries.NET#55
 Electric-Coin-Company/zcash-light-client-ffi#186
@@ -176,6 +180,9 @@ element-hq/element-web#32717
 element-hq/element-x-ios#5161
 elixir-lang/elixir#15114
 emberjs/ember.js#21185
+endevco/aube#631
+endevco/pitchfork#434
+endojs/endo#3252
 EpicWink/proxpi@5e04d5e24bb8abfc6ad65721aea1c1781628ac9b
 erlang/otp#11000
 erlang/rebar3#3001
@@ -237,7 +244,13 @@ hanami/hanami@4c206392546c1bbaea29782df60fed7769071e84
 hellux/jotdown#76
 hexpm/hex#1110
 hexpm/hexpm#1383
+holoviz/colorcet#155
+holoviz/datashader#1497
+holoviz/geoviews#841
 holoviz/holoviews#6860
+holoviz/hvplot#1726
+holoviz/panel#8584
+holoviz/param#1143
 Homebrew/actions#630
 Homebrew/actions#631
 Homebrew/brew#18662
@@ -281,6 +294,11 @@ intel/llvm#20437
 ispc/ispc#3589
 j178/prek#947
 jazzband/pip-tools#2327
+jdx/fnox#480
+jdx/hk#925
+jdx/mise#9804
+jdx/mise-action#471
+jdx/usage#633
 jj-vcs/jj#5076
 JOML-CI/JOML@98290c379f54d05d6d27afb11ae88dfd86e35c9d
 js-cookie/js-cookie#946
@@ -340,6 +358,7 @@ microsoft/vscode-python-debugger#709
 miguelgrinberg/microdot#362
 miketheman/pytest-socket#462
 mkuf/prind#183
+MLCIL/scikit-fingerprints#553
 mne-tools/mne-python#13011
 MoarVM/MoarVM#1875
 mongodb-labs/flask-pymongo#170
@@ -386,6 +405,7 @@ open-telemetry/opentelemetry-ebpf-instrumentation#1511
 openbao/openbao#924
 openpubkey/opkssh#198
 openpubkey/opkssh#247
+opf/openproject#23067
 Orange-OpenSource/hurl#3574
 orion-rs/orion#441
 orion-rs/orion#490
@@ -404,11 +424,13 @@ pentacent/keila@7eb6aeb61d0b191bc8fca13f4deef0bd422ac8d3
 pgautoupgrade/docker-pgautoupgrade#221
 philips-software/amp-devcontainer#830
 PlasmaPy/PlasmaPy#2975
+pnpm/pnpm#11608
 PowerDNS/pdns#15600
 praetorian-inc/noseyparker#228
 prettytable/prettytable#339
 privacyidea/privacyidea#4854
 prometheus/prometheus#16530
+prosekit/prosekit#1609
 prowler-cloud/prowler#10200
 prowler-cloud/prowler#10207
 prowler-cloud/prowler#10208
@@ -473,6 +495,7 @@ reubeno/brush#534
 reubeno/brush#535
 rkyv/rkyv#611
 rolldown/rolldown#3861
+rsyslog/rsyslog#6808
 ruby/ruby#16273
 rubygems/rubygems#8702
 rubygems/rubygems.org#5350
@@ -521,6 +544,7 @@ slackapi/python-slack-events-api#110
 slackapi/python-slack-hooks#58
 slackapi/python-slack-sdk#1691
 slackapi/slack-cli#100
+stanfordnlp/dspy#9743
 Stebalien/tempfile#402
 stravalib/stravalib#645
 stravalib/stravalib#648
@@ -530,6 +554,17 @@ stx-labs/clarinet#2281
 super-linter/super-linter#7241
 Swatinem/rust-cache#262
 sympy/sympy#29641
+TanStack/cli#450
+TanStack/config#387
+TanStack/db#1525
+TanStack/devtools#440
+TanStack/form#2176
+TanStack/pacer#212
+TanStack/query#10700
+TanStack/router#7389
+TanStack/store#326
+TanStack/table#6251
+TanStack/tanstack.com#919
 target/data-validator#223
 TecharoHQ/anubis#188
 tektoncd/operator#3300
@@ -543,6 +578,7 @@ theopenconversationkit/tock@85face9458cd6f9676d647cabc00de7be74ecac5
 theupdateframework/python-tuf#2798
 theupdateframework/tuf-on-ci#548
 thomaspoignant/go-feature-flag#5118
+tiangolo/library-skills#31
 toml-rs/toml#1145
 torchbox/wagtailmedia#252
 tornadoweb/tornado#3438
@@ -555,7 +591,10 @@ trifectatechfoundation/sudo-rs#1490
 trifectatechfoundation/teach-rs#162
 triggerdotdev/trigger.dev#3506
 TritonVM/triton-vm@670907d4bfe9b70d160c78403cd0ad1fb16757e8
+tstyche/tstyche@477b8b9c52f59c141918e1c164ad59644d64f81f
 ua-parser/uap-python#250
+UKGovernmentBEIS/inspect_evals#1597
+UKGovernmentBEIS/inspect_evals#1599
 ultrajson/ultrajson#650
 Unidata/MetPy#3710
 Uniswap/docs#1114
@@ -566,6 +605,7 @@ updatecli/updatecli#7865
 urllib3/urllib3#3528
 uutils/coreutils#6973
 ViaVersion/ViaVersion#4315
+vitejs/vite#22442
 vlang/v#22681
 VowpalWabbit/vowpal_wabbit#4918
 VSCodium/vscodium#2795
