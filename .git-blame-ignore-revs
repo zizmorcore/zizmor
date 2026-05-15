@@ -1,0 +1,2 @@
+# chore(deps): drop serde_yaml rename, use yaml_serde directly
+d706f97cf294e09f4a3d22c2dc8b32a54a2fe508
