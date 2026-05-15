@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [cache-poisoning] audit would fail to consider
+  `release` events as exempt from cache usage findings when filtered by a
+  tag condition (#2004)
+
 ## 1.25.0
 
 ### New Features 🌈
