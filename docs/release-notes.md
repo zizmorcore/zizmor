@@ -19,6 +19,10 @@ of `zizmor`.
 
     Many thanks to @0xdea for implementing this fix!
 
+* Fixed a typo in [unpinned-tools] annotations (#2008)
+
+    Many thanks to @martincostello for implementing this fix!
+
 ## 1.25.0
 
 ### New Features 🌈
