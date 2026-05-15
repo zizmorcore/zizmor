@@ -23,6 +23,9 @@ of `zizmor`.
 
     Many thanks to @martincostello for implementing this fix!
 
+* Fixed a bug where the [github-app] audit would incorrectly flag some safe
+  uses of @actions/create-github-app-token as unsafe (#2011)
+
 ## 1.25.0
 
 ### New Features 🌈
