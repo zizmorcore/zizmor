@@ -815,7 +815,7 @@ that issue them:
   whereas typically only the current repository needs to be accessed for the
   operation being performed.
 
-* Issuing a token with access to all of the installaton's permissions,
+* Issuing a token with access to all of the installation's permissions,
   instead of the specific permissions needed for the operation being performed.
   For example, by default, @actions/create-github-app-token issues tokens with
   all permissions that the GitHub App has been granted during installation, which
