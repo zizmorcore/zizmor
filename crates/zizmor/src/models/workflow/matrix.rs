@@ -131,7 +131,7 @@ impl<'doc> Expansions<'doc> {
     }
 
     fn expand_explicit_rows(
-        include: &IndexMap<String, serde_yaml::Value>,
+        include: &IndexMap<String, yaml_serde::Value>,
         base: SymbolicLocation<'doc>,
     ) -> Vec<Expansion<'doc>> {
         let normalized = include
@@ -143,7 +143,7 @@ impl<'doc> Expansions<'doc> {
     }
 
     fn expand_dimensions(
-        dimensions: &IndexMap<String, LoE<Vec<serde_yaml::Value>>>,
+        dimensions: &IndexMap<String, LoE<Vec<yaml_serde::Value>>>,
         base: SymbolicLocation<'doc>,
     ) -> Vec<Expansion<'doc>> {
         let normalized = dimensions

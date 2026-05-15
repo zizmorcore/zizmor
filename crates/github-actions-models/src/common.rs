@@ -585,13 +585,13 @@ mod tests {
     #[test]
     fn test_permissions() {
         assert_eq!(
-            serde_yaml::from_str::<Permissions>("read-all").unwrap(),
+            yaml_serde::from_str::<Permissions>("read-all").unwrap(),
             Permissions::Base(BasePermission::ReadAll)
         );
 
         let perm = "security-events: write";
         assert_eq!(
-            serde_yaml::from_str::<Permissions>(perm).unwrap(),
+            yaml_serde::from_str::<Permissions>(perm).unwrap(),
             Permissions::Explicit(IndexMap::from([(
                 "security-events".into(),
                 Permission::Write
@@ -603,7 +603,7 @@ mod tests {
     fn test_env_empty_value() {
         let env = "foo:";
         assert_eq!(
-            serde_yaml::from_str::<Env>(env).unwrap()["foo"],
+            yaml_serde::from_str::<Env>(env).unwrap()["foo"],
             EnvValue::String("".into())
         );
     }
@@ -999,7 +999,7 @@ mod tests {
         struct Dummy(#[serde(deserialize_with = "reusable_step_uses")] Uses);
 
         insta::assert_debug_snapshot!(
-            serde_yaml::from_str::<Dummy>(
+            yaml_serde::from_str::<Dummy>(
                 "octo-org/this-repo/.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
             )
             .map(|d| d.0)
@@ -1023,7 +1023,7 @@ mod tests {
         );
 
         insta::assert_debug_snapshot!(
-            serde_yaml::from_str::<Dummy>(
+            yaml_serde::from_str::<Dummy>(
                 "octo-org/this-repo/.github/workflows/workflow-1.yml@notahash"
             ).map(|d| d.0).unwrap(),
             @r#"
@@ -1045,7 +1045,7 @@ mod tests {
         );
 
         insta::assert_debug_snapshot!(
-            serde_yaml::from_str::<Dummy>(
+            yaml_serde::from_str::<Dummy>(
                 "octo-org/this-repo/.github/workflows/workflow-1.yml@abcd"
             ).map(|d| d.0).unwrap(),
             @r#"
@@ -1068,7 +1068,7 @@ mod tests {
 
         // Invalid: remote reusable workflow without ref
         insta::assert_debug_snapshot!(
-            serde_yaml::from_str::<Dummy>(
+            yaml_serde::from_str::<Dummy>(
                 "octo-org/this-repo/.github/workflows/workflow-1.yml"
             ).map(|d| d.0).unwrap_err(),
             @r#"Error("malformed `uses` ref: missing `@<ref>` in octo-org/this-repo/.github/workflows/workflow-1.yml")"#
@@ -1076,7 +1076,7 @@ mod tests {
 
         // Invalid: local reusable workflow with ref
         insta::assert_debug_snapshot!(
-            serde_yaml::from_str::<Dummy>(
+            yaml_serde::from_str::<Dummy>(
                 "./.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
             ).map(|d| d.0).unwrap_err(),
             @r#"Error("local reusable workflow reference can't specify `@<ref>`")"#
@@ -1084,7 +1084,7 @@ mod tests {
 
         // Invalid: no ref at all
         insta::assert_debug_snapshot!(
-            serde_yaml::from_str::<Dummy>(
+            yaml_serde::from_str::<Dummy>(
                 ".github/workflows/workflow-1.yml"
             ).map(|d| d.0).unwrap_err(),
             @r#"Error("malformed `uses` ref: missing `@<ref>` in .github/workflows/workflow-1.yml")"#
@@ -1092,7 +1092,7 @@ mod tests {
 
         // Invalid: missing user/repo
         insta::assert_debug_snapshot!(
-            serde_yaml::from_str::<Dummy>(
+            yaml_serde::from_str::<Dummy>(
                 "workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
             ).map(|d| d.0).unwrap_err(),
             @r#"Error("malformed `uses` ref: owner/repo slug is too short: workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89")"#

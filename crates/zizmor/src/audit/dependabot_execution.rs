@@ -26,7 +26,7 @@ impl DependabotExecution {
                     .location()
                     .route
                     .with_keys(["insecure-external-code-execution".into()]),
-                operation: Op::Replace(serde_yaml::Value::String("deny".to_string())),
+                operation: Op::Replace(yaml_serde::Value::String("deny".to_string())),
             }],
         }
     }

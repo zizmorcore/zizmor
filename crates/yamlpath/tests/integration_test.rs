@@ -32,7 +32,7 @@ struct TestcaseQuery {
 #[derive(Deserialize)]
 struct Testcase {
     #[serde(rename = "testcase")]
-    _testcase: serde_yaml::Value,
+    _testcase: yaml_serde::Value,
     queries: Vec<TestcaseQuery>,
 }
 
@@ -53,7 +53,7 @@ impl<'a> From<&'a TestcaseQuery> for Route<'a> {
 
 fn run_testcase(path: &Path) {
     let raw_testcase = std::fs::read_to_string(path).unwrap();
-    let testcase = serde_yaml::from_str::<Testcase>(&raw_testcase).unwrap();
+    let testcase = yaml_serde::from_str::<Testcase>(&raw_testcase).unwrap();
 
     for q in &testcase.queries {
         let document = Document::new(raw_testcase.clone()).unwrap();

@@ -25,7 +25,7 @@ impl DependabotCooldown {
                 route: update.location().route.with_keys(["cooldown".into()]),
                 operation: Op::Add {
                     key: "default-days".to_string(),
-                    value: serde_yaml::Value::Number(7.into()),
+                    value: yaml_serde::Value::Number(7.into()),
                 },
             }],
         }
@@ -44,7 +44,7 @@ impl DependabotCooldown {
                     .location()
                     .route
                     .with_keys(["cooldown".into(), "default-days".into()]),
-                operation: Op::Replace(serde_yaml::Value::Number(7.into())),
+                operation: Op::Replace(yaml_serde::Value::Number(7.into())),
             }],
         }
     }
@@ -59,11 +59,11 @@ impl DependabotCooldown {
                 route: update.location().route,
                 operation: Op::Add {
                     key: "cooldown".to_string(),
-                    value: serde_yaml::Value::Mapping({
-                        let mut map = serde_yaml::Mapping::new();
+                    value: yaml_serde::Value::Mapping({
+                        let mut map = yaml_serde::Mapping::new();
                         map.insert(
-                            serde_yaml::Value::String("default-days".to_string()),
-                            serde_yaml::Value::Number(7.into()),
+                            yaml_serde::Value::String("default-days".to_string()),
+                            yaml_serde::Value::Number(7.into()),
                         );
                         map
                     }),

@@ -264,7 +264,7 @@ impl Artipacked {
                     key: "with".to_string(),
                     updates: indexmap::IndexMap::from_iter([(
                         "persist-credentials".to_string(),
-                        serde_yaml::Value::Bool(false),
+                        yaml_serde::Value::Bool(false),
                     )]),
                 },
             }],

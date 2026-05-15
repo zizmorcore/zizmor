@@ -25,11 +25,11 @@ foo:
 flow: [1, 2, 3, {more: 456, evenmore: "abc\ndef"}]
 "#;
 
-    let value: serde_yaml::Value = serde_yaml::from_str(doc).unwrap();
+    let value: yaml_serde::Value = yaml_serde::from_str(doc).unwrap();
     let serialized = serialize_flow(&value).unwrap();
 
     // serialized is valid YAML
-    assert!(serde_yaml::from_str::<serde_yaml::Value>(&serialized).is_ok());
+    assert!(yaml_serde::from_str::<yaml_serde::Value>(&serialized).is_ok());
 
     insta::assert_snapshot!(format_patch(&serialized), @r#"
     --- PATCH ---
@@ -215,10 +215,10 @@ foo:
 
     let content = doc.extract_with_leading_whitespace(&feature);
 
-    let reparsed = serde_yaml::from_str::<serde_yaml::Mapping>(content).unwrap();
+    let reparsed = yaml_serde::from_str::<yaml_serde::Mapping>(content).unwrap();
     assert_eq!(
-        reparsed.get(serde_yaml::Value::String("a".to_string())),
-        Some(&serde_yaml::Value::String("b".to_string()))
+        reparsed.get(yaml_serde::Value::String("a".to_string())),
+        Some(&yaml_serde::Value::String("b".to_string()))
     );
 }
 
@@ -832,7 +832,7 @@ foo:
 
     let operations = vec![Patch {
         route: route!("foo", "bar"),
-        operation: Op::Replace(serde_yaml::Value::String("abc".to_string())),
+        operation: Op::Replace(yaml_serde::Value::String("abc".to_string())),
     }];
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
@@ -857,7 +857,7 @@ fn test_replace_empty_flow_value() {
 
     let patches = vec![Patch {
         route: route!("foo", "bar"),
-        operation: Op::Replace(serde_yaml::Value::String("abc".to_string())),
+        operation: Op::Replace(yaml_serde::Value::String("abc".to_string())),
     }];
 
     let result = apply_yaml_patches(&document, &patches).unwrap();
@@ -882,7 +882,7 @@ fn test_replace_empty_flow_value_no_colon() {
 
     let patches = vec![Patch {
         route: route!("foo", "bar"),
-        operation: Op::Replace(serde_yaml::Value::String("abc".to_string())),
+        operation: Op::Replace(yaml_serde::Value::String("abc".to_string())),
     }];
 
     let result = apply_yaml_patches(&document, &patches).unwrap();
@@ -951,7 +951,7 @@ jobs:
 
     let operations = vec![Patch {
         route: route!("permissions", "contents"),
-        operation: Op::Replace(serde_yaml::Value::String("write".to_string())),
+        operation: Op::Replace(yaml_serde::Value::String("write".to_string())),
     }];
 
     let result = apply_yaml_patches(&document, &operations).unwrap();
@@ -991,7 +991,7 @@ fn test_add_rejects_duplicate_key() {
         route: route!("foo"),
         operation: Op::Add {
             key: "bar".to_string(),
-            value: serde_yaml::Value::String("def".to_string()),
+            value: yaml_serde::Value::String("def".to_string()),
         },
     }];
 
@@ -1019,7 +1019,7 @@ permissions:
         route: route!("permissions"),
         operation: Op::Add {
             key: "issues".to_string(),
-            value: serde_yaml::Value::String("read".to_string()),
+            value: yaml_serde::Value::String("read".to_string()),
         },
     }];
 
@@ -1048,7 +1048,7 @@ foo: { bar: abc }
         route: route!("foo"),
         operation: Op::Add {
             key: "baz".to_string(),
-            value: serde_yaml::Value::String("qux".to_string()),
+            value: yaml_serde::Value::String("qux".to_string()),
         },
     }];
 
@@ -1115,13 +1115,13 @@ jobs:
     let operations = vec![
         Patch {
             route: route!("permissions", "contents"),
-            operation: Op::Replace(serde_yaml::Value::String("write".to_string())),
+            operation: Op::Replace(yaml_serde::Value::String("write".to_string())),
         },
         Patch {
             route: route!("permissions"),
             operation: Op::Add {
                 key: "issues".to_string(),
-                value: serde_yaml::Value::String("write".to_string()),
+                value: yaml_serde::Value::String("write".to_string()),
             },
         },
     ];
@@ -1320,13 +1320,13 @@ jobs:
     let operations = vec![
         Patch {
             route: route!("permissions", "contents"),
-            operation: Op::Replace(serde_yaml::Value::String("write".to_string())),
+            operation: Op::Replace(yaml_serde::Value::String("write".to_string())),
         },
         Patch {
             route: route!("permissions"),
             operation: Op::Add {
                 key: "packages".to_string(),
-                value: serde_yaml::Value::String("read".to_string()),
+                value: yaml_serde::Value::String("read".to_string()),
             },
         },
     ];
@@ -1369,12 +1369,12 @@ jobs:
     runs-on: ubuntu-latest"#;
 
     // Test empty mapping formatting
-    let empty_mapping = serde_yaml::Mapping::new();
+    let empty_mapping = yaml_serde::Mapping::new();
     let operations = vec![Patch {
         route: route!("jobs", "test"),
         operation: Op::Add {
             key: "permissions".to_string(),
-            value: serde_yaml::Value::Mapping(empty_mapping),
+            value: yaml_serde::Value::Mapping(empty_mapping),
         },
     }];
 
@@ -1410,7 +1410,7 @@ jobs:
         route: route!("jobs", "test"),
         operation: Op::Add {
             key: "permissions".to_string(),
-            value: serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
+            value: yaml_serde::Value::Mapping(yaml_serde::Mapping::new()),
         },
     }];
 
@@ -1500,11 +1500,11 @@ fn test_step_insertion_with_comments() {
         route: route!("steps", 0),
         operation: Op::Add {
             key: "with".to_string(),
-            value: serde_yaml::Value::Mapping({
-                let mut map = serde_yaml::Mapping::new();
+            value: yaml_serde::Value::Mapping({
+                let mut map = yaml_serde::Mapping::new();
                 map.insert(
-                    serde_yaml::Value::String("persist-credentials".to_string()),
-                    serde_yaml::Value::Bool(false),
+                    yaml_serde::Value::String("persist-credentials".to_string()),
+                    yaml_serde::Value::Bool(false),
                 );
                 map
             }),
@@ -1622,7 +1622,7 @@ jobs:
         route: route!(),
         operation: Op::Add {
             key: "permissions".to_string(),
-            value: serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
+            value: yaml_serde::Value::Mapping(yaml_serde::Mapping::new()),
         },
     }];
 
@@ -1659,7 +1659,7 @@ jobs:
         route: route!(),
         operation: Op::Add {
             key: "permissions".to_string(),
-            value: serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
+            value: yaml_serde::Value::Mapping(yaml_serde::Mapping::new()),
         },
     }];
 
@@ -1695,11 +1695,11 @@ fn test_step_content_end_detection() {
         route: route!("steps", 0),
         operation: Op::Add {
             key: "with".to_string(),
-            value: serde_yaml::Value::Mapping({
-                let mut map = serde_yaml::Mapping::new();
+            value: yaml_serde::Value::Mapping({
+                let mut map = yaml_serde::Mapping::new();
                 map.insert(
-                    serde_yaml::Value::String("persist-credentials".to_string()),
-                    serde_yaml::Value::Bool(false),
+                    yaml_serde::Value::String("persist-credentials".to_string()),
+                    yaml_serde::Value::Bool(false),
                 );
                 map
             }),
@@ -1742,7 +1742,7 @@ fn test_merge_into_new_key() {
             key: "env".to_string(),
             updates: indexmap::IndexMap::from_iter([(
                 "TEST_VAR".to_string(),
-                serde_yaml::Value::String("test_value".to_string()),
+                yaml_serde::Value::String("test_value".to_string()),
             )]),
         },
     }];
@@ -1782,7 +1782,7 @@ fn test_merge_into_existing_key() {
             key: "env".to_string(),
             updates: indexmap::IndexMap::from_iter([(
                 "NEW_VAR".to_string(),
-                serde_yaml::Value::String("new_value".to_string()),
+                yaml_serde::Value::String("new_value".to_string()),
             )]),
         },
     }];
@@ -1826,7 +1826,7 @@ fn test_merge_into_prevents_duplicate_keys() {
             key: "env".to_string(),
             updates: indexmap::IndexMap::from_iter([(
                 "NEW_VAR".to_string(),
-                serde_yaml::Value::String("new_value".to_string()),
+                yaml_serde::Value::String("new_value".to_string()),
             )]),
         },
     }];
@@ -1870,7 +1870,7 @@ fn test_merge_into_with_unicode() {
             key: "env".to_string(),
             updates: indexmap::IndexMap::from_iter([(
                 "TEST_VAR".to_string(),
-                serde_yaml::Value::String("new_value".to_string()),
+                yaml_serde::Value::String("new_value".to_string()),
             )]),
         },
     }];
@@ -1966,7 +1966,7 @@ fn test_debug_indentation_issue() {
         route: route!("jobs", "build", "steps", 0),
         operation: Op::Add {
             key: "shell".to_string(),
-            value: serde_yaml::Value::String("bash".to_string()),
+            value: yaml_serde::Value::String("bash".to_string()),
         },
     }];
 
@@ -2017,9 +2017,9 @@ jobs:
         assert!(env_content.contains("IDENTITY: ${{ secrets.IDENTITY }}"));
 
         // Try to parse it as YAML and verify structure
-        match serde_yaml::from_str::<serde_yaml::Value>(env_content) {
+        match yaml_serde::from_str::<yaml_serde::Value>(env_content) {
             Ok(value) => {
-                if let serde_yaml::Value::Mapping(outer_mapping) = value {
+                if let yaml_serde::Value::Mapping(outer_mapping) = value {
                     // Assert that the mapping contains expected keys
                     assert!(
                         !outer_mapping.is_empty(),
@@ -2028,13 +2028,13 @@ jobs:
 
                     // The extracted content includes the "env:" key, so we need to look inside it
                     if let Some(env_value) =
-                        outer_mapping.get(serde_yaml::Value::String("env".to_string()))
+                        outer_mapping.get(yaml_serde::Value::String("env".to_string()))
                     {
-                        if let serde_yaml::Value::Mapping(env_mapping) = env_value {
+                        if let yaml_serde::Value::Mapping(env_mapping) = env_value {
                             // Verify that we can iterate over the env mapping
                             let mut found_identity = false;
                             for (k, _v) in env_mapping {
-                                if let serde_yaml::Value::String(key_str) = k {
+                                if let yaml_serde::Value::String(key_str) = k {
                                     if key_str == "IDENTITY" {
                                         found_identity = true;
                                     }
@@ -2066,7 +2066,7 @@ jobs:
     // Test the MergeInto operation
     let new_env = indexmap::IndexMap::from_iter([(
         "STEPS_META_OUTPUTS_TAGS".to_string(),
-        serde_yaml::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
+        yaml_serde::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
     )]);
 
     let operations = vec![Patch {
@@ -2118,7 +2118,7 @@ fn test_merge_into_complex_env_mapping() {
 
     let new_env = indexmap::IndexMap::from_iter([(
         "STEPS_META_OUTPUTS_TAGS".to_string(),
-        serde_yaml::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
+        yaml_serde::Value::String("${{ steps.meta.outputs.tags }}".to_string()),
     )]);
 
     let operations = vec![Patch {
@@ -2171,7 +2171,7 @@ fn test_merge_into_reuses_existing_key_no_duplicates() {
             key: "env".to_string(),
             updates: indexmap::IndexMap::from_iter([(
                 "NEW_VAR".to_string(),
-                serde_yaml::Value::String("new_value".to_string()),
+                yaml_serde::Value::String("new_value".to_string()),
             )]),
         },
     }];
@@ -2218,7 +2218,7 @@ fn test_merge_into_with_mapping_merge_behavior() {
                 key: "env".to_string(),
                 updates: indexmap::IndexMap::from_iter([(
                     "NEW_VAR_1".to_string(),
-                    serde_yaml::Value::String("new_value_1".to_string()),
+                    yaml_serde::Value::String("new_value_1".to_string()),
                 )]),
             },
         },
@@ -2228,7 +2228,7 @@ fn test_merge_into_with_mapping_merge_behavior() {
                 key: "env".to_string(),
                 updates: indexmap::IndexMap::from_iter([(
                     "NEW_VAR_2".to_string(),
-                    serde_yaml::Value::String("new_value_2".to_string()),
+                    yaml_serde::Value::String("new_value_2".to_string()),
                 )]),
             },
         },
@@ -2292,9 +2292,9 @@ jobs:
         route: route!("on", "pull_request"),
         operation: Op::Add {
             key: "types".to_string(),
-            value: serde_yaml::Value::Sequence(vec![
-                serde_yaml::Value::String("opened".to_string()),
-                serde_yaml::Value::String("synchronize".to_string()),
+            value: yaml_serde::Value::Sequence(vec![
+                yaml_serde::Value::String("opened".to_string()),
+                yaml_serde::Value::String("synchronize".to_string()),
             ]),
         },
     }];
@@ -2349,7 +2349,7 @@ jobs:
 
     let operations = vec![Patch {
         route: route!("jobs", "test", "steps", 0, "with", "timeout"),
-        operation: Op::Replace(serde_yaml::Value::Number(serde_yaml::Number::from(600))),
+        operation: Op::Replace(yaml_serde::Value::Number(yaml_serde::Number::from(600))),
     }];
 
     let result =
@@ -2383,7 +2383,7 @@ foo:
         route: route!("foo", "bar"),
         operation: Op::Add {
             key: "qux".to_string(),
-            value: serde_yaml::Value::String("xyz".to_string()),
+            value: yaml_serde::Value::String("xyz".to_string()),
         },
     }];
 
@@ -2419,7 +2419,7 @@ matrix:
         route: route!("matrix", "include", 0),
         operation: Op::Add {
             key: "arch".to_string(),
-            value: serde_yaml::Value::String("x64".to_string()),
+            value: yaml_serde::Value::String("x64".to_string()),
         },
     }];
 
@@ -2456,7 +2456,7 @@ matrix:
         route: route!("matrix", "include", 0),
         operation: Op::Add {
             key: "arch".to_string(),
-            value: serde_yaml::Value::String("x64".to_string()),
+            value: yaml_serde::Value::String("x64".to_string()),
         },
     }];
 
@@ -2492,7 +2492,7 @@ strategy:
         route: route!("strategy", "matrix", "include", 0),
         operation: Op::Add {
             key: "arch".to_string(),
-            value: serde_yaml::Value::String("x64".to_string()),
+            value: yaml_serde::Value::String("x64".to_string()),
         },
     }];
 
@@ -2525,7 +2525,7 @@ jobs:
         route: route!("jobs", "test", "env"),
         operation: Op::Add {
             key: "LOG_LEVEL".to_string(),
-            value: serde_yaml::Value::String("info".to_string()),
+            value: yaml_serde::Value::String("info".to_string()),
         },
     }];
 
@@ -2557,7 +2557,7 @@ jobs:
         route: route!("jobs", "test", "env"),
         operation: Op::Add {
             key: "LOG_LEVEL".to_string(),
-            value: serde_yaml::Value::String("info".to_string()),
+            value: yaml_serde::Value::String("info".to_string()),
         },
     }];
 
@@ -2594,7 +2594,7 @@ jobs:
         route: route!("jobs", "test", "env"),
         operation: Op::Add {
             key: "LOG_LEVEL".to_string(),
-            value: serde_yaml::Value::String("info".to_string()),
+            value: yaml_serde::Value::String("info".to_string()),
         },
     }];
 
@@ -2630,7 +2630,7 @@ jobs:
         route: route!("jobs", "test", "env"),
         operation: Op::Add {
             key: "LOG_LEVEL".to_string(),
-            value: serde_yaml::Value::String("info".to_string()),
+            value: yaml_serde::Value::String("info".to_string()),
         },
     }];
 
@@ -2663,7 +2663,7 @@ permissions:
         route: route!("permissions", "actions"),
         operation: Op::Add {
             key: "delete".to_string(),
-            value: serde_yaml::Value::Bool(true),
+            value: yaml_serde::Value::Bool(true),
         },
     }];
 
@@ -2696,7 +2696,7 @@ on:
         route: route!("on", "push"),
         operation: Op::Add {
             key: "tags".to_string(),
-            value: serde_yaml::Value::Sequence(vec![serde_yaml::Value::String("v*".to_string())]),
+            value: yaml_serde::Value::Sequence(vec![yaml_serde::Value::String("v*".to_string())]),
         },
     }];
 
@@ -2732,7 +2732,7 @@ jobs:
         route: route!("jobs", "test", "env"),
         operation: Op::Add {
             key: "NODE_ENV".to_string(),
-            value: serde_yaml::Value::String("test".to_string()),
+            value: yaml_serde::Value::String("test".to_string()),
         },
     }];
 
@@ -2768,7 +2768,7 @@ fn test_merge_into_preserves_comments_in_env_block() {
 
     let new_env = indexmap::IndexMap::from_iter([(
         "INPUTS_SCRIPT".to_string(),
-        serde_yaml::Value::String("${{ inputs.script }}".to_string()),
+        yaml_serde::Value::String("${{ inputs.script }}".to_string()),
     )]);
 
     let operations = vec![Patch {
@@ -2825,11 +2825,11 @@ jobs:
             updates: indexmap::IndexMap::from_iter([
                 (
                     "persist-credentials".to_string(),
-                    serde_yaml::Value::Bool(false),
+                    yaml_serde::Value::Bool(false),
                 ),
                 (
                     "another-key".to_string(),
-                    serde_yaml::Value::String("some-value".to_string()),
+                    yaml_serde::Value::String("some-value".to_string()),
                 ),
             ]),
         },
@@ -2873,7 +2873,7 @@ jobs:
             key: "with".to_string(),
             updates: indexmap::IndexMap::from_iter([(
                 "persist-credentials".to_string(),
-                serde_yaml::Value::Bool(false),
+                yaml_serde::Value::Bool(false),
             )]),
         },
     }];
@@ -2912,11 +2912,11 @@ updates:
         route: route!("updates", 0),
         operation: Op::Add {
             key: "cooldown".to_string(),
-            value: serde_yaml::Value::Mapping({
-                let mut map = serde_yaml::Mapping::new();
+            value: yaml_serde::Value::Mapping({
+                let mut map = yaml_serde::Mapping::new();
                 map.insert(
-                    serde_yaml::Value::String("default-days".to_string()),
-                    serde_yaml::Value::Number(7.into()),
+                    yaml_serde::Value::String("default-days".to_string()),
+                    yaml_serde::Value::Number(7.into()),
                 );
                 map
             }),
@@ -2953,7 +2953,7 @@ version: 1.0
 
     let operations = vec![Patch {
         route: route!("version"),
-        operation: Op::Replace(serde_yaml::Value::String("2.0".to_string())),
+        operation: Op::Replace(yaml_serde::Value::String("2.0".to_string())),
     }];
 
     let result =
@@ -3032,7 +3032,7 @@ key: value
         route: route!(),
         operation: Op::Add {
             key: "newkey".to_string(),
-            value: serde_yaml::Value::String("newvalue".to_string()),
+            value: yaml_serde::Value::String("newvalue".to_string()),
         },
     }];
 
@@ -3061,7 +3061,7 @@ fn test_preserve_trailing_newline_replace_nested_at_end() {
 
     let operations = vec![Patch {
         route: route!("jobs", "test", "env", "VAR"),
-        operation: Op::Replace(serde_yaml::Value::String("new".to_string())),
+        operation: Op::Replace(yaml_serde::Value::String("new".to_string())),
     }];
 
     let result =
@@ -3093,7 +3093,7 @@ fn test_preserve_trailing_newline_add_to_nested_mapping_at_end() {
         route: route!("jobs", "test", "steps", 0),
         operation: Op::Add {
             key: "name".to_string(),
-            value: serde_yaml::Value::String("Test step".to_string()),
+            value: yaml_serde::Value::String("Test step".to_string()),
         },
     }];
 
@@ -3123,7 +3123,7 @@ fn test_preserve_trailing_newline_replace_multiline_at_end() {
 
     let operations = vec![Patch {
         route: route!("description"),
-        operation: Op::Replace(serde_yaml::Value::String("New description".to_string())),
+        operation: Op::Replace(yaml_serde::Value::String("New description".to_string())),
     }];
 
     let result =
@@ -3149,7 +3149,7 @@ key: value"#;
 
     let operations = vec![Patch {
         route: route!("key"),
-        operation: Op::Replace(serde_yaml::Value::String("newvalue".to_string())),
+        operation: Op::Replace(yaml_serde::Value::String("newvalue".to_string())),
     }];
 
     let result =
@@ -3175,7 +3175,7 @@ items:
     let operations = vec![Patch {
         route: route!("items"),
         operation: Op::Append {
-            value: serde_yaml::Value::String("third".to_string()),
+            value: yaml_serde::Value::String("third".to_string()),
         },
     }];
 
@@ -3203,28 +3203,28 @@ databases:
     readonly: false
 "#;
 
-    let mut new_database = serde_yaml::Mapping::new();
+    let mut new_database = yaml_serde::Mapping::new();
     new_database.insert(
-        serde_yaml::Value::String("name".to_string()),
-        serde_yaml::Value::String("analytics".to_string()),
+        yaml_serde::Value::String("name".to_string()),
+        yaml_serde::Value::String("analytics".to_string()),
     );
     new_database.insert(
-        serde_yaml::Value::String("host".to_string()),
-        serde_yaml::Value::String("db2.example.com".to_string()),
+        yaml_serde::Value::String("host".to_string()),
+        yaml_serde::Value::String("db2.example.com".to_string()),
     );
     new_database.insert(
-        serde_yaml::Value::String("port".to_string()),
-        serde_yaml::Value::Number(5433.into()),
+        yaml_serde::Value::String("port".to_string()),
+        yaml_serde::Value::Number(5433.into()),
     );
     new_database.insert(
-        serde_yaml::Value::String("readonly".to_string()),
-        serde_yaml::Value::Bool(true),
+        yaml_serde::Value::String("readonly".to_string()),
+        yaml_serde::Value::Bool(true),
     );
 
     let operations = vec![Patch {
         route: route!("databases"),
         operation: Op::Append {
-            value: serde_yaml::Value::Mapping(new_database),
+            value: yaml_serde::Value::Mapping(new_database),
         },
     }];
 
@@ -3259,20 +3259,20 @@ jobs:
         run: echo "second"
 "#;
 
-    let mut new_step = serde_yaml::Mapping::new();
+    let mut new_step = yaml_serde::Mapping::new();
     new_step.insert(
-        serde_yaml::Value::String("name".to_string()),
-        serde_yaml::Value::String("Third step".to_string()),
+        yaml_serde::Value::String("name".to_string()),
+        yaml_serde::Value::String("Third step".to_string()),
     );
     new_step.insert(
-        serde_yaml::Value::String("run".to_string()),
-        serde_yaml::Value::String("echo \"third\"".to_string()),
+        yaml_serde::Value::String("run".to_string()),
+        yaml_serde::Value::String("echo \"third\"".to_string()),
     );
 
     let operations = vec![Patch {
         route: route!("jobs", "test", "steps"),
         operation: Op::Append {
-            value: serde_yaml::Value::Mapping(new_step),
+            value: yaml_serde::Value::Mapping(new_step),
         },
     }];
 
@@ -3307,24 +3307,24 @@ servers:
     port: 8443
 "#;
 
-    let mut new_server = serde_yaml::Mapping::new();
+    let mut new_server = yaml_serde::Mapping::new();
     new_server.insert(
-        serde_yaml::Value::String("name".to_string()),
-        serde_yaml::Value::String("dev".to_string()),
+        yaml_serde::Value::String("name".to_string()),
+        yaml_serde::Value::String("dev".to_string()),
     );
     new_server.insert(
-        serde_yaml::Value::String("host".to_string()),
-        serde_yaml::Value::String("localhost".to_string()),
+        yaml_serde::Value::String("host".to_string()),
+        yaml_serde::Value::String("localhost".to_string()),
     );
     new_server.insert(
-        serde_yaml::Value::String("port".to_string()),
-        serde_yaml::Value::Number(8080.into()),
+        yaml_serde::Value::String("port".to_string()),
+        yaml_serde::Value::Number(8080.into()),
     );
 
     let operations = vec![Patch {
         route: route!("servers"),
         operation: Op::Append {
-            value: serde_yaml::Value::Mapping(new_server),
+            value: yaml_serde::Value::Mapping(new_server),
         },
     }];
 
@@ -3363,7 +3363,7 @@ ports:
     let operations = vec![Patch {
         route: route!("ports"),
         operation: Op::Append {
-            value: serde_yaml::Value::Number(8082.into()),
+            value: yaml_serde::Value::Number(8082.into()),
         },
     }];
 
@@ -3390,7 +3390,7 @@ configs:
     let operations = vec![Patch {
         route: route!("configs"),
         operation: Op::Append {
-            value: serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
+            value: yaml_serde::Value::Mapping(yaml_serde::Mapping::new()),
         },
     }];
 
@@ -3414,31 +3414,31 @@ services:
     port: 8080
 "#;
 
-    let mut new_service = serde_yaml::Mapping::new();
+    let mut new_service = yaml_serde::Mapping::new();
     new_service.insert(
-        serde_yaml::Value::String("name".to_string()),
-        serde_yaml::Value::String("worker".to_string()),
+        yaml_serde::Value::String("name".to_string()),
+        yaml_serde::Value::String("worker".to_string()),
     );
     new_service.insert(
-        serde_yaml::Value::String("port".to_string()),
-        serde_yaml::Value::Number(9090.into()),
+        yaml_serde::Value::String("port".to_string()),
+        yaml_serde::Value::Number(9090.into()),
     );
 
-    let mut config = serde_yaml::Mapping::new();
+    let mut config = yaml_serde::Mapping::new();
     config.insert(
-        serde_yaml::Value::String("replicas".to_string()),
-        serde_yaml::Value::Number(3.into()),
+        yaml_serde::Value::String("replicas".to_string()),
+        yaml_serde::Value::Number(3.into()),
     );
 
     new_service.insert(
-        serde_yaml::Value::String("config".to_string()),
-        serde_yaml::Value::Mapping(config),
+        yaml_serde::Value::String("config".to_string()),
+        yaml_serde::Value::Mapping(config),
     );
 
     let operations = vec![Patch {
         route: route!("services"),
         operation: Op::Append {
-            value: serde_yaml::Value::Mapping(new_service),
+            value: yaml_serde::Value::Mapping(new_service),
         },
     }];
 
@@ -3468,7 +3468,7 @@ config:
     let operations = vec![Patch {
         route: route!("config"),
         operation: Op::Append {
-            value: serde_yaml::Value::String("item".to_string()),
+            value: yaml_serde::Value::String("item".to_string()),
         },
     }];
 
@@ -3496,13 +3496,13 @@ tasks:
         Patch {
             route: route!("tasks"),
             operation: Op::Append {
-                value: serde_yaml::Value::String("task2".to_string()),
+                value: yaml_serde::Value::String("task2".to_string()),
             },
         },
         Patch {
             route: route!("tasks"),
             operation: Op::Append {
-                value: serde_yaml::Value::String("task3".to_string()),
+                value: yaml_serde::Value::String("task3".to_string()),
             },
         },
     ];
@@ -3534,20 +3534,20 @@ jobs:
         run: npm test
 "#;
 
-    let mut new_step = serde_yaml::Mapping::new();
+    let mut new_step = yaml_serde::Mapping::new();
     new_step.insert(
-        serde_yaml::Value::String("name".to_string()),
-        serde_yaml::Value::String("Upload coverage".to_string()),
+        yaml_serde::Value::String("name".to_string()),
+        yaml_serde::Value::String("Upload coverage".to_string()),
     );
     new_step.insert(
-        serde_yaml::Value::String("uses".to_string()),
-        serde_yaml::Value::String("codecov/codecov-action@v3".to_string()),
+        yaml_serde::Value::String("uses".to_string()),
+        yaml_serde::Value::String("codecov/codecov-action@v3".to_string()),
     );
 
     let operations = vec![Patch {
         route: route!("jobs", "test", "steps"),
         operation: Op::Append {
-            value: serde_yaml::Value::Mapping(new_step),
+            value: yaml_serde::Value::Mapping(new_step),
         },
     }];
 
@@ -3578,14 +3578,14 @@ foo:
   - abc
 "#;
 
-    let mut nested_sequence = serde_yaml::Sequence::new();
-    nested_sequence.push(serde_yaml::Value::String("def".to_string()));
-    nested_sequence.push(serde_yaml::Value::String("ghi".to_string()));
+    let mut nested_sequence = yaml_serde::Sequence::new();
+    nested_sequence.push(yaml_serde::Value::String("def".to_string()));
+    nested_sequence.push(yaml_serde::Value::String("ghi".to_string()));
 
     let operations = vec![Patch {
         route: route!("foo"),
         operation: Op::Append {
-            value: serde_yaml::Value::Sequence(nested_sequence),
+            value: yaml_serde::Value::Sequence(nested_sequence),
         },
     }];
 

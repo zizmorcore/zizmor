@@ -104,7 +104,7 @@ mod tests {
 
         for case in cases {
             let case = format!("\"{case}\"");
-            assert!(serde_yaml::from_str::<ExplicitExpr>(&case).is_err());
+            assert!(yaml_serde::from_str::<ExplicitExpr>(&case).is_err());
         }
     }
 
@@ -119,7 +119,7 @@ mod tests {
             ("${{    foo     }}", "foo"),
         ] {
             let case = format!("\"{case}\"");
-            let expr: ExplicitExpr = serde_yaml::from_str(&case).unwrap();
+            let expr: ExplicitExpr = yaml_serde::from_str(&case).unwrap();
             assert_eq!(expr.as_bare(), *expected);
         }
     }
@@ -128,20 +128,20 @@ mod tests {
     fn test_loe() {
         let lit = "\"normal string\"";
         assert_eq!(
-            serde_yaml::from_str::<LoE<String>>(lit).unwrap(),
+            yaml_serde::from_str::<LoE<String>>(lit).unwrap(),
             LoE::Literal("normal string".to_string())
         );
 
         let expr = "\"${{ expr }}\"";
         assert!(matches!(
-            serde_yaml::from_str::<LoE<String>>(expr).unwrap(),
+            yaml_serde::from_str::<LoE<String>>(expr).unwrap(),
             LoE::Expr(_)
         ));
 
         // Invalid expr deserializes as string.
         let invalid = "\"${{ invalid \"";
         assert_eq!(
-            serde_yaml::from_str::<LoE<String>>(invalid).unwrap(),
+            yaml_serde::from_str::<LoE<String>>(invalid).unwrap(),
             LoE::Literal("${{ invalid ".to_string())
         );
     }

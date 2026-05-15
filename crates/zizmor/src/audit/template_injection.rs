@@ -348,7 +348,7 @@ impl TemplateInjection {
                     key: "env".to_string(),
                     updates: indexmap::IndexMap::from_iter([(
                         env_var.clone(),
-                        serde_yaml::Value::String(raw.as_raw().into()),
+                        yaml_serde::Value::String(raw.as_raw().into()),
                     )]),
                 },
             });

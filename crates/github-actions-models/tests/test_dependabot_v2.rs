@@ -9,11 +9,11 @@ fn sample_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/sample-dependabot/v2")
 }
 
-fn load_dependabot_result(name: &str) -> Result<Dependabot, serde_yaml::Error> {
+fn load_dependabot_result(name: &str) -> Result<Dependabot, yaml_serde::Error> {
     let workflow_path = sample_dir().join(name);
     let dependabot_contents = std::fs::read_to_string(&workflow_path)
         .unwrap_or_else(|err| panic!("failed to read {}: {err}", workflow_path.display()));
-    serde_yaml::from_str(&dependabot_contents)
+    yaml_serde::from_str(&dependabot_contents)
 }
 
 fn load_dependabot(name: &str) -> Dependabot {

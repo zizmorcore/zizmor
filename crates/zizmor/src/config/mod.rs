@@ -54,11 +54,11 @@ pub(crate) enum ConfigErrorInner {
 
     /// The overall configuration file is syntactically invalid.
     #[error("invalid configuration syntax")]
-    Syntax(#[source] serde_yaml::Error),
+    Syntax(#[source] yaml_serde::Error),
 
     /// A specific audit's configuration is syntactically invalid.
     #[error("invalid syntax for audit `{1}`")]
-    AuditSyntax(#[source] serde_yaml::Error, &'static str),
+    AuditSyntax(#[source] yaml_serde::Error, &'static str),
 
     /// The `unpinned-uses` config is semantically invalid.
     #[error("invalid `unpinned-uses` config")]
@@ -180,7 +180,7 @@ pub(crate) struct AuditRuleConfig {
     ignore: Vec<WorkflowRule>,
     /// Rule-specific configuration.
     #[serde(default)]
-    config: Option<serde_yaml::Mapping>,
+    config: Option<yaml_serde::Mapping>,
     /// Remapping configuration.
     #[serde(default)]
     remap: Option<RemapConfig>,
@@ -198,7 +198,7 @@ struct RawConfig {
 
 impl RawConfig {
     fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
-        serde_yaml::from_str(contents).map_err(ConfigErrorInner::Syntax)
+        yaml_serde::from_str(contents).map_err(ConfigErrorInner::Syntax)
     }
 
     fn rule_config<T>(&self, ident: &'static str) -> Result<Option<T>, ConfigErrorInner>
@@ -208,7 +208,7 @@ impl RawConfig {
         self.rules
             .get(ident)
             .and_then(|rule_config| rule_config.config.as_ref())
-            .map(|policy| serde_yaml::from_value::<T>(serde_yaml::Value::Mapping(policy.clone())))
+            .map(|policy| yaml_serde::from_value::<T>(yaml_serde::Value::Mapping(policy.clone())))
             .transpose()
             .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))
     }
@@ -251,7 +251,7 @@ pub(crate) struct ForbiddenUsesConfig(
     // mapping with an explicit key discriminant (i.e. `allow:` or `deny:`)
     // rather than a YAML tag. We could work around this by using serde's
     // `untagged` instead, but this produces suboptimal user-facing error messages.
-    #[serde(with = "serde_yaml::with::singleton_map")] pub(crate) ForbiddenUsesConfigInner,
+    #[serde(with = "yaml_serde::with::singleton_map")] pub(crate) ForbiddenUsesConfigInner,
 );
 
 impl Deref for ForbiddenUsesConfig {

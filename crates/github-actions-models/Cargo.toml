@@ -19,7 +19,7 @@ workspace = true
 indexmap.workspace = true
 self_cell.workspace = true
 serde.workspace = true
-serde_yaml.workspace = true
+yaml_serde.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

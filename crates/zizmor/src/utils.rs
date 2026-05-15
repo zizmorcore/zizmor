@@ -333,7 +333,7 @@ fn parse_validation_errors(errors: Vec<ErrorEntry<'_>>) -> Error {
     anyhow!(message)
 }
 
-/// Like `serde_yaml::from_str`, but with a JSON schema validator
+/// Like `yaml_serde::from_str`, but with a JSON schema validator
 /// and an error type that distinguishes between syntax and semantic
 /// errors.
 pub(crate) fn from_str_with_validation<'de, T>(
@@ -343,33 +343,33 @@ pub(crate) fn from_str_with_validation<'de, T>(
 where
     T: serde::Deserialize<'de>,
 {
-    match serde_yaml::from_str::<T>(contents) {
+    match yaml_serde::from_str::<T>(contents) {
         Ok(value) => Ok(value),
         Err(e) => {
             // Something a little wonky happens here: we want
             // to distinguish between syntax and semantic errors,
             // but serde-yaml doesn't give us an API to do that.
             // To approximate it, we re-parse the input as a
-            // `serde_yaml::Mapping`, then convert that `serde_yaml::Mapping`
+            // `yaml_serde::Mapping`, then convert that `yaml_serde::Mapping`
             // into a `serde_json::Value` and use it as an oracle -- a successful
             // re-parse indicates that the input is valid YAML and
             // that our error is semantic, while a failed re-parse
             // indicates a syntax error.
             //
-            // We need to round-trip through a `serde_yaml::Mapping` to ensure that
+            // We need to round-trip through a `yaml_serde::Mapping` to ensure that
             // all of YAML's validity rules are preserved -- directly deserializing
             // into a `serde_json::Value` would miss some YAML-specific checks,
             // like duplicate keys within mappings. See #1395 for an example of this.
             //
             // We do this in a nested fashion to avoid re-parsing
             // the input twice if we can help it, and because the
-            // more obvious trick (`serde_yaml::from_value`) doesn't
+            // more obvious trick (`yaml_serde::from_value`) doesn't
             // work due to a lack of referential transparency.
             //
             // See: https://github.com/dtolnay/serde-yaml/issues/170
             // See: https://github.com/dtolnay/serde-yaml/issues/395
 
-            match serde_yaml::from_str::<serde_yaml::Mapping>(contents) {
+            match yaml_serde::from_str::<yaml_serde::Mapping>(contents) {
                 // We know we have valid YAML, so one of two things happened here:
                 // 1. The input is semantically valid, but we have a bug in
                 //    `github-actions-models`.

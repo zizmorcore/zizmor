@@ -10,7 +10,7 @@ pub enum Error {
     #[error("YAML query error: {0}")]
     Query(#[from] yamlpath::QueryError),
     #[error("YAML serialization error: {0}")]
-    Serialization(#[from] serde_yaml::Error),
+    Serialization(#[from] yaml_serde::Error),
     #[error("Invalid operation: {0}")]
     InvalidOperation(String),
 }
@@ -157,7 +157,7 @@ pub enum Op<'doc> {
     /// if none exists.
     EmplaceComment { new: Cow<'doc, str> },
     /// Replace the value at the given path
-    Replace(serde_yaml::Value),
+    Replace(yaml_serde::Value),
     /// Add a new key-value pair at the given path.
     ///
     /// The route should point to a mapping.
@@ -169,14 +169,14 @@ pub enum Op<'doc> {
     /// - The key must not already exist in the targeted mapping.
     Add {
         key: String,
-        value: serde_yaml::Value,
+        value: yaml_serde::Value,
     },
     /// Update a mapping at the given path.
     ///
     /// If the mapping does not already exist, it will be created.
     MergeInto {
         key: String,
-        updates: indexmap::IndexMap<String, serde_yaml::Value>,
+        updates: indexmap::IndexMap<String, yaml_serde::Value>,
     },
     /// Remove the key at the given path
     #[allow(dead_code)]
@@ -184,7 +184,7 @@ pub enum Op<'doc> {
     /// Append a new item to a sequence at the given path.
     ///
     /// The sequence must be a block sequence; flow sequences are not supported.
-    Append { value: serde_yaml::Value },
+    Append { value: yaml_serde::Value },
 }
 
 /// Apply a sequence of YAML patch operations to a YAML document.
@@ -449,7 +449,7 @@ fn apply_single_patch(
                     }
 
                     // NOTE: We need to extract the original mapping with
-                    // leading whitespace so that serde_yaml can parse it;
+                    // leading whitespace so that yaml_serde can parse it;
                     // otherwise something like:
                     //
                     // ```yaml
@@ -466,7 +466,7 @@ fn apply_single_patch(
                     // ```
                     let existing_content =
                         document.extract_with_leading_whitespace(&existing_feature);
-                    let existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(
+                    let existing_mapping = yaml_serde::from_str::<yaml_serde::Mapping>(
                         existing_content,
                     )
                     .map_err(|e| {
@@ -517,7 +517,7 @@ fn apply_single_patch(
                             route: patch.route.clone(),
                             operation: Op::Add {
                                 key: key.clone(),
-                                value: serde_yaml::to_value(updates.clone())?,
+                                value: yaml_serde::to_value(updates.clone())?,
                             },
                         },
                     );
@@ -608,35 +608,35 @@ pub fn route_to_feature_exact<'a>(
     doc.query_exact(route).map_err(Error::from)
 }
 
-/// Serialize a serde_yaml::Value to a YAML string, handling different types appropriately
-fn serialize_yaml_value(value: &serde_yaml::Value) -> Result<String, Error> {
-    let yaml_str = serde_yaml::to_string(value)?;
+/// Serialize a yaml_serde::Value to a YAML string, handling different types appropriately
+fn serialize_yaml_value(value: &yaml_serde::Value) -> Result<String, Error> {
+    let yaml_str = yaml_serde::to_string(value)?;
     Ok(yaml_str.trim_end().to_string()) // Remove trailing newline
 }
 
-/// Serialize a [`serde_yaml::Value`] to a YAML string in flow layout.
+/// Serialize a [`yaml_serde::Value`] to a YAML string in flow layout.
 ///
 /// This serializes only a restricted subset of YAML: tags are not
 /// supported, and mapping keys must be strings.
-pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
+pub fn serialize_flow(value: &yaml_serde::Value) -> Result<String, Error> {
     let mut buf = String::new();
-    fn serialize_inner(value: &serde_yaml::Value, buf: &mut String) -> Result<(), Error> {
+    fn serialize_inner(value: &yaml_serde::Value, buf: &mut String) -> Result<(), Error> {
         match value {
-            serde_yaml::Value::Null => {
-                // serde_yaml puts a trailing newline on this for some reasons
+            yaml_serde::Value::Null => {
+                // yaml_serde puts a trailing newline on this for some reasons
                 // so we do it manually.
                 buf.push_str("null");
                 Ok(())
             }
-            serde_yaml::Value::Bool(b) => {
+            yaml_serde::Value::Bool(b) => {
                 buf.push_str(if *b { "true" } else { "false" });
                 Ok(())
             }
-            serde_yaml::Value::Number(n) => {
+            yaml_serde::Value::Number(n) => {
                 buf.push_str(&n.to_string());
                 Ok(())
             }
-            serde_yaml::Value::String(s) => {
+            yaml_serde::Value::String(s) => {
                 // Note: there are other plain-scalar-safe chars, but this is fine
                 // for a first approximation.
                 if s.chars()
@@ -644,7 +644,7 @@ pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
                 {
                     buf.push_str(s);
                 } else {
-                    // Dumb hack: serde_yaml will always produce a reasonable-enough
+                    // Dumb hack: yaml_serde will always produce a reasonable-enough
                     // single-line string scalar for us.
                     buf.push_str(
                         &serde_json::to_string(s)
@@ -654,7 +654,7 @@ pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
 
                 Ok(())
             }
-            serde_yaml::Value::Sequence(values) => {
+            yaml_serde::Value::Sequence(values) => {
                 // Serialize sequence in flow style: [item1, item2, item3]
                 buf.push('[');
                 for (i, item) in values.iter().enumerate() {
@@ -666,14 +666,14 @@ pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
                 buf.push(']');
                 Ok(())
             }
-            serde_yaml::Value::Mapping(mapping) => {
+            yaml_serde::Value::Mapping(mapping) => {
                 // Serialize mapping in flow style: { key1: value1, key2: value2 }
                 buf.push_str("{ ");
                 for (i, (key, value)) in mapping.iter().enumerate() {
                     if i > 0 {
                         buf.push_str(", ");
                     }
-                    if !matches!(key, serde_yaml::Value::String(_)) {
+                    if !matches!(key, yaml_serde::Value::String(_)) {
                         return Err(Error::InvalidOperation(format!(
                             "mapping keys must be strings, found: {key:?}"
                         )));
@@ -681,7 +681,7 @@ pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
                     serialize_inner(key, buf)?;
 
                     buf.push_str(": ");
-                    if !matches!(value, serde_yaml::Value::Null) {
+                    if !matches!(value, yaml_serde::Value::Null) {
                         // Skip the null part of `key: null`, since `key: `
                         // is more idiomatic.
                         serialize_inner(value, buf)?;
@@ -690,7 +690,7 @@ pub fn serialize_flow(value: &serde_yaml::Value) -> Result<String, Error> {
                 buf.push_str(" }");
                 Ok(())
             }
-            serde_yaml::Value::Tagged(tagged_value) => Err(Error::InvalidOperation(format!(
+            yaml_serde::Value::Tagged(tagged_value) => Err(Error::InvalidOperation(format!(
                 "cannot serialize tagged value: {tagged_value:?}"
             ))),
         }
@@ -824,10 +824,10 @@ fn handle_block_mapping_addition(
     doc: &yamlpath::Document,
     feature: &yamlpath::Feature,
     key: &str,
-    value: &serde_yaml::Value,
+    value: &yaml_serde::Value,
 ) -> Result<String, Error> {
     // Convert the new value to YAML string for block style handling
-    let new_value_str = if matches!(value, serde_yaml::Value::Sequence(_)) {
+    let new_value_str = if matches!(value, yaml_serde::Value::Sequence(_)) {
         // For sequences, use flow-aware serialization to maintain consistency
         serialize_flow(value)?
     } else {
@@ -839,7 +839,7 @@ fn handle_block_mapping_addition(
     let indent = " ".repeat(extract_leading_indentation_for_block_item(doc, feature));
 
     // Format the new entry
-    let mut final_entry = if let serde_yaml::Value::Mapping(mapping) = &value {
+    let mut final_entry = if let yaml_serde::Value::Mapping(mapping) = &value {
         if mapping.is_empty() {
             // For empty mappings, format inline
             format!("\n{indent}{key}: {new_value_str}")
@@ -910,13 +910,13 @@ fn handle_block_mapping_addition(
 fn handle_block_sequence_append(
     doc: &yamlpath::Document,
     feature: &yamlpath::Feature,
-    value: &serde_yaml::Value,
+    value: &yaml_serde::Value,
 ) -> Result<String, Error> {
     let feature_content = doc.extract(feature);
     let indent = extract_leading_whitespace(doc, feature);
 
     // Use flow-style for nested sequences to produce more idiomatic YAML
-    let value_str = if matches!(value, serde_yaml::Value::Sequence(_)) {
+    let value_str = if matches!(value, yaml_serde::Value::Sequence(_)) {
         serialize_flow(value)?
     } else {
         serialize_yaml_value(value)?
@@ -964,7 +964,7 @@ fn handle_block_sequence_append(
 fn handle_flow_mapping_addition(
     feature_content: &str,
     key: &str,
-    value: &serde_yaml::Value,
+    value: &yaml_serde::Value,
 ) -> Result<String, Error> {
     // Our strategy for flow mappings is to deserialize the existing feature,
     // add the new key-value pair, and then serialize it back.
@@ -976,12 +976,12 @@ fn handle_flow_mapping_addition(
     // line flow mappings can't contain comments or (much) other user
     // significant formatting.
 
-    let mut existing_mapping = serde_yaml::from_str::<serde_yaml::Mapping>(feature_content)
+    let mut existing_mapping = yaml_serde::from_str::<yaml_serde::Mapping>(feature_content)
         .map_err(Error::Serialization)?;
 
     existing_mapping.insert(key.into(), value.clone());
 
-    let updated_content = serialize_flow(&serde_yaml::Value::Mapping(existing_mapping))?;
+    let updated_content = serialize_flow(&yaml_serde::Value::Mapping(existing_mapping))?;
 
     Ok(updated_content)
 }
@@ -1014,7 +1014,7 @@ pub fn find_content_end(feature: &yamlpath::Feature, doc: &yamlpath::Document) -
 fn apply_value_replacement(
     feature: &yamlpath::Feature,
     doc: &yamlpath::Document,
-    value: &serde_yaml::Value,
+    value: &yaml_serde::Value,
     support_multiline_literals: bool,
 ) -> Result<String, Error> {
     // Extract the current content to see what we're replacing
@@ -1054,7 +1054,7 @@ fn apply_value_replacement(
 
             if is_multiline_literal {
                 // Check if this is a multiline string value
-                if let serde_yaml::Value::String(string_content) = value
+                if let yaml_serde::Value::String(string_content) = value
                     && string_content.contains('\n')
                 {
                     // For multiline literal blocks, use the raw string content
@@ -1105,7 +1105,7 @@ fn handle_flow_mapping_value_replacement(
     _start_byte: usize,
     _end_byte: usize,
     current_content: &str,
-    value: &serde_yaml::Value,
+    value: &yaml_serde::Value,
 ) -> Result<String, Error> {
     let val_str = serialize_yaml_value(value)?;
     let val_str = val_str.trim();

@@ -213,10 +213,10 @@ mod tests {
 
     #[test]
     fn test_docker_action_uses_deserialization() {
-        let uses: DockerActionUses = serde_yaml::from_str("Dockerfile").unwrap();
+        let uses: DockerActionUses = yaml_serde::from_str("Dockerfile").unwrap();
         assert!(matches!(uses, DockerActionUses::Dockerfile));
 
-        let uses: DockerActionUses = serde_yaml::from_str("ubuntu:latest").unwrap();
+        let uses: DockerActionUses = yaml_serde::from_str("ubuntu:latest").unwrap();
         assert!(matches!(uses, DockerActionUses::Image(_)));
     }
 }

@@ -2,7 +2,7 @@
 
 use indexmap::IndexMap;
 use serde::Deserialize;
-use serde_yaml::Value;
+use yaml_serde::Value;
 
 use crate::common::expr::{BoE, LoE};
 use crate::common::{DockerUses, Env, If, Permissions, Uses, custom_error};
@@ -218,12 +218,12 @@ mod tests {
     #[test]
     fn test_secrets() {
         assert_eq!(
-            serde_yaml::from_str::<Secrets>("inherit").unwrap(),
+            yaml_serde::from_str::<Secrets>("inherit").unwrap(),
             Secrets::Inherit
         );
 
         let secrets = "foo-secret: bar";
-        let Secrets::Env(secrets) = serde_yaml::from_str::<Secrets>(secrets).unwrap() else {
+        let Secrets::Env(secrets) = yaml_serde::from_str::<Secrets>(secrets).unwrap() else {
             panic!("unexpected secrets variant");
         };
         assert_eq!(secrets["foo-secret"], EnvValue::String("bar".into()));
@@ -235,7 +235,7 @@ mod tests {
         let Strategy {
             matrix: Some(LoE::Expr(expr)),
             ..
-        } = serde_yaml::from_str::<Strategy>(strategy).unwrap()
+        } = yaml_serde::from_str::<Strategy>(strategy).unwrap()
         else {
             panic!("unexpected matrix variant");
         };
@@ -255,7 +255,7 @@ matrix:
                     dimensions: LoE::Literal(dims),
                 })),
             ..
-        } = serde_yaml::from_str::<Strategy>(strategy).unwrap()
+        } = yaml_serde::from_str::<Strategy>(strategy).unwrap()
         else {
             panic!("unexpected matrix variant");
         };
@@ -268,7 +268,7 @@ matrix:
         let runson = "group: \nlabels: []";
 
         assert_eq!(
-            serde_yaml::from_str::<RunsOn>(runson)
+            yaml_serde::from_str::<RunsOn>(runson)
                 .unwrap_err()
                 .to_string(),
             "runs-on must provide either `group` or one or more `labels`"

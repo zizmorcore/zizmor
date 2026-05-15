@@ -358,7 +358,7 @@ pull_request:
 workflow_dispatch:
 issue_comment:";
 
-        let events = serde_yaml::from_str::<super::Events>(events).unwrap();
+        let events = yaml_serde::from_str::<super::Events>(events).unwrap();
         assert_eq!(events.count(), 4);
     }
 }
