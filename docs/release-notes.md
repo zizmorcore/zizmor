@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.25.1
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [cache-poisoning] audit would fail to consider
