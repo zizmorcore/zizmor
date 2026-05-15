@@ -116,10 +116,10 @@ impl GitHubApp {
             }
         }
 
-        // `owner: ...` without `repository: ...` grants the app token access to all
+        // `owner: ...` without `repositories: ...` grants the app token access to all
         // repositories in the owner's account, which is likely more access than the
         // user intended.
-        if with.contains_key("owner") && !with.contains_key("repository") {
+        if with.contains_key("owner") && !with.contains_key("repositories") {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::High)
