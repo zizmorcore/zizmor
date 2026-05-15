@@ -9,7 +9,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
     16 |       - uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
        |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action implicitly uses an unpinned latest version
        |
-       = note: audit confidence → High
+       = note: audit confidence → Low
 
     warning[unpinned-tools]: action installs an unpinned external tool
       --> @@INPUT@@:19:11

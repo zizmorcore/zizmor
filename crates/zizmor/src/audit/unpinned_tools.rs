@@ -1,21 +1,37 @@
+use std::sync::LazyLock;
+
 use github_actions_models::common::{EnvValue, Uses, expr::LoE};
 use subfeature::Subfeature;
 
 use crate::audit::{Audit, AuditError, audit_meta};
 use crate::config::Config;
-use crate::finding::{Confidence, Finding, Severity};
+use crate::finding::{Confidence, Finding, Persona, Severity};
+use crate::github::Client;
 use crate::models::StepBodyCommon;
 use crate::models::uses::RepositoryUsesExt;
+use crate::models::version::Version;
 use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
 use crate::state::AuditState;
 use crate::utils::ExtractedExpr;
 
 use super::AuditLoadError;
 
-static KNOWN_UNPINNED_TOOLS_ACTIONS: &[&str] =
-    &["aquasecurity/trivy-action", "1password/load-secrets-action"];
+/// List of actions that are known to install unpinned external tools, along with an optional
+/// upper bound after which the action started pinning versions.
+static KNOWN_UNPINNED_TOOLS_ACTIONS: LazyLock<Vec<(&str, Option<Version>)>> = LazyLock::new(|| {
+    [
+        (
+            "aquasecurity/trivy-action",
+            Some(Version::parse("v0.36").unwrap()),
+        ),
+        ("1password/load-secrets-action", None),
+    ]
+    .into()
+});
 
-pub(crate) struct UnpinnedTools;
+pub(crate) struct UnpinnedTools {
+    client: Option<Client>,
+}
 
 audit_meta!(
     UnpinnedTools,
@@ -24,7 +40,7 @@ audit_meta!(
 );
 
 impl UnpinnedTools {
-    fn process_step<'doc>(
+    async fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
@@ -38,17 +54,55 @@ impl UnpinnedTools {
             return Ok(findings);
         };
 
-        if !KNOWN_UNPINNED_TOOLS_ACTIONS
+        let Some((_, max_action_version)) = KNOWN_UNPINNED_TOOLS_ACTIONS
             .iter()
-            .any(|action| uses.matches(action))
-        {
+            .find(|action| uses.matches(action.0))
+        else {
             return Ok(findings);
-        }
+        };
+
+        let (confidence, persona) = if let Some(max_action_version) = max_action_version {
+            // We need to check whether we're using a version of the action that
+            // still exhibits unpinned behavior.
+            let uses_version = if !uses.ref_is_commit() {
+                Some(uses.git_ref().to_string())
+            } else {
+                match self.client {
+                    Some(ref client) => {
+                        let tag = client
+                            .longest_tag_for_commit(uses.owner(), uses.repo(), uses.git_ref())
+                            .await
+                            .map_err(Self::err)?;
+
+                        match tag {
+                            Some(tag) => Some(tag.name),
+                            None => None,
+                        }
+                    }
+                    None => None,
+                }
+            };
+
+            if let Some(uses_version) = uses_version
+                && let Ok(ref uses_version) = Version::parse(&uses_version)
+            {
+                if uses_version < max_action_version {
+                    (Confidence::High, Persona::Regular)
+                } else {
+                    return Ok(findings);
+                }
+            } else {
+                (Confidence::Low, Persona::Pedantic)
+            }
+        } else {
+            (Confidence::High, Persona::Regular)
+        };
 
         let finding = match with.get("version") {
             None => Some(
                 Self::finding()
-                    .confidence(Confidence::High)
+                    .confidence(confidence)
+                    .persona(persona)
                     .severity(Severity::Medium)
                     .add_location(
                         step.location()
@@ -105,11 +159,17 @@ impl UnpinnedTools {
 
 #[async_trait::async_trait]
 impl Audit for UnpinnedTools {
-    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
+    fn new(state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
     {
-        Ok(Self)
+        let client = if state.no_online_audits {
+            None
+        } else {
+            state.gh_client.clone()
+        };
+
+        Ok(Self { client })
     }
 
     async fn audit_step<'doc>(
@@ -117,7 +177,7 @@ impl Audit for UnpinnedTools {
         step: &Step<'doc>,
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step)
+        self.process_step(step).await
     }
 
     async fn audit_composite_step<'a>(
@@ -125,6 +185,6 @@ impl Audit for UnpinnedTools {
         step: &CompositeStep<'a>,
         _config: &Config,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
-        self.process_step(step)
+        self.process_step(step).await
     }
 }
