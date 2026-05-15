@@ -15,6 +15,10 @@ of `zizmor`.
   `release` events as exempt from cache usage findings when filtered by a
   tag condition (#2004)
 
+* Fixed a typo when suggesting `--fix` flags for findings (#2010)
+
+    Many thanks to @0xdea for implementing this fix!
+
 ## 1.25.0
 
 ### New Features 🌈
