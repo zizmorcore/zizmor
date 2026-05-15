@@ -17,15 +17,15 @@ homepage = "https://docs.zizmor.sh"
 edition = "2024"
 license = "MIT"
 rust-version = "1.88.0"
-version = "1.25.0"
+version = "1.25.1"
 
 [workspace.dependencies]
-github-actions-expressions = { path = "crates/github-actions-expressions", version = "1.25.0" }
-github-actions-models = { path = "crates/github-actions-models", version = "1.25.0" }
-subfeature = { path = "crates/subfeature", version = "1.25.0" }
-tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.25.0" }
-yamlpath = { path = "crates/yamlpath", version = "1.25.0" }
-yamlpatch = { path = "crates/yamlpatch", version = "1.25.0" }
+github-actions-expressions = { path = "crates/github-actions-expressions", version = "1.25.1" }
+github-actions-models = { path = "crates/github-actions-models", version = "1.25.1" }
+subfeature = { path = "crates/subfeature", version = "1.25.1" }
+tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.25.1" }
+yamlpath = { path = "crates/yamlpath", version = "1.25.1" }
+yamlpatch = { path = "crates/yamlpatch", version = "1.25.1" }
 
 anyhow = "1.0.102"
 itertools = "0.14.0"
