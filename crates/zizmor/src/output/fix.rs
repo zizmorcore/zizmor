@@ -50,7 +50,7 @@ pub fn apply_fixes(
     if fixes_by_input.is_empty() {
         if total_fixes > 0 {
             let suggestion = match fix_mode {
-                FixMode::Safe => Some("Use --fix=unsafe or --fix=all to apply unsafe fixes."),
+                FixMode::Safe => Some("Use --fix=unsafe-only or --fix=all to apply unsafe fixes."),
                 FixMode::UnsafeOnly => Some("Use --fix=safe or --fix=all to apply safe fixes."),
                 FixMode::All => None,
             };
