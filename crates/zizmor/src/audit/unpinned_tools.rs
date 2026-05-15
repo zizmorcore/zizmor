@@ -55,7 +55,7 @@ impl UnpinnedTools {
                             .primary()
                             .with_keys(["uses".into()])
                             .subfeature(Subfeature::new(0, uses.raw()))
-                            .annotated("action implictly uses an unpinned latest version"),
+                            .annotated("action implicitly uses an unpinned latest version"),
                     ),
             ),
             Some(EnvValue::String(v)) if v == "latest" => Some(

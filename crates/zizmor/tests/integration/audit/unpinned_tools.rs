@@ -7,7 +7,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
       --> @@INPUT@@:16:15
        |
     16 |       - uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action implictly uses an unpinned latest version
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action implicitly uses an unpinned latest version
        |
        = note: audit confidence → High
 
@@ -26,7 +26,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
       --> @@INPUT@@:20:15
        |
     20 |       - uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action implictly uses an unpinned latest version
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action implicitly uses an unpinned latest version
        |
        = note: audit confidence → High
 
