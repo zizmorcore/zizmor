@@ -547,7 +547,9 @@ impl CachePoisoning {
         // confidence accordingly.
         // TODO: We probably need to make this even more precise, e.g. for pushes with tag patterns.
         if let PublishingScenario::UsingReleaseTriggers(triggers) = scenario
-            && let [ReleaseTrigger::TagPush] = triggers.as_slice()
+            && triggers
+                .iter()
+                .all(|t| matches!(t, ReleaseTrigger::TagPush | ReleaseTrigger::ReleaseEvent))
             && let Some(control) = CacheControlField::extract(coord, step)
             && let Some(expr) = CacheControlExpr::parse(&control.raw_value.to_string())
         {

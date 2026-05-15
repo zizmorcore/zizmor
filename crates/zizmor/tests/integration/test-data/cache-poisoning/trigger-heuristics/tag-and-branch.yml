@@ -3,7 +3,7 @@ name: tag-event-heuristics
 on:
   push:
     branches:
-      - master
+      - release
     tags:
       - "*"
   release:
@@ -16,5 +16,7 @@ jobs:
     steps:
       - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
-          # this is safe since both `push: tags` and `release` are tied to a tag.
+          # we would consider this safe *if* there was only a tag and/or release trigger
+          # for this workflow, but since there's also a branch trigger that looks like
+          # a release we can't assert that all release events will also be tag events.
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}

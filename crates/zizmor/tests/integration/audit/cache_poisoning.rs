@@ -674,6 +674,20 @@ fn test_trigger_heuristics_tag_and_release() -> anyhow::Result<()> {
                 "cache-poisoning/trigger-heuristics/tag-and-release.yml"
             ))
             .run()?,
+        @"No findings to report. Good job! (2 suppressed)"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_trigger_heuristics_tag_and_branch() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "cache-poisoning/trigger-heuristics/tag-and-branch.yml"
+            ))
+            .run()?,
         @r#"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:17:9
@@ -681,7 +695,7 @@ fn test_trigger_heuristics_tag_and_release() -> anyhow::Result<()> {
      3 | / on:
      4 | |   push:
      5 | |     branches:
-     6 | |       - master
+     6 | |       - release
      7 | |     tags:
      8 | |       - "*"
      9 | |   release:
@@ -690,9 +704,9 @@ fn test_trigger_heuristics_tag_and_release() -> anyhow::Result<()> {
     17 |         - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
     18 | /         with:
-    19 | |           # we would consider this safe *if* there was only a tag trigger for this workflow,
-    20 | |           # but since there's also a release trigger we can't assert that all release
-    21 | |           # events will also be tag events.
+    19 | |           # we would consider this safe *if* there was only a tag and/or release trigger
+    20 | |           # for this workflow, but since there's also a branch trigger that looks like
+    21 | |           # a release we can't assert that all release events will also be tag events.
     22 | |           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
        | |________________________________________________________________- may enable caching here
        |
