@@ -13,7 +13,7 @@ use crate::utils::ExtractedExpr;
 use super::AuditLoadError;
 
 static KNOWN_UNPINNED_TOOLS_ACTIONS: &[&str] =
-    &["aquasecurity/trivy-action", "1password/load-secrets-action"];
+    &["aquasecurity/setup-trivy", "1password/load-secrets-action"];
 
 pub(crate) struct UnpinnedTools;
 

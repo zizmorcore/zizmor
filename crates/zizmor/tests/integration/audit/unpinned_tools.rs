@@ -6,16 +6,16 @@ fn test_regular_persona() -> anyhow::Result<()> {
     warning[unpinned-tools]: action installs an unpinned external tool
       --> @@INPUT@@:16:15
        |
-    16 |       - uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action implicitly uses an unpinned latest version
+    16 |       - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action implicitly uses an unpinned latest version
        |
        = note: audit confidence → High
 
     warning[unpinned-tools]: action installs an unpinned external tool
       --> @@INPUT@@:19:11
        |
-    17 |       - uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
-       |               ------------------------------------------------------------------ this action
+    17 |       - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+       |               ----------------------------------------------------------------- this action
     18 |         with:
     19 |           version: latest
        |           ^^^^^^^^^^^^^^^ specifies `version: latest` which is unpinned
@@ -44,8 +44,8 @@ fn test_regular_persona() -> anyhow::Result<()> {
     warning[unpinned-tools]: action installs an unpinned external tool
       --> @@INPUT@@:26:11
        |
-    24 |       - uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
-       |               ------------------------------------------------------------------ this action
+    24 |       - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+       |               ----------------------------------------------------------------- this action
     25 |         with:
     26 |           version: ${{ inputs.trivy-version }}
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ specifies `version` dynamically, which may be unpinned
