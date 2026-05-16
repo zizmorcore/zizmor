@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [unpinned-tools] audit would incorrectly flag the
+  @aquasecurity/trivy-action action as installing an unpinned tool version,
+  rather than @aquasecurity/setup-trivy (#2018)
+
 ## 1.25.1
 
 ### Bug Fixes 🐛
