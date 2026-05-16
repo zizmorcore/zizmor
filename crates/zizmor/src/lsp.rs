@@ -267,7 +267,7 @@ impl Backend {
                 params.text,
                 InputKey::local("lsp".into(), path, None),
             )?)
-        } else if matches!(path.file_name(), Some("dependabot.yml")) {
+        } else if matches!(path.file_name(), Some("dependabot.yml" | "dependabot.yaml")) {
             AuditInput::from(Dependabot::from_string(
                 params.text,
                 InputKey::local("lsp".into(), path, None),

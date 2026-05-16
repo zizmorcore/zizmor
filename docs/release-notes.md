@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where zizmor's LSP would not recognize `dependabot.yaml` files in its
+  default configuration (#2026)
+
+    Many thanks to @fionn for implementing this fix!
+
 ## 1.25.2
 
 ### Bug Fixes 🐛
