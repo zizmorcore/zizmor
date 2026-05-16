@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.25.2
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [unpinned-tools] audit would incorrectly flag the
