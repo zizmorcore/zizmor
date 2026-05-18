@@ -1551,7 +1551,7 @@ there are steps you can take to minimize their risk:
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action | N/A            | v1.25.0       | ✅             | ❌                 | ❌           |
+| Workflow, Action | N/A            | v1.26.0       | ✅             | ❌                 | ✅           |
 
 Runs [ShellCheck] against `#!yaml run:` blocks that resolve to POSIX/Bourne-family shells.
 
