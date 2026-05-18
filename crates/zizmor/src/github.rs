@@ -283,7 +283,7 @@ impl Client {
                             // NOTE(ww): In the context of the retry classifier,
                             // "success" means "don't retry".
                             Some(status) => {
-                                if status.is_client_error() || status.is_server_error() {
+                                if is_retryable_github_api_status(status) {
                                     req_rep.retryable()
                                 } else {
                                     req_rep.success()
@@ -930,6 +930,14 @@ impl Client {
     }
 }
 
+fn is_retryable_github_api_status(status: StatusCode) -> bool {
+    status.is_server_error()
+        || matches!(
+            status,
+            StatusCode::REQUEST_TIMEOUT | StatusCode::TOO_EARLY | StatusCode::TOO_MANY_REQUESTS
+        )
+}
+
 /// A single branch, as returned by GitHub's branches endpoints.
 ///
 /// This model is intentionally incomplete.
@@ -1023,7 +1031,9 @@ pub(crate) struct File {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::{Client, GitHubHost, GitHubToken};
+    use reqwest::StatusCode;
+
+    use crate::github::{Client, GitHubHost, GitHubToken, is_retryable_github_api_status};
 
     #[test]
     fn test_github_host() {
@@ -1055,6 +1065,38 @@ mod tests {
     fn test_github_token_err() {
         for token in ["", " ", "\r", "\n", "\t", "     "] {
             assert!(GitHubToken::new(token).is_err());
+        }
+    }
+
+    #[test]
+    fn test_retryable_github_api_status() {
+        for status in [
+            StatusCode::REQUEST_TIMEOUT,
+            StatusCode::TOO_EARLY,
+            StatusCode::TOO_MANY_REQUESTS,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            StatusCode::BAD_GATEWAY,
+            StatusCode::SERVICE_UNAVAILABLE,
+            StatusCode::GATEWAY_TIMEOUT,
+        ] {
+            assert!(
+                is_retryable_github_api_status(status),
+                "{status} should retry"
+            );
+        }
+
+        for status in [
+            StatusCode::BAD_REQUEST,
+            StatusCode::UNAUTHORIZED,
+            StatusCode::FORBIDDEN,
+            StatusCode::NOT_FOUND,
+            StatusCode::GONE,
+            StatusCode::UNPROCESSABLE_ENTITY,
+        ] {
+            assert!(
+                !is_retryable_github_api_status(status),
+                "{status} should not retry"
+            );
         }
     }
 
