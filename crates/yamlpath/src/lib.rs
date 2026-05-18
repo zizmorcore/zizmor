@@ -880,6 +880,17 @@ impl Document {
         };
         let was_alias = pre_resolution_node.id() != focus_node.id();
 
+        // Historically, indexing into a flow sequence item like
+        // `[1, 2, 3: [4, 5]]` has produced just the pair's value rather than
+        // the `flow_pair` itself. Preserve that terminal behavior while still
+        // allowing intermediate `flow_pair` nodes to participate in further
+        // descent (e.g. `steps[0].uses`).
+        if matches!(route.route.last(), Some(Component::Index(_))) && focus_node.is_flow_pair() {
+            focus_node = focus_node
+                .child_by_field_name("value")
+                .unwrap_or(focus_node);
+        }
+
         // For Pretty and KeyOnly modes, we need the structural position
         // in the tree. When an alias was resolved, use the pre-resolution
         // node so we navigate the alias reference site, not the anchor
@@ -979,6 +990,18 @@ impl Document {
         node: &Node<'b>,
         component: &Component,
     ) -> Result<Node<'b>, QueryError> {
+        if node.is_pair() {
+            return match component {
+                Component::Key(key) => self.descend_mapping(node, key),
+                Component::Index(idx) => {
+                    let value = node
+                        .child_by_field_name("value")
+                        .ok_or(QueryError::ExpectedList(*idx))?;
+                    self.descend(&value, component)
+                }
+            };
+        }
+
         // The cursor is assumed to start on a block_node or flow_node,
         // which has a child containing the inner scalar/vector/alias
         // type we're descending through.
@@ -1025,9 +1048,22 @@ impl Document {
                 .ok_or_else(|| QueryError::Other(format!("unknown alias: {}", alias_name)))?;
         }
 
+        while child.is_block_or_flow_node() {
+            let mut cursor = child.walk();
+            child = child
+                .named_children(&mut cursor)
+                .find(|n| !n.is_anchor())
+                .ok_or_else(|| {
+                    QueryError::Other(format!(
+                        "node of kind {} has no non-anchor child",
+                        child.kind()
+                    ))
+                })?;
+        }
+
         // We expect the child to be a sequence or mapping of either
         // flow or block type.
-        if child.is_mapping() {
+        if child.is_mapping() || child.is_pair() {
             match component {
                 Component::Key(key) => self.descend_mapping(&child, key),
                 Component::Index(idx) => Err(QueryError::ExpectedList(*idx)),
@@ -1043,6 +1079,22 @@ impl Document {
     }
 
     fn descend_mapping<'b>(&self, node: &Node<'b>, expected: &str) -> Result<Node<'b>, QueryError> {
+        if node.is_pair() {
+            let key = node
+                .child_by_field_name("key")
+                .ok_or_else(|| QueryError::MissingChildField(node.kind().into(), "key"))?;
+
+            let key_value = key
+                .utf8_text(self.source().as_bytes())
+                .expect("impossible: key should be UTF-8 by construction");
+
+            if key_value == expected {
+                return Ok(node.child_by_field_name("value").unwrap_or(*node));
+            }
+
+            return Err(QueryError::ExhaustedMapping(expected.into()));
+        }
+
         let mut cur = node.walk();
         for child in node.named_children(&mut cur) {
             let key = if child.is_pair() {
@@ -1154,14 +1206,6 @@ impl Document {
         let Some(child) = children.get(idx) else {
             return Err(QueryError::ExhaustedList(idx, children.len()));
         };
-
-        if child.is_flow_pair() {
-            // Similarly, if our index happens to be a `flow_pair`, we need to
-            // get the `value` child to get the next `flow_node`.
-            // The `value` might not be present (e.g. `{foo: }`), in which case
-            // we treat the `flow_pair` itself as terminal like with the mapping hack.
-            return Ok(child.child_by_field_name("value").unwrap_or(*child));
-        }
 
         Ok(*child)
     }
@@ -1656,5 +1700,25 @@ list:
                 assert_eq!(doc.extract(&feature), expected, "YAML: {}", yaml);
             }
         }
+    }
+
+    #[test]
+    fn test_flow_sequence_mapping_pair_query() {
+        let doc = Document::new(
+            r#"
+jobs:
+  test:
+    steps: [uses: actions/checkout@v4]
+            "#,
+        )
+        .unwrap();
+
+        let feature = doc
+            .query_exact(&route!("jobs", "test", "steps", 0, "uses"))
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(feature.kind(), FeatureKind::Scalar);
+        assert_eq!(doc.extract(&feature), "actions/checkout@v4");
     }
 }

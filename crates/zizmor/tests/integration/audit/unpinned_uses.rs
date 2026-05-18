@@ -171,6 +171,30 @@ fn test_issue_1543_repro() -> Result<()> {
     Ok(())
 }
 
+/// Reproduction case for #1671:
+/// flow-sequence steps with `uses:` should be audited instead of crashing.
+#[test]
+fn test_issue_1671_repro() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-uses/issue-1671-repro.yml"))
+            .run()?,
+        @"
+    error[unpinned-uses]: unpinned action reference
+     --> @@INPUT@@:9:20
+      |
+    9 |     steps: [{uses: actions/checkout@v4, with: {persist-credentials: false}}]
+      |                    ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+      |
+      = note: audit confidence → High
+
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
 /// Default policies (no explicit config).
 #[test]
 fn test_default_config() -> Result<()> {
