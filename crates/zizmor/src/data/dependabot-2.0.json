@@ -929,23 +929,6 @@
                 "enum": ["dependency-name"]
               }
             },
-            "anyOf": [
-              {
-                "required": ["dependency-type"]
-              },
-              {
-                "required": ["patterns"]
-              },
-              {
-                "required": ["exclude-patterns"]
-              },
-              {
-                "required": ["update-types"]
-              },
-              {
-                "required": ["group-by"]
-              }
-            ],
             "additionalProperties": false
           },
           "minProperties": 1
