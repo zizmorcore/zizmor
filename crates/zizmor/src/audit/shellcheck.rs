@@ -198,14 +198,25 @@ impl ShellcheckAudit {
                 vec![]
             });
 
-        tracing::debug!("shellcheck diagnostics: {diagnostics:#?}");
+        let run_location = step.location().primary().with_keys(["run".into()]);
+
+        // Determine the indentation offset of the run: block.
+        // It will be used to calculate the exact offset of findings below.
+        let run_point = run_location
+            .clone()
+            .concretize(step.document())
+            .map_err(Self::err)?
+            .concrete
+            .location
+            .start_point;
 
         diagnostics
             .into_iter()
             .map(|diagnostic| {
+                // find the code fragment inside the inspected shell script
                 let offset = Self::diagnostic_span(run, &diagnostic);
                 let end_offset = if diagnostic.end_line == diagnostic.line {
-                    let line_start = offset - diagnostic.column.saturating_sub(1);
+                    let line_start = offset.saturating_sub(diagnostic.column.saturating_sub(1));
                     line_start + diagnostic.end_column.saturating_sub(1)
                 } else {
                     run[offset..].find('\n').map_or(run.len(), |n| offset + n)
@@ -213,14 +224,19 @@ impl ShellcheckAudit {
                 let end_offset = end_offset.min(run.len());
                 let fragment = &run[offset..end_offset];
 
-                let location = step.location().primary().with_keys(["run".into()]);
+                // shellcheck findings columns don't take YAML indentation into account.
+                // Adjust the diagnostic offset using the position of the run block within the YAML document,
+                // so that the correct occurrence of the fragment is found in the raw YAML text.
+                let after =
+                    (diagnostic.line.saturating_sub(1) * run_point.column).saturating_add(offset);
 
                 let location = if !fragment.is_empty() {
-                    location
-                        .subfeature(Subfeature::new(offset, fragment))
+                    run_location
+                        .clone()
+                        .subfeature(Subfeature::new(after, fragment))
                         .annotated(format!("SC{}: {}", diagnostic.code, diagnostic.message))
                 } else {
-                    location.annotated(format!(
+                    run_location.clone().annotated(format!(
                         "SC{} at line {}, column {}: {}",
                         diagnostic.code, diagnostic.line, diagnostic.column, diagnostic.message
                     ))
