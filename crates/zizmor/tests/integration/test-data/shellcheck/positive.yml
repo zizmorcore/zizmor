@@ -1,0 +1,17 @@
+name: shellcheck-positive
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.base_ref == main }}
+
+jobs:
+  shellcheck:
+    name: Shellcheck True Positive
+    runs-on: ubuntu-latest
+    steps:
+      - name: unquoted variable
+        run: echo $FOO

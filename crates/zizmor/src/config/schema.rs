@@ -13,7 +13,7 @@ use schemars::JsonSchema;
 
 use super::{
     DependabotCooldownConfig, ForbiddenUsesConfig, RemapConfig, SecretsOutsideEnvConfig,
-    UnpinnedUsesConfig, WorkflowRule,
+    ShellcheckConfig, UnpinnedUsesConfig, WorkflowRule,
 };
 
 /// Base configuration for all audit rules.
@@ -74,6 +74,17 @@ struct UnpinnedUsesRuleConfig {
     config: UnpinnedUsesConfig,
 }
 
+/// Configuration for the `shellcheck` audit.
+#[derive(Debug, Default, JsonSchema)]
+#[serde(deny_unknown_fields)]
+struct ShellcheckRuleConfig {
+    #[serde(flatten)]
+    base: BaseRuleConfig,
+
+    #[serde(default)]
+    config: ShellcheckConfig,
+}
+
 macro_rules! define_audit_rules {
     (
         $( $field:ident ),* $(,)?
@@ -130,6 +141,7 @@ define_audit_rules! {
     [DependabotCooldownRuleConfig] dependabot_cooldown,
     [ForbiddenUsesRuleConfig] forbidden_uses,
     [SecretsOutsideEnvRuleConfig] secrets_outside_env,
+    [ShellcheckRuleConfig] shellcheck,
     [UnpinnedUsesRuleConfig] unpinned_uses,
 }
 

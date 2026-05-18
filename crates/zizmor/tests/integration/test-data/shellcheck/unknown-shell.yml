@@ -1,0 +1,24 @@
+name: shellcheck-unknown-shell
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.base_ref == main }}
+
+jobs:
+  shellcheck-unknown-runner:
+    name: shellcheck should default to bash when runner type is not recognized
+    runs-on: ${{ vars.RUNNER }}
+    steps:
+      - name: unknown runner should default to bash
+        run: echo $FOO
+  shellcheck-unknown-shell:
+    name: shellcheck should default to bash when shell is not recognized
+    runs-on: ubuntu-latest
+    steps:
+      - name: unknown shell should default to bash
+        shell: ${{ vars.SHELL }}
+        run: echo $FOO

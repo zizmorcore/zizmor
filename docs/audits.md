@@ -1547,6 +1547,36 @@ there are steps you can take to minimize their risk:
 
 [ephemeral ("just-in-time") runners]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-just-in-time-runners
 
+## `shellcheck`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action | N/A            | v1.25.0       | ✅             | ❌                 | ❌           |
+
+Runs [ShellCheck] against `#!yaml run:` blocks that resolve to POSIX/Bourne-family shells.
+
+This audit currently runs on `sh`, `bash`, `dash`, `ksh`, and `zsh` run blocks.
+`cmd`, `pwsh` are skipped. Unknown or expression-derived shells are skipped, unless
+`rules.shellcheck.config.check-unknown-shells` is set to `true`.
+
+!!! note
+
+    This audit depends on the `shellcheck` binary being available in `PATH`.
+    If `shellcheck` is unavailable, this audit is skipped.
+
+    [Error SC2296](https://www.shellcheck.net/wiki/SC2296) that triggers when
+    using templating syntax `${{ ... }}` is ignored to avoid false positives.
+
+### Remediation
+
+Address the reported ShellCheck diagnostics in your `run:` scripts. Typical fixes include:
+
+* Quoting variable expansions (for example, changing `echo $FOO` to `echo "$FOO"`).
+* Avoiding fragile globbing and word splitting patterns.
+* Using more robust shell constructs suggested by ShellCheck.
+
+[ShellCheck]: https://www.shellcheck.net/
+
 ## `stale-action-refs`
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |

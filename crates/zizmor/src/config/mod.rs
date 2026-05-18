@@ -22,7 +22,8 @@ use crate::{
     App, CollectionOptions,
     audit::{
         AuditCore, dependabot_cooldown::DependabotCooldown, forbidden_uses::ForbiddenUses,
-        secrets_outside_env::SecretsOutsideEnvironment, unpinned_uses::UnpinnedUses,
+        secrets_outside_env::SecretsOutsideEnvironment, shellcheck::ShellcheckAudit,
+        unpinned_uses::UnpinnedUses,
     },
     finding::{Finding, Severity},
     github::{Client, ClientError},
@@ -280,6 +281,16 @@ pub(crate) struct SecretsOutsideEnvConfig {
     pub(crate) allow: Vec<String>,
 }
 
+/// Configuration for the `shellcheck` audit.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+#[serde(default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub(crate) struct ShellcheckConfig {
+    /// Assume that workflow steps with runtime-derived runner labels use a bash-compatible shell.
+    pub(crate) check_unknown_shells: bool,
+}
+
 /// Policy to evaluate secrets references
 #[derive(Clone, Debug)]
 pub(crate) struct SecretsOutsideEnvPolicy {
@@ -480,6 +491,7 @@ pub(crate) struct Config {
     pub(crate) dependabot_cooldown_config: DependabotCooldownConfig,
     pub(crate) forbidden_uses_config: Option<ForbiddenUsesConfig>,
     pub(crate) secrets_outside_env_policy: SecretsOutsideEnvPolicy,
+    pub(crate) shellcheck_config: ShellcheckConfig,
     pub(crate) unpinned_uses_policies: UnpinnedUsesPolicies,
 }
 
@@ -500,6 +512,10 @@ impl Config {
             .map(Into::into)
             .unwrap_or_default();
 
+        let shellcheck_config = raw
+            .rule_config(ShellcheckAudit::ident())?
+            .unwrap_or_default();
+
         let unpinned_uses_policies = {
             if let Some(unpinned_uses_config) =
                 raw.rule_config::<UnpinnedUsesConfig>(UnpinnedUses::ident())?
@@ -515,6 +531,7 @@ impl Config {
             dependabot_cooldown_config,
             forbidden_uses_config,
             secrets_outside_env_policy,
+            shellcheck_config,
             unpinned_uses_policies,
         })
     }

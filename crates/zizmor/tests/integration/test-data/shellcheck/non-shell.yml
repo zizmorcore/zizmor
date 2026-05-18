@@ -1,0 +1,10 @@
+name: shellcheck-non-shell
+on:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: windows-latest
+    steps:
+      - name: windows shell default
+        run: Write-Output "$env:FOO"
