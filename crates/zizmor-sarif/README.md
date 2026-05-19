@@ -1,13 +1,23 @@
-# `zizmor-sarif`
+# zizmor-sarif
 
-Minimal in-tree data models for [SARIF 2.1.0] — covering only the
-fields that [`zizmor`] currently emits as output.
+[![zizmor](https://img.shields.io/badge/%F0%9F%8C%88-zizmor-white?labelColor=white)](https://zizmor.sh/)
+[![CI](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml/badge.svg)](https://github.com/zizmorcore/zizmor/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/zizmor-sarif)](https://crates.io/crates/zizmor-sarif)
+[![docs.rs](https://img.shields.io/docsrs/zizmor-sarif)](https://docs.rs/zizmor-sarif)
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/woodruffw?style=flat&logo=githubsponsors&labelColor=white&color=white)](https://github.com/sponsors/woodruffw)
+[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.com/invite/PGU3zGZuGG)
 
-This crate is workspace-internal: it is not intended to be a general
-SARIF library and only models the subset of the specification needed
-to produce zizmor's `--format=sarif` output. If you need a complete
-SARIF crate for parsing or generation outside zizmor, use one of the
-existing community crates (e.g. `serde-sarif`).
+Minimal data models for [SARIF 2.1.0], covering only the fields that
+[zizmor] currently emits as output.
+
+This crate is part of [zizmor].
+
+If you need a more complete SARIF crate, consider [`serde-sarif`].
+
+## License
+
+MIT License.
 
 [SARIF 2.1.0]: https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html
-[`zizmor`]: https://github.com/zizmorcore/zizmor
+[zizmor]: https://zizmor.sh
+[`serde-sarif`]: https://crates.io/crates/serde-sarif
