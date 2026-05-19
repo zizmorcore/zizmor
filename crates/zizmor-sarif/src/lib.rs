@@ -1,6 +1,6 @@
-//! Minimal in-tree data models for [SARIF 2.1.0].
+//! Minimal, zizmor-specialized data models for [SARIF 2.1.0].
 //!
-//! Only the subset of SARIF that `zizmor` actually emits is modelled.
+//! Only the subset of SARIF that `zizmor` actually needs is modelled.
 //!
 //! [SARIF 2.1.0]: https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html
 
