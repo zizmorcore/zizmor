@@ -16,6 +16,10 @@ of `zizmor`.
 
     Many thanks to @andrew for proposing and implementing this improvement!
 
+### Performance Improvements 🚄
+
+* Most online audits are significantly faster, thanks to more precise retry handling (#2036)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where zizmor's LSP would not recognize `dependabot.yaml` files in its
