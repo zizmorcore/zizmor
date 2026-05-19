@@ -1,0 +1,18 @@
+[package]
+name = "zizmor-sarif"
+description = "Minimal SARIF 2.1.0 data models used by zizmor"
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/zizmor-sarif"
+readme = "README.md"
+
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true

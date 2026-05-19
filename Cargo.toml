@@ -8,6 +8,7 @@ members = [
     "crates/yamlpatch",
     "crates/yamlpath",
     "crates/zizmor",
+    "crates/zizmor-sarif",
 ]
 
 [workspace.package]
@@ -26,6 +27,7 @@ subfeature = { path = "crates/subfeature", version = "1.25.2" }
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.25.2" }
 yamlpath = { path = "crates/yamlpath", version = "1.25.2" }
 yamlpatch = { path = "crates/yamlpatch", version = "1.25.2" }
+zizmor-sarif = { path = "crates/zizmor-sarif", version = "1.25.2" }
 
 anyhow = "1.0.102"
 itertools = "0.14.0"
@@ -63,7 +65,6 @@ reqwest-middleware = "0.5.1"
 self_cell = "1"
 schemars = "1.2"
 serde = { version = "1.0.228", features = ["derive"] }
-serde-sarif = "0.8.0"
 serde_json = "1.0.149"
 serde_json_path = "0.7.2"
 yaml_serde = "0.10"
