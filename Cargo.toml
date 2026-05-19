@@ -27,7 +27,7 @@ subfeature = { path = "crates/subfeature", version = "1.25.2" }
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.25.2" }
 yamlpath = { path = "crates/yamlpath", version = "1.25.2" }
 yamlpatch = { path = "crates/yamlpatch", version = "1.25.2" }
-zizmor-sarif = { path = "crates/zizmor-sarif", version = "1.25.2" }
+zizmor-sarif = { path = "crates/zizmor-sarif", version = "0.0.1" }
 
 anyhow = "1.0.102"
 itertools = "0.14.0"

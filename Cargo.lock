@@ -4486,7 +4486,7 @@ dependencies = [
 
 [[package]]
 name = "zizmor-sarif"
-version = "1.25.2"
+version = "0.0.1"
 dependencies = [
  "serde",
  "serde_json",
