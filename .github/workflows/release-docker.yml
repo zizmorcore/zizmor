@@ -135,7 +135,7 @@ jobs:
           images: "${{ env.ZIZMOR_IMAGE }}"
           tags: |
             type=raw,value=${{ github.event.inputs.version }}
-            typw=raw,value=latest,enable=${{ github.event.inputs.latest }}
+            type=raw,value=latest,enable=${{ github.event.inputs.latest }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
