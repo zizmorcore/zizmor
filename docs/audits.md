@@ -1728,6 +1728,56 @@ shell quoting/expansion rules.
             ISSUE_TITLE: ${{ github.event.issue.title }}
         ```
 
+## `typosquat-uses`
+
+| Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action | [typosquat-uses.yml] | v1.26.0        | ✅             | ❌                 | ❌           |
+
+[typosquat-uses.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/typosquat-uses.yml
+
+Detects `#!yaml uses:` clauses that reference an action whose `owner/repo`
+slug is a close textual variant of a well-known action, but is owned by a
+different account.
+
+Typosquatting attacks rely on a developer mistyping or copy-pasting a slightly
+wrong name (`action/checkout` instead of `actions/checkout`, `dokcer/login-action`
+instead of `docker/login-action`). If an attacker registers the misspelled
+namespace, the workflow will fetch and execute their code.
+
+This audit compares each `#!yaml uses:` slug against a baked-in corpus of
+popular actions using the [typomania] library. A finding is raised when the
+slug is one omitted, repeated, swapped, or substituted character away from a
+corpus entry **and** the owner differs from the legitimate action's owner.
+Near-misses within the same owner (for example `actions/chckout`) are not
+reported, since the legitimate organisation already controls that namespace
+and the reference will simply fail at runtime.
+
+[typomania]: https://github.com/rustfoundation/typomania
+
+When run offline, findings are reported at low confidence since zizmor cannot
+tell whether the misspelled repository actually exists. When a GitHub token is
+available, zizmor checks whether the slug resolves to a live repository and
+raises confidence to high if it does.
+
+### Remediation
+
+Correct the `#!yaml uses:` reference to point at the intended action.
+
+=== "Before"
+
+    ```yaml title="typosquat.yml" hl_lines="3"
+    - name: checkout
+      uses: action/checkout@v4
+    ```
+
+=== "After"
+
+    ```yaml title="typosquat.yml" hl_lines="3"
+    - name: checkout
+      uses: actions/checkout@v4
+    ```
+
 ## `undocumented-permissions`
 
 | Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |

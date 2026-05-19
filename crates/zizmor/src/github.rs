@@ -675,6 +675,20 @@ impl Client {
     }
 
     #[instrument(skip(self))]
+    pub(crate) async fn repo_exists(&self, owner: &str, repo: &str) -> Result<bool, ClientError> {
+        match self.list_refs(owner, repo).await {
+            Ok(_) => Ok(true),
+            Err(ClientError::Inner(inner))
+                if matches!(inner.as_ref(), ClientError::RepoMissingOrPrivate { .. }) =>
+            {
+                Ok(false)
+            }
+            Err(ClientError::RepoMissingOrPrivate { .. }) => Ok(false),
+            Err(e) => Err(e),
+        }
+    }
+
+    #[instrument(skip(self))]
     pub(crate) async fn compare_commits(
         &self,
         owner: &str,

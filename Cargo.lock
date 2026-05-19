@@ -249,6 +249,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 
 [[package]]
+name = "bitflip"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7006e6395f41477e1052dfff8381b32c0d740c2ff3d48ffd72d19132293b4578"
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1018,7 +1024,7 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 name = "github-actions-expressions"
 version = "1.25.2"
 dependencies = [
- "itertools",
+ "itertools 0.14.0",
  "pest",
  "pest_derive",
  "pretty_assertions",
@@ -1502,6 +1508,15 @@ name = "is_terminal_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
+
+[[package]]
+name = "itertools"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+dependencies = [
+ "either",
+]
 
 [[package]]
 name = "itertools"
@@ -2345,9 +2360,9 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "reqwest"
-version = "0.13.3"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62e0021ea2c22aed41653bc7e1419abb2c97e038ff2c33d0e1309e49a97deec0"
+checksum = "ab3f43e3283ab1488b624b44b0e988d0acea0b3214e694730a055cb6b2efa801"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -3510,6 +3525,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 
 [[package]]
+name = "typomania"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38f8c4efb88486b445b83759c6589b97a0fe4cf82bd36be336c164b49af13bef"
+dependencies = [
+ "bitflip",
+ "itertools 0.11.0",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "ucd-trie"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4542,7 +4569,7 @@ dependencies = [
  "indexmap",
  "indicatif",
  "insta",
- "itertools",
+ "itertools 0.14.0",
  "jsonschema",
  "line-index",
  "owo-colors",
@@ -4567,6 +4594,7 @@ dependencies = [
  "tree-sitter",
  "tree-sitter-bash",
  "tree-sitter-powershell",
+ "typomania",
  "yaml_serde",
  "yamlpatch",
  "yamlpath",

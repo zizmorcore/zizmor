@@ -272,6 +272,9 @@
         "template-injection": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
+        "typosquat-uses": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "undocumented-permissions": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
