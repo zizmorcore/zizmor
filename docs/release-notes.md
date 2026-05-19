@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [typosquat-uses] detects `uses:` clauses that reference likely
+  typoed actions (#1985)
+
+    Many thanks to @andrew for proposing and implementing this improvement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where zizmor's LSP would not recognize `dependabot.yaml` files in its
@@ -1834,5 +1841,6 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [superfluous-actions]: ./audits.md#superfluous-actions
 [github-app]: ./audits.md#github-app
 [unpinned-tools]: ./audits.md#unpinned-tools
+[typosquat-uses]: ./audits.md#typosquat-uses
 
 [exit code]: ./usage.md#exit-codes
