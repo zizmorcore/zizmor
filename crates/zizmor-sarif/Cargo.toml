@@ -4,8 +4,7 @@ description = "Minimal SARIF 2.1.0 data models used by zizmor"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/zizmor-sarif"
 readme = "README.md"
 
-version = "0.0.1"
-# version.workspace = true
+version.workspace = true
 authors.workspace = true
 homepage.workspace = true
 edition.workspace = true
