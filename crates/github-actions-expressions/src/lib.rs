@@ -69,7 +69,7 @@ impl<'a> Origin<'a> {
 
 /// An expression along with its source origin (span and unparsed form).
 ///
-/// An expression's span is tight: it covers exactly the bytes the expression
+/// An expression's span covers exactly the bytes the expression
 /// was parsed from, with no surrounding whitespace. A parenthesized expression
 /// includes its parentheses, so every span is a balanced, self-contained slice
 /// of the source.
