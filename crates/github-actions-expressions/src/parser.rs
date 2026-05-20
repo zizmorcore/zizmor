@@ -19,21 +19,20 @@ type PResult<'src> = Result<SpannedExpr<'src>, Error>;
 /// Parse a complete GitHub Actions expression. The whole input must be
 /// consumed (modulo whitespace).
 pub(crate) fn parse(src: &str) -> Result<SpannedExpr<'_>, Error> {
-    let tokens = lexer::lex(src)?;
     let mut parser = Parser {
         src,
-        tokens,
+        tokens: lexer::lex(src)?,
         pos: 0,
     };
 
     if parser.peek().is_none() {
-        return Err(syntax_error("empty expression", 0));
+        return Err(parser.error_here("empty expression"));
     }
 
     let expr = parser.parse_or()?;
 
-    if let Some(token) = parser.peek() {
-        return Err(syntax_error("unexpected trailing input", token.start));
+    if parser.peek().is_some() {
+        return Err(parser.error_here("unexpected trailing input"));
     }
 
     Ok(expr)
@@ -57,14 +56,41 @@ impl<'src> Parser<'src> {
         self.peek().map(|t| t.tok)
     }
 
-    /// Build an [`Origin`] spanning `[start, end)`.
-    fn origin(&self, start: usize, end: usize) -> Origin<'src> {
-        Origin::new(start..end, &self.src[start..end])
+    /// Advance past and return the current token. The caller must have already
+    /// confirmed, via [`Parser::peek`], that a token is present.
+    fn bump(&mut self) -> Token<'src> {
+        let token = self.tokens[self.pos];
+        self.pos += 1;
+        token
     }
 
-    /// The byte offset to blame for an "unexpected end of input" error.
-    fn end_offset(&self) -> usize {
-        self.tokens.last().map_or(0, |t| t.end)
+    /// Consume and return the current token if `predicate` accepts its kind.
+    fn eat(&mut self, predicate: fn(Tok<'src>) -> bool) -> Option<Token<'src>> {
+        let token = self.peek().filter(|t| predicate(t.tok))?;
+        self.pos += 1;
+        Some(token)
+    }
+
+    /// Like [`Parser::eat`], but fails with `message` when nothing matches.
+    fn expect(
+        &mut self,
+        predicate: fn(Tok<'src>) -> bool,
+        message: &'static str,
+    ) -> Result<Token<'src>, Error> {
+        self.eat(predicate).ok_or_else(|| self.error_here(message))
+    }
+
+    /// A syntax error blaming the current token, or end of input.
+    fn error_here(&self, message: &'static str) -> Error {
+        let offset = self
+            .peek()
+            .map_or_else(|| self.tokens.last().map_or(0, |t| t.end), |t| t.start);
+        syntax_error(message, offset)
+    }
+
+    /// Build a [`SpannedExpr`] spanning `[start, end)`.
+    fn spanned(&self, start: usize, end: usize, expr: Expr<'src>) -> SpannedExpr<'src> {
+        SpannedExpr::new(Origin::new(start..end, &self.src[start..end]), expr)
     }
 
     /// Parse a left-associative chain of binary operators. `operand` parses
@@ -79,9 +105,9 @@ impl<'src> Parser<'src> {
         while let Some(op) = self.peek_tok().and_then(match_op) {
             self.pos += 1;
             let rhs = operand(self)?;
-            let (start, end) = (lhs.origin.span.start, rhs.origin.span.end);
-            lhs = SpannedExpr::new(
-                self.origin(start, end),
+            lhs = self.spanned(
+                lhs.origin.span.start,
+                rhs.origin.span.end,
                 Expr::BinOp {
                     lhs: Box::new(lhs),
                     op,
@@ -130,27 +156,19 @@ impl<'src> Parser<'src> {
     /// Parse a unary expression. Each `!` binds tightly to what follows it, so
     /// `!!x` is `!(!x)` and `!!x || y` is `(!!x) || y`.
     fn parse_unary(&mut self) -> PResult<'src> {
-        let Some(token) = self.peek() else {
-            return Err(syntax_error(
-                "unexpected end of expression",
-                self.end_offset(),
-            ));
+        let Some(bang) = self.eat(|t| matches!(t, Tok::Bang)) else {
+            return self.parse_postfix();
         };
 
-        if matches!(token.tok, Tok::Bang) {
-            self.pos += 1;
-            let inner = self.parse_unary()?;
-            let end = inner.origin.span.end;
-            return Ok(SpannedExpr::new(
-                self.origin(token.start, end),
-                Expr::UnOp {
-                    op: UnOp::Not,
-                    expr: Box::new(inner),
-                },
-            ));
-        }
-
-        self.parse_postfix()
+        let inner = self.parse_unary()?;
+        Ok(self.spanned(
+            bang.start,
+            inner.origin.span.end,
+            Expr::UnOp {
+                op: UnOp::Not,
+                expr: Box::new(inner),
+            },
+        ))
     }
 
     /// Parse a primary expression followed by zero or more `.member`, `.*`,
@@ -185,62 +203,40 @@ impl<'src> Parser<'src> {
         }
 
         let end = parts.last().expect("at least the head").origin.span.end;
-        Ok(SpannedExpr::new(
-            self.origin(start, end),
-            Expr::context(parts),
-        ))
+        Ok(self.spanned(start, end, Expr::context(parts)))
     }
 
     /// Parse a `.member` access: an identifier or a `*` wildcard.
     fn parse_member(&mut self) -> PResult<'src> {
-        match self.peek() {
-            Some(Token {
-                tok: Tok::Ident(name),
-                start,
-                end,
-            }) => {
-                self.pos += 1;
-                Ok(SpannedExpr::new(self.origin(start, end), Expr::ident(name)))
+        match self.peek_tok() {
+            Some(Tok::Ident(name)) => {
+                let token = self.bump();
+                Ok(self.spanned(token.start, token.end, Expr::ident(name)))
             }
-            Some(Token {
-                tok: Tok::Star,
-                start,
-                end,
-            }) => {
-                self.pos += 1;
-                Ok(SpannedExpr::new(self.origin(start, end), Expr::Star))
-            }
-            Some(token) => Err(syntax_error("expected an identifier or `*`", token.start)),
-            None => Err(syntax_error(
-                "expected an identifier or `*`",
-                self.end_offset(),
-            )),
+            Some(Tok::Star) => Ok(self.parse_star()),
+            _ => Err(self.error_here("expected an identifier or `*`")),
         }
     }
 
     /// Parse a `[index]` access: either a full expression or a bare `*`.
     fn parse_index(&mut self) -> PResult<'src> {
-        let open = self.peek().expect("caller checked for `[`");
-        self.pos += 1; // consume '['
+        let open = self.bump(); // '['
 
-        let inner = match self.peek() {
-            Some(Token {
-                tok: Tok::Star,
-                start,
-                end,
-            }) => {
-                self.pos += 1;
-                SpannedExpr::new(self.origin(start, end), Expr::Star)
-            }
-            _ => self.parse_or()?,
+        let inner = if matches!(self.peek_tok(), Some(Tok::Star)) {
+            self.parse_star()
+        } else {
+            self.parse_or()?
         };
 
         let close = self.expect(|t| matches!(t, Tok::RBracket), "expected `]`")?;
+        Ok(self.spanned(open.start, close.end, Expr::Index(Box::new(inner))))
+    }
 
-        Ok(SpannedExpr::new(
-            self.origin(open.start, close.end),
-            Expr::Index(Box::new(inner)),
-        ))
+    /// Parse a `*` wildcard. The caller must have confirmed the current token
+    /// is a [`Tok::Star`].
+    fn parse_star(&mut self) -> SpannedExpr<'src> {
+        let token = self.bump();
+        self.spanned(token.start, token.end, Expr::Star)
     }
 
     /// Parse a primary expression: a literal, parenthesized expression,
@@ -248,75 +244,42 @@ impl<'src> Parser<'src> {
     /// a trailing `.member`/`[index]` access (identifiers, calls, groupings).
     fn parse_primary(&mut self) -> Result<(SpannedExpr<'src>, bool), Error> {
         let Some(token) = self.peek() else {
-            return Err(syntax_error(
-                "unexpected end of expression",
-                self.end_offset(),
-            ));
+            return Err(self.error_here("unexpected end of expression"));
         };
 
-        let literal = |kind| {
-            Ok((
-                SpannedExpr::new(
-                    Origin::new(token.start..token.end, &self.src[token.start..token.end]),
-                    Expr::Literal(kind),
-                ),
-                false,
-            ))
-        };
-
-        match token.tok {
-            Tok::Number(value) => {
-                self.pos += 1;
-                literal(Literal::Number(value))
-            }
-            Tok::True => {
-                self.pos += 1;
-                literal(Literal::Boolean(true))
-            }
-            Tok::False => {
-                self.pos += 1;
-                literal(Literal::Boolean(false))
-            }
-            Tok::Null => {
-                self.pos += 1;
-                literal(Literal::Null)
-            }
-            Tok::Str => {
-                self.pos += 1;
-                // The lexeme includes the surrounding quotes; trim them and
-                // unescape any doubled quotes, borrowing when possible.
-                let inner = &self.src[token.start + 1..token.end - 1];
-                let value = if inner.contains('\'') {
-                    Cow::Owned(inner.replace("''", "'"))
-                } else {
-                    Cow::Borrowed(inner)
-                };
-                literal(Literal::String(value))
-            }
+        // `(...)`, identifiers, and calls are accessible heads, returned
+        // inline; every other primary is a one-token literal handled below.
+        let literal = match token.tok {
+            Tok::Number(value) => Literal::Number(value),
+            Tok::True => Literal::Boolean(true),
+            Tok::False => Literal::Boolean(false),
+            Tok::Null => Literal::Null,
+            Tok::Str => Literal::String(self.string_value(token)),
             Tok::LParen => {
                 self.pos += 1;
                 let inner = self.parse_or()?;
                 let close = self.expect(|t| matches!(t, Tok::RParen), "expected `)`")?;
-                // Groupings have no AST node; re-span the inner expression over
+                // A grouping has no AST node; re-span the inner expression over
                 // the parens so every span stays a balanced slice of the source.
-                Ok((
-                    SpannedExpr::new(self.origin(token.start, close.end), inner.inner),
-                    true,
-                ))
+                return Ok((self.spanned(token.start, close.end, inner.inner), true));
             }
             Tok::Ident(name) => {
                 self.pos += 1;
-                if matches!(self.peek_tok(), Some(Tok::LParen)) {
-                    Ok((self.parse_call(token.start, name)?, true))
+                let expr = if matches!(self.peek_tok(), Some(Tok::LParen)) {
+                    self.parse_call(token.start, name)?
                 } else {
-                    Ok((
-                        SpannedExpr::new(self.origin(token.start, token.end), Expr::ident(name)),
-                        true,
-                    ))
-                }
+                    self.spanned(token.start, token.end, Expr::ident(name))
+                };
+                return Ok((expr, true));
             }
-            _ => Err(syntax_error("expected an expression", token.start)),
-        }
+            _ => return Err(self.error_here("expected an expression")),
+        };
+
+        self.pos += 1;
+        Ok((
+            self.spanned(token.start, token.end, Expr::Literal(literal)),
+            false,
+        ))
     }
 
     /// Parse a function call. `start` is the offset of the function name and
@@ -326,47 +289,32 @@ impl<'src> Parser<'src> {
 
         let mut args = Vec::new();
         let close = loop {
-            if let Some(close) = self.peek().filter(|t| matches!(t.tok, Tok::RParen)) {
-                self.pos += 1;
+            // A `)` ends the argument list, whether it's empty or trailing.
+            if let Some(close) = self.eat(|t| matches!(t, Tok::RParen)) {
                 break close;
             }
 
             args.push(self.parse_or()?);
 
-            match self.peek() {
-                Some(token) if matches!(token.tok, Tok::RParen) => {
-                    self.pos += 1;
-                    break token;
-                }
-                Some(token) if matches!(token.tok, Tok::Comma) => self.pos += 1,
-                Some(token) => return Err(syntax_error("expected `,` or `)`", token.start)),
-                None => {
-                    return Err(syntax_error("expected `,` or `)`", self.end_offset()));
-                }
+            if let Some(close) = self.eat(|t| matches!(t, Tok::RParen)) {
+                break close;
+            }
+            if self.eat(|t| matches!(t, Tok::Comma)).is_none() {
+                return Err(self.error_here("expected `,` or `)`"));
             }
         };
 
-        let call = Call::new(name, args)?;
-        Ok(SpannedExpr::new(
-            self.origin(start, close.end),
-            Expr::Call(call),
-        ))
+        Ok(self.spanned(start, close.end, Expr::Call(Call::new(name, args)?)))
     }
 
-    /// Consume the token at the cursor if `predicate` accepts it, otherwise
-    /// fail with `message`.
-    fn expect(
-        &mut self,
-        predicate: fn(Tok<'src>) -> bool,
-        message: &'static str,
-    ) -> Result<Token<'src>, Error> {
-        match self.peek() {
-            Some(token) if predicate(token.tok) => {
-                self.pos += 1;
-                Ok(token)
-            }
-            Some(token) => Err(syntax_error(message, token.start)),
-            None => Err(syntax_error(message, self.end_offset())),
+    /// The unescaped value of a [`Tok::Str`] token: quotes trimmed and `''`
+    /// collapsed to `'`, borrowing from the source unless unescaping is needed.
+    fn string_value(&self, token: Token<'src>) -> Cow<'src, str> {
+        let inner = &self.src[token.start + 1..token.end - 1];
+        if inner.contains('\'') {
+            Cow::Owned(inner.replace("''", "'"))
+        } else {
+            Cow::Borrowed(inner)
         }
     }
 }

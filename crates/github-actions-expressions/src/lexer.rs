@@ -95,10 +95,11 @@ impl<'src> Lexer<'src> {
         let bytes = self.bytes();
 
         loop {
-            // Skip whitespace between tokens.
-            while self.pos < bytes.len() && bytes[self.pos].is_ascii_whitespace() {
-                self.pos += 1;
-            }
+            // Skip whitespace between tokens, then stop at end of input.
+            self.pos += bytes[self.pos..]
+                .iter()
+                .take_while(|&&b| b.is_ascii_whitespace())
+                .count();
             if self.pos >= bytes.len() {
                 break;
             }
@@ -173,33 +174,34 @@ impl<'src> Lexer<'src> {
 
     /// Lex a numeric literal; it must parse to a finite, non-`NaN` value.
     fn lex_number(&mut self) -> Result<(), Error> {
-        let bytes = self.bytes();
         let start = self.pos;
-        let mut i = start;
-        while i < bytes.len() && (!is_boundary(bytes[i]) || bytes[i] == b'.') {
-            i += 1;
-        }
+        // A number runs to the next boundary, but may contain `.`.
+        let end = start
+            + self.bytes()[start..]
+                .iter()
+                .take_while(|&&b| !is_boundary(b) || b == b'.')
+                .count();
 
-        let value = parse_number(&self.src[start..i]);
+        let value = parse_number(&self.src[start..end]);
         if value.is_nan() {
             return Err(syntax_error("invalid numeric literal", start));
         }
 
-        self.push(Tok::Number(value), start, i);
+        self.push(Tok::Number(value), start, end);
         Ok(())
     }
 
     /// Lex an identifier, or a keyword (`true`/`false`/`null`/`NaN`/`Infinity`)
     /// when not following a `.` (so `foo.true` accesses a member named `true`).
     fn lex_identifier(&mut self) -> Result<(), Error> {
-        let bytes = self.bytes();
         let start = self.pos;
-        let mut i = start;
-        while i < bytes.len() && !is_boundary(bytes[i]) {
-            i += 1;
-        }
+        let end = start
+            + self.bytes()[start..]
+                .iter()
+                .take_while(|&&b| !is_boundary(b))
+                .count();
 
-        let lexeme = &self.src[start..i];
+        let lexeme = &self.src[start..end];
         if !is_legal_identifier(lexeme) {
             return Err(syntax_error("unexpected symbol", start));
         }
@@ -214,7 +216,7 @@ impl<'src> Lexer<'src> {
             _ => Tok::Ident(lexeme),
         };
 
-        self.push(tok, start, i);
+        self.push(tok, start, end);
         Ok(())
     }
 }
