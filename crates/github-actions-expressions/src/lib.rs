@@ -1000,8 +1000,7 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        // These cases pin the parser's exact AST shape and byte-range
-        // origins. Every span is a tight, balanced slice of the source.
+        // These cases pin the parser's exact AST shape and byte-range origins.
         let cases = &[
             (
                 "!true || false || true",
