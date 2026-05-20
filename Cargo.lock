@@ -4240,8 +4240,6 @@ dependencies = [
  "indexmap",
  "insta",
  "line-index",
- "pretty_assertions",
- "serde",
  "serde_json",
  "subfeature",
  "thiserror 2.0.18",
