@@ -68,11 +68,10 @@ impl<'a> Origin<'a> {
 
 /// An expression along with its source origin (span and unparsed form).
 ///
-/// Important: Because of how our parser works internally, an expression's
-/// span is its *rule*'s span, which can be larger than the expression itself.
-/// For example, `foo || bar || baz` is covered by a single rule, so each
-/// decomposed `Expr::BinOp` within it will have the same span despite
-/// logically having different sub-spans of the parent rule's span.
+/// An expression's span is tight: it covers exactly the bytes the expression
+/// was parsed from, with no surrounding whitespace. A parenthesized expression
+/// includes its parentheses, so every span is a balanced, self-contained slice
+/// of the source.
 #[derive(Debug, PartialEq)]
 pub struct SpannedExpr<'src> {
     /// The expression's source origin.
@@ -977,8 +976,7 @@ mod tests {
         ];
 
         for case in cases {
-            Expr::parse(case)
-                .unwrap_or_else(|e| panic!("{case:?} should parse, but failed: {e}"));
+            Expr::parse(case).unwrap_or_else(|e| panic!("{case:?} should parse, but failed: {e}"));
         }
 
         Ok(())
@@ -1001,35 +999,39 @@ mod tests {
 
     #[test]
     fn test_parse() {
+        // These cases pin the parser's exact AST shape and byte-range
+        // origins. Every span is a tight, balanced slice of the source.
         let cases = &[
             (
                 "!true || false || true",
                 SpannedExpr::new(
                     Origin::new(0..22, "!true || false || true"),
                     Expr::BinOp {
-                        lhs: SpannedExpr::new(
-                            Origin::new(0..22, "!true || false || true"),
+                        lhs: Box::new(SpannedExpr::new(
+                            Origin::new(0..14, "!true || false"),
                             Expr::BinOp {
-                                lhs: SpannedExpr::new(
+                                lhs: Box::new(SpannedExpr::new(
                                     Origin::new(0..5, "!true"),
                                     Expr::UnOp {
                                         op: UnOp::Not,
-                                        expr: SpannedExpr::new(
+                                        expr: Box::new(SpannedExpr::new(
                                             Origin::new(1..5, "true"),
-                                            true.into(),
-                                        )
-                                        .into(),
+                                            Expr::Literal(Literal::Boolean(true)),
+                                        )),
                                     },
-                                )
-                                .into(),
+                                )),
                                 op: BinOp::Or,
-                                rhs: SpannedExpr::new(Origin::new(9..14, "false"), false.into())
-                                    .into(),
+                                rhs: Box::new(SpannedExpr::new(
+                                    Origin::new(9..14, "false"),
+                                    Expr::Literal(Literal::Boolean(false)),
+                                )),
                             },
-                        )
-                        .into(),
+                        )),
                         op: BinOp::Or,
-                        rhs: SpannedExpr::new(Origin::new(18..22, "true"), true.into()).into(),
+                        rhs: Box::new(SpannedExpr::new(
+                            Origin::new(18..22, "true"),
+                            Expr::Literal(Literal::Boolean(true)),
+                        )),
                     },
                 ),
             ),
@@ -1037,21 +1039,21 @@ mod tests {
                 "'foo '' bar'",
                 SpannedExpr::new(
                     Origin::new(0..12, "'foo '' bar'"),
-                    Expr::Literal(Literal::String("foo ' bar".into())),
+                    Expr::Literal(Literal::String(Cow::Borrowed("foo ' bar"))),
                 ),
             ),
             (
                 "('foo '' bar')",
                 SpannedExpr::new(
-                    Origin::new(1..13, "'foo '' bar'"),
-                    Expr::Literal(Literal::String("foo ' bar".into())),
+                    Origin::new(0..14, "('foo '' bar')"),
+                    Expr::Literal(Literal::String(Cow::Borrowed("foo ' bar"))),
                 ),
             ),
             (
                 "((('foo '' bar')))",
                 SpannedExpr::new(
-                    Origin::new(3..15, "'foo '' bar'"),
-                    Expr::Literal(Literal::String("foo ' bar".into())),
+                    Origin::new(0..18, "((('foo '' bar')))"),
+                    Expr::Literal(Literal::String(Cow::Borrowed("foo ' bar"))),
                 ),
             ),
             (
@@ -1061,9 +1063,18 @@ mod tests {
                     Expr::Call(Call {
                         func: Function::Format,
                         args: vec![
-                            SpannedExpr::new(Origin::new(7..16, "'{0} {1}'"), "{0} {1}".into()),
-                            SpannedExpr::new(Origin::new(18..19, "2"), 2.0.into()),
-                            SpannedExpr::new(Origin::new(21..22, "3"), 3.0.into()),
+                            SpannedExpr::new(
+                                Origin::new(7..16, "'{0} {1}'"),
+                                Expr::Literal(Literal::String(Cow::Borrowed("{0} {1}"))),
+                            ),
+                            SpannedExpr::new(
+                                Origin::new(18..19, "2"),
+                                Expr::Literal(Literal::Number(2.0)),
+                            ),
+                            SpannedExpr::new(
+                                Origin::new(21..22, "3"),
+                                Expr::Literal(Literal::Number(3.0)),
+                            ),
                         ],
                     }),
                 ),
@@ -1091,14 +1102,14 @@ mod tests {
                             Origin::new(11..14, "[1]"),
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(12..13, "1"),
-                                1.0.into(),
+                                Expr::Literal(Literal::Number(1.0)),
                             ))),
                         ),
                         SpannedExpr::new(
                             Origin::new(14..17, "[2]"),
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(15..16, "2"),
-                                2.0.into(),
+                                Expr::Literal(Literal::Number(2.0)),
                             ))),
                         ),
                     ]),
@@ -1108,7 +1119,7 @@ mod tests {
                 "foo.bar.baz[*]",
                 SpannedExpr::new(
                     Origin::new(0..14, "foo.bar.baz[*]"),
-                    Expr::context([
+                    Expr::context(vec![
                         SpannedExpr::new(Origin::new(0..3, "foo"), Expr::ident("foo")),
                         SpannedExpr::new(Origin::new(4..7, "bar"), Expr::ident("bar")),
                         SpannedExpr::new(Origin::new(8..11, "baz"), Expr::ident("baz")),
@@ -1140,8 +1151,6 @@ mod tests {
                 ),
             ),
             (
-                // Sanity check for our associativity: the top level Expr here
-                // should be `BinOp::Or`.
                 "github.ref == 'refs/heads/main' && 'value_for_main_branch' || 'value_for_other_branches'",
                 SpannedExpr::new(
                     Origin::new(
@@ -1151,12 +1160,12 @@ mod tests {
                     Expr::BinOp {
                         lhs: Box::new(SpannedExpr::new(
                             Origin::new(
-                                0..59,
+                                0..58,
                                 "github.ref == 'refs/heads/main' && 'value_for_main_branch'",
                             ),
                             Expr::BinOp {
                                 lhs: Box::new(SpannedExpr::new(
-                                    Origin::new(0..32, "github.ref == 'refs/heads/main'"),
+                                    Origin::new(0..31, "github.ref == 'refs/heads/main'"),
                                     Expr::BinOp {
                                         lhs: Box::new(SpannedExpr::new(
                                             Origin::new(0..10, "github.ref"),
@@ -1174,23 +1183,27 @@ mod tests {
                                         op: BinOp::Eq,
                                         rhs: Box::new(SpannedExpr::new(
                                             Origin::new(14..31, "'refs/heads/main'"),
-                                            Expr::Literal(Literal::String(
-                                                "refs/heads/main".into(),
-                                            )),
+                                            Expr::Literal(Literal::String(Cow::Borrowed(
+                                                "refs/heads/main",
+                                            ))),
                                         )),
                                     },
                                 )),
                                 op: BinOp::And,
                                 rhs: Box::new(SpannedExpr::new(
                                     Origin::new(35..58, "'value_for_main_branch'"),
-                                    Expr::Literal(Literal::String("value_for_main_branch".into())),
+                                    Expr::Literal(Literal::String(Cow::Borrowed(
+                                        "value_for_main_branch",
+                                    ))),
                                 )),
                             },
                         )),
                         op: BinOp::Or,
                         rhs: Box::new(SpannedExpr::new(
                             Origin::new(62..88, "'value_for_other_branches'"),
-                            Expr::Literal(Literal::String("value_for_other_branches".into())),
+                            Expr::Literal(Literal::String(Cow::Borrowed(
+                                "value_for_other_branches",
+                            ))),
                         )),
                     },
                 ),
@@ -1201,21 +1214,24 @@ mod tests {
                     Origin::new(0..23, "(true || false) == true"),
                     Expr::BinOp {
                         lhs: Box::new(SpannedExpr::new(
-                            Origin::new(1..14, "true || false"),
+                            Origin::new(0..15, "(true || false)"),
                             Expr::BinOp {
                                 lhs: Box::new(SpannedExpr::new(
                                     Origin::new(1..5, "true"),
-                                    true.into(),
+                                    Expr::Literal(Literal::Boolean(true)),
                                 )),
                                 op: BinOp::Or,
                                 rhs: Box::new(SpannedExpr::new(
                                     Origin::new(9..14, "false"),
-                                    false.into(),
+                                    Expr::Literal(Literal::Boolean(false)),
                                 )),
                             },
                         )),
                         op: BinOp::Eq,
-                        rhs: Box::new(SpannedExpr::new(Origin::new(19..23, "true"), true.into())),
+                        rhs: Box::new(SpannedExpr::new(
+                            Origin::new(19..23, "true"),
+                            Expr::Literal(Literal::Boolean(true)),
+                        )),
                     },
                 ),
             ),
@@ -1226,7 +1242,7 @@ mod tests {
                     Expr::UnOp {
                         op: UnOp::Not,
                         expr: Box::new(SpannedExpr::new(
-                            Origin::new(2..16, "!true || false"),
+                            Origin::new(1..17, "(!true || false)"),
                             Expr::BinOp {
                                 lhs: Box::new(SpannedExpr::new(
                                     Origin::new(2..7, "!true"),
@@ -1234,14 +1250,14 @@ mod tests {
                                         op: UnOp::Not,
                                         expr: Box::new(SpannedExpr::new(
                                             Origin::new(3..7, "true"),
-                                            true.into(),
+                                            Expr::Literal(Literal::Boolean(true)),
                                         )),
                                     },
                                 )),
                                 op: BinOp::Or,
                                 rhs: Box::new(SpannedExpr::new(
                                     Origin::new(11..16, "false"),
-                                    false.into(),
+                                    Expr::Literal(Literal::Boolean(false)),
                                 )),
                             },
                         )),
@@ -1252,7 +1268,7 @@ mod tests {
                 "foobar[format('{0}', 'event')]",
                 SpannedExpr::new(
                     Origin::new(0..30, "foobar[format('{0}', 'event')]"),
-                    Expr::context([
+                    Expr::context(vec![
                         SpannedExpr::new(Origin::new(0..6, "foobar"), Expr::ident("foobar")),
                         SpannedExpr::new(
                             Origin::new(6..30, "[format('{0}', 'event')]"),
@@ -1263,11 +1279,11 @@ mod tests {
                                     args: vec![
                                         SpannedExpr::new(
                                             Origin::new(14..19, "'{0}'"),
-                                            Expr::from("{0}"),
+                                            Expr::Literal(Literal::String(Cow::Borrowed("{0}"))),
                                         ),
                                         SpannedExpr::new(
                                             Origin::new(21..28, "'event'"),
-                                            Expr::from("event"),
+                                            Expr::Literal(Literal::String(Cow::Borrowed("event"))),
                                         ),
                                     ],
                                 }),
@@ -1281,7 +1297,7 @@ mod tests {
                 SpannedExpr::new(
                     Origin::new(0..29, "github.actor_id == '49699333'"),
                     Expr::BinOp {
-                        lhs: SpannedExpr::new(
+                        lhs: Box::new(SpannedExpr::new(
                             Origin::new(0..15, "github.actor_id"),
                             Expr::context(vec![
                                 SpannedExpr::new(
@@ -1293,29 +1309,27 @@ mod tests {
                                     Expr::ident("actor_id"),
                                 ),
                             ]),
-                        )
-                        .into(),
+                        )),
                         op: BinOp::Eq,
                         rhs: Box::new(SpannedExpr::new(
                             Origin::new(19..29, "'49699333'"),
-                            Expr::from("49699333"),
+                            Expr::Literal(Literal::String(Cow::Borrowed("49699333"))),
                         )),
                     },
                 ),
             ),
-            // Parenthesized call with index access
             (
                 "(fromJSON('[]'))[1]",
                 SpannedExpr::new(
                     Origin::new(0..19, "(fromJSON('[]'))[1]"),
                     Expr::context(vec![
                         SpannedExpr::new(
-                            Origin::new(1..15, "fromJSON('[]')"),
+                            Origin::new(0..16, "(fromJSON('[]'))"),
                             Expr::Call(Call {
                                 func: Function::FromJSON,
                                 args: vec![SpannedExpr::new(
                                     Origin::new(10..14, "'[]'"),
-                                    Expr::from("[]"),
+                                    Expr::Literal(Literal::String(Cow::Borrowed("[]"))),
                                 )],
                             }),
                         ),
@@ -1323,7 +1337,7 @@ mod tests {
                             Origin::new(16..19, "[1]"),
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(17..18, "1"),
-                                1.0.into(),
+                                Expr::Literal(Literal::Number(1.0)),
                             ))),
                         ),
                     ]),
