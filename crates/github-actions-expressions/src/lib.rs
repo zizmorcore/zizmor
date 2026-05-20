@@ -13,37 +13,33 @@ use crate::{
     op::{BinOp, UnOp},
 };
 
-use self::parser::{ExprParser, Rule};
-use itertools::Itertools;
-use pest::{Parser, iterators::Pair};
-
 pub mod call;
 pub mod context;
 pub mod identifier;
+mod lexer;
 pub mod literal;
 pub mod op;
+mod parser;
 
 /// Errors that can occur during expression parsing.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// The expression failed to parse according to the grammar.
-    #[error("Parse error: {0}")]
-    Pest(#[from] pest::error::Error<Rule>),
+    #[error(transparent)]
+    Syntax(#[from] SyntaxError),
     /// The expression contains an invalid function call.
     #[error("Invalid function call")]
     Call(#[from] call::Error),
 }
 
-// Isolates the ExprParser, Rule and other generated types
-// so that we can do `missing_docs` at the top-level.
-// See: https://github.com/pest-parser/pest/issues/326
-mod parser {
-    use pest_derive::Parser;
-
-    /// A parser for GitHub Actions' expression language.
-    #[derive(Parser)]
-    #[grammar = "expr.pest"]
-    pub struct ExprParser;
+/// A syntax error encountered while parsing an expression.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[error("invalid expression syntax: {message} (at offset {offset})")]
+pub struct SyntaxError {
+    /// A human-readable description of the error.
+    pub message: &'static str,
+    /// The byte offset within the expression at which the error occurred.
+    pub offset: usize,
 }
 
 /// Represents the origin of an expression, including its source span
@@ -73,11 +69,10 @@ impl<'a> Origin<'a> {
 
 /// An expression along with its source origin (span and unparsed form).
 ///
-/// Important: Because of how our parser works internally, an expression's
-/// span is its *rule*'s span, which can be larger than the expression itself.
-/// For example, `foo || bar || baz` is covered by a single rule, so each
-/// decomposed `Expr::BinOp` within it will have the same span despite
-/// logically having different sub-spans of the parent rule's span.
+/// An expression's span covers exactly the bytes the expression
+/// was parsed from, with no surrounding whitespace. A parenthesized expression
+/// includes its parentheses, so every span is a balanced, self-contained slice
+/// of the source.
 #[derive(Debug, PartialEq)]
 pub struct SpannedExpr<'src> {
     /// The expression's source origin.
@@ -404,239 +399,8 @@ impl<'src> Expr<'src> {
     }
 
     /// Parses the given string into an expression.
-    #[allow(clippy::unwrap_used)]
     pub fn parse(expr: &'src str) -> Result<SpannedExpr<'src>, Error> {
-        // Top level `expression` is a single `or_expr`.
-        let or_expr = ExprParser::parse(Rule::expression, expr)?
-            .next()
-            .unwrap()
-            .into_inner()
-            .next()
-            .unwrap();
-
-        fn parse_pair(pair: Pair<'_, Rule>) -> Result<Box<SpannedExpr<'_>>, Error> {
-            // We're parsing a pest grammar, which isn't left-recursive.
-            // As a result, we have constructions like
-            // `or_expr = { and_expr ~ ("||" ~ and_expr)* }`, which
-            // result in wonky ASTs like one or many (>2) headed ORs.
-            // We turn these into sane looking ASTs by punching the single
-            // pairs down to their primitive type and folding the
-            // many-headed pairs appropriately.
-            // For example, `or_expr` matches the `1` one but punches through
-            // to `Number(1)`, and also matches `true || true || true` which
-            // becomes `BinOp(BinOp(true, true), true)`.
-
-            match pair.as_rule() {
-                Rule::or_expr => {
-                    let (span, raw) = (pair.as_span(), pair.as_str());
-                    let mut pairs = pair.into_inner();
-                    let lhs = parse_pair(pairs.next().unwrap())?;
-                    pairs.try_fold(lhs, |expr, next| {
-                        Ok(SpannedExpr::new(
-                            Origin::new(span.start()..span.end(), raw),
-                            Expr::BinOp {
-                                lhs: expr,
-                                op: BinOp::Or,
-                                rhs: parse_pair(next)?,
-                            },
-                        )
-                        .into())
-                    })
-                }
-                Rule::and_expr => {
-                    let (span, raw) = (pair.as_span(), pair.as_str());
-                    let mut pairs = pair.into_inner();
-                    let lhs = parse_pair(pairs.next().unwrap())?;
-                    pairs.try_fold(lhs, |expr, next| {
-                        Ok(SpannedExpr::new(
-                            Origin::new(span.start()..span.end(), raw),
-                            Expr::BinOp {
-                                lhs: expr,
-                                op: BinOp::And,
-                                rhs: parse_pair(next)?,
-                            },
-                        )
-                        .into())
-                    })
-                }
-                Rule::eq_expr => {
-                    // eq_expr matches both `==` and `!=` and captures
-                    // them in the `eq_op` capture, so we fold with
-                    // two-tuples of (eq_op, comp_expr).
-                    let (span, raw) = (pair.as_span(), pair.as_str());
-                    let mut pairs = pair.into_inner();
-                    let lhs = parse_pair(pairs.next().unwrap())?;
-
-                    let pair_chunks = pairs.chunks(2);
-                    pair_chunks.into_iter().try_fold(lhs, |expr, mut next| {
-                        let eq_op = next.next().unwrap();
-                        let comp_expr = next.next().unwrap();
-
-                        let eq_op = match eq_op.as_str() {
-                            "==" => BinOp::Eq,
-                            "!=" => BinOp::Neq,
-                            _ => unreachable!(),
-                        };
-
-                        Ok(SpannedExpr::new(
-                            Origin::new(span.start()..span.end(), raw),
-                            Expr::BinOp {
-                                lhs: expr,
-                                op: eq_op,
-                                rhs: parse_pair(comp_expr)?,
-                            },
-                        )
-                        .into())
-                    })
-                }
-                Rule::comp_expr => {
-                    // Same as eq_expr, but with comparison operators.
-                    let (span, raw) = (pair.as_span(), pair.as_str());
-                    let mut pairs = pair.into_inner();
-                    let lhs = parse_pair(pairs.next().unwrap())?;
-
-                    let pair_chunks = pairs.chunks(2);
-                    pair_chunks.into_iter().try_fold(lhs, |expr, mut next| {
-                        let comp_op = next.next().unwrap();
-                        let unary_expr = next.next().unwrap();
-
-                        let eq_op = match comp_op.as_str() {
-                            ">" => BinOp::Gt,
-                            ">=" => BinOp::Ge,
-                            "<" => BinOp::Lt,
-                            "<=" => BinOp::Le,
-                            _ => unreachable!(),
-                        };
-
-                        Ok(SpannedExpr::new(
-                            Origin::new(span.start()..span.end(), raw),
-                            Expr::BinOp {
-                                lhs: expr,
-                                op: eq_op,
-                                rhs: parse_pair(unary_expr)?,
-                            },
-                        )
-                        .into())
-                    })
-                }
-                Rule::unary_expr => {
-                    let (span, raw) = (pair.as_span(), pair.as_str());
-                    let mut pairs = pair.into_inner();
-                    let inner_pair = pairs.next().unwrap();
-
-                    match inner_pair.as_rule() {
-                        Rule::unary_op => Ok(SpannedExpr::new(
-                            Origin::new(span.start()..span.end(), raw),
-                            Expr::UnOp {
-                                op: UnOp::Not,
-                                expr: parse_pair(pairs.next().unwrap())?,
-                            },
-                        )
-                        .into()),
-                        Rule::primary_expr => parse_pair(inner_pair),
-                        _ => unreachable!(),
-                    }
-                }
-                Rule::primary_expr => {
-                    // Punt back to the top level match to keep things simple.
-                    parse_pair(pair.into_inner().next().unwrap())
-                }
-                Rule::number => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
-                    parse_number(pair.as_str()).into(),
-                )
-                .into()),
-                Rule::string => {
-                    let (span, raw) = (pair.as_span(), pair.as_str());
-                    // string -> string_inner
-                    let string_inner = pair.into_inner().next().unwrap().as_str();
-
-                    // Optimization: if our string literal doesn't have any
-                    // escaped quotes in it, we can save ourselves a clone.
-                    if !string_inner.contains('\'') {
-                        Ok(SpannedExpr::new(
-                            Origin::new(span.start()..span.end(), raw),
-                            string_inner.into(),
-                        )
-                        .into())
-                    } else {
-                        Ok(SpannedExpr::new(
-                            Origin::new(span.start()..span.end(), raw),
-                            string_inner.replace("''", "'").into(),
-                        )
-                        .into())
-                    }
-                }
-                Rule::boolean => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
-                    pair.as_str().parse::<bool>().unwrap().into(),
-                )
-                .into()),
-                Rule::null => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
-                    Expr::Literal(Literal::Null),
-                )
-                .into()),
-                Rule::star => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
-                    Expr::Star,
-                )
-                .into()),
-                Rule::function_call => {
-                    let (span, raw) = (pair.as_span(), pair.as_str());
-                    let mut pairs = pair.into_inner();
-
-                    let identifier = pairs.next().unwrap();
-                    let args = pairs
-                        .map(|pair| parse_pair(pair).map(|e| *e))
-                        .collect::<Result<_, _>>()?;
-
-                    let call = Call::new(identifier.as_str(), args)?;
-
-                    Ok(SpannedExpr::new(
-                        Origin::new(span.start()..span.end(), raw),
-                        Expr::Call(call),
-                    )
-                    .into())
-                }
-                Rule::identifier => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
-                    Expr::ident(pair.as_str()),
-                )
-                .into()),
-                Rule::index => Ok(SpannedExpr::new(
-                    Origin::new(pair.as_span().start()..pair.as_span().end(), pair.as_str()),
-                    Expr::Index(parse_pair(pair.into_inner().next().unwrap())?),
-                )
-                .into()),
-                Rule::context => {
-                    let (span, raw) = (pair.as_span(), pair.as_str());
-                    let pairs = pair.into_inner();
-
-                    let mut inner: Vec<SpannedExpr> = pairs
-                        .map(|pair| parse_pair(pair).map(|e| *e))
-                        .collect::<Result<_, _>>()?;
-
-                    // The `context` rule wholly encloses `function_call`
-                    // and parenthesized expressions, so unwrap single-element
-                    // contexts for those to avoid unnecessary nesting.
-                    // Bare identifiers are kept as `Context` since they
-                    // represent genuine context references (e.g. `github`).
-                    if inner.len() == 1 && !matches!(inner[0].inner, Expr::Identifier(_)) {
-                        Ok(inner.remove(0).into())
-                    } else {
-                        Ok(SpannedExpr::new(
-                            Origin::new(span.start()..span.end(), raw),
-                            Expr::context(inner),
-                        )
-                        .into())
-                    }
-                }
-                r => panic!("unrecognized rule: {r:?}"),
-            }
-        }
-
-        parse_pair(or_expr).map(|e| *e)
+        parser::parse(expr)
     }
 }
 
@@ -1017,12 +781,11 @@ impl<'src> Expr<'src> {
 mod tests {
     use std::borrow::Cow;
 
-    use pest::Parser as _;
     use pretty_assertions::assert_eq;
 
-    use crate::{Call, Error, Literal, Origin, SpannedExpr};
+    use crate::{Call, Error, Literal, Origin, SpannedExpr, context::Context};
 
-    use super::{BinOp, Expr, ExprParser, Function, Rule, UnOp};
+    use super::{BinOp, Expr, Function, UnOp};
 
     #[test]
     fn test_literal_string_borrows() {
@@ -1072,22 +835,22 @@ mod tests {
 
     #[test]
     fn test_parse_string_rule() {
+        // Each case maps a source literal to its unescaped value.
         let cases = &[
             ("''", ""),
             ("' '", " "),
-            ("''''", "''"),
+            ("''''", "'"),
             ("'test'", "test"),
             ("'spaces are ok'", "spaces are ok"),
-            ("'escaping '' works'", "escaping '' works"),
+            ("'escaping '' works'", "escaping ' works"),
         ];
 
         for (case, expected) in cases {
-            let s = ExprParser::parse(Rule::string, case)
-                .unwrap()
-                .next()
-                .unwrap();
+            let Expr::Literal(Literal::String(s)) = &*Expr::parse(case).unwrap() else {
+                panic!("expected a literal string expression for {case}");
+            };
 
-            assert_eq!(s.into_inner().next().unwrap().as_str(), *expected);
+            assert_eq!(s, expected);
         }
     }
 
@@ -1106,40 +869,31 @@ mod tests {
         ];
 
         for case in cases {
-            assert_eq!(
-                ExprParser::parse(Rule::context, case)
-                    .unwrap()
-                    .next()
-                    .unwrap()
-                    .as_str(),
-                *case
+            assert!(
+                Context::parse(case).is_some(),
+                "{case:?} should parse as a context"
             );
         }
     }
 
     #[test]
     fn test_parse_call_rule() {
+        // Function call syntax, exercised with real (known) functions so
+        // that `Expr::parse`'s arity/name validation is satisfied.
         let cases = &[
-            "foo()",
-            "foo(bar)",
-            "foo(bar())",
-            "foo(1.23)",
-            "foo(1,2)",
-            "foo(1, 2)",
-            "foo(1, 2, secret.GH_TOKEN)",
-            "foo(   )",
+            "success()",
+            "fromJSON(bar)",
+            "toJSON(fromJSON(bar))",
+            "fromJSON(1.23)",
+            "contains(1,2)",
+            "contains(1, 2)",
+            "format('{0} {1}', 1, secret.GH_TOKEN)",
+            "success(   )",
             "fromJSON(inputs.free-threading)",
         ];
 
         for case in cases {
-            assert_eq!(
-                ExprParser::parse(Rule::function_call, case)
-                    .unwrap()
-                    .next()
-                    .unwrap()
-                    .as_str(),
-                *case
-            );
+            assert!(Expr::parse(case).is_ok(), "{case:?} should parse");
         }
     }
 
@@ -1167,7 +921,7 @@ mod tests {
             "(true == false) == true",
             "(true == (false || true && (true || false))) == true",
             "(github.actor != 'github-actions[bot]' && github.actor) == 'BrewTestBot'",
-            "foo()[0]",
+            "fromJSON(bar)[0]",
             "fromJson(steps.runs.outputs.data).workflow_runs[0].id",
             multiline,
             "'a' == 'b' && 'c' || 'd'",
@@ -1223,13 +977,7 @@ mod tests {
         ];
 
         for case in cases {
-            assert_eq!(
-                ExprParser::parse(Rule::expression, case)?
-                    .next()
-                    .unwrap()
-                    .as_str(),
-                *case
-            );
+            Expr::parse(case).unwrap_or_else(|e| panic!("{case:?} should parse, but failed: {e}"));
         }
 
         Ok(())
@@ -1244,7 +992,7 @@ mod tests {
 
         for case in cases {
             assert!(
-                ExprParser::parse(Rule::expression, case).is_err(),
+                Expr::parse(case).is_err(),
                 "{case:?} should not parse as a valid expression"
             );
         }
@@ -1252,35 +1000,38 @@ mod tests {
 
     #[test]
     fn test_parse() {
+        // These cases pin the parser's exact AST shape and byte-range origins.
         let cases = &[
             (
                 "!true || false || true",
                 SpannedExpr::new(
                     Origin::new(0..22, "!true || false || true"),
                     Expr::BinOp {
-                        lhs: SpannedExpr::new(
-                            Origin::new(0..22, "!true || false || true"),
+                        lhs: Box::new(SpannedExpr::new(
+                            Origin::new(0..14, "!true || false"),
                             Expr::BinOp {
-                                lhs: SpannedExpr::new(
+                                lhs: Box::new(SpannedExpr::new(
                                     Origin::new(0..5, "!true"),
                                     Expr::UnOp {
                                         op: UnOp::Not,
-                                        expr: SpannedExpr::new(
+                                        expr: Box::new(SpannedExpr::new(
                                             Origin::new(1..5, "true"),
-                                            true.into(),
-                                        )
-                                        .into(),
+                                            Expr::Literal(Literal::Boolean(true)),
+                                        )),
                                     },
-                                )
-                                .into(),
+                                )),
                                 op: BinOp::Or,
-                                rhs: SpannedExpr::new(Origin::new(9..14, "false"), false.into())
-                                    .into(),
+                                rhs: Box::new(SpannedExpr::new(
+                                    Origin::new(9..14, "false"),
+                                    Expr::Literal(Literal::Boolean(false)),
+                                )),
                             },
-                        )
-                        .into(),
+                        )),
                         op: BinOp::Or,
-                        rhs: SpannedExpr::new(Origin::new(18..22, "true"), true.into()).into(),
+                        rhs: Box::new(SpannedExpr::new(
+                            Origin::new(18..22, "true"),
+                            Expr::Literal(Literal::Boolean(true)),
+                        )),
                     },
                 ),
             ),
@@ -1288,21 +1039,21 @@ mod tests {
                 "'foo '' bar'",
                 SpannedExpr::new(
                     Origin::new(0..12, "'foo '' bar'"),
-                    Expr::Literal(Literal::String("foo ' bar".into())),
+                    Expr::Literal(Literal::String(Cow::Borrowed("foo ' bar"))),
                 ),
             ),
             (
                 "('foo '' bar')",
                 SpannedExpr::new(
-                    Origin::new(1..13, "'foo '' bar'"),
-                    Expr::Literal(Literal::String("foo ' bar".into())),
+                    Origin::new(0..14, "('foo '' bar')"),
+                    Expr::Literal(Literal::String(Cow::Borrowed("foo ' bar"))),
                 ),
             ),
             (
                 "((('foo '' bar')))",
                 SpannedExpr::new(
-                    Origin::new(3..15, "'foo '' bar'"),
-                    Expr::Literal(Literal::String("foo ' bar".into())),
+                    Origin::new(0..18, "((('foo '' bar')))"),
+                    Expr::Literal(Literal::String(Cow::Borrowed("foo ' bar"))),
                 ),
             ),
             (
@@ -1312,9 +1063,18 @@ mod tests {
                     Expr::Call(Call {
                         func: Function::Format,
                         args: vec![
-                            SpannedExpr::new(Origin::new(7..16, "'{0} {1}'"), "{0} {1}".into()),
-                            SpannedExpr::new(Origin::new(18..19, "2"), 2.0.into()),
-                            SpannedExpr::new(Origin::new(21..22, "3"), 3.0.into()),
+                            SpannedExpr::new(
+                                Origin::new(7..16, "'{0} {1}'"),
+                                Expr::Literal(Literal::String(Cow::Borrowed("{0} {1}"))),
+                            ),
+                            SpannedExpr::new(
+                                Origin::new(18..19, "2"),
+                                Expr::Literal(Literal::Number(2.0)),
+                            ),
+                            SpannedExpr::new(
+                                Origin::new(21..22, "3"),
+                                Expr::Literal(Literal::Number(3.0)),
+                            ),
                         ],
                     }),
                 ),
@@ -1342,14 +1102,14 @@ mod tests {
                             Origin::new(11..14, "[1]"),
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(12..13, "1"),
-                                1.0.into(),
+                                Expr::Literal(Literal::Number(1.0)),
                             ))),
                         ),
                         SpannedExpr::new(
                             Origin::new(14..17, "[2]"),
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(15..16, "2"),
-                                2.0.into(),
+                                Expr::Literal(Literal::Number(2.0)),
                             ))),
                         ),
                     ]),
@@ -1359,7 +1119,7 @@ mod tests {
                 "foo.bar.baz[*]",
                 SpannedExpr::new(
                     Origin::new(0..14, "foo.bar.baz[*]"),
-                    Expr::context([
+                    Expr::context(vec![
                         SpannedExpr::new(Origin::new(0..3, "foo"), Expr::ident("foo")),
                         SpannedExpr::new(Origin::new(4..7, "bar"), Expr::ident("bar")),
                         SpannedExpr::new(Origin::new(8..11, "baz"), Expr::ident("baz")),
@@ -1391,8 +1151,6 @@ mod tests {
                 ),
             ),
             (
-                // Sanity check for our associativity: the top level Expr here
-                // should be `BinOp::Or`.
                 "github.ref == 'refs/heads/main' && 'value_for_main_branch' || 'value_for_other_branches'",
                 SpannedExpr::new(
                     Origin::new(
@@ -1402,12 +1160,12 @@ mod tests {
                     Expr::BinOp {
                         lhs: Box::new(SpannedExpr::new(
                             Origin::new(
-                                0..59,
+                                0..58,
                                 "github.ref == 'refs/heads/main' && 'value_for_main_branch'",
                             ),
                             Expr::BinOp {
                                 lhs: Box::new(SpannedExpr::new(
-                                    Origin::new(0..32, "github.ref == 'refs/heads/main'"),
+                                    Origin::new(0..31, "github.ref == 'refs/heads/main'"),
                                     Expr::BinOp {
                                         lhs: Box::new(SpannedExpr::new(
                                             Origin::new(0..10, "github.ref"),
@@ -1425,23 +1183,27 @@ mod tests {
                                         op: BinOp::Eq,
                                         rhs: Box::new(SpannedExpr::new(
                                             Origin::new(14..31, "'refs/heads/main'"),
-                                            Expr::Literal(Literal::String(
-                                                "refs/heads/main".into(),
-                                            )),
+                                            Expr::Literal(Literal::String(Cow::Borrowed(
+                                                "refs/heads/main",
+                                            ))),
                                         )),
                                     },
                                 )),
                                 op: BinOp::And,
                                 rhs: Box::new(SpannedExpr::new(
                                     Origin::new(35..58, "'value_for_main_branch'"),
-                                    Expr::Literal(Literal::String("value_for_main_branch".into())),
+                                    Expr::Literal(Literal::String(Cow::Borrowed(
+                                        "value_for_main_branch",
+                                    ))),
                                 )),
                             },
                         )),
                         op: BinOp::Or,
                         rhs: Box::new(SpannedExpr::new(
                             Origin::new(62..88, "'value_for_other_branches'"),
-                            Expr::Literal(Literal::String("value_for_other_branches".into())),
+                            Expr::Literal(Literal::String(Cow::Borrowed(
+                                "value_for_other_branches",
+                            ))),
                         )),
                     },
                 ),
@@ -1452,21 +1214,24 @@ mod tests {
                     Origin::new(0..23, "(true || false) == true"),
                     Expr::BinOp {
                         lhs: Box::new(SpannedExpr::new(
-                            Origin::new(1..14, "true || false"),
+                            Origin::new(0..15, "(true || false)"),
                             Expr::BinOp {
                                 lhs: Box::new(SpannedExpr::new(
                                     Origin::new(1..5, "true"),
-                                    true.into(),
+                                    Expr::Literal(Literal::Boolean(true)),
                                 )),
                                 op: BinOp::Or,
                                 rhs: Box::new(SpannedExpr::new(
                                     Origin::new(9..14, "false"),
-                                    false.into(),
+                                    Expr::Literal(Literal::Boolean(false)),
                                 )),
                             },
                         )),
                         op: BinOp::Eq,
-                        rhs: Box::new(SpannedExpr::new(Origin::new(19..23, "true"), true.into())),
+                        rhs: Box::new(SpannedExpr::new(
+                            Origin::new(19..23, "true"),
+                            Expr::Literal(Literal::Boolean(true)),
+                        )),
                     },
                 ),
             ),
@@ -1477,7 +1242,7 @@ mod tests {
                     Expr::UnOp {
                         op: UnOp::Not,
                         expr: Box::new(SpannedExpr::new(
-                            Origin::new(2..16, "!true || false"),
+                            Origin::new(1..17, "(!true || false)"),
                             Expr::BinOp {
                                 lhs: Box::new(SpannedExpr::new(
                                     Origin::new(2..7, "!true"),
@@ -1485,14 +1250,14 @@ mod tests {
                                         op: UnOp::Not,
                                         expr: Box::new(SpannedExpr::new(
                                             Origin::new(3..7, "true"),
-                                            true.into(),
+                                            Expr::Literal(Literal::Boolean(true)),
                                         )),
                                     },
                                 )),
                                 op: BinOp::Or,
                                 rhs: Box::new(SpannedExpr::new(
                                     Origin::new(11..16, "false"),
-                                    false.into(),
+                                    Expr::Literal(Literal::Boolean(false)),
                                 )),
                             },
                         )),
@@ -1503,7 +1268,7 @@ mod tests {
                 "foobar[format('{0}', 'event')]",
                 SpannedExpr::new(
                     Origin::new(0..30, "foobar[format('{0}', 'event')]"),
-                    Expr::context([
+                    Expr::context(vec![
                         SpannedExpr::new(Origin::new(0..6, "foobar"), Expr::ident("foobar")),
                         SpannedExpr::new(
                             Origin::new(6..30, "[format('{0}', 'event')]"),
@@ -1514,11 +1279,11 @@ mod tests {
                                     args: vec![
                                         SpannedExpr::new(
                                             Origin::new(14..19, "'{0}'"),
-                                            Expr::from("{0}"),
+                                            Expr::Literal(Literal::String(Cow::Borrowed("{0}"))),
                                         ),
                                         SpannedExpr::new(
                                             Origin::new(21..28, "'event'"),
-                                            Expr::from("event"),
+                                            Expr::Literal(Literal::String(Cow::Borrowed("event"))),
                                         ),
                                     ],
                                 }),
@@ -1532,7 +1297,7 @@ mod tests {
                 SpannedExpr::new(
                     Origin::new(0..29, "github.actor_id == '49699333'"),
                     Expr::BinOp {
-                        lhs: SpannedExpr::new(
+                        lhs: Box::new(SpannedExpr::new(
                             Origin::new(0..15, "github.actor_id"),
                             Expr::context(vec![
                                 SpannedExpr::new(
@@ -1544,29 +1309,27 @@ mod tests {
                                     Expr::ident("actor_id"),
                                 ),
                             ]),
-                        )
-                        .into(),
+                        )),
                         op: BinOp::Eq,
                         rhs: Box::new(SpannedExpr::new(
                             Origin::new(19..29, "'49699333'"),
-                            Expr::from("49699333"),
+                            Expr::Literal(Literal::String(Cow::Borrowed("49699333"))),
                         )),
                     },
                 ),
             ),
-            // Parenthesized call with index access
             (
                 "(fromJSON('[]'))[1]",
                 SpannedExpr::new(
                     Origin::new(0..19, "(fromJSON('[]'))[1]"),
                     Expr::context(vec![
                         SpannedExpr::new(
-                            Origin::new(1..15, "fromJSON('[]')"),
+                            Origin::new(0..16, "(fromJSON('[]'))"),
                             Expr::Call(Call {
                                 func: Function::FromJSON,
                                 args: vec![SpannedExpr::new(
                                     Origin::new(10..14, "'[]'"),
-                                    Expr::from("[]"),
+                                    Expr::Literal(Literal::String(Cow::Borrowed("[]"))),
                                 )],
                             }),
                         ),
@@ -1574,7 +1337,7 @@ mod tests {
                             Origin::new(16..19, "[1]"),
                             Expr::Index(Box::new(SpannedExpr::new(
                                 Origin::new(17..18, "1"),
-                                1.0.into(),
+                                Expr::Literal(Literal::Number(1.0)),
                             ))),
                         ),
                     ]),
