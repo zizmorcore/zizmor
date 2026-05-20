@@ -75,7 +75,9 @@ pub(crate) fn lex(src: &str) -> Result<Vec<Token<'_>>, Error> {
     Lexer {
         src,
         pos: 0,
-        tokens: Vec::new(),
+        // Tokens average well over two source bytes each, so this sizes the
+        // buffer to avoid reallocations without meaningfully over-allocating.
+        tokens: Vec::with_capacity(src.len() / 2),
     }
     .run()
 }

@@ -29,7 +29,7 @@ pub(crate) fn parse(src: &str) -> Result<SpannedExpr<'_>, Error> {
         return Err(parser.error_here("empty expression"));
     }
 
-    let expr = parser.parse_or()?;
+    let expr = parser.parse_expr(0)?;
 
     if parser.peek().is_some() {
         return Err(parser.error_here("unexpected trailing input"));
@@ -43,6 +43,22 @@ struct Parser<'src> {
     src: &'src str,
     tokens: Vec<Token<'src>>,
     pos: usize,
+}
+
+/// Map an operator token to its [`BinOp`] and binding power (higher binds
+/// tighter), or `None` for any non-operator token.
+fn binop(tok: Tok<'_>) -> Option<(BinOp, u8)> {
+    Some(match tok {
+        Tok::Or => (BinOp::Or, 1),
+        Tok::And => (BinOp::And, 2),
+        Tok::EqualEqual => (BinOp::Eq, 3),
+        Tok::BangEqual => (BinOp::Neq, 3),
+        Tok::Greater => (BinOp::Gt, 4),
+        Tok::GreaterEqual => (BinOp::Ge, 4),
+        Tok::Less => (BinOp::Lt, 4),
+        Tok::LessEqual => (BinOp::Le, 4),
+        _ => return None,
+    })
 }
 
 impl<'src> Parser<'src> {
@@ -93,18 +109,19 @@ impl<'src> Parser<'src> {
         SpannedExpr::new(Origin::new(start..end, &self.src[start..end]), expr)
     }
 
-    /// Parse a left-associative chain of binary operators. `operand` parses
-    /// the next-higher precedence level; `match_op` recognizes an operator.
-    fn parse_binop(
-        &mut self,
-        operand: fn(&mut Self) -> PResult<'src>,
-        match_op: fn(Tok<'src>) -> Option<BinOp>,
-    ) -> PResult<'src> {
-        let mut lhs = operand(self)?;
+    /// Parse an expression via precedence climbing, consuming binary
+    /// operators whose binding power is at least `min_bp`. All operators are
+    /// left-associative; the precedences are (loosest to tightest) `||`,
+    /// `&&`, `==`/`!=`, then `>`/`>=`/`<`/`<=`.
+    fn parse_expr(&mut self, min_bp: u8) -> PResult<'src> {
+        let mut lhs = self.parse_unary()?;
 
-        while let Some(op) = self.peek_tok().and_then(match_op) {
+        while let Some((op, bp)) = self.peek_tok().and_then(binop) {
+            if bp < min_bp {
+                break;
+            }
             self.pos += 1;
-            let rhs = operand(self)?;
+            let rhs = self.parse_expr(bp + 1)?;
             lhs = self.spanned(
                 lhs.origin.span.start,
                 rhs.origin.span.end,
@@ -117,40 +134,6 @@ impl<'src> Parser<'src> {
         }
 
         Ok(lhs)
-    }
-
-    /// Parse a logical-or chain (`||`), the lowest precedence level.
-    fn parse_or(&mut self) -> PResult<'src> {
-        self.parse_binop(Self::parse_and, |t| {
-            matches!(t, Tok::Or).then_some(BinOp::Or)
-        })
-    }
-
-    /// Parse a logical-and chain (`&&`).
-    fn parse_and(&mut self) -> PResult<'src> {
-        self.parse_binop(Self::parse_equality, |t| {
-            matches!(t, Tok::And).then_some(BinOp::And)
-        })
-    }
-
-    /// Parse an equality chain (`==`, `!=`).
-    fn parse_equality(&mut self) -> PResult<'src> {
-        self.parse_binop(Self::parse_comparison, |t| match t {
-            Tok::EqualEqual => Some(BinOp::Eq),
-            Tok::BangEqual => Some(BinOp::Neq),
-            _ => None,
-        })
-    }
-
-    /// Parse a comparison chain (`>`, `>=`, `<`, `<=`).
-    fn parse_comparison(&mut self) -> PResult<'src> {
-        self.parse_binop(Self::parse_unary, |t| match t {
-            Tok::Greater => Some(BinOp::Gt),
-            Tok::GreaterEqual => Some(BinOp::Ge),
-            Tok::Less => Some(BinOp::Lt),
-            Tok::LessEqual => Some(BinOp::Le),
-            _ => None,
-        })
     }
 
     /// Parse a unary expression. Each `!` binds tightly to what follows it, so
@@ -225,7 +208,7 @@ impl<'src> Parser<'src> {
         let inner = if matches!(self.peek_tok(), Some(Tok::Star)) {
             self.parse_star()
         } else {
-            self.parse_or()?
+            self.parse_expr(0)?
         };
 
         let close = self.expect(|t| matches!(t, Tok::RBracket), "expected `]`")?;
@@ -257,7 +240,7 @@ impl<'src> Parser<'src> {
             Tok::Str => Literal::String(self.string_value(token)),
             Tok::LParen => {
                 self.pos += 1;
-                let inner = self.parse_or()?;
+                let inner = self.parse_expr(0)?;
                 let close = self.expect(|t| matches!(t, Tok::RParen), "expected `)`")?;
                 // A grouping has no AST node; re-span the inner expression over
                 // the parens so every span stays a balanced slice of the source.
@@ -294,7 +277,7 @@ impl<'src> Parser<'src> {
                 break close;
             }
 
-            args.push(self.parse_or()?);
+            args.push(self.parse_expr(0)?);
 
             if let Some(close) = self.eat(|t| matches!(t, Tok::RParen)) {
                 break close;
