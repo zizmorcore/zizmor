@@ -1,14 +1,7 @@
-//! The recursive descent parser for GitHub Actions expressions.
+//! Recursive descent parser for GitHub Actions expressions.
 //!
-//! [`parse`] runs the [`lexer`](crate::lexer) and then walks the resulting
-//! token stream. Because it works on tokens rather than raw characters, every
-//! AST node's span is simply the range from its first token to its last token
-//! -- tight, and free of the whitespace artifacts a character-level parser
-//! would incur.
-//!
-//! The structure is loosely modeled on GitHub's reference implementation in
-//! `actions/languageservices`, but builds zizmor's own AST and is deliberately
-//! permissive about unknown context names.
+//! The grammar follows GitHub's `actions/languageservices` reference, but is
+//! deliberately permissive about unknown context names.
 
 use std::borrow::Cow;
 
@@ -23,10 +16,8 @@ use crate::{
 /// The result of parsing a single grammar production.
 type PResult<'src> = Result<SpannedExpr<'src>, Error>;
 
-/// Parse a complete GitHub Actions expression.
-///
-/// The entire input must be consumed (modulo whitespace); otherwise a
-/// [`SyntaxError`](crate::SyntaxError) is returned.
+/// Parse a complete GitHub Actions expression. The whole input must be
+/// consumed (modulo whitespace).
 pub(crate) fn parse(src: &str) -> Result<SpannedExpr<'_>, Error> {
     let tokens = lexer::lex(src)?;
     let mut parser = Parser {
@@ -75,8 +66,6 @@ impl<'src> Parser<'src> {
     fn end_offset(&self) -> usize {
         self.tokens.last().map_or(0, |t| t.end)
     }
-
-    // --- binary operator precedence levels ---------------------------------
 
     /// Parse a left-associative chain of binary operators. `operand` parses
     /// the next-higher precedence level; `match_op` recognizes an operator.
@@ -138,11 +127,8 @@ impl<'src> Parser<'src> {
         })
     }
 
-    // --- unary, postfix, and primary ---------------------------------------
-
-    /// Parse a unary expression: zero or more `!` applied to a postfix
-    /// expression. Each `!` binds tightly to the expression that follows it,
-    /// so `!!x` is `!(!x)` and `!!x || y` is `(!!x) || y`.
+    /// Parse a unary expression. Each `!` binds tightly to what follows it, so
+    /// `!!x` is `!(!x)` and `!!x || y` is `(!!x) || y`.
     fn parse_unary(&mut self) -> PResult<'src> {
         let Some(token) = self.peek() else {
             return Err(syntax_error(
@@ -192,10 +178,8 @@ impl<'src> Parser<'src> {
             }
         }
 
-        // A context wrapping a single non-identifier expression (a bare
-        // function call or parenthesized expression) is unwrapped, to avoid
-        // pointless `Context` nesting. Bare identifiers stay wrapped, since
-        // they are genuine single-component contexts (e.g. `github`).
+        // A lone non-identifier head (a bare call or parenthesized expression)
+        // is unwrapped; a lone identifier stays a genuine `Context` (`github`).
         if parts.len() == 1 && !head_is_identifier {
             return Ok(parts.remove(0));
         }
@@ -259,11 +243,9 @@ impl<'src> Parser<'src> {
         ))
     }
 
-    /// Parse a primary expression: a literal, a parenthesized expression, an
-    /// identifier, or a function call.
-    ///
-    /// Returns the parsed expression plus whether it can take a trailing
-    /// member or index access (true for identifiers, calls, and groupings).
+    /// Parse a primary expression: a literal, parenthesized expression,
+    /// identifier, or function call. The returned flag is whether it can take
+    /// a trailing `.member`/`[index]` access (identifiers, calls, groupings).
     fn parse_primary(&mut self) -> Result<(SpannedExpr<'src>, bool), Error> {
         let Some(token) = self.peek() else {
             return Err(syntax_error(
@@ -315,9 +297,8 @@ impl<'src> Parser<'src> {
                 self.pos += 1;
                 let inner = self.parse_or()?;
                 let close = self.expect(|t| matches!(t, Tok::RParen), "expected `)`")?;
-                // The grouping has no AST node of its own; re-span the inner
-                // expression to cover the parentheses so every span remains a
-                // balanced, self-contained slice of the source.
+                // Groupings have no AST node; re-span the inner expression over
+                // the parens so every span stays a balanced slice of the source.
                 Ok((
                     SpannedExpr::new(self.origin(token.start, close.end), inner.inner),
                     true,

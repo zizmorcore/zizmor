@@ -1,9 +1,5 @@
-//! The lexer for GitHub Actions expressions.
-//!
-//! [`lex`] turns an expression string into a flat list of [`Token`]s,
-//! discarding whitespace. Every token carries a precise byte range, which is
-//! what lets the [`parser`](crate::parser) produce tight, whitespace-free
-//! spans.
+//! Lexer for GitHub Actions expressions: turns a string into a flat list of
+//! [`Token`]s, discarding whitespace. Each token carries a precise byte range.
 
 use crate::{Error, SyntaxError, parse_number};
 
@@ -31,11 +27,11 @@ pub(crate) enum Tok<'src> {
     LessEqual,
     And,
     Or,
-    /// A numeric literal; the parsed value is carried inline.
+    /// A numeric literal.
     Number(f64),
     /// A string literal; its value is derived from the token's byte range.
     Str,
-    /// An identifier; its name is the slice between `start` and `end`.
+    /// An identifier.
     Ident(&'src str),
     True,
     False,
@@ -51,9 +47,6 @@ pub(crate) struct Token<'src> {
 }
 
 /// Returns whether `byte` terminates an identifier or number lexeme.
-///
-/// Note that `.` is a boundary here, but numbers treat it specially (a number
-/// may contain `.`), so [`Lexer::lex_number`] handles it itself.
 fn is_boundary(byte: u8) -> bool {
     byte.is_ascii_whitespace()
         || matches!(
@@ -87,7 +80,6 @@ pub(crate) fn lex(src: &str) -> Result<Vec<Token<'_>>, Error> {
     .run()
 }
 
-/// Turns a source string into a flat list of [`Token`]s.
 struct Lexer<'src> {
     src: &'src str,
     pos: usize,
@@ -135,8 +127,7 @@ impl<'src> Lexer<'src> {
                 b'|' if next == Some(b'|') => self.push(Tok::Or, start, start + 2),
                 b'|' => return Err(syntax_error("expected `||`", start)),
                 b'\'' => self.lex_string()?,
-                // A `.` begins a number unless it follows something a member
-                // access can attach to, in which case it's a `.` accessor.
+                // A `.` is a member accessor after a value, else it starts a number.
                 b'.' if self.prev_allows_dot() => self.push(Tok::Dot, start, start + 1),
                 b'.' | b'+' | b'-' | b'0'..=b'9' => self.lex_number()?,
                 _ => self.lex_identifier()?,
@@ -159,8 +150,7 @@ impl<'src> Lexer<'src> {
         )
     }
 
-    /// Lex a single-quoted string literal. A doubled quote (`''`) is an
-    /// escaped literal quote.
+    /// Lex a single-quoted string literal (`''` is an escaped quote).
     fn lex_string(&mut self) -> Result<(), Error> {
         let bytes = self.bytes();
         let start = self.pos;
@@ -181,8 +171,7 @@ impl<'src> Lexer<'src> {
         Ok(())
     }
 
-    /// Lex a numeric literal. The lexeme runs to the next boundary (with `.`
-    /// allowed within), and must parse to a finite, non-`NaN` value.
+    /// Lex a numeric literal; it must parse to a finite, non-`NaN` value.
     fn lex_number(&mut self) -> Result<(), Error> {
         let bytes = self.bytes();
         let start = self.pos;
@@ -200,9 +189,8 @@ impl<'src> Lexer<'src> {
         Ok(())
     }
 
-    /// Lex an identifier or a keyword (`true`, `false`, `null`, `NaN`,
-    /// `Infinity`). Keywords are only recognized when not immediately
-    /// following a `.`, so e.g. `foo.true` accesses a member named `true`.
+    /// Lex an identifier, or a keyword (`true`/`false`/`null`/`NaN`/`Infinity`)
+    /// when not following a `.` (so `foo.true` accesses a member named `true`).
     fn lex_identifier(&mut self) -> Result<(), Error> {
         let bytes = self.bytes();
         let start = self.pos;
