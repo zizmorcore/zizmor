@@ -16,6 +16,7 @@ use crate::{
 pub mod call;
 pub mod context;
 pub mod identifier;
+mod lexer;
 pub mod literal;
 pub mod op;
 mod parser;
