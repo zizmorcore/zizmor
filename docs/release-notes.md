@@ -27,6 +27,8 @@ of `zizmor`.
 
     Many thanks to @fionn for implementing this fix!
 
+* Fixed a bug where [ref-version-mismatch] would fail to fully match some version comments (#2040)
+
 ## 1.25.2
 
 ### Bug Fixes 🐛

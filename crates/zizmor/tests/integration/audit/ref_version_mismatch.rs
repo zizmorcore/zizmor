@@ -202,3 +202,18 @@ fn test_issue_1899() -> Result<()> {
 
     Ok(())
 }
+
+/// Bug #2039: version comments like `# 1.2.3rc1` should be detected correctly.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_issue_2039() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .input(input_under_test("ref-version-mismatch/issue-2039-repro.yml"))
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
