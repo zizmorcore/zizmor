@@ -16,6 +16,7 @@ impl DependabotCooldown {
     /// Creates a fix that adds default-days to an existing cooldown block
     fn create_add_default_days_fix<'doc>(
         update: crate::models::dependabot::Update<'doc>,
+        days: u64,
     ) -> Fix<'doc> {
         Fix {
             title: "add default-days to cooldown".to_string(),
@@ -25,7 +26,7 @@ impl DependabotCooldown {
                 route: update.location().route.with_keys(["cooldown".into()]),
                 operation: Op::Add {
                     key: "default-days".to_string(),
-                    value: yaml_serde::Value::Number(7.into()),
+                    value: yaml_serde::Value::Number(days.into()),
                 },
             }],
         }
@@ -34,9 +35,10 @@ impl DependabotCooldown {
     /// Creates a fix that increases an insufficient default-days value
     fn create_increase_default_days_fix<'doc>(
         update: crate::models::dependabot::Update<'doc>,
+        days: u64,
     ) -> Fix<'doc> {
         Fix {
-            title: "increase default-days to 7".to_string(),
+            title: format!("increase default-days to {days}"),
             key: update.location().key,
             disposition: FixDisposition::Safe,
             patches: vec![Patch {
@@ -44,13 +46,16 @@ impl DependabotCooldown {
                     .location()
                     .route
                     .with_keys(["cooldown".into(), "default-days".into()]),
-                operation: Op::Replace(yaml_serde::Value::Number(7.into())),
+                operation: Op::Replace(yaml_serde::Value::Number(days.into())),
             }],
         }
     }
 
     /// Creates a fix that adds a cooldown block with default-days
-    fn create_add_cooldown_fix<'doc>(update: crate::models::dependabot::Update<'doc>) -> Fix<'doc> {
+    fn create_add_cooldown_fix<'doc>(
+        update: crate::models::dependabot::Update<'doc>,
+        days: u64,
+    ) -> Fix<'doc> {
         Fix {
             title: "add cooldown configuration".to_string(),
             key: update.location().key,
@@ -63,7 +68,7 @@ impl DependabotCooldown {
                         let mut map = yaml_serde::Mapping::new();
                         map.insert(
                             yaml_serde::Value::String("default-days".to_string()),
-                            yaml_serde::Value::Number(7.into()),
+                            yaml_serde::Value::Number(days.into()),
                         );
                         map
                     }),
@@ -88,6 +93,7 @@ impl Audit for DependabotCooldown {
         config: &crate::config::Config,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
+        let minimum_days = config.dependabot_cooldown_config.days.get() as u64;
 
         for update in dependabot.updates() {
             // Check for cooldown + multi-ecosystem-group interaction.
@@ -149,12 +155,10 @@ impl Audit for DependabotCooldown {
                             )
                             .confidence(Confidence::High)
                             .severity(Severity::Medium)
-                            .fix(Self::create_add_default_days_fix(update))
+                            .fix(Self::create_add_default_days_fix(update, minimum_days))
                             .build(dependabot)?,
                     ),
-                    Some(default_days)
-                        if default_days < config.dependabot_cooldown_config.days.get() as u64 =>
-                    {
+                    Some(default_days) if default_days < minimum_days => {
                         findings.push(
                             Self::finding()
                                 .add_location(
@@ -162,11 +166,15 @@ impl Audit for DependabotCooldown {
                                         .location()
                                         .with_keys(["cooldown".into(), "default-days".into()])
                                         .primary()
-                                        .annotated(format!("insufficient default-days configured (less than {days})", days = config.dependabot_cooldown_config.days)),
+                                        .annotated(format!(
+                                            "insufficient default-days configured (less than {minimum_days})"
+                                        )),
                                 )
                                 .confidence(Confidence::Medium)
                                 .severity(Severity::Low)
-                                .fix(Self::create_increase_default_days_fix(update))
+                                .fix(Self::create_increase_default_days_fix(
+                                    update, minimum_days,
+                                ))
                                 .build(dependabot)?,
                         )
                     }
@@ -182,7 +190,7 @@ impl Audit for DependabotCooldown {
                         )
                         .confidence(Confidence::High)
                         .severity(Severity::Medium)
-                        .fix(Self::create_add_cooldown_fix(update))
+                        .fix(Self::create_add_cooldown_fix(update, minimum_days))
                         .build(dependabot)?,
                 ),
             }

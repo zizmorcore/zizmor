@@ -172,6 +172,33 @@ fn test_config_short_cooldown_permitted() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_configured_minimum_days_insufficient() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "dependabot-cooldown/default-days-seven/dependabot.yml"
+            ))
+            .config(input_under_test(
+                "dependabot-cooldown/configs/cooldown-fourteen-days.yml"
+            ))
+            .run()?,
+        @"
+    help[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+     --> @@INPUT@@:7:7
+      |
+    7 |       default-days: 7
+      |       ^^^^^^^^^^^^^^^ insufficient default-days configured (less than 14)
+      |
+      = note: audit confidence → Medium
+      = note: this finding has an auto-fix
+
+    1 findings (1 safe fixes): 0 informational, 1 low, 0 medium, 0 high
+    ");
+
+    Ok(())
+}
+
+#[test]
 fn test_multi_ecosystem_group_with_cooldown() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
