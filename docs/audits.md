@@ -810,16 +810,13 @@ that issue them:
 
 * Issuing a token with access to _all_ of the installation's repositories,
   instead of the specific repository (or repositories) being operated on.
-  By default, GitHub App installation token issuances are granted access to
-  all repositories that the GitHub App's installation has access to,
-  whereas typically only the current repository needs to be accessed for the
-  operation being performed.
+  For example, in @actions/create-github-app-token, using `#!yaml owner: ...`
+  **without** `#!yaml repositories: ...` will issue a token with access to all repositories under the owner.
 
 * Issuing a token with access to all of the installation's permissions,
   instead of the specific permissions needed for the operation being performed.
   For example, by default, @actions/create-github-app-token issues tokens with
-  all permissions that the GitHub App has been granted during installation, which
-  can be much broader than what the operation being performed actually needs.
+  all permissions that the GitHub App has been granted during installation, which can be much broader than the operation actually needs.
 
 ### Remediation
 
