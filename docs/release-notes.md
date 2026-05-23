@@ -27,12 +27,16 @@ of `zizmor`.
 
 ### Bug Fixes 🐛
 
-* Fixed a bug where zizmor's LSP would not recognize `dependabot.yaml` files in its
-  default configuration (#2026)
+* Fixed a bug where zizmor's LSP would not recognize `dependabot.yaml`
+  files in its default configuration (#2026)
 
     Many thanks to @fionn for implementing this fix!
 
-* Fixed a bug where [ref-version-mismatch] would fail to fully match some version comments (#2040)
+* Fixed a bug where [ref-version-mismatch] would fail to fully match some
+  version comments (#2040)
+
+* Fixed a bug where [dependabot-cooldown] would fail to honor the user's
+  configured days when performing autofixes (#2055)
 
 ### Changes ⚠️
 
