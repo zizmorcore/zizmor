@@ -29,6 +29,12 @@ of `zizmor`.
 
 * Fixed a bug where [ref-version-mismatch] would fail to fully match some version comments (#2040)
 
+### Changes ⚠️
+
+* The [impostor-commit] audit no longer suggests auto-fixes,
+  to avoid incorrectly minimizing the amount of manual remediation
+  work needed (#2054)
+
 ## 1.25.2
 
 ### Bug Fixes 🐛

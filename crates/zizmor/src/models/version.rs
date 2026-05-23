@@ -28,6 +28,7 @@ static_regex!(
 #[derive(Eq)]
 pub(crate) struct Version<'a> {
     /// The raw version, exactly as it appears in its source.
+    #[allow(dead_code)]
     raw: &'a str,
     major: u64,
     minor: u64,
@@ -78,11 +79,6 @@ impl<'a> Version<'a> {
             minor,
             patch,
         })
-    }
-
-    /// Return the raw version string, exactly as it was parsed.
-    pub(crate) fn raw(&self) -> &'a str {
-        self.raw
     }
 }
 
@@ -136,7 +132,7 @@ mod tests {
             assert_eq!(version.major, exp_major);
             assert_eq!(version.minor, exp_minor);
             assert_eq!(version.patch, exp_patch);
-            assert_eq!(version.raw(), input);
+            assert_eq!(version.raw, input);
         }
     }
 

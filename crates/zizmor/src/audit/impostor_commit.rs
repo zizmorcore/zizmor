@@ -15,22 +15,11 @@ use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     audit::AuditError,
     config::Config,
-    finding::{
-        Confidence, Finding, Severity,
-        location::{Locatable as _, Routable},
-    },
+    finding::{Confidence, Finding, Severity, location::Locatable as _},
     github::{self, ComparisonStatus},
-    models::{
-        StepCommon,
-        uses::RepositoryUsesExt as _,
-        version::Version,
-        workflow::{ReusableWorkflowCallJob, Workflow},
-    },
-    registry::input::InputKey,
+    models::{StepCommon, uses::RepositoryUsesExt as _, workflow::Workflow},
     state::AuditState,
 };
-
-use yamlpatch::{Op, Patch};
 
 pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
 
@@ -278,25 +267,6 @@ impl ImpostorCommit {
             _ => Ok(true),
         }
     }
-
-    /// Return the highest semantically versioned tag in the repository.
-    async fn get_highest_tag(&self, uses: &RepositoryUses) -> Result<Option<String>, AuditError> {
-        let tags = self
-            .client
-            .list_tags(uses.owner(), uses.repo())
-            .await
-            .map_err(Self::err)?;
-
-        // Filter tags down to those that can be parsed as semantic versions,
-        // get the highest one, and return its original string representation.
-        let highest_tag = tags
-            .iter()
-            .filter_map(|tag| Version::parse(&tag.name).ok())
-            .max()
-            .map(|vers| vers.raw().to_string());
-
-        Ok(highest_tag)
-    }
 }
 
 #[async_trait::async_trait]
@@ -331,7 +301,7 @@ impl Audit for ImpostorCommit {
                         };
 
                         if self.impostor(uses).await? {
-                            let mut finding_builder = Self::finding()
+                            let finding_builder = Self::finding()
                                 .severity(Severity::High)
                                 .confidence(Confidence::High)
                                 .add_location(step.location_with_grip())
@@ -355,7 +325,7 @@ impl Audit for ImpostorCommit {
                     };
 
                     if self.impostor(uses).await? {
-                        let mut finding_builder = Self::finding()
+                        let finding_builder = Self::finding()
                             .severity(Severity::High)
                             .confidence(Confidence::High)
                             .add_location(reusable.location_with_grip())
@@ -388,7 +358,7 @@ impl Audit for ImpostorCommit {
         };
 
         if self.impostor(uses).await? {
-            let mut finding_builder = Self::finding()
+            let finding_builder = Self::finding()
                 .severity(Severity::High)
                 .confidence(Confidence::High)
                 .add_location(step.location_with_grip())
@@ -399,10 +369,6 @@ impl Audit for ImpostorCommit {
                         .primary()
                         .annotated(IMPOSTOR_ANNOTATION),
                 );
-
-            if let Some(fix) = self.create_impostor_fix(uses, step).await {
-                finding_builder = finding_builder.fix(fix);
-            }
 
             findings.push(finding_builder.build(step).map_err(Self::err)?);
         }
