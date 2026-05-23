@@ -19,3 +19,9 @@ jobs:
           # but *only* for tag events, which we consider unsafe becaue we assume that
           # tag events correspond to releases.
           sccache: ${{ startsWith(github.ref, 'refs/tags/') }}
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          # this is the opposite of #2050: caching is explicitly enabled here for
+          # pushes to tag refs, which we consider unsafe because we assume that tag
+          # pushes correspond to releases.
+          sccache: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
