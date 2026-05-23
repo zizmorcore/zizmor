@@ -654,12 +654,35 @@ fn test_trigger_heuristics_tag_only() -> anyhow::Result<()> {
     19 | |           # but *only* for tag events, which we consider unsafe becaue we assume that
     20 | |           # tag events correspond to releases.
     21 | |           sccache: ${{ startsWith(github.ref, 'refs/tags/') }}
-       | |_______________________________________________________________- enables caching explicitly here
+       | |______________________________________________________________- enables caching explicitly here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:22:9
+       |
+     3 | / on:
+     4 | |   push:
+     5 | |     branches:
+     6 | |       - master
+     7 | |     tags:
+     8 | |       - "*"
+       | |___________- generally used when publishing artifacts generated at runtime
+    ...
+    22 |         - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    23 | /         with:
+    24 | |           # this is the opposite of #2050: caching is explicitly enabled here for
+    25 | |           # pushes to tag refs, which we consider unsafe because we assume that tag
+    26 | |           # pushes correspond to releases.
+    27 | |           sccache: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+       | |__________________________________________________________________________________- enables caching explicitly here
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    4 findings (2 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 
@@ -674,7 +697,7 @@ fn test_trigger_heuristics_tag_and_release() -> anyhow::Result<()> {
                 "cache-poisoning/trigger-heuristics/tag-and-release.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job!"
     );
 
     Ok(())
@@ -708,12 +731,35 @@ fn test_trigger_heuristics_tag_and_branch() -> anyhow::Result<()> {
     20 | |           # for this workflow, but since there's also a branch trigger that looks like
     21 | |           # a release we can't assert that all release events will also be tag events.
     22 | |           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
-       | |________________________________________________________________- may enable caching here
+       | |_______________________________________________________________- may enable caching here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:23:9
+       |
+     3 | / on:
+     4 | |   push:
+     5 | |     branches:
+     6 | |       - release
+     7 | |     tags:
+     8 | |       - "*"
+     9 | |   release:
+       | |__________- generally used when publishing artifacts generated at runtime
+    ...
+    23 |         - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    24 | /         with:
+    25 | |           # same as above: we would consider this safe if there wasn't also a branch
+    26 | |           # trigger that looks like a release.
+    27 | |           sccache: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}
+       | |_____________________________________________________________________________________- may enable caching here
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    4 findings (2 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 

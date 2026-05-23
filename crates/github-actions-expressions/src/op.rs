@@ -1,4 +1,6 @@
-//! Unary and binary operators.
+//! Unary and binary expressions and operators.
+
+use crate::SpannedExpr;
 
 /// Binary operations allowed in an expression.
 #[derive(Debug, PartialEq)]
@@ -19,6 +21,19 @@ pub enum BinOp {
     Lt,
     /// `expr <= expr`
     Le,
+}
+
+/// Represents a binary expression.
+///
+/// Binary expressions can be either logical or arithmetic.
+#[derive(Debug, PartialEq)]
+pub struct BinExpr<'src> {
+    /// The LHS of the expr.
+    pub lhs: Box<SpannedExpr<'src>>,
+    /// The binary operator.
+    pub op: BinOp,
+    /// The RHS of the expr.
+    pub rhs: Box<SpannedExpr<'src>>,
 }
 
 /// Unary operations allowed in an expression.

@@ -20,3 +20,8 @@ jobs:
           # for this workflow, but since there's also a branch trigger that looks like
           # a release we can't assert that all release events will also be tag events.
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          # same as above: we would consider this safe if there wasn't also a branch
+          # trigger that looks like a release.
+          sccache: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}

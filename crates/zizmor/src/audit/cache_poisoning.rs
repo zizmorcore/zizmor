@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 
 use github_actions_expressions::call::{Call, Function};
 use github_actions_expressions::literal::Literal;
-use github_actions_expressions::op::UnOp;
+use github_actions_expressions::op::{BinExpr, BinOp, UnOp};
 use github_actions_expressions::{Expr, SpannedExpr};
 use github_actions_models::common::EnvValue;
 use github_actions_models::common::expr::LoE;
@@ -25,6 +25,13 @@ use yamlpatch::{Op, Patch};
 use super::AuditLoadError;
 
 const TAG_REF_PREFIX: &str = "refs/tags/";
+/// A canonical parse for our [`CacheControlExpr::RefTypeTagPush`] heuristic below.
+/// We don't match this verbatim; instead we decompose it for commutative comparisons.
+static REF_TYPE_TAG_PUSH_GUARD: LazyLock<Expr> = LazyLock::new(|| {
+    Expr::parse("github.event_name == 'push' && github.ref_type == 'tag'")
+        .expect("impossible")
+        .inner
+});
 
 /// The list of known cache-aware actions
 /// In the future we can easily retrieve this list from the static API,
@@ -303,9 +310,10 @@ enum PublishingScenario<'doc> {
 enum CacheControlExpr {
     /// A literal `${{ true }}` or `${{ false }}`.
     Bool(bool),
-    // At the moment, this is the only combination of cache control expression and workflow trigger
-    // that we recognize.
+    // An expression like `startsWith(github.ref, 'refs/tags/')`.
     StartsWithGithubRefTagPrefix,
+    // An expression like `github.event_name == 'push' && github.ref_type == 'tag'`
+    RefTypeTagPush,
     /// A negation of another cache control expression.
     Not(Box<CacheControlExpr>),
 }
@@ -320,7 +328,7 @@ impl CacheControlExpr {
     fn from_spanned(expr: &SpannedExpr) -> Option<Self> {
         match &expr.inner {
             Expr::Literal(Literal::Boolean(value)) => Some(Self::Bool(*value)),
-            Expr::UnOp {
+            Expr::UnExpr {
                 op: UnOp::Not,
                 expr,
             } => Some(Self::Not(Box::new(Self::from_spanned(expr)?))),
@@ -339,6 +347,13 @@ impl CacheControlExpr {
                     None
                 }
             }
+            expr @ Expr::BinExpr(BinExpr { op: BinOp::And, .. }) => {
+                if expr.commutative_matches(&REF_TYPE_TAG_PUSH_GUARD) {
+                    Some(Self::RefTypeTagPush)
+                } else {
+                    None
+                }
+            }
             // TODO: At some point we might want to add heuristics for `case(...)` here as well.
             _ => None,
         }
@@ -349,6 +364,7 @@ impl CacheControlExpr {
             Self::Bool(value) => *value,
             Self::Not(expr) => !expr.eval_for_tag_push(),
             Self::StartsWithGithubRefTagPrefix => true,
+            Self::RefTypeTagPush => true,
         }
     }
 }

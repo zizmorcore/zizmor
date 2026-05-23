@@ -10,11 +10,20 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.base_ref == main }}
+
 jobs:
   publish:
+    name: publish
     runs-on: ubuntu-latest
     steps:
       - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           # this is safe since both `push: tags` and `release` are tied to a tag.
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          # this is safe since both `push: tags` and `release` are tied to a tag.
+          sccache: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}

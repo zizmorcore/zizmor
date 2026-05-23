@@ -10,7 +10,7 @@ use crate::{
     call::Call,
     lexer::{self, Tok, Token, syntax_error},
     literal::Literal,
-    op::{BinOp, UnOp},
+    op::{BinExpr, BinOp, UnOp},
 };
 
 /// The result of parsing a single grammar production.
@@ -125,11 +125,11 @@ impl<'src> Parser<'src> {
             lhs = self.spanned(
                 lhs.origin.span.start,
                 rhs.origin.span.end,
-                Expr::BinOp {
+                Expr::BinExpr(BinExpr {
                     lhs: Box::new(lhs),
                     op,
                     rhs: Box::new(rhs),
-                },
+                }),
             );
         }
 
@@ -147,7 +147,7 @@ impl<'src> Parser<'src> {
         Ok(self.spanned(
             bang.start,
             inner.origin.span.end,
-            Expr::UnOp {
+            Expr::UnExpr {
                 op: UnOp::Not,
                 expr: Box::new(inner),
             },

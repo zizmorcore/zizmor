@@ -16,6 +16,11 @@ of `zizmor`.
 
     Many thanks to @andrew for proposing and implementing this improvement!
 
+### Enhancements 🌱
+
+* The [cache-poisoning] audit now detects additional cache disablement
+  heuristics (#2053)
+
 ### Performance Improvements 🚄
 
 * Most online audits are significantly faster, thanks to more precise retry handling (#2036)
