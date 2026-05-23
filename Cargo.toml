@@ -31,7 +31,6 @@ zizmor-sarif = { path = "crates/zizmor-sarif", version = "1.25.2" }
 
 anyhow = "1.0.102"
 itertools = "0.14.0"
-pretty_assertions = "1.4.1"
 annotate-snippets = "0.12.16"
 anstream = "1.0.0"
 assert_cmd = "2.2.2"

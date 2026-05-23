@@ -4,6 +4,7 @@ use github_actions_expressions::{
     Expr, SpannedExpr,
     call::{Call, Function},
     context::Context,
+    op::BinExpr,
 };
 
 use crate::{
@@ -92,11 +93,11 @@ impl UnredactedSecrets {
             Expr::Context(Context { parts, .. }) => {
                 results.extend(parts.iter().flat_map(Self::secret_leakages))
             }
-            Expr::BinOp { lhs, op: _, rhs } => {
+            Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {
                 results.extend(Self::secret_leakages(lhs));
                 results.extend(Self::secret_leakages(rhs));
             }
-            Expr::UnOp { op: _, expr } => results.extend(Self::secret_leakages(expr)),
+            Expr::UnExpr { op: _, expr } => results.extend(Self::secret_leakages(expr)),
             _ => (),
         }
 

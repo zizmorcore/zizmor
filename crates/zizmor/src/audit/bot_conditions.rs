@@ -4,7 +4,7 @@ use github_actions_expressions::{
     Expr, SpannedExpr,
     call::Call,
     context::{Context, ContextPattern},
-    op::{BinOp, UnOp},
+    op::{BinExpr, BinOp, UnOp},
 };
 use github_actions_models::{
     common::If,
@@ -278,7 +278,7 @@ impl BotConditions {
                 .reduce(|(bc, _), (bc_next, _)| (bc.or(bc_next), false))
                 .unwrap_or((None, dominating)),
             Expr::Index(expr) => Self::walk_tree_for_bot_condition(expr, dominating),
-            Expr::BinOp { lhs, op, rhs } => match op {
+            Expr::BinExpr(BinExpr { lhs, op, rhs }) => match op {
                 // || is dominating.
                 BinOp::Or => {
                     let (bc_lhs, _) = Self::walk_tree_for_bot_condition(lhs, true);
@@ -323,7 +323,7 @@ impl BotConditions {
                     (bc_lhs.or(bc_rhs), false)
                 }
             },
-            Expr::UnOp { op, expr } => match op {
+            Expr::UnExpr { op, expr } => match op {
                 // We don't really know what we're negating, so naively
                 // assume we're non-dominating.
                 //
