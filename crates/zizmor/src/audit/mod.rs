@@ -20,6 +20,7 @@ use crate::{
     state::AuditState,
 };
 
+pub(crate) mod adhoc_packages;
 pub(crate) mod anonymous_definition;
 pub(crate) mod archived_uses;
 pub(crate) mod artipacked;

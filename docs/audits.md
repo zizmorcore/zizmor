@@ -14,6 +14,64 @@ Legend:
 |----------|------------------|---------------|----------------|--------------------|--------------|
 | Workflow, Action, Dependabot | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit supports auto-fixes when used in the `--fix` mode | The audit supports custom configuration |
 
+## `adhoc-packages`
+
+| Type             | Examples            | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|------------------|---------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action | [adhoc-packages.yml] | v1.26.0       | ✅             | ❌                 | ❌           |
+
+[adhoc-packages.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/adhoc-packages.yml
+
+Detects `#!yaml run:` steps that install packages ad hoc, outside of a
+lockfile-managed manifest.
+
+Installing packages directly with commands like `#!bash gem install <pkg>`
+sidesteps the project's lockfile (e.g. `Gemfile.lock`), which causes several
+supply-chain hazards:
+
+- Without a lockfile to pin against, the workflow always installs whichever
+  version the registry currently advertises. A compromised release of an
+  upstream dependency is therefore picked up automatically on the next run.
+- Lockfiles record content hashes that can be cross-checked against the
+  registry. Ad-hoc installs perform no such verification, so a compromised
+  package is harder to detect after the fact.
+- Reproducibility is lost: re-running the same workflow can install different
+  versions of the same package over time.
+
+Currently this audit only flags `#!bash gem install <pkg>` invocations,
+including those with extra flags or version specifiers (e.g. `-v 13.0.6`).
+Subcommands like `#!bash gem build` or `#!bash gem push` are not flagged.
+
+### Remediation
+
+Add the package to a manifest that produces a lockfile (e.g. a `Gemfile`),
+commit the resulting lockfile, and install via the corresponding lockfile-aware
+command (e.g. `#!bash bundle install`).
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="adhoc-packages.yml" hl_lines="6"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v5.0.0
+              - run: gem install rake
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="adhoc-packages.yml" hl_lines="6"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v5.0.0
+              - run: bundle install
+        ```
+
 ## `anonymous-definition`
 
 | Type            | Examples         | Introduced in | Works offline | Auto-fixes available | Configurable |

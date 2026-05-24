@@ -82,6 +82,7 @@ impl AuditRegistry {
         register_audit!(audit::superfluous_actions::SuperfluousActions);
         register_audit!(audit::github_app::GitHubApp);
         register_audit!(audit::unpinned_tools::UnpinnedTools);
+        register_audit!(audit::adhoc_packages::AdhocPackages);
 
         Ok(registry)
     }

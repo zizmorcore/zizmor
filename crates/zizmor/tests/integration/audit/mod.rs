@@ -1,5 +1,6 @@
 //! Per-audit integrationt tests, including snapshots.
 
+mod adhoc_packages;
 mod anonymous_definition;
 mod archived_uses;
 mod artipacked;

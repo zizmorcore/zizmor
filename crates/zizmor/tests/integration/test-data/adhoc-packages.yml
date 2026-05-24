@@ -1,0 +1,47 @@
+name: adhoc-packages
+
+on: push
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vulnerable:
+    name: vulnerable
+    runs-on: ubuntu-latest
+    steps:
+      # NOT OK: ad-hoc `gem install`.
+      - name: vulnerable-1
+        run: gem install rake
+
+      # NOT OK: ad-hoc `gem install` with multiple packages.
+      - name: vulnerable-2
+        run: gem install rake rspec
+
+      # NOT OK: ad-hoc `gem install` with a version pin (still no lockfile).
+      - name: vulnerable-3
+        run: gem install rake -v 13.0.6
+
+      # NOT OK: ad-hoc `gem install` with extra flags.
+      - name: vulnerable-4
+        run: gem install --no-document rake
+
+  not-vulnerable:
+    name: not-vulnerable
+    runs-on: ubuntu-latest
+    steps:
+      # OK: `bundle install` uses the project's Gemfile.lock.
+      - name: not-vulnerable-1
+        run: bundle install
+
+      # OK: other gem subcommands are not flagged.
+      - name: not-vulnerable-2
+        run: gem build foo.gemspec
+
+      # OK: `gem install` without a package name is malformed,
+      # but we don't flag it.
+      - name: not-vulnerable-3
+        run: gem install --help
