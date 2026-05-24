@@ -224,8 +224,15 @@ mod tests {
             (&["gem", "env"][..], false),
             // `bundle install` is lockfile-aware, so it should stay false.
             (&["bundle", "install"][..], false),
-            // TODO: flip to `true` once `npm install` is covered.
+            // TODO: flip to `true` once `npm install`/`npx` is covered.
             (&["npm", "install", "lodash"][..], false),
+            (&["npm", "install", "oxlint@1.55.0"][..], false),
+            (&["npm", "install", "--no-fund", "oxlint@1.55.0"][..], false),
+            (&["npx", "-y", "lodash"][..], false),
+            (&["npx", "--yes", "lodash"][..], false),
+            (&["npx", "--yes", "lodash@1.2.3"][..], false),
+            (&["npm", "exec", "lodash"][..], false),
+            (&["npm", "exec", "lodash@1.2.3"][..], false),
             // TODO: flip to `true` once `pip install` is covered.
             (&["pip", "install", "requests"][..], false),
         ] {
