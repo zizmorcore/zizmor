@@ -222,9 +222,11 @@ mod tests {
             (&["gem", "build", "foo.gemspec"][..], false),
             (&["gem", "push", "foo-0.1.0.gem"][..], false),
             (&["gem", "env"][..], false),
-            // Unrelated commands
+            // `bundle install` is lockfile-aware, so it should stay false.
             (&["bundle", "install"][..], false),
+            // TODO: flip to `true` once `npm install` is covered.
             (&["npm", "install", "lodash"][..], false),
+            // TODO: flip to `true` once `pip install` is covered.
             (&["pip", "install", "requests"][..], false),
         ] {
             let cmd = args[0];
