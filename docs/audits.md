@@ -1910,6 +1910,75 @@ by running `#!bash docker inspect redis:7.4.3 --format='{{.RepoDigests}}'`.
               - run: "echo pinned container!"
         ```
 
+## `unpinned-packages`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action  | N/A            | v1.26.0        | ✅            | ❌                | ❌          |
+
+
+
+Detects package installations performed outside the context of a lockfile,
+e.g. `#!bash npm install <pkg>`, `#!bash gem install <pkg>`, or
+`#!bash pip install <pkg>`.
+
+Installing packages directly through a package manager without going through
+a lockfile (like `package-lock.json`, `Gemfile.lock`, or `requirements.txt`)
+poses several supply chain security risks:
+
+* **No version pinning**: the latest version of the package and all of its
+  dependencies are installed automatically, increasing the likelihood of
+  pulling in a compromised release.
+* **No hash verification**: package managers that support content hashing
+  (like `npm` and `pip`) cannot enforce hash checks without a lockfile.
+* **Difficult post-incident analysis**: without a lockfile, determining
+  which exact versions were installed at a given point in time requires
+  sifting through job logs, which may not include specific version information.
+
+This audit detects the following patterns in `#!yaml run:` steps:
+
+* `npm install <pkg>` (installing individual packages without a lockfile)
+* `npx -y <pkg>` or `npx --yes <pkg>` (executing packages with automatic install)
+* `pip install <pkg>` (installing packages outside of a requirements file)
+* `gem install <pkg>` (installing gems outside of a Gemfile)
+* `composer require <pkg>` (requiring packages without a lockfile)
+
+!!! note
+
+    `#!bash npm install` (without arguments) and `#!bash npm ci` are not
+    flagged, as they install from the project's `package-lock.json`.
+
+### Remediation
+
+Add the package to your project's dependency manifest (`package.json`,
+`Gemfile`, `requirements.txt`, `composer.json`, etc.) and install from
+the lockfile instead.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="unpinned-packages.yml" hl_lines="5"
+        jobs:
+          release:
+            runs-on: ubuntu-latest
+            steps:
+              - run: gem install gem-release
+              - run: gem-release
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="unpinned-packages.yml" hl_lines="4-6"
+        jobs:
+          release:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Install dependencies
+                run: bundle install
+              - run: bundle exec gem-release
+        ```
+
 ## `unpinned-tools`
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |

@@ -51,6 +51,7 @@ pub(crate) mod template_injection;
 pub(crate) mod typosquat_uses;
 pub(crate) mod undocumented_permissions;
 pub(crate) mod unpinned_images;
+pub(crate) mod unpinned_packages;
 pub(crate) mod unpinned_tools;
 pub(crate) mod unpinned_uses;
 pub(crate) mod unredacted_secrets;
