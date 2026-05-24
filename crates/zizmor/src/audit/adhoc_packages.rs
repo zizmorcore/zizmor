@@ -12,12 +12,9 @@ use crate::{
 };
 
 const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) @span";
-const PWSH_COMMAND_QUERY: &str =
-    "(command command_name: (_) @cmd command_elements: (_ (generic_token) @args)+) @span";
 
 pub(crate) struct AdhocPackages {
     bash_command_query: utils::SpannedQuery,
-    pwsh_command_query: utils::SpannedQuery,
 }
 
 audit_meta!(
@@ -41,6 +38,7 @@ impl AdhocPackages {
     /// ad-hoc package installation, e.g. `gem install <package>`.
     fn is_adhoc_install_command<'a>(cmd: &'a str, args: impl Iterator<Item = &'a str>) -> bool {
         match cmd {
+            // TODO: Add support for `npm install pkg` and `pip install pkg`, etc later.
             "gem" => {
                 // Looking for `gem install <pkg> ...`, where `install` is the
                 // first non-flag argument and at least one package name follows.
@@ -75,15 +73,10 @@ impl AdhocPackages {
 
                 (&self.bash_command_query, tree)
             }
-            "pwsh" | "powershell" => {
-                let mut parser = utils::pwsh_parser();
-                let tree = parser
-                    .parse(run, None)
-                    .context("failed to parse `run:` body as pwsh")
-                    .map_err(Self::err)?;
-
-                (&self.pwsh_command_query, tree)
-            }
+            // TODO: support pwsh. The tree-sitter-powershell grammar emits
+            // each `command_elements` child as its own query match, which
+            // breaks the multi-arg `gem install <pkg>` pattern we need to
+            // detect here.
             _ => {
                 tracing::debug!("unable to analyze 'run:' block: unknown shell '{normalized}'");
                 return Ok(vec![]);
@@ -150,7 +143,13 @@ impl AdhocPackages {
             return Ok(findings);
         };
 
-        let shell = step.shell().map(|s| s.0).unwrap_or("bash");
+        let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
+            tracing::debug!(
+                "adhoc-packages: couldn't determine shell for step {idx}; assuming bash",
+                idx = step.index()
+            );
+            "bash"
+        });
 
         for subfeature in self.adhoc_install_candidates(run, shell)? {
             findings.push(
@@ -184,7 +183,6 @@ impl Audit for AdhocPackages {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self {
             bash_command_query: utils::SpannedQuery::new(BASH_COMMAND_QUERY, &utils::BASH),
-            pwsh_command_query: utils::SpannedQuery::new(PWSH_COMMAND_QUERY, &utils::PWSH),
         })
     }
 
@@ -211,8 +209,10 @@ mod tests {
     fn test_is_adhoc_install_command() {
         for (args, expected) in &[
             (&["gem", "install", "rake"][..], true),
+            (&["gem", "install", "rails:7.0.0"][..], true),
             (&["gem", "install", "rake", "rspec"][..], true),
             (&["gem", "install", "--no-document", "rake"][..], true),
+            (&["gem", "install", "rails", "--no-document"][..], true),
             (&["gem", "install", "rake", "-v", "13.0.6"][..], true),
             (&["gem", "--silent", "install", "rake"][..], true),
             // No package, just flags
