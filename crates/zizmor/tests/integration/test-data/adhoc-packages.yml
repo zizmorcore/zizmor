@@ -29,6 +29,16 @@ jobs:
       - name: vulnerable-4
         run: gem install --no-document rake
 
+      # TODO: enable once `npm install` is covered.
+      # # NOT OK: ad-hoc `npm install`.
+      # - name: vulnerable-5
+      #   run: npm install lodash
+
+      # TODO: enable once `pip install` is covered.
+      # # NOT OK: ad-hoc `pip install`.
+      # - name: vulnerable-6
+      #   run: pip install requests
+
   not-vulnerable:
     name: not-vulnerable
     runs-on: ubuntu-latest
