@@ -302,8 +302,26 @@ intended to publish build artifacts:
   releases, *or*
 * Disable cache-aware actions with an `#!yaml if:` condition based on the trigger at
   the step level, *or*
-* Set an action-specific input to disable cache restoration when appropriate,
-  such as `lookup-only` in @Swatinem/rust-cache.
+* Set an action-specific input to disable cache restoration when appropriate.
+  Some (non-exhaustive) examples below:
+
+    | Action | Input |
+    |--------|-------|
+    | @Swatinem/rust-cache | `#!yaml lookup-only: true` |
+    | @actions/setup-node | `#!yaml package-manager-cache: false` |
+    | @astral-sh/setup-uv | `#!yaml enable-cache: false` |
+
+In addition to the above, the `cache-poisoning` audit is aware of several common patterns
+that _conditionally disable_ caching. For example, if you're publishing via a `release` trigger
+or a tag-push event, you can write something like the following to disable caching for just
+that case:
+
+```yaml
+uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+with:
+  # only enable the cache if the ref is not a tag
+  enable-cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+```
 
 ## `concurrency-limits`
 
