@@ -303,7 +303,8 @@ intended to publish build artifacts:
 * Disable cache-aware actions with an `#!yaml if:` condition based on the trigger at
   the step level, *or*
 * Set an action-specific input to disable cache restoration when appropriate,
-  such as `lookup-only` in @Swatinem/rust-cache.
+  such as `lookup-only` in @Swatinem/rust-cache or `package-manager-cache: false`
+  in @actions/setup-node.
 
 ## `concurrency-limits`
 
