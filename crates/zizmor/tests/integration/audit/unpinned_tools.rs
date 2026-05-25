@@ -57,3 +57,27 @@ fn test_regular_persona() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Regression test for #2059: steps gated with a statically-false `if:`
+/// condition should not be audited, since they cannot execute.
+#[test]
+fn test_if_false_skipped() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-tools-if-false.yml"))
+            .run()?,
+        @r"
+    warning[unpinned-tools]: action installs an unpinned external tool
+      --> @@INPUT@@:26:15
+       |
+    26 |       - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action implicitly uses an unpinned latest version
+       |
+       = note: audit confidence → High
+
+    3 findings (1 ignored, 1 suppressed): 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    Ok(())
+}

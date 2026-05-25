@@ -160,6 +160,10 @@ impl<'a, 'doc> AsDocument<'a, 'doc> for DockerAction<'doc> {
 }
 
 /// An iterable container for steps within a [`Job`].
+///
+/// Composite steps whose `if:` condition is statically known to be false
+/// (e.g. `if: false` or `if: ${{ false }}`) are skipped, since such steps
+/// cannot execute and therefore can't violate any runtime-behavior audit.
 pub(crate) struct CompositeSteps<'a> {
     inner: std::iter::Enumerate<std::slice::Iter<'a, github_actions_models::action::Step>>,
     parent: &'a Action,
@@ -182,12 +186,15 @@ impl<'a> Iterator for CompositeSteps<'a> {
     type Item = CompositeStep<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = self.inner.next();
-
-        match item {
-            Some((idx, step)) => Some(CompositeStep::new(idx, step, self.parent)),
-            None => None,
+        for (idx, step) in self.inner.by_ref() {
+            if let Some(cond) = step.r#if.as_ref()
+                && crate::models::if_is_statically_false(cond)
+            {
+                continue;
+            }
+            return Some(CompositeStep::new(idx, step, self.parent));
         }
+        None
     }
 }
 

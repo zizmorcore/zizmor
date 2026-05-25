@@ -1,0 +1,26 @@
+name: unpinned-tools-if-false
+
+on: push
+
+permissions: {}
+
+# Repro for #2059: steps with statically-false `if:` conditions should not be
+# audited, since they cannot execute. This pattern is used by composite-action
+# "allowlist" workflows where every `- uses:` entry is gated with `if: false`
+# purely so dependabot can track the SHA.
+jobs:
+  allowlist:
+    name: allowlist
+    runs-on: ubuntu-latest
+    steps:
+      # Would normally trip unpinned-tools, but `if: false` makes it a no-op.
+      - uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        if: false
+
+      - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+        if: ${{ false }} # zizmor: ignore[obfuscation]
+        with:
+          version: latest
+
+      # This one is *not* gated; it should still trigger.
+      - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
