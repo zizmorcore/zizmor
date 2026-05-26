@@ -39,13 +39,23 @@ impl AdhocPackages {
     fn is_adhoc_install_command<'a>(cmd: &'a str, args: impl Iterator<Item = &'a str>) -> bool {
         let mut args = args;
         match cmd {
-            // TODO: Add support for `npm install pkg` and `pip install pkg`, etc later.
+            // TODO: Add support for `pip install pkg`, etc later.
             "gem" => {
                 // Require at least one non-flag argument after `install` so we
                 // don't flag malformed invocations like `gem install`.
                 // Looking for `gem install <pkg> ...`, where `install` is the
                 // first non-flag argument and at least one package name follows.
                 args.any(|arg| arg == "install") && args.any(|arg| !arg.starts_with('-'))
+            }
+            "npm" => {
+                args.any(|arg| arg == "install" || arg == "exec")
+                    && args.any(|arg| !arg.starts_with('-'))
+            }
+            // Only hit npx if it has -y or --yes, to avoid flagging npx
+            // invocations that run a package installed via lockfile.
+            "npx" => {
+                args.any(|arg| arg == "-y" || arg == "--yes")
+                    && args.any(|arg| !arg.starts_with('-'))
             }
             _ => false,
         }
@@ -204,6 +214,7 @@ mod tests {
     #[test]
     fn test_is_adhoc_install_command() {
         for (args, expected) in &[
+            // `gem install` with various argument patterns that should be flagged as ad-hoc installs.
             (&["gem", "install", "rake"][..], true),
             (&["gem", "install", "rails:7.0.0"][..], true),
             (&["gem", "install", "rake", "rspec"][..], true),
@@ -220,15 +231,20 @@ mod tests {
             (&["gem", "env"][..], false),
             // `bundle install` is lockfile-aware, so it should stay false.
             (&["bundle", "install"][..], false),
-            // TODO: flip to `true` once `npm install`/`npx` is covered.
-            (&["npm", "install", "lodash"][..], false),
-            (&["npm", "install", "oxlint@1.55.0"][..], false),
-            (&["npm", "install", "--no-fund", "oxlint@1.55.0"][..], false),
-            (&["npx", "-y", "lodash"][..], false),
-            (&["npx", "--yes", "lodash"][..], false),
-            (&["npx", "--yes", "lodash@1.2.3"][..], false),
-            (&["npm", "exec", "lodash"][..], false),
-            (&["npm", "exec", "lodash@1.2.3"][..], false),
+            // `npm install`/`npx` is also disallowed.
+            (&["npm", "install", "lodash"][..], true),
+            (&["npm", "install", "oxlint@1.55.0"][..], true),
+            (&["npm", "install", "--no-fund", "oxlint@1.55.0"][..], true),
+            (&["npx", "-y", "lodash"][..], true),
+            (&["npx", "--yes", "lodash"][..], true),
+            (&["npx", "--yes", "lodash@1.2.3"][..], true),
+            (&["npm", "exec", "lodash"][..], true),
+            (&["npm", "exec", "lodash@1.2.3"][..], true),
+            // npm flags without a package shouldn't be flagged.
+            (&["npm", "install", "--help"][..], false),
+            (&["npm", "install", "--no-fund"][..], false),
+            (&["npm", "ci"][..], false),
+            (&["npx", "foobar"][..], false),
             // TODO: flip to `true` once `pip install` is covered.
             (&["pip", "install", "requests"][..], false),
         ] {
