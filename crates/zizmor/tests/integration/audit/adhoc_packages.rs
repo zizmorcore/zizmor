@@ -79,7 +79,67 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    7 findings: 0 informational, 7 low, 0 medium, 0 high
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:46:14
+       |
+    46 |         run: npm install lodash
+       |         ---  ^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:50:14
+       |
+    50 |         run: npm install oxlint@1.55.0
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:54:14
+       |
+    54 |         run: npm install --no-fund oxlint@1.55.0
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:58:14
+       |
+    58 |         run: npm exec lodash
+       |         ---  ^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:63:14
+       |
+    63 |         run: npx -y lodash
+       |         ---  ^^^^^^^^^^^^^ installs a package outside of a lockfile
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:67:14
+       |
+    67 |         run: npx --yes lodash@1.2.3
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    13 findings: 0 informational, 13 low, 0 medium, 0 high
     "#
     );
 

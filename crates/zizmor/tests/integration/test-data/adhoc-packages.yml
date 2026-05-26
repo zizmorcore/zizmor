@@ -41,14 +41,34 @@ jobs:
           gem install bar
           echo "Goodbye"
 
-      # TODO: enable once `npm install` is covered.
-      # # NOT OK: ad-hoc `npm install`.
-      # - name: vulnerable-7
-      #   run: npm install lodash
+      # NOT OK: ad-hoc `npm install`.
+      - name: vulnerable-7
+        run: npm install lodash
+
+      # NOT OK: ad-hoc `npm install` with a version pin.
+      - name: vulnerable-8
+        run: npm install oxlint@1.55.0
+
+      # NOT OK: ad-hoc `npm install` with extra flags.
+      - name: vulnerable-9
+        run: npm install --no-fund oxlint@1.55.0
+
+      # NOT OK: ad-hoc `npm exec`.
+      - name: vulnerable-10
+        run: npm exec lodash
+
+      # NOT OK: `npx -y` skips the install prompt and pulls the package
+      # directly from the registry.
+      - name: vulnerable-11
+        run: npx -y lodash
+
+      # NOT OK: `npx --yes` is the long form of `npx -y`.
+      - name: vulnerable-12
+        run: npx --yes lodash@1.2.3
 
       # TODO: enable once `pip install` is covered.
       # # NOT OK: ad-hoc `pip install`.
-      # - name: vulnerable-8
+      # - name: vulnerable-13
       #   run: pip install requests
 
   not-vulnerable:
@@ -67,3 +87,17 @@ jobs:
       # but we don't flag it.
       - name: not-vulnerable-3
         run: gem install --help
+
+      # OK: `npm ci` is lockfile-aware.
+      - name: not-vulnerable-4
+        run: npm ci
+
+      # OK: `npm install` without a package name uses the project's
+      # package-lock.json.
+      - name: not-vulnerable-5
+        run: npm install --no-fund
+
+      # OK: `npx <pkg>` without `-y`/`--yes` runs a package that's
+      # already installed via a lockfile.
+      - name: not-vulnerable-6
+        run: npx foobar
