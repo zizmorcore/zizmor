@@ -51,7 +51,9 @@ impl AdhocPackages {
 
                 // Require at least one non-flag argument after `install` so we
                 // don't flag malformed invocations like `gem install`.
-                args.any(|arg| !arg.starts_with('-'))
+                // Looking for `gem install <pkg> ...`, where `install` is the
+                // first non-flag argument and at least one package name follows.
+                args.any(|arg| arg == "install") && args.any(|arg| !arg.starts_with('-'))
             }
             _ => false,
         }
