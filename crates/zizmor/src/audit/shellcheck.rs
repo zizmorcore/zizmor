@@ -161,8 +161,7 @@ impl ShellcheckAudit {
         script: &str,
     ) -> Result<Vec<ShellcheckDiagnostic>, AuditError> {
         let mut child = Command::new(&self.executable)
-            // SC2296 errors are caused by templating syntax ${{ ... }} that shellcheck doesn't understand.
-            .args(["--format", "json1", "--shell", shell, "-", "-e", "SC2296"])
+            .args(["--format", "json1", "--shell", shell, "-"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
