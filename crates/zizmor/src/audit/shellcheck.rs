@@ -44,6 +44,30 @@ struct ShellcheckDiagnostic {
 }
 
 impl ShellcheckAudit {
+
+    fn sanitize_shellcheck_script(script: &str) -> String {
+        // Removes template expressions like ${{ ... }} from the script.
+        // Replaces them with whitespace of the same length,
+        // so that the offsets of the remaining code are unchanged for accurate diagnostics.
+        let mut sanitized = String::with_capacity(script.len());
+        let mut cursor = 0;
+
+        for (_, span) in utils::extract_fenced_expressions(script) {
+            if span.start > cursor {
+                sanitized.push_str(&script[cursor..span.start]);
+            }
+            
+            sanitized.push_str(&"_".repeat(span.end - span.start));
+            cursor = span.end;
+        }
+
+        if cursor < script.len() {
+            sanitized.push_str(&script[cursor..]);
+        }
+
+        sanitized
+    }
+
     fn supported_shell(shell: &str) -> bool {
         matches!(shell, "sh" | "bash" | "dash" | "ksh" | "zsh")
     }
@@ -191,8 +215,10 @@ impl ShellcheckAudit {
             return Ok(vec![]);
         };
 
+        let shellcheck_script = Self::sanitize_shellcheck_script(run);
+
         let diagnostics = self
-            .run_shellcheck(&shellcheck_shell, run)
+            .run_shellcheck(&shellcheck_shell, &shellcheck_script)
             .unwrap_or_else(|error| {
                 tracing::debug!("shellcheck failed to run: {error}");
                 vec![]
