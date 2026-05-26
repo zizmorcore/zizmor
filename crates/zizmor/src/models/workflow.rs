@@ -427,6 +427,9 @@ impl<'doc> Job<'doc> {
 }
 
 /// An iterable container for jobs within a [`Workflow`].
+///
+/// Jobs whose `if:` condition is statically known to be false are skipped, since such jobs
+/// cannot execute and therefore can't violate any audits.
 pub(crate) struct Jobs<'doc> {
     parent: &'doc Workflow,
     inner: indexmap::map::Iter<'doc, String, workflow::Job>,
@@ -445,12 +448,22 @@ impl<'doc> Iterator for Jobs<'doc> {
     type Item = Job<'doc>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = self.inner.next();
+        for (id, job) in self.inner.by_ref() {
+            let cond = match job {
+                workflow::Job::NormalJob(normal) => normal.r#if.as_ref(),
+                workflow::Job::ReusableWorkflowCallJob(reusable) => reusable.r#if.as_ref(),
+            };
 
-        match item {
-            Some((id, job)) => Some(Job::new(id, job, self.parent)),
-            None => None,
+            if let Some(cond) = cond
+                && crate::models::if_is_statically_false(cond)
+            {
+                continue;
+            }
+
+            return Some(Job::new(id, job, self.parent));
         }
+
+        None
     }
 }
 
@@ -643,9 +656,8 @@ impl<'doc> Step<'doc> {
 
 /// An iterable container for steps within a [`Job`].
 ///
-/// Steps whose `if:` condition is statically known to be false
-/// (e.g. `if: false` or `if: ${{ false }}`) are skipped, since such steps
-/// cannot execute and therefore can't violate any runtime-behavior audit.
+/// Steps whose `if:` condition is statically known to be false are skipped,
+/// since such steps cannot execute and therefore can't violate any audits.
 pub(crate) struct Steps<'doc> {
     inner: std::iter::Enumerate<std::slice::Iter<'doc, github_actions_models::workflow::job::Step>>,
     parent: NormalJob<'doc>,

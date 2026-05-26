@@ -339,8 +339,8 @@ fn test_dummy_job_anchors() -> Result<()> {
        |
      9 |         - &checkout
        |  _________^
-    10 | |         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2 
-       | |_________________________________________________________________________________^ does not set persist-credentials: false
+    10 | |         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+       | |________________________________________________________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -354,16 +354,7 @@ fn test_dummy_job_anchors() -> Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    help[obfuscation]: obfuscated usage of GitHub Actions features
-     --> @@INPUT@@:6:13
-      |
-    6 |     if: ${{ false }}
-      |             ^^^^^ can be replaced by its static evaluation
-      |
-      = note: audit confidence → High
-      = note: this finding has an auto-fix
-
-    6 findings (3 suppressed, 1 safe fixes, 2 unsafe fixes): 0 informational, 1 low, 2 medium, 0 high
+    5 findings (3 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 
