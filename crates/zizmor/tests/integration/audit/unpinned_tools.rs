@@ -57,3 +57,17 @@ fn test_regular_persona() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Regression test for #2059: steps gated with a statically-false `if:`
+/// condition should not be audited, since they cannot execute.
+#[test]
+fn test_if_false_skipped() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-tools/if-false.yml"))
+            .run()?,
+        @"No findings to report. Good job! (1 ignored, 1 suppressed)"
+    );
+
+    Ok(())
+}

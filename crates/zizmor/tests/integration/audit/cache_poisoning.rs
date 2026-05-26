@@ -35,7 +35,7 @@ fn test_caching_enabled_by_default() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     ",
     );
 
@@ -144,7 +144,7 @@ fn test_caching_opt_out() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/caching-opt-out.yml"))
             .run()?,
-        @"No findings to report. Good job! (1 ignored, 2 suppressed)"
+        @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())

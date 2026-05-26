@@ -38,6 +38,12 @@ of `zizmor`.
 * Fixed a bug where [dependabot-cooldown] would fail to honor the user's
   configured days when performing autofixes (#2055)
 
+* Steps gated by a statically-false `if:` condition (e.g. `if: false`,
+  `if: ${{ false }}`) are now skipped during auditing, since they cannot
+  execute. This eliminates a class of false positives in audits like
+  [unpinned-tools] when composite actions use the `if: false` pattern
+  as an allowlist registry (#2059)
+
 ### Changes ⚠️
 
 * The [impostor-commit] audit no longer suggests auto-fixes,
