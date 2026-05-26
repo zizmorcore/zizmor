@@ -445,12 +445,22 @@ impl<'doc> Iterator for Jobs<'doc> {
     type Item = Job<'doc>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = self.inner.next();
+        for (id, job) in self.inner.by_ref() {
+            let cond = match job {
+                workflow::Job::NormalJob(normal) => normal.r#if.as_ref(),
+                workflow::Job::ReusableWorkflowCallJob(reusable) => reusable.r#if.as_ref(),
+            };
 
-        match item {
-            Some((id, job)) => Some(Job::new(id, job, self.parent)),
-            None => None,
+            if let Some(cond) = cond
+                && crate::models::if_is_statically_false(cond)
+            {
+                continue;
+            }
+
+            return Some(Job::new(id, job, self.parent));
         }
+
+        None
     }
 }
 
