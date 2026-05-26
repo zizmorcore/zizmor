@@ -37,6 +37,8 @@ impl AdhocPackages {
     /// Determine whether the given command and arguments correspond to an
     /// ad-hoc package installation, e.g. `gem install <package>`.
     fn is_adhoc_install_command<'a>(cmd: &'a str, args: impl Iterator<Item = &'a str>) -> bool {
+    
+    let mut args = args;
         match cmd {
             // TODO: Add support for `npm install pkg` and `pip install pkg`, etc later.
             "gem" => {
