@@ -58,42 +58,42 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
        = note: audit confidence → High
 
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
-      --> @@INPUT@@:40:11
+      --> @@INPUT@@:38:14
        |
-    38 |         run: |
-       |         --- this step
-    39 |           echo "Hello"
-    40 |           gem install foo
-       |           ^^^^^^^^^^^^^^^ installs a package outside of a lockfile
-       |
-       = note: audit confidence → High
-
-    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
-      --> @@INPUT@@:41:11
-       |
-    38 |         run: |
-       |         --- this step
-    ...
-    41 |           gem install bar
-       |           ^^^^^^^^^^^^^^^ installs a package outside of a lockfile
-       |
-       = note: audit confidence → High
-
-    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
-      --> @@INPUT@@:46:14
-       |
-    46 |         run: npm install lodash
-       |         ---  ^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+    38 |         run: gem i rake
+       |         ---  ^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
        |
        = note: audit confidence → High
 
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:44:11
+       |
+    42 |         run: |
+       |         --- this step
+    43 |           echo "Hello"
+    44 |           gem install foo
+       |           ^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+       |
+       = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:45:11
+       |
+    42 |         run: |
+       |         --- this step
+    ...
+    45 |           gem install bar
+       |           ^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+       |
+       = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
       --> @@INPUT@@:50:14
        |
-    50 |         run: npm install oxlint@1.55.0
-       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+    50 |         run: npm install lodash
+       |         ---  ^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
        |
@@ -102,8 +102,8 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
       --> @@INPUT@@:54:14
        |
-    54 |         run: npm install --no-fund oxlint@1.55.0
-       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+    54 |         run: npm install oxlint@1.55.0
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
        |
@@ -112,8 +112,8 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
       --> @@INPUT@@:58:14
        |
-    58 |         run: npm i lodash
-       |         ---  ^^^^^^^^^^^^ installs a package outside of a lockfile
+    58 |         run: npm install --no-fund oxlint@1.55.0
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
        |
@@ -122,8 +122,8 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
       --> @@INPUT@@:62:14
        |
-    62 |         run: npm add lodash
-       |         ---  ^^^^^^^^^^^^^^ installs a package outside of a lockfile
+    62 |         run: npm i lodash
+       |         ---  ^^^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
        |
@@ -132,18 +132,18 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
       --> @@INPUT@@:66:14
        |
-    66 |         run: npm exec lodash
-       |         ---  ^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+    66 |         run: npm add lodash
+       |         ---  ^^^^^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
        |
        = note: audit confidence → High
 
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
-      --> @@INPUT@@:71:14
+      --> @@INPUT@@:70:14
        |
-    71 |         run: npx -y lodash
-       |         ---  ^^^^^^^^^^^^^ installs a package outside of a lockfile
+    70 |         run: npm exec lodash
+       |         ---  ^^^^^^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
        |
@@ -152,14 +152,24 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
       --> @@INPUT@@:75:14
        |
-    75 |         run: npx --yes lodash@1.2.3
+    75 |         run: npx -y lodash
+       |         ---  ^^^^^^^^^^^^^ installs a package outside of a lockfile
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:79:14
+       |
+    79 |         run: npx --yes lodash@1.2.3
        |         ---  ^^^^^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
        |
        = note: audit confidence → High
 
-    15 findings: 0 informational, 15 low, 0 medium, 0 high
+    16 findings: 0 informational, 16 low, 0 medium, 0 high
     "#
     );
 

@@ -41,9 +41,10 @@ hazards:
 
 Currently this audit flags:
 
-- `#!bash gem install <pkg>` invocations, including those with extra flags or
-  version specifiers (e.g. `-v 13.0.6`). Other subcommands like
-  `#!bash gem build` or `#!bash gem push` are not flagged.
+- `#!bash gem install <pkg>` invocations (and the alias `#!bash gem i <pkg>`),
+  including those with extra flags or version specifiers (e.g. `-v 13.0.6`).
+  Other subcommands like `#!bash gem build` or `#!bash gem push` are not
+  flagged.
 - `#!bash npm install <pkg>` and `#!bash npm exec <pkg>` invocations,
   including their documented aliases (e.g. `#!bash npm i <pkg>`,
   `#!bash npm add <pkg>`, `#!bash npm x <pkg>`). `#!bash npm install`/

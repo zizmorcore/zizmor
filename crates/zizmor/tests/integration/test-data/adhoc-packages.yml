@@ -33,6 +33,10 @@ jobs:
       - name: vulnerable-5
         run: gem install --no-document rake
 
+      # NOT OK: `gem i` is an alias for `gem install`.
+      - name: vulnerable-5a
+        run: gem i rake
+
       # NOT OK: multiple ad-hoc `gem install` invocations in a multi-line `run:`.
       - name: vulnerable-6
         run: |

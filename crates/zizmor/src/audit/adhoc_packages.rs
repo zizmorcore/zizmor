@@ -45,7 +45,9 @@ impl AdhocPackages {
                 // don't flag malformed invocations like `gem install`.
                 // Looking for `gem install <pkg> ...`, where `install` is the
                 // first non-flag argument and at least one package name follows.
-                args.any(|arg| arg == "install") && args.any(|arg| !arg.starts_with('-'))
+                // `gem i` is a documented alias for `gem install`.
+                args.any(|arg| arg == "install" || arg == "i")
+                    && args.any(|arg| !arg.starts_with('-'))
             }
             "npm" => {
                 // Looking for `npm install <pkg>` or `npm exec <pkg>`, where
@@ -241,9 +243,14 @@ mod tests {
             (&["gem", "install", "rails", "--no-document"][..], true),
             (&["gem", "install", "rake", "-v", "13.0.6"][..], true),
             (&["gem", "--silent", "install", "rake"][..], true),
+            // `gem i` is an alias for `gem install`.
+            (&["gem", "i", "rake"][..], true),
+            (&["gem", "i", "--no-document", "rake"][..], true),
             // No package, just flags
             (&["gem", "install"][..], false),
             (&["gem", "install", "--help"][..], false),
+            (&["gem", "i"][..], false),
+            (&["gem", "i", "--help"][..], false),
             // Other gem subcommands
             (&["gem", "build", "foo.gemspec"][..], false),
             (&["gem", "push", "foo-0.1.0.gem"][..], false),
