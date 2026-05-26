@@ -55,6 +55,9 @@ Currently this audit flags:
   `#!bash npx <pkg>` without `-y`/`--yes` is not flagged, since it typically
   runs a binary already installed via a lockfile.
 
+This audit analyzes `#!yaml run:` steps written in either bash (the default on
+Linux/macOS runners) or PowerShell (the default on Windows runners).
+
 ### Remediation
 
 Add the package to a manifest that produces a lockfile (e.g. a `Gemfile`),

@@ -169,7 +169,48 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    16 findings: 0 informational, 16 low, 0 medium, 0 high
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+       --> @@INPUT@@:123:14
+        |
+    123 |         run: gem install rake
+        |         ---  ^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+        |         |
+        |         this step
+        |
+        = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+       --> @@INPUT@@:127:14
+        |
+    127 |         run: npm install lodash
+        |         ---  ^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+        |         |
+        |         this step
+        |
+        = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+       --> @@INPUT@@:131:14
+        |
+    131 |         run: npx -y lodash
+        |         ---  ^^^^^^^^^^^^^ installs a package outside of a lockfile
+        |         |
+        |         this step
+        |
+        = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+       --> @@INPUT@@:137:11
+        |
+    135 |         run: |
+        |         --- this step
+    136 |           Write-Host "Hello"
+    137 |           gem install foo
+        |           ^^^^^^^^^^^^^^^ installs a package outside of a lockfile
+        |
+        = note: audit confidence → High
+
+    20 findings: 0 informational, 20 low, 0 medium, 0 high
     "#
     );
 

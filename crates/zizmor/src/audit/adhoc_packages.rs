@@ -12,9 +12,14 @@ use crate::{
 };
 
 const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) @span";
+const PWSH_COMMAND_QUERY: &str = "(command \
+    command_name: (_) @cmd \
+    command_elements: (command_elements (_)+ @args) \
+) @span";
 
 pub(crate) struct AdhocPackages {
     bash_command_query: utils::SpannedQuery,
+    pwsh_command_query: utils::SpannedQuery,
 }
 
 audit_meta!(
@@ -97,13 +102,16 @@ impl AdhocPackages {
                     .parse(run, None)
                     .context("failed to parse `run:` body as bash")
                     .map_err(Self::err)?;
-
                 (&self.bash_command_query, tree)
             }
-            // TODO: support pwsh. The tree-sitter-powershell grammar emits
-            // each `command_elements` child as its own query match, which
-            // breaks the multi-arg `gem install <pkg>` pattern we need to
-            // detect here.
+            "pwsh" | "powershell" => {
+                let mut parser = utils::pwsh_parser();
+                let tree = parser
+                    .parse(run, None)
+                    .context("failed to parse `run:` body as pwsh")
+                    .map_err(Self::err)?;
+                (&self.pwsh_command_query, tree)
+            }
             _ => {
                 tracing::debug!("unable to analyze 'run:' block: unknown shell '{normalized}'");
                 return Ok(vec![]);
@@ -111,10 +119,10 @@ impl AdhocPackages {
         };
 
         let matches = self.query(query, &mut cursor, &tree, run);
-        let cmd = query
+        let cmd_idx = query
             .capture_index_for_name("cmd")
             .expect("internal error: missing capture index for 'cmd'");
-        let args = query
+        let args_idx = query
             .capture_index_for_name("args")
             .expect("internal error: missing capture index for 'args'");
 
@@ -124,7 +132,7 @@ impl AdhocPackages {
                 let cap = mat
                     .captures
                     .iter()
-                    .find(|cap| cap.index == cmd)
+                    .find(|cap| cap.index == cmd_idx)
                     .expect("internal error: expected capture for cmd");
                 cap.node
                     .utf8_text(run.as_bytes())
@@ -134,7 +142,13 @@ impl AdhocPackages {
             let args = mat
                 .captures
                 .iter()
-                .filter(|cap| cap.index == args)
+                .filter(|cap| cap.index == args_idx)
+                // The powershell grammar interleaves `command_argument_sep`
+                // whitespace nodes between real arguments inside
+                // `command_elements`. They have no analogue in bash, so
+                // filtering here is a no-op for bash but lets the single
+                // query work for pwsh too.
+                .filter(|cap| cap.node.kind() != "command_argument_sep")
                 .map(|cap| {
                     cap.node
                         .utf8_text(run.as_bytes())
@@ -210,6 +224,7 @@ impl Audit for AdhocPackages {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError> {
         Ok(Self {
             bash_command_query: utils::SpannedQuery::new(BASH_COMMAND_QUERY, &utils::BASH),
+            pwsh_command_query: utils::SpannedQuery::new(PWSH_COMMAND_QUERY, &utils::PWSH),
         })
     }
 

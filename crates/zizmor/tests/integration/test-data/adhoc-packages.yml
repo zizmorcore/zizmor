@@ -113,3 +113,38 @@ jobs:
       # already installed via a lockfile.
       - name: not-vulnerable-6
         run: npx foobar
+
+  vulnerable-pwsh:
+    name: vulnerable-pwsh
+    runs-on: windows-latest
+    steps:
+      # NOT OK: ad-hoc `gem install` in pwsh.
+      - name: vulnerable-pwsh-1
+        run: gem install rake
+
+      # NOT OK: ad-hoc `npm install` in pwsh.
+      - name: vulnerable-pwsh-2
+        run: npm install lodash
+
+      # NOT OK: `npx -y` in pwsh.
+      - name: vulnerable-pwsh-3
+        run: npx -y lodash
+
+      # NOT OK: multiline pwsh `run:` with a `gem install`.
+      - name: vulnerable-pwsh-4
+        run: |
+          Write-Host "Hello"
+          gem install foo
+          Write-Host "Goodbye"
+
+  not-vulnerable-pwsh:
+    name: not-vulnerable-pwsh
+    runs-on: windows-latest
+    steps:
+      # OK: `npm ci` in pwsh.
+      - name: not-vulnerable-pwsh-1
+        run: npm ci
+
+      # OK: bare `npx foobar` in pwsh.
+      - name: not-vulnerable-pwsh-2
+        run: npx foobar
