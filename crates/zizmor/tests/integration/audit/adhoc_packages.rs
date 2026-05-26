@@ -112,7 +112,27 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
       --> @@INPUT@@:58:14
        |
-    58 |         run: npm exec lodash
+    58 |         run: npm i lodash
+       |         ---  ^^^^^^^^^^^^ installs a package outside of a lockfile
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:62:14
+       |
+    62 |         run: npm add lodash
+       |         ---  ^^^^^^^^^^^^^^ installs a package outside of a lockfile
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
+      --> @@INPUT@@:66:14
+       |
+    66 |         run: npm exec lodash
        |         ---  ^^^^^^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
@@ -120,9 +140,9 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
        = note: audit confidence → High
 
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
-      --> @@INPUT@@:63:14
+      --> @@INPUT@@:71:14
        |
-    63 |         run: npx -y lodash
+    71 |         run: npx -y lodash
        |         ---  ^^^^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
@@ -130,16 +150,16 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
        = note: audit confidence → High
 
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
-      --> @@INPUT@@:67:14
+      --> @@INPUT@@:75:14
        |
-    67 |         run: npx --yes lodash@1.2.3
+    75 |         run: npx --yes lodash@1.2.3
        |         ---  ^^^^^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
        |         |
        |         this step
        |
        = note: audit confidence → High
 
-    13 findings: 0 informational, 13 low, 0 medium, 0 high
+    15 findings: 0 informational, 15 low, 0 medium, 0 high
     "#
     );
 

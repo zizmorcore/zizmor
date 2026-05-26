@@ -53,6 +53,14 @@ jobs:
       - name: vulnerable-9
         run: npm install --no-fund oxlint@1.55.0
 
+      # NOT OK: `npm i` is an alias for `npm install`.
+      - name: vulnerable-9a
+        run: npm i lodash
+
+      # NOT OK: `npm add` is also an alias for `npm install`.
+      - name: vulnerable-9b
+        run: npm add lodash
+
       # NOT OK: ad-hoc `npm exec`.
       - name: vulnerable-10
         run: npm exec lodash

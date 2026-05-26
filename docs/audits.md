@@ -44,8 +44,10 @@ Currently this audit flags:
 - `#!bash gem install <pkg>` invocations, including those with extra flags or
   version specifiers (e.g. `-v 13.0.6`). Other subcommands like
   `#!bash gem build` or `#!bash gem push` are not flagged.
-- `#!bash npm install <pkg>` and `#!bash npm exec <pkg>` invocations.
-  `#!bash npm install` with no package name (which installs from
+- `#!bash npm install <pkg>` and `#!bash npm exec <pkg>` invocations,
+  including their documented aliases (e.g. `#!bash npm i <pkg>`,
+  `#!bash npm add <pkg>`, `#!bash npm x <pkg>`). `#!bash npm install`/
+  `#!bash npm i` with no package name (which installs from
   `package-lock.json`) and `#!bash npm ci` are not flagged.
 - `#!bash npx -y <pkg>` / `#!bash npx --yes <pkg>` invocations, which skip
   the install prompt and pull the package straight from the registry.
