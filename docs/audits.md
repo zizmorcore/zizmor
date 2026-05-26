@@ -25,9 +25,10 @@ Legend:
 Detects `#!yaml run:` steps that install packages ad hoc, outside of a
 lockfile-managed manifest.
 
-Installing packages directly with commands like `#!bash gem install <pkg>`
-sidesteps the project's lockfile (e.g. `Gemfile.lock`), which causes several
-supply-chain hazards:
+Installing packages directly with commands like `#!bash gem install <pkg>` or
+`#!bash npm install <pkg>` sidesteps the project's lockfile (e.g.
+`Gemfile.lock`, `package-lock.json`), which causes several supply-chain
+hazards:
 
 - Without a lockfile to pin against, the workflow always installs whichever
   version the registry currently advertises. A compromised release of an
@@ -38,9 +39,18 @@ supply-chain hazards:
 - Reproducibility is lost: re-running the same workflow can install different
   versions of the same package over time.
 
-Currently this audit only flags `#!bash gem install <pkg>` invocations,
-including those with extra flags or version specifiers (e.g. `-v 13.0.6`).
-Subcommands like `#!bash gem build` or `#!bash gem push` are not flagged.
+Currently this audit flags:
+
+- `#!bash gem install <pkg>` invocations, including those with extra flags or
+  version specifiers (e.g. `-v 13.0.6`). Other subcommands like
+  `#!bash gem build` or `#!bash gem push` are not flagged.
+- `#!bash npm install <pkg>` and `#!bash npm exec <pkg>` invocations.
+  `#!bash npm install` with no package name (which installs from
+  `package-lock.json`) and `#!bash npm ci` are not flagged.
+- `#!bash npx -y <pkg>` / `#!bash npx --yes <pkg>` invocations, which skip
+  the install prompt and pull the package straight from the registry.
+  `#!bash npx <pkg>` without `-y`/`--yes` is not flagged, since it typically
+  runs a binary already installed via a lockfile.
 
 ### Remediation
 

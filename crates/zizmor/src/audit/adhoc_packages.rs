@@ -235,16 +235,21 @@ mod tests {
             (&["npm", "install", "lodash"][..], true),
             (&["npm", "install", "oxlint@1.55.0"][..], true),
             (&["npm", "install", "--no-fund", "oxlint@1.55.0"][..], true),
+            (&["npm", "install", "package-with-dashes"][..], true),
             (&["npx", "-y", "lodash"][..], true),
             (&["npx", "--yes", "lodash"][..], true),
             (&["npx", "--yes", "lodash@1.2.3"][..], true),
             (&["npm", "exec", "lodash"][..], true),
             (&["npm", "exec", "lodash@1.2.3"][..], true),
+            (&["npm", "exec", "--package=lodash@1.2.3"][..], true),
+            (&["npm", "exec", "-p=lodash@1.2.3"][..], true),
+            (&["npm", "exec", "--ws", "--", "eslint", "./*.js"][..], true),
             // npm flags without a package shouldn't be flagged.
             (&["npm", "install", "--help"][..], false),
             (&["npm", "install", "--no-fund"][..], false),
             (&["npm", "ci"][..], false),
             (&["npx", "foobar"][..], false),
+            (&["npx", "foobar@1.2.3"][..], false),
             // TODO: flip to `true` once `pip install` is covered.
             (&["pip", "install", "requests"][..], false),
         ] {
