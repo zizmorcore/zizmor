@@ -123,6 +123,14 @@
         - apache/sedona#2582
 
 
+-   ![](https://github.com/apollographql.png?size=40){ width="40" loading=lazy align=left } apollographql
+
+    ---
+
+    ??? example "Examples"
+        - apollographql/apollo-client#13236
+
+
 -   ![](https://github.com/aquasecurity.png?size=40){ width="40" loading=lazy align=left } aquasecurity
 
     ---
@@ -308,6 +316,14 @@
         - BerriAI/litellm#24663
 
 
+-   ![](https://github.com/beste.png?size=40){ width="40" loading=lazy align=left } beste
+
+    ---
+
+    ??? example "Examples"
+        - beste/firebase-php#1093
+
+
 -   ![](https://github.com/better-auth.png?size=40){ width="40" loading=lazy align=left } better-auth
 
     ---
@@ -367,6 +383,7 @@
 
     ??? example "Examples"
         - bloomberg/memray#922
+        - bloomberg/pystack#292
 
 
 -   ![](https://github.com/boto.png?size=40){ width="40" loading=lazy align=left } boto
@@ -753,6 +770,14 @@
         - dnnsoftware/Dnn.Platform#7195
 
 
+-   ![](https://github.com/DNSCrypt.png?size=40){ width="40" loading=lazy align=left } DNSCrypt
+
+    ---
+
+    ??? example "Examples"
+        - DNSCrypt/dnscrypt-proxy@60ab04f6ebab4c362f5d4c798f07e6dff4345ac5
+
+
 -   ![](https://github.com/docker.png?size=40){ width="40" loading=lazy align=left } docker
 
     ---
@@ -950,6 +975,7 @@
 
     ??? example "Examples"
         - fastapi/asyncer#555
+        - fastapi/fastapi#15607
         - fastapi/full-stack-fastapi-template#2260
         - fastapi/sqlmodel#1871
         - fastapi/typer#1705
@@ -1403,6 +1429,14 @@
         - intlify/vue-i18n#2489
 
 
+-   ![](https://github.com/iorate.png?size=40){ width="40" loading=lazy align=left } iorate
+
+    ---
+
+    ??? example "Examples"
+        - iorate/ublacklist#828
+
+
 -   ![](https://github.com/irbis-sh.png?size=40){ width="40" loading=lazy align=left } irbis-sh
 
     ---
@@ -1445,6 +1479,14 @@
         - jdx/mise#9804
         - jdx/mise-action#471
         - jdx/usage#633
+
+
+-   ![](https://github.com/jedisct1.png?size=40){ width="40" loading=lazy align=left } jedisct1
+
+    ---
+
+    ??? example "Examples"
+        - jedisct1/dsvpn@5383fd9ae714d3c6856023714a27db811ab78e6e
 
 
 -   ![](https://github.com/jj-vcs.png?size=40){ width="40" loading=lazy align=left } jj-vcs
@@ -1511,6 +1553,14 @@
     ??? example "Examples"
         - kata-containers/kata-containers#11392
         - kata-containers/kata-containers#11475
+
+
+-   ![](https://github.com/kimai.png?size=40){ width="40" loading=lazy align=left } kimai
+
+    ---
+
+    ??? example "Examples"
+        - kimai/kimai#5952
 
 
 -   ![](https://github.com/Kludex.png?size=40){ width="40" loading=lazy align=left } Kludex
@@ -1619,6 +1669,14 @@
 
     ??? example "Examples"
         - louislam/uptime-kuma#6575
+
+
+-   ![](https://github.com/m-bain.png?size=40){ width="40" loading=lazy align=left } m-bain
+
+    ---
+
+    ??? example "Examples"
+        - m-bain/whisperX#1423
 
 
 -   ![](https://github.com/madnuttah.png?size=40){ width="40" loading=lazy align=left } madnuttah
@@ -1788,6 +1846,14 @@
 
     ??? example "Examples"
         - miguelgrinberg/microdot#362
+
+
+-   ![](https://github.com/mikavilpas.png?size=40){ width="40" loading=lazy align=left } mikavilpas
+
+    ---
+
+    ??? example "Examples"
+        - mikavilpas/yazi.nvim#1881
 
 
 -   ![](https://github.com/miketheman.png?size=40){ width="40" loading=lazy align=left } miketheman
@@ -2045,8 +2111,10 @@
     ---
 
     ??? example "Examples"
+        - open-telemetry/opentelemetry-collector#15358
         - open-telemetry/opentelemetry-dotnet#7334
         - open-telemetry/opentelemetry-dotnet-contrib#4425
+        - open-telemetry/opentelemetry-dotnet-instrumentation#5077
         - open-telemetry/opentelemetry-ebpf-instrumentation#1511
         - open-telemetry/opentelemetry-js#6732
         - open-telemetry/opentelemetry-js-contrib#3533
@@ -2102,6 +2170,14 @@
         - ossf/allstar#818
 
 
+-   ![](https://github.com/otter-sec.png?size=40){ width="40" loading=lazy align=left } otter-sec
+
+    ---
+
+    ??? example "Examples"
+        - otter-sec/anchor#4594
+
+
 -   ![](https://github.com/Ouranosinc.png?size=40){ width="40" loading=lazy align=left } Ouranosinc
 
     ---
@@ -2118,6 +2194,14 @@
         - oxc-project/oxc#7844
         - oxc-project/oxc-resolver#370
         - oxc-project/oxc-resolver#373
+
+
+-   ![](https://github.com/oxigraph.png?size=40){ width="40" loading=lazy align=left } oxigraph
+
+    ---
+
+    ??? example "Examples"
+        - oxigraph/oxigraph#1728
 
 
 -   ![](https://github.com/pallets.png?size=40){ width="40" loading=lazy align=left } pallets
@@ -2279,6 +2363,14 @@
 
     ??? example "Examples"
         - pubgrub-rs/pubgrub#389
+
+
+-   ![](https://github.com/py-pdf.png?size=40){ width="40" loading=lazy align=left } py-pdf
+
+    ---
+
+    ??? example "Examples"
+        - py-pdf/pypdf#3808
 
 
 -   ![](https://github.com/pyca.png?size=40){ width="40" loading=lazy align=left } pyca
@@ -2569,6 +2661,15 @@
     ??? example "Examples"
         - rubygems/rubygems#8702
         - rubygems/rubygems.org#5350
+
+
+-   ![](https://github.com/rubysec.png?size=40){ width="40" loading=lazy align=left } rubysec
+
+    ---
+
+    ??? example "Examples"
+        - rubysec/bundler-audit#424
+        - rubysec/ruby-advisory-db#1064
 
 
 -   ![](https://github.com/rust-bitcoin.png?size=40){ width="40" loading=lazy align=left } rust-bitcoin

@@ -44,6 +44,7 @@ apache/polaris#4097
 apache/ratis#1426
 apache/sedona#1976
 apache/sedona#2582
+apollographql/apollo-client#13236
 aquasecurity/trivy#10322
 aquasecurity/trivy-action#502
 aquasecurity/trivy-operator#2910
@@ -89,6 +90,7 @@ Bash-it/bash-it#2381
 ben-manes/caffeine@cc5425aa2dca829276b583c5f7669e16d88d8403
 BerkeleyLearnVerify/Scenic#320
 BerriAI/litellm#24663
+beste/firebase-php#1093
 better-auth/better-auth#8879
 bevyengine/bevy#22294
 bevyengine/bevy#22817
@@ -101,6 +103,7 @@ bitwarden/sdk-sm#1378
 bitwarden/server#6409
 blakeblackshear/frigate#15490
 bloomberg/memray#922
+bloomberg/pystack#292
 boto/boto3#4755
 boto/botocore#3665
 boto/s3transfer#374
@@ -170,6 +173,7 @@ django/django@09d4bf5cd9c95c588d3ec22edea5db1f5f146900
 django/django@86b8058b40145fb5ba4fd859676225f533eca986
 django/django@e8958c4690faef27b6715524ecb5c49c3ecb6a09
 dnnsoftware/Dnn.Platform#7195
+DNSCrypt/dnscrypt-proxy@60ab04f6ebab4c362f5d4c798f07e6dff4345ac5
 docker/compose#12737
 dry-rb/dry-validation@44db170688d78e301d1e2d5f4e7dc260047f6fa5
 dubzzz/fast-check#6369
@@ -201,6 +205,7 @@ esl/MongooseIM#4435
 ethereum/hevm#615
 external-secrets/external-secrets#5368
 fastapi/asyncer#555
+fastapi/fastapi#15607
 fastapi/full-stack-fastapi-template#2260
 fastapi/sqlmodel#1871
 fastapi/typer#1705
@@ -309,6 +314,7 @@ inspektor-gadget/inspektor-gadget#5337
 Instagram/LibCST#1262
 intel/llvm#20437
 intlify/vue-i18n#2489
+iorate/ublacklist#828
 irbis-sh/zen-desktop#684
 ispc/ispc#3589
 j178/prek#947
@@ -318,6 +324,7 @@ jdx/hk#925
 jdx/mise#9804
 jdx/mise-action#471
 jdx/usage#633
+jedisct1/dsvpn@5383fd9ae714d3c6856023714a27db811ab78e6e
 jj-vcs/jj#5076
 JOML-CI/JOML@98290c379f54d05d6d27afb11ae88dfd86e35c9d
 js-cookie/js-cookie#946
@@ -328,6 +335,7 @@ jupyterhub/jupyterhub#5049
 kanidm/kanidm#3430
 kata-containers/kata-containers#11392
 kata-containers/kata-containers#11475
+kimai/kimai#5952
 Kludex/python-multipart#242
 Kludex/uvicorn#2872
 kubecolor/kubecolor#273
@@ -345,6 +353,7 @@ lissy93/dashy#2140
 llvm/llvm-project#187905
 lmstudio-ai/venvstacks#51
 louislam/uptime-kuma#6575
+m-bain/whisperX#1423
 madnuttah/unbound-docker#119
 maennchen/ZipStream-PHP#414
 MAIF/yozefu#284
@@ -381,6 +390,7 @@ microsoft/vscode-python#25047
 microsoft/vscode-python-debugger#709
 middyjs/middy#1646
 miguelgrinberg/microdot#362
+mikavilpas/yazi.nvim#1881
 miketheman/pytest-socket#462
 mkuf/prind#183
 MLCIL/scikit-fingerprints#553
@@ -428,8 +438,10 @@ onyx-dot-app/onyx#6344
 open-edge-platform/geti#162
 open-edge-platform/geti-sdk#603
 open-policy-agent/opa#8356
+open-telemetry/opentelemetry-collector#15358
 open-telemetry/opentelemetry-dotnet#7334
 open-telemetry/opentelemetry-dotnet-contrib#4425
+open-telemetry/opentelemetry-dotnet-instrumentation#5077
 open-telemetry/opentelemetry-ebpf-instrumentation#1511
 open-telemetry/opentelemetry-js#6732
 open-telemetry/opentelemetry-js-contrib#3533
@@ -441,10 +453,12 @@ Orange-OpenSource/hurl#3574
 orion-rs/orion#441
 orion-rs/orion#490
 ossf/allstar#818
+otter-sec/anchor#4594
 Ouranosinc/xclim#2023
 oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
+oxigraph/oxigraph#1728
 pallets/click#3304
 pallets/flask#5945
 pallets/werkzeug#3150
@@ -473,6 +487,7 @@ psf/black#4911
 psf/cachecontrol#345
 psf/requests#7314
 pubgrub-rs/pubgrub#389
+py-pdf/pypdf#3808
 pyca/service-identity#75
 pydantic/monty#312
 pydantic/pydantic#13039
@@ -532,6 +547,8 @@ rsyslog/rsyslog#6808
 ruby/ruby#16273
 rubygems/rubygems#8702
 rubygems/rubygems.org#5350
+rubysec/bundler-audit#424
+rubysec/ruby-advisory-db#1064
 rust-bitcoin/rust-bitcoin#5234
 rust-lang/bors#732
 rust-lang/compiler-builtins#1113
