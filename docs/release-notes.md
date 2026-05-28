@@ -42,6 +42,9 @@ of `zizmor`.
   `if: ${{ false }}`) are now skipped during auditing, since they cannot
   execute (#2059, #2069)
 
+* Fixed a bug where [ref-version-mismatch] would fail to identify some valid
+  version comments (#2073)
+
 ### Changes ⚠️
 
 * The [impostor-commit] audit no longer suggests auto-fixes,
