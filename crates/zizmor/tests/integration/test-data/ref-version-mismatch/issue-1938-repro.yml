@@ -1,0 +1,18 @@
+name: ISSUE-1938-REPRO
+
+on:
+  push:
+
+permissions: {}
+
+concurrency:
+  group: ISSUE-1938-REPRO
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Namespaced tag comment should match pinned SHA
+        uses: grafana/shared-workflows/actions/create-github-app-token@ae92934a14a48b94494dbc06d74a81d47fe08a40 # create-github-app-token/v0.2.2
