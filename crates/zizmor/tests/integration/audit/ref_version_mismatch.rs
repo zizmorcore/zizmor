@@ -203,6 +203,20 @@ fn test_issue_1899() -> Result<()> {
     Ok(())
 }
 
+/// Bug #1938: version comments like `# create-github-app-token/v0.2.2` should be detected correctly.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_issue_1938() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .args(["--persona=pedantic"])
+            .input(input_under_test("ref-version-mismatch/issue-1938-repro.yml"))
+            .run()?, @"No findings to report. Good job!");
+
+    Ok(())
+}
+
 /// Bug #2039: version comments like `# 1.2.3rc1` should be detected correctly.
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
