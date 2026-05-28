@@ -1943,7 +1943,7 @@ Even though the referenced action may itself by pinned, the action's configurati
 cause it to fetch the "latest" version of the tools used by it. At the moment, this audit only applies
 to a set of known actions with such behavior:
 
-- @aquasecurity/trivy-action
+- @aquasecurity/setup-trivy
 - @1password/load-secrets-action
 
 For these actions, zizmor reports a finding when:
