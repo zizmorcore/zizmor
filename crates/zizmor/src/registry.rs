@@ -25,6 +25,68 @@ impl AuditRegistry {
         }
     }
 
+    /// Returns the identifiers of every known default audit, including any
+    /// that may end up skipped at load time (e.g. because they require
+    /// network access or a GitHub API token).
+    pub(crate) fn all_default_idents() -> &'static [&'static str] {
+        use std::sync::OnceLock;
+
+        use crate::audit::AuditCore as _;
+
+        static IDENTS: OnceLock<Vec<&'static str>> = OnceLock::new();
+
+        IDENTS.get_or_init(|| {
+            macro_rules! idents {
+                ($($rule:path),* $(,)?) => {
+                    vec![$({
+                        use $rule as base;
+                        base::ident()
+                    }),*]
+                };
+            }
+
+            idents!(
+                audit::artipacked::Artipacked,
+                audit::unsound_contains::UnsoundContains,
+                audit::excessive_permissions::ExcessivePermissions,
+                audit::dangerous_triggers::DangerousTriggers,
+                audit::impostor_commit::ImpostorCommit,
+                audit::ref_confusion::RefConfusion,
+                audit::use_trusted_publishing::UseTrustedPublishing,
+                audit::template_injection::TemplateInjection,
+                audit::hardcoded_container_credentials::HardcodedContainerCredentials,
+                audit::self_hosted_runner::SelfHostedRunner,
+                audit::known_vulnerable_actions::KnownVulnerableActions,
+                audit::unpinned_uses::UnpinnedUses,
+                audit::undocumented_permissions::UndocumentedPermissions,
+                audit::insecure_commands::InsecureCommands,
+                audit::github_env::GitHubEnv,
+                audit::cache_poisoning::CachePoisoning,
+                audit::secrets_inherit::SecretsInherit,
+                audit::bot_conditions::BotConditions,
+                audit::overprovisioned_secrets::OverprovisionedSecrets,
+                audit::unredacted_secrets::UnredactedSecrets,
+                audit::forbidden_uses::ForbiddenUses,
+                audit::obfuscation::Obfuscation,
+                audit::stale_action_refs::StaleActionRefs,
+                audit::unpinned_images::UnpinnedImages,
+                audit::anonymous_definition::AnonymousDefinition,
+                audit::unsound_condition::UnsoundCondition,
+                audit::ref_version_mismatch::RefVersionMismatch,
+                audit::dependabot_execution::DependabotExecution,
+                audit::dependabot_cooldown::DependabotCooldown,
+                audit::concurrency_limits::ConcurrencyLimits,
+                audit::archived_uses::ArchivedUses,
+                audit::typosquat_uses::TyposquatUses,
+                audit::misfeature::Misfeature,
+                audit::secrets_outside_env::SecretsOutsideEnvironment,
+                audit::superfluous_actions::SuperfluousActions,
+                audit::github_app::GitHubApp,
+                audit::unpinned_tools::UnpinnedTools,
+            )
+        })
+    }
+
     /// Constructs a new [`AuditRegistry`] with all default audits registered.
     pub(crate) fn default_audits(audit_state: &AuditState) -> anyhow::Result<Self> {
         let mut registry = Self::empty();
@@ -87,6 +149,16 @@ impl AuditRegistry {
 
     pub(crate) fn len(&self) -> usize {
         self.audits.len()
+    }
+
+    /// Returns the identifiers of all registered audits, in registration order.
+    pub(crate) fn idents(&self) -> impl Iterator<Item = &'static str> {
+        self.audits.keys().copied()
+    }
+
+    /// Retain only the audits whose identifiers are in `selected`.
+    pub(crate) fn retain_selected(&mut self, selected: &std::collections::HashSet<&str>) {
+        self.audits.retain(|ident, _| selected.contains(ident));
     }
 
     pub(crate) fn register_audit(

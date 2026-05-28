@@ -537,19 +537,27 @@ impl Config {
     where
         F: AsyncFnOnce() -> Result<Option<Self>, ConfigError>,
     {
-        if options.no_config {
+        let mut config = if options.no_config {
             // User has explicitly disabled config loading.
             tracing::debug!("skipping config discovery: explicitly disabled");
-            Ok(Self::default())
+            Self::default()
         } else if let Some(config) = &options.global_config {
             // The user gave us a (legacy) global config file,
             // which takes precedence over any discovered config.
             tracing::debug!("config discovery: using global config: {config:?}");
-            Ok(config.clone())
+            config.clone()
         } else {
             // Attempt to discover a config file using the provided function.
-            discover_fn().await.map(|conf| conf.unwrap_or_default())
+            discover_fn().await?.unwrap_or_default()
+        };
+
+        for ident in &options.force_enabled_rules {
+            if let Some(rule_config) = config.raw.rules.get_mut(ident) {
+                rule_config.disable = false;
+            }
         }
+
+        Ok(config)
     }
 
     /// Discover a [`Config`] in the given directory.

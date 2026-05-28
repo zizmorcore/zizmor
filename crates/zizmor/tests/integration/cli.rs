@@ -806,6 +806,150 @@ fn test_stdin_valid_yaml_unknown_schema() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// `--select` runs only the specified audit rule.
+#[test]
+fn test_select_single_rule() -> anyhow::Result<()> {
+    let workflow = "\
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+";
+    insta::assert_snapshot!(
+        zizmor()
+            .stdin(workflow)
+            .no_config(true)
+            .args(["--select=artipacked", "-"])
+            .run()?,
+        @r"
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+     --> <stdin>:6:9
+      |
+    6 |       - uses: actions/checkout@v3
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+      |
+      = note: audit confidence → Low
+      = note: this finding has an auto-fix
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
+
+/// `--select` can be repeated to select multiple rules.
+#[test]
+fn test_select_multiple_rules() -> anyhow::Result<()> {
+    let workflow = "\
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+";
+    insta::assert_snapshot!(
+        zizmor()
+            .stdin(workflow)
+            .no_config(true)
+            .args(["--select=artipacked", "--select=unpinned-uses", "-"])
+            .run()?,
+        @r"
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+     --> <stdin>:6:9
+      |
+    6 |       - uses: actions/checkout@v3
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+      |
+      = note: audit confidence → Low
+      = note: this finding has an auto-fix
+
+    error[unpinned-uses]: unpinned action reference
+     --> <stdin>:6:15
+      |
+    6 |       - uses: actions/checkout@v3
+      |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+      |
+      = note: audit confidence → High
+
+    2 findings: 0 informational, 0 low, 1 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
+/// `--select` rejects unknown audit rule identifiers.
+#[test]
+fn test_select_unknown_rule() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .stdin("on: push")
+            .no_config(true)
+            .expects_failure(2)
+            .args(["--select=does-not-exist", "-"])
+            .run()?,
+        @"
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
+    error: --select: unknown audit rule(s): 'does-not-exist'
+
+    Usage: zizmor [OPTIONS] <INPUT>...
+
+    For more information, try '--help'.
+    "
+    );
+
+    Ok(())
+}
+
+/// `--select` overrides `disable: true` from a config file for the
+/// selected rule.
+#[test]
+fn test_select_overrides_disable() -> anyhow::Result<()> {
+    let workflow = "\
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+";
+
+    let config_path =
+        std::env::temp_dir().join(format!("zizmor-test-select-{}.yml", std::process::id()));
+    std::fs::write(&config_path, "rules:\n  artipacked:\n    disable: true\n")?;
+    let config_path_str = config_path.to_string_lossy().into_owned();
+
+    let result = zizmor()
+        .stdin(workflow)
+        .config(config_path_str)
+        .args(["--select=artipacked", "-"])
+        .run();
+
+    let _ = std::fs::remove_file(&config_path);
+
+    insta::assert_snapshot!(
+        result?,
+        @r"
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+     --> <stdin>:6:9
+      |
+    6 |       - uses: actions/checkout@v3
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+      |
+      = note: audit confidence → Low
+      = note: this finding has an auto-fix
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
+
 /// Test that valid YAML matching no known schema fails in strict mode.
 #[test]
 fn test_stdin_valid_yaml_unknown_schema_strict() -> anyhow::Result<()> {
