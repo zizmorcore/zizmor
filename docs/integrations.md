@@ -100,6 +100,8 @@ GitHub Actions setup:
 
           - name: Install the latest version of uv
             uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+            with:
+              enable-cache: false
 
           - name: Run zizmor 🌈
             run: uvx zizmor --format=sarif . > results.sarif # (2)!
@@ -170,6 +172,8 @@ GitHub Actions setup:
 
           - name: Install the latest version of uv
             uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+            with:
+              enable-cache: false
 
           - name: Run zizmor 🌈
             run: uvx zizmor --format=github . # (2)!
