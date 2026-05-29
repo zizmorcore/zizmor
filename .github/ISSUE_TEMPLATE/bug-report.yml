@@ -36,6 +36,10 @@ body:
             and [closed](https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue%20state%3Aclosed)
             issues for a duplicate report.
           required: true
+        - label: >-
+            I affirm that I have followed the [AI policy](https://github.com/zizmorcore/.github/blob/main/AI_POLICY.md)
+            and that this report constitutes my own words and understanding.
+          required: true
 
   - type: input
     attributes:
