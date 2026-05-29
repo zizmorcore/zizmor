@@ -105,6 +105,11 @@ Tracebit
 Alexander Riccio
 </a>
 </td>
+<td align="center" valign="top">
+<a href="https://github.com/willingc">
+Carol Willing
+</a>
+</td>
 </tr>
 </tbody>
 </table>
