@@ -932,33 +932,6 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         }
     }
 
-    if !app.audit.select.is_empty() {
-        let known: HashSet<&str> = AuditRegistry::all_default_idents()
-            .iter()
-            .copied()
-            .collect();
-        let unknown = app
-            .audit
-            .select
-            .iter()
-            .filter(|ident| !known.contains(ident.as_str()))
-            .collect::<Vec<_>>();
-
-        if !unknown.is_empty() {
-            let mut cmd = App::command();
-            let unknown_list = unknown
-                .iter()
-                .map(|ident| format!("'{ident}'"))
-                .collect::<Vec<_>>()
-                .join(", ");
-            cmd.error(
-                clap::error::ErrorKind::InvalidValue,
-                format!("--select: unknown audit rule(s): {unknown_list}"),
-            )
-            .exit();
-        }
-    }
-
     let collection_mode_set = CollectionModeSet::from(app.input.collect.as_slice());
 
     let min_severity = match app.audit.min_severity {
@@ -995,6 +968,49 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         .map(|token| Client::new(&app.network.gh_hostname, token, &app.network.cache_dir))
         .transpose()?;
 
+    let state = AuditState::new(app.network.no_online_audits, gh_client);
+
+    let mut audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;
+
+    if !app.audit.select.is_empty() {
+        let loaded: HashSet<&str> = audit_registry.idents().collect();
+        let skipped: HashSet<&str> = audit_registry.skipped_idents().iter().copied().collect();
+
+        let unknown = app
+            .audit
+            .select
+            .iter()
+            .filter(|ident| !loaded.contains(ident.as_str()) && !skipped.contains(ident.as_str()))
+            .collect::<Vec<_>>();
+
+        if !unknown.is_empty() {
+            let mut cmd = App::command();
+            let unknown_list = unknown
+                .iter()
+                .map(|ident| format!("'{ident}'"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            cmd.error(
+                clap::error::ErrorKind::InvalidValue,
+                format!("--select: unknown audit rule(s): {unknown_list}"),
+            )
+            .exit();
+        }
+
+        let selected: HashSet<&str> = app.audit.select.iter().map(String::as_str).collect();
+
+        for ident in &selected {
+            if skipped.contains(ident) {
+                warn!(
+                    "selected audit '{ident}' was not loaded; \
+                     it may require a GitHub API token or online access"
+                );
+            }
+        }
+
+        audit_registry.retain_selected(&selected);
+    }
+
     let collection_options = CollectionOptions {
         mode_set: collection_mode_set,
         strict: app.input.strict_collection,
@@ -1006,29 +1022,9 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     let registry = collect_inputs(
         app.input.inputs.as_slice(),
         &collection_options,
-        gh_client.as_ref(),
+        state.gh_client.as_ref(),
     )
     .await?;
-
-    let state = AuditState::new(app.network.no_online_audits, gh_client);
-
-    let mut audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;
-
-    if !app.audit.select.is_empty() {
-        let selected: HashSet<&str> = app.audit.select.iter().map(String::as_str).collect();
-
-        let loaded: HashSet<&str> = audit_registry.idents().collect();
-        for ident in &selected {
-            if !loaded.contains(ident) {
-                warn!(
-                    "selected audit '{ident}' was not loaded; \
-                     it may require a GitHub API token or online access"
-                );
-            }
-        }
-
-        audit_registry.retain_selected(&selected);
-    }
 
     let mut results = FindingRegistry::new(
         &registry,
