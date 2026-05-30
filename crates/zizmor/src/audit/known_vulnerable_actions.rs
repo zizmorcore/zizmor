@@ -243,6 +243,7 @@ impl KnownVulnerableActions {
     async fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
+        config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
@@ -252,6 +253,11 @@ impl KnownVulnerableActions {
 
         for (severity, id, first_patched_version) in self.action_known_vulnerabilities(uses).await?
         {
+            if config.known_vulnerable_actions_config.allow.contains(&id) {
+                tracing::trace!("{id} is allowed in configuration; skipping");
+                continue;
+            }
+
             let mut finding_builder = Self::finding()
                 .confidence(Confidence::High)
                 .severity(severity)
@@ -310,17 +316,17 @@ impl Audit for KnownVulnerableActions {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step).await
+        self.process_step(step, config).await
     }
 
     async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
-        _config: &Config,
+        config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step).await
+        self.process_step(step, config).await
     }
 }
 

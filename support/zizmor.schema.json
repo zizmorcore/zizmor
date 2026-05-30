@@ -153,6 +153,61 @@
       },
       "additionalProperties": false
     },
+    "KnownVulnerableActionsConfig": {
+      "title": "Configuration for the `known-vulnerable-actions` audit.",
+      "type": "object",
+      "properties": {
+        "allow": {
+          "description": "List of advisory IDs to ignore for this audit.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "allow"
+      ]
+    },
+    "KnownVulnerableActionsRuleConfig": {
+      "description": "Configuration for the `known-vulnerable-actions` audit.",
+      "type": "object",
+      "properties": {
+        "config": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/KnownVulnerableActionsConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disable": {
+          "type": "boolean",
+          "default": false
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowRule"
+          }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "RemapConfig": {
       "type": "object",
       "properties": {
@@ -237,7 +292,7 @@
           "$ref": "#/definitions/BaseRuleConfig"
         },
         "known-vulnerable-actions": {
-          "$ref": "#/definitions/BaseRuleConfig"
+          "$ref": "#/definitions/KnownVulnerableActionsRuleConfig"
         },
         "misfeature": {
           "$ref": "#/definitions/BaseRuleConfig"

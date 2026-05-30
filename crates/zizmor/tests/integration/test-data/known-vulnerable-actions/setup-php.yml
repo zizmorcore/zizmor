@@ -1,0 +1,17 @@
+name: ISSUE-1899-REPRO
+
+on:
+  push:
+
+permissions: {}
+
+concurrency:
+  group: test
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # 2.37.0
