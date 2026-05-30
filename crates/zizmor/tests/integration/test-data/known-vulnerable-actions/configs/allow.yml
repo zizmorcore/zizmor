@@ -1,0 +1,6 @@
+rules:
+  known-vulnerable-actions:
+    config:
+      allow:
+        - GHSA-5wxr-w449-57cm
+        - GHSA-pqwm-q9pv-ph8r

@@ -21,6 +21,10 @@ of `zizmor`.
 * The [cache-poisoning] audit now detects additional cache disablement
   heuristics (#2053)
 
+* The [known-vulnerable-actions] audit is now configurable. 
+  See [the configuration documentation](./audits.md#known-vulnerable-actions-configuration)
+  for details (#2084)
+
 ### Performance Improvements 🚄
 
 * Most online audits are significantly faster, thanks to more precise retry handling (#2036)

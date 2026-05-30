@@ -12,8 +12,8 @@
 use schemars::JsonSchema;
 
 use super::{
-    DependabotCooldownConfig, ForbiddenUsesConfig, RemapConfig, SecretsOutsideEnvConfig,
-    UnpinnedUsesConfig, WorkflowRule,
+    DependabotCooldownConfig, ForbiddenUsesConfig, KnownVulnerableActionsConfig, RemapConfig,
+    SecretsOutsideEnvConfig, UnpinnedUsesConfig, WorkflowRule,
 };
 
 /// Base configuration for all audit rules.
@@ -74,6 +74,17 @@ struct UnpinnedUsesRuleConfig {
     config: UnpinnedUsesConfig,
 }
 
+/// Configuration for the `known-vulnerable-actions` audit.
+#[derive(Debug, Default, JsonSchema)]
+#[serde(deny_unknown_fields)]
+struct KnownVulnerableActionsRuleConfig {
+    #[serde(flatten)]
+    base: BaseRuleConfig,
+
+    #[serde(default)]
+    config: Option<KnownVulnerableActionsConfig>,
+}
+
 macro_rules! define_audit_rules {
     (
         $( $field:ident ),* $(,)?
@@ -104,7 +115,6 @@ define_audit_rules! {
     template_injection,
     hardcoded_container_credentials,
     self_hosted_runner,
-    known_vulnerable_actions,
     undocumented_permissions,
     insecure_commands,
     github_env,
@@ -132,6 +142,7 @@ define_audit_rules! {
     [ForbiddenUsesRuleConfig] forbidden_uses,
     [SecretsOutsideEnvRuleConfig] secrets_outside_env,
     [UnpinnedUsesRuleConfig] unpinned_uses,
+    [KnownVulnerableActionsRuleConfig] known_vulnerable_actions,
 }
 
 /// # zizmor's configuration

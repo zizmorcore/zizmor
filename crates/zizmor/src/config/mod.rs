@@ -22,6 +22,7 @@ use crate::{
     App, CollectionOptions,
     audit::{
         AuditCore, dependabot_cooldown::DependabotCooldown, forbidden_uses::ForbiddenUses,
+        known_vulnerable_actions::KnownVulnerableActions,
         secrets_outside_env::SecretsOutsideEnvironment, unpinned_uses::UnpinnedUses,
     },
     finding::{Finding, Severity},
@@ -467,6 +468,15 @@ impl TryFrom<UnpinnedUsesConfig> for UnpinnedUsesPolicies {
     }
 }
 
+/// # Configuration for the `known-vulnerable-actions` audit.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub(crate) struct KnownVulnerableActionsConfig {
+    /// List of advisory IDs to ignore for this audit.
+    pub(crate) allow: HashSet<String>,
+}
+
 /// zizmor's configuration.
 ///
 /// This is a wrapper around [`RawConfig`] that pre-computes various
@@ -481,6 +491,7 @@ pub(crate) struct Config {
     pub(crate) forbidden_uses_config: Option<ForbiddenUsesConfig>,
     pub(crate) secrets_outside_env_policy: SecretsOutsideEnvPolicy,
     pub(crate) unpinned_uses_policies: UnpinnedUsesPolicies,
+    pub(crate) known_vulnerable_actions_config: KnownVulnerableActionsConfig,
 }
 
 impl Config {
@@ -510,12 +521,17 @@ impl Config {
             }
         };
 
+        let known_vulnerable_actions_config = raw
+            .rule_config::<KnownVulnerableActionsConfig>(KnownVulnerableActions::ident())?
+            .unwrap_or_default();
+
         Ok(Self {
             raw,
             dependabot_cooldown_config,
             forbidden_uses_config,
             secrets_outside_env_policy,
             unpinned_uses_policies,
+            known_vulnerable_actions_config,
         })
     }
 
