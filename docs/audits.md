@@ -84,7 +84,7 @@ represents a supply chain risk:
 
 - Any vulnerabilities discovered in the action or reusable workflow *itself*
   are unlikely to be fixed, since the repository is read-only.
-  
+
 Consequently, users are encouraged to avoid dependening on archived repositories
 for actions or reusable workflows.
 
@@ -95,19 +95,19 @@ Depending on the archived repository's functionality, you may be able to:
 - _Remove_ the action/reusable workflow entirely. Actions @actions-rs/cargo,
   for example, can be replaced by directly invoking the correct `#!bash cargo ...`
   command in a `#!yaml run:` step.
-  
+
 - _Replace_ the archived action/reusable workflow with a maintained alternative.
   For example, @actions/setup-ruby can be replaced with @ruby/setup-ruby.
-  
+
 !!! tip
 
     Many archived actions are thin wrappers around GitHub's REST and GraphQL
     APIs. In most cases, you can replace these actions with usage of the
     [`gh` CLI](https://cli.github.com/), which is pre-installed on GitHub-hosted
     runners.
-    
+
     For more information, see [Using GitHub CLI in workflows].
-    
+
     [Using GitHub CLI in workflows]: https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-github-cli
 
 ## `artipacked`
@@ -137,7 +137,7 @@ unless actually needed.
     when v6.0.0 or higher of @actions/checkout is used. This reflects a
     change in v6.0.0's credential persistence behavior towards a more
     misuse-resistant location.
-    
+
     See orgs/community?179107 for additional information.
 
 Other resources:
@@ -487,9 +487,9 @@ enable them.
 
     Dependabot's `multi-ecosystem-groups` feature does not interact well
     with `cooldown`: if you use the two together, Dependabot will only create
-    an update for _one_ ecosystem for each cooldown period, even if multiple 
+    an update for _one_ ecosystem for each cooldown period, even if multiple
     ecosystems have new versions available. See #1501 for context.
-    
+
     zizmor will flag these cases with a pedantic finding.
 
 Other resources:
@@ -1058,6 +1058,40 @@ injection via [template injection].
 
 [template injection]: #template-injection
 
+### Configuration { #known-vulnerable-actions-configuration }
+
+!!! tip
+
+    `known-vulnerable-actions` is configurable in `v1.26.0` and later.
+
+#### `rules.known-vulnerable-actions.config.allow`
+
+_Type_: `list`
+
+The `rules.known-vulnerable-actions.config.allow` allows users to suppress findings
+for specific vulnerabilities, by advisory ID.
+
+!!! example
+    To suppress [GHSA-5wxr-w449-57cm](https://github.com/advisories/GHSA-5wxr-w449-57cm):
+
+    ```yaml title="zizmor.yml"
+    rules:
+      known-vulnerable-actions:
+        config:
+          allow:
+            - GHSA-5wxr-w449-57cm
+    ```
+
+!!! danger
+
+    Users **must fully understand** the implications of a vulnerability before allowlisting it.
+
+    When in doubt, **do not** allowlist a vulnerability. Instead, either remove it or upgrade
+    to a fixed version (if available).
+
+By default, no vulnerabilities are allowlisted, meaning that all known vulnerabilities
+will produce findings.
+
 ### Remediation
 
 If the vulnerability is applicable to your use: upgrade to a fixed version of
@@ -1077,9 +1111,9 @@ Misfeatures include:
   dependencies directly into a global (user or system-level) environment,
   which is both difficult to audit and is likely to cause broken
   resolutions.
-  
+
     !!! note
-  
+
         See actions/setup-python#1201 and [PEP 668](https://peps.python.org/pep-0668/)
         for additional context.
 
@@ -1089,7 +1123,7 @@ Misfeatures include:
   since 2019.
 
     !!! note
-  
+
         Prior to `v1.21.0`, this check was performed by the [`obfuscation`](#obfuscation) audit.
 
 * Use of non-"well-known" shells, i.e. shells other than those
@@ -1130,7 +1164,7 @@ Address the misfeature by removing or replacing its usage.
             steps:
               - name: Setup Python
                 uses: actions/setup-python@v6
-              
+
               - name: Install package
                 run: |
                   python -m venv .env
@@ -1440,7 +1474,7 @@ the risk of secrets being exposed to untrusted code or compromised workflows.
     particular, as of March 2026 environment secrets do not interact correctly
     with reusable workflows unless the caller workflow uses `secrets: inherit`,
     which is itself flagged by [secrets-inherit](./audits.md#secrets-inherit).
-    
+
 ### Remediation
 
 In general, secrets should be configured at the environment level, and only
@@ -1454,7 +1488,7 @@ the job or jobs that need a secret should use the corresponding environment.
 
     You **must** move your secrets into the environment's secrets (and remove
     them from the repo/org-wide secrets) in order for this to be effective.
-    
+
 !!! example
 
     === "Before :warning:"
@@ -1486,7 +1520,7 @@ the job or jobs that need a secret should use the corresponding environment.
 
 !!! tip
 
-    `secrets-outside-env` is configurable in `v1.24.0` and later. 
+    `secrets-outside-env` is configurable in `v1.24.0` and later.
 
 #### `rules.secrets-outside-env.config.allow`
 
@@ -1597,7 +1631,7 @@ which points to a Git tag.
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | N/A            | v1.23.0        | ✅             | ❌                | ❌  |  
+| Workflow, Action  | N/A            | v1.23.0        | ✅             | ❌                | ❌  |
 
 
 Detects actions that are known to be "superfluous," i.e. perform an operation already provided by GitHub's own runner images.
@@ -1952,11 +1986,11 @@ For these actions, zizmor reports a finding when:
 - `with.version` is set to `latest`
 
 !!! note
-  
+
     This audit does not flag actions that perform *interior* hash-pinning, e.g.
     that fetch the "latest" version of a tool but only after validating it against
     a known-good hash.
-    
+
     For example, @zizmorcore/zizmor-action defaults to the "latest" version of
     `zizmor` relative to the action's release, and that "latest" version is
     [pinned in the action itself](https://github.com/zizmorcore/zizmor-action/blob/main/support/versions),
@@ -2106,7 +2140,7 @@ regardless of definition order.
 
     You can use `zizmor`'s [fix mode](./usage.md#auto-fixing-results) to
     automatically hash-pin your workflows and actions.
-  
+
     Alternatively, there are several third-party tools that can automatically
     hash-pin your workflows and actions for you:
 
@@ -2485,11 +2519,11 @@ once it's configured:
     ---
 
     See: [Trusted publishing for npm packages]
-    
+
 -   :simple-nuget:{.lg .middle} .NET (nuget.org)
 
     ---
-    
+
     Usage: @NuGet/login
 
     See: [Trusted publishing for nuget.org]
