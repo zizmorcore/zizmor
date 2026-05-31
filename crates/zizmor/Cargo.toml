@@ -90,4 +90,3 @@ fst.workspace = true
 [dev-dependencies]
 assert_cmd.workspace = true
 insta.workspace = true
-serde_json_path.workspace = true

@@ -1,7 +1,5 @@
 // TODO: These modules could stand to be cleaned up a bit.
 
-/// Basic acceptance tests.
-mod acceptance;
 /// Audit-specific tests.
 mod audit;
 /// Basic CLI tests.
