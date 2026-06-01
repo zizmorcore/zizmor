@@ -36,4 +36,5 @@ mod unpinned_uses;
 mod unredacted_secrets;
 mod unsound_condition;
 mod unsound_contains;
+mod unsound_ternary;
 mod use_trusted_publishing;

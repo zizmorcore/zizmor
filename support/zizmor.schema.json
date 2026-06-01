@@ -351,6 +351,9 @@
         "unsound-contains": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
+        "unsound-ternary": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "use-trusted-publishing": {
           "$ref": "#/definitions/BaseRuleConfig"
         }

@@ -2445,6 +2445,72 @@ Other resources:
                 if: contains(fromJSON('["refs/heads/main", "refs/heads/develop"]'), github.ref)
         ```
 
+## `unsound-ternary`
+
+| Type     | Examples              | Introduced in | Works offline | Auto-fixes available | Configurable |
+|----------|-----------------------|---------------|---------------|--------------------|--------------|
+| Workflow, Action | [issue-746-repro.yml] | v1.26.0      | ✅            | ❌                 | ❌           |
+
+[issue-746-repro.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/unsound-ternary/issue-746-repro.yml
+
+Detects GitHub Actions expressions that use `&&` and `||` as a pseudo-ternary
+when the "true" value can evaluate to a falsy value.
+
+It's common to imitate the behavior of a ternary in GitHub Actions expressions
+like this:
+
+```yaml
+${{ condition && value || fallback }}
+```
+
+This only behaves like a ternary when `value` is truthy. If `value` is falsy,
+the expression falls through to `fallback` even when `condition` is true. For
+example, the following expression evaluates to `bar` when `foo` is truthy:
+
+```yaml
+${{ foo && '' || 'bar' }}
+```
+
+This audit detects pseudo-ternaries where the true arm statically evaluates to
+a falsy value, including `#!yaml ''`, `#!yaml 0`, `#!yaml false`, and
+`#!yaml null`.
+
+### Remediation
+
+Use the official `case(...)` function when a value may be falsy:
+
+```yaml
+${{ case(condition, value, fallback) }}
+```
+
+Alternatively, rewrite the expression so that the true arm cannot be falsy.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="unsound-ternary.yml" hl_lines="7"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - run: echo "value=${VALUE}"
+                env:
+                  VALUE: ${{ foo && '' || 'bar' }}
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="unsound-ternary.yml" hl_lines="7"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - run: echo "value=${VALUE}"
+                env:
+                  VALUE: ${{ case(foo, '', 'bar') }}
+        ```
+
 
 ## `use-trusted-publishing`
 
