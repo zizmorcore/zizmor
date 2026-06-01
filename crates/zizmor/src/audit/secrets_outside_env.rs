@@ -6,7 +6,7 @@ use crate::{
     config::Config,
     finding::{
         Confidence, Finding, Persona, Severity,
-        location::{Feature, Locatable, Location},
+        location::{Feature, Locatable as _, Location},
     },
     models::workflow::{JobCommon as _, NormalJob},
     state::AuditState,

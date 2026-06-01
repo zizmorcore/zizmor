@@ -81,6 +81,9 @@ tree-sitter-yaml = "0.7.2"
 tikv-jemallocator = "0.6"
 typomania = { version = "0.1.2", default-features = false }
 
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
 [workspace.lints.clippy]
 dbg_macro = "warn"
 todo = "warn"
@@ -90,6 +93,7 @@ needless_lifetimes = "warn"
 print_stderr = "warn"
 print_stdout = "warn"
 unwrap_used = "warn"
+unused_trait_names = "warn"
 
 [profile.dev.package]
 insta.opt-level = 3

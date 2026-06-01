@@ -6,7 +6,8 @@ use crate::{
     config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::{
-        StepBodyCommon, StepCommon, action::CompositeStep, uses::RepositoryUsesExt, workflow::Step,
+        StepBodyCommon, StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _,
+        workflow::Step,
     },
     state::AuditState,
     utils,

@@ -5,10 +5,10 @@ use yamlpatch::{Op, Patch};
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
 use crate::config::{Config, UsesPolicy};
-use crate::finding::location::{Locatable, Routable};
+use crate::finding::location::{Locatable, Routable as _};
 use crate::finding::{Confidence, Finding, Fix, Persona, Severity};
 use crate::github;
-use crate::models::uses::{RepositoryUsesExt, RepositoryUsesPattern};
+use crate::models::uses::{RepositoryUsesExt as _, RepositoryUsesPattern};
 use crate::models::version::Version;
 use crate::models::workflow::ReusableWorkflowCallJob;
 use crate::models::{

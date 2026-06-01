@@ -21,7 +21,7 @@ pub mod schema;
 use crate::{
     App, CollectionOptions,
     audit::{
-        AuditCore, dependabot_cooldown::DependabotCooldown, forbidden_uses::ForbiddenUses,
+        AuditCore as _, dependabot_cooldown::DependabotCooldown, forbidden_uses::ForbiddenUses,
         known_vulnerable_actions::KnownVulnerableActions,
         secrets_outside_env::SecretsOutsideEnvironment, unpinned_uses::UnpinnedUses,
     },

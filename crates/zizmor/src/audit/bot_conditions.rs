@@ -1,4 +1,4 @@
-use std::{ops::Deref, sync::LazyLock};
+use std::{ops::Deref as _, sync::LazyLock};
 
 use github_actions_expressions::{
     Expr, SpannedExpr,
@@ -15,7 +15,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
-    models::workflow::{JobCommon, Workflow},
+    models::workflow::{JobCommon as _, Workflow},
     utils::{self, ExtractedExpr},
 };
 use subfeature::Subfeature;

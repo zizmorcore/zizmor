@@ -11,7 +11,6 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(missing_docs)]
 #![allow(clippy::redundant_field_names)]
-#![forbid(unsafe_code)]
 
 use std::{
     borrow::Cow,

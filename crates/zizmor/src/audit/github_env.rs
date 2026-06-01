@@ -1,6 +1,6 @@
-use std::ops::{Deref, Range};
+use std::ops::{Deref as _, Range};
 
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use github_actions_models::action;
 use github_actions_models::workflow::job::StepBody;
 use tree_sitter::{
@@ -12,7 +12,7 @@ use crate::audit::AuditError;
 use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::StepCommon;
+use crate::models::StepCommon as _;
 use crate::models::{workflow::JobCommon as _, workflow::Step};
 use crate::state::AuditState;
 use crate::utils;

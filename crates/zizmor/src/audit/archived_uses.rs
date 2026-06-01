@@ -7,7 +7,7 @@ use subfeature::Subfeature;
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
     config::Config,
-    finding::{Confidence, Finding, FindingBuilder, Persona, Severity, location::Locatable},
+    finding::{Confidence, Finding, FindingBuilder, Persona, Severity, location::Locatable as _},
     models::{
         StepCommon as _,
         action::CompositeStep,

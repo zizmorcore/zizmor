@@ -8,7 +8,7 @@ use crate::{
     config::Config,
     finding::{
         Finding, Fix, FixDisposition, Persona,
-        location::{Feature, Location, Routable},
+        location::{Feature, Location, Routable as _},
     },
     models::{StepCommon, action::CompositeStep, workflow::Step},
     utils::parse_fenced_expressions_from_routable,

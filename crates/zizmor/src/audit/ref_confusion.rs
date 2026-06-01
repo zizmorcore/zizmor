@@ -13,7 +13,7 @@ use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::audit::AuditError;
 use crate::finding::Finding;
 use crate::finding::location::Locatable as _;
-use crate::models::{StepCommon, action::CompositeStep};
+use crate::models::{StepCommon as _, action::CompositeStep};
 use crate::{
     finding::{Confidence, Severity},
     github,
