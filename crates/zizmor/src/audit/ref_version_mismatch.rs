@@ -8,10 +8,10 @@ use crate::{
     config::Config,
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
-        location::{Comment, Feature, Location, Routable},
+        location::{Comment, Feature, Location, Routable as _},
     },
     github,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt, workflow::Step},
+    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
     utils::once::static_regex,
 };
 

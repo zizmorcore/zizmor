@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::ops::Deref as _;
 
 use github_actions_expressions::{
     Expr, SpannedExpr,

@@ -3,7 +3,9 @@
 //! The [`Client`] type uses a mixture of GitHub's REST API and
 //! direct Git access, depending on the operation being performed.
 
-use std::{collections::HashSet, fmt::Display, io::Read, ops::Deref, str::FromStr, sync::Arc};
+use std::{
+    collections::HashSet, fmt::Display, io::Read as _, ops::Deref as _, str::FromStr, sync::Arc,
+};
 
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
@@ -25,7 +27,7 @@ use tracing::instrument;
 use crate::{
     CollectionOptions,
     registry::input::{CollectionError, InputGroup, InputKey, InputKind, RepoSlug},
-    utils::{PipeSelf, ZIZMOR_AGENT},
+    utils::{PipeSelf as _, ZIZMOR_AGENT},
 };
 
 mod lineref;

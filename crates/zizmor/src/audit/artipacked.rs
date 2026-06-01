@@ -12,7 +12,7 @@ use crate::{
     audit::AuditError,
     finding::{Confidence, Finding, Fix, Persona, Severity, location::Routable as _},
     github::{Client, ClientError},
-    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt, version::Version},
+    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _, version::Version},
     state::AuditState,
     utils::split_patterns,
 };

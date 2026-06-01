@@ -1,6 +1,5 @@
 //! Subfeature handling and manipulation APIs.
 
-#![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
 use std::sync::LazyLock;

@@ -12,7 +12,7 @@ use anstream::{eprintln, println, stderr, stream::IsTerminal};
 use anyhow::anyhow;
 use camino::Utf8PathBuf;
 use clap::{
-    ArgAction, Args, CommandFactory, Parser, ValueEnum, ValueHint,
+    ArgAction, Args, CommandFactory as _, Parser, ValueEnum, ValueHint,
     builder::{
         NonEmptyStringValueParser,
         styling::{AnsiColor, Effects, Styles},
@@ -22,24 +22,24 @@ use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use etcetera::AppStrategy as _;
 use finding::{Confidence, Persona, Severity};
-use futures::stream::{FuturesOrdered, StreamExt};
+use futures::stream::{FuturesOrdered, StreamExt as _};
 use github::{GitHubHost, GitHubToken};
 use indicatif::ProgressStyle;
-use owo_colors::OwoColorize;
+use owo_colors::OwoColorize as _;
 use registry::input::{InputKey, InputRegistry};
 use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
 use terminal_link::Link;
 use thiserror::Error;
 use tracing::{Span, info_span, instrument, warn};
-use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt};
+use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt as _};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 use crate::{
     audit::AuditError,
     config::{Config, ConfigError, ConfigErrorInner},
     github::Client,
-    models::AsDocument,
+    models::AsDocument as _,
     registry::input::CollectionError,
     utils::once::warn_once,
 };

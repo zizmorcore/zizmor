@@ -2,14 +2,14 @@
 
 use std::collections::HashMap;
 
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use camino::Utf8PathBuf;
-use owo_colors::OwoColorize;
+use owo_colors::OwoColorize as _;
 
 use crate::{
     FixMode,
     finding::{Finding, Fix, FixDisposition},
-    models::AsDocument,
+    models::AsDocument as _,
     registry::{FindingRegistry, input::InputKey, input::InputRegistry},
 };
 

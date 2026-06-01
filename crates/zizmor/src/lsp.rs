@@ -1,6 +1,6 @@
 //! zizmor's language server.
 
-use std::str::FromStr;
+use std::str::FromStr as _;
 use tokio::sync::RwLock;
 
 use camino::{Utf8Path, Utf8PathBuf};

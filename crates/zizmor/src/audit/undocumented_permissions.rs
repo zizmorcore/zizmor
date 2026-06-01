@@ -3,7 +3,7 @@ use github_actions_models::common::{Permission, Permissions};
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::audit::AuditError;
 use crate::finding::location::Locatable as _;
-use crate::models::AsDocument;
+use crate::models::AsDocument as _;
 use crate::{
     AuditState,
     finding::{Confidence, Persona, Severity, location::SymbolicLocation},

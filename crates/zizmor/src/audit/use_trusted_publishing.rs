@@ -6,7 +6,7 @@ use tree_sitter::StreamingIterator as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::audit::AuditError;
-use crate::finding::location::Locatable;
+use crate::finding::location::Locatable as _;
 use crate::{
     finding::{Confidence, Finding, Severity},
     models::{

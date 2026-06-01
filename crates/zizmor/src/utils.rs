@@ -7,7 +7,7 @@ use github_actions_models::common::{Env, expr::LoE};
 use jsonschema::ErrorEntry;
 use jsonschema::{Validator, validator_for};
 use std::ops::{Deref, Range};
-use std::{fmt::Write, sync::LazyLock};
+use std::{fmt::Write as _, sync::LazyLock};
 
 use crate::finding::location::Routable;
 use crate::{models::AsDocument, registry::input::CollectionError};

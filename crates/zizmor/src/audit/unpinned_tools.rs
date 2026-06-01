@@ -5,7 +5,7 @@ use crate::audit::{Audit, AuditError, audit_meta};
 use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::StepBodyCommon;
-use crate::models::uses::RepositoryUsesExt;
+use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
 use crate::state::AuditState;
 use crate::utils::ExtractedExpr;

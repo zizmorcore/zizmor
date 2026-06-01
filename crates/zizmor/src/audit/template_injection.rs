@@ -15,7 +15,7 @@
 //! A small amount of additional processing is done to remove template
 //! expressions that an attacker can't control.
 
-use std::{env, ops::Deref, sync::LazyLock, vec};
+use std::{env, ops::Deref as _, sync::LazyLock, vec};
 
 use fst::Map;
 use github_actions_expressions::{Expr, context::Context, literal::Literal};

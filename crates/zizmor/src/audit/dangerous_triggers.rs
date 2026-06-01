@@ -6,7 +6,7 @@ use super::{Audit, AuditLoadError, audit_meta};
 use crate::audit::AuditError;
 use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::uses::RepositoryUsesExt;
+use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::workflow::Workflow;
 use crate::state::AuditState;
 

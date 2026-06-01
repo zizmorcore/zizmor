@@ -17,7 +17,7 @@ use crate::{
     config::Config,
     finding::{Confidence, Finding, Severity, location::Locatable as _},
     github::{self, ComparisonStatus},
-    models::{StepCommon, uses::RepositoryUsesExt as _, workflow::Workflow},
+    models::{StepCommon as _, uses::RepositoryUsesExt as _, workflow::Workflow},
     state::AuditState,
 };
 
