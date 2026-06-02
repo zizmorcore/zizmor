@@ -1,0 +1,11 @@
+on: pull_request
+
+name: issue-746-repro
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ${{ foo && '' || 'bar' }}

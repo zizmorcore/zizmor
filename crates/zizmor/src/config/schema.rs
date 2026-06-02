@@ -107,6 +107,7 @@ macro_rules! define_audit_rules {
 define_audit_rules! {
     artipacked,
     unsound_contains,
+    unsound_ternary,
     excessive_permissions,
     dangerous_triggers,
     impostor_commit,

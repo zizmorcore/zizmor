@@ -56,6 +56,7 @@ pub(crate) mod unpinned_uses;
 pub(crate) mod unredacted_secrets;
 pub(crate) mod unsound_condition;
 pub(crate) mod unsound_contains;
+pub(crate) mod unsound_ternary;
 pub(crate) mod use_trusted_publishing;
 
 #[derive(Debug)]

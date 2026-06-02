@@ -46,6 +46,7 @@ impl AuditRegistry {
 
         register_audit!(audit::artipacked::Artipacked);
         register_audit!(audit::unsound_contains::UnsoundContains);
+        register_audit!(audit::unsound_ternary::UnsoundTernary);
         register_audit!(audit::excessive_permissions::ExcessivePermissions);
         register_audit!(audit::dangerous_triggers::DangerousTriggers);
         register_audit!(audit::impostor_commit::ImpostorCommit);

@@ -16,6 +16,11 @@ of `zizmor`.
 
     Many thanks to @andrew for proposing and implementing this improvement!
 
+* **New audit**: [unsound-ternary] detects pseudo-ternary expressions that
+  don't evaluate as expected (#2085)
+
+    Many thanks to @terror for proposing and implementing this improvement!
+
 ### Enhancements 🌱
 
 * The [cache-poisoning] audit now detects additional cache disablement
