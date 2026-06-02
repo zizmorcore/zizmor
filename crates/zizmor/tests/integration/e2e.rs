@@ -657,10 +657,10 @@ fn issue_1745() -> Result<()> {
             .working_dir(input_under_test("issue-1745-repro"))
             .args([".", "--format=github"])
             .run()?,
-        @r#"
-    ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
-    "#
+        @"
+    ::warning file=./.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=./.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    "
     );
 
     Ok(())

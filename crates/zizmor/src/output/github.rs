@@ -30,7 +30,6 @@ impl Finding<'_> {
         // sometimes end at EOF and GitHub's annotations don't handle that
         // gracefully.
         let filepath = Utf8Path::new(primary.symbolic.key.presentation_path());
-        let filepath = filepath.strip_prefix(".").unwrap_or(filepath);
         let start_line = primary.concrete.location.start_point.row + 1;
         let title = self.ident;
 
