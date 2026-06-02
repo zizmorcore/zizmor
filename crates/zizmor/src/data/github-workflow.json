@@ -248,6 +248,9 @@
         "checks": {
           "$ref": "#/definitions/permissions-level"
         },
+        "code-quality": {
+          "$ref": "#/definitions/permissions-level"
+        },
         "contents": {
           "$ref": "#/definitions/permissions-level"
         },
