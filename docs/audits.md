@@ -2477,7 +2477,7 @@ a falsy value, including `#!yaml ''`, `#!yaml 0`, `#!yaml false`, and
 
 ### Remediation
 
-Use the official `case(...)` function when a value may be falsy:
+Use the `case(...)` function when a value may be falsy:
 
 ```yaml
 ${{ case(condition, value, fallback) }}
