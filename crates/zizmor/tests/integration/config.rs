@@ -40,8 +40,8 @@ fn test_discovers_config_in_root_from_file_input() -> anyhow::Result<()> {
             .run()?,
         @"
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
-    DEBUG zizmor::config: attempting config discovery in `@@TEST_PREFIX@@/config-scenarios/config-in-root/.github/workflows`
-    DEBUG zizmor::config: found config candidate at `@@TEST_PREFIX@@/config-scenarios/config-in-root/zizmor.yml`
+    DEBUG zizmor::config: attempting config discovery in `@@WORKING_DIR@@/@@TEST_PREFIX@@/config-scenarios/config-in-root/.github/workflows`
+    DEBUG zizmor::config: found config candidate at `@@WORKING_DIR@@/@@TEST_PREFIX@@/config-scenarios/config-in-root/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "
     );
@@ -66,7 +66,7 @@ fn test_discovers_config_in_root_from_child_dir() -> anyhow::Result<()> {
         @"
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
     DEBUG zizmor::config: attempting config discovery in `@@INPUT@@`
-    DEBUG zizmor::config: found config candidate at `@@TEST_PREFIX@@/config-scenarios/config-in-root/zizmor.yml`
+    DEBUG zizmor::config: found config candidate at `@@WORKING_DIR@@/@@TEST_PREFIX@@/config-scenarios/config-in-root/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "
     );
@@ -191,8 +191,8 @@ fn test_discovers_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
             .run()?,
         @"
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@`
-    DEBUG zizmor::config: attempting config discovery in `@@TEST_PREFIX@@/config-scenarios/config-in-dotgithub/.github/workflows`
-    DEBUG zizmor::config: found config candidate at `@@TEST_PREFIX@@/config-scenarios/config-in-dotgithub/.github/zizmor.yml`
+    DEBUG zizmor::config: attempting config discovery in `@@WORKING_DIR@@/@@TEST_PREFIX@@/config-scenarios/config-in-dotgithub/.github/workflows`
+    DEBUG zizmor::config: found config candidate at `@@WORKING_DIR@@/@@TEST_PREFIX@@/config-scenarios/config-in-dotgithub/.github/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "
     );

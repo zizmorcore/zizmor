@@ -17,7 +17,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -66,7 +65,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -126,7 +124,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -178,7 +175,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -244,7 +240,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -314,7 +309,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -384,7 +378,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -454,7 +447,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -517,7 +509,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -580,7 +571,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -643,7 +633,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },
@@ -706,7 +695,6 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "prefix": null,
               "given_path": "@@INPUT@@"
             }
           },

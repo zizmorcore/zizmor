@@ -64,20 +64,25 @@ of `zizmor`.
 * Fixed a bug where [ref-version-mismatch] would fail to identify some valid
   version comments (#2073)
 
-* Fixed a bug where `zizmor` would present partial paths for some inputs
-  when using `--format=github` (#1748)
-
 * Fixed a bug where [unpinned-images] would incorrectly flag empty matrix
   expansions as unpinned container image references (#2102)
 
 * Fixed a bug where [unpinned-images] would incorrectly flag some `matrix`
   expansions as unpinned (#2098)
 
+* The SARIF (`--format=sarif`) and GitHub Annotations (`--format=github`)
+  output formats now provide more correct/useful paths, particularly when
+  the user provides a relative path as input to `zizmor` rather than
+  `zizmor .` (#1748, #2095)
+
 ### Changes ⚠️
 
 * The [impostor-commit] audit no longer suggests auto-fixes,
   to avoid incorrectly minimizing the amount of manual remediation
   work needed (#2054)
+
+* The JSON and SARIF outputs no longer contain a misleading `prefix`
+  key (#2095)
 
 ## 1.25.2
 

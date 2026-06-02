@@ -1,10 +1,11 @@
 //! Input registry and associated types.
 
 use std::{
-    collections::{BTreeMap, btree_map},
+    collections::{BTreeMap, HashSet, btree_map},
     io::Read as _,
     path::PathBuf,
     str::FromStr as _,
+    sync::LazyLock,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -181,10 +182,47 @@ pub(crate) struct LocalKey {
     /// The group this input belongs to.
     #[serde(skip)]
     group: Group,
-    /// The path's nondeterministic prefix, if any.
-    prefix: Option<Utf8PathBuf>,
     /// The given path to the input. This can be absolute or relative.
     pub(crate) given_path: Utf8PathBuf,
+    #[serde(skip)]
+    best_relative_path: String,
+}
+
+impl LocalKey {
+    /// Produce the "best" relative path for a given path.
+    ///
+    /// This path is the "best" in the sense that it's intended to be maximally
+    /// compatible with the assumptions that consumers make. Specifically, many
+    /// consumers (like GitHub's "Advanced Security") expect paths to be relative
+    /// to the root of the repository, even if the user supplied them to the tool
+    /// as absolute or relative to some other directory.
+    fn best_relative_path<P: AsRef<Utf8Path>>(
+        given_path: P,
+        prefix: Option<P>,
+        root: Option<P>,
+    ) -> String {
+        // Happy path: we have a root directory and the input
+        // is relative to it once canonicalized.
+        if let Some(root) = root
+            && let Ok(canonical) = given_path.as_ref().canonicalize_utf8()
+            && let Ok(relative) = canonical.strip_prefix(root.as_ref())
+        {
+            return relative.as_str().to_owned();
+        }
+
+        // Semi-happy path: we don't have a root directory,
+        // but we have a known prefix that we can strip from the
+        // input path.
+        if let Some(prefix) = prefix
+            && let Ok(stripped) = given_path.as_ref().strip_prefix(prefix.as_ref())
+        {
+            return stripped.as_str().to_owned();
+        }
+
+        // Sad path: no root or known prefix, so we return the
+        // given path as-is and hope for the best.
+        given_path.as_ref().as_str().to_owned()
+    }
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
@@ -238,11 +276,26 @@ impl std::fmt::Display for InputKey {
 }
 
 impl InputKey {
-    pub(crate) fn local<P: AsRef<Utf8Path>>(group: Group, path: P, prefix: Option<P>) -> Self {
+    /// Constructs a local InputKey.
+    ///
+    /// `prefix` and `root` are used to derive the input's
+    /// "best" relative path for output rendering purposes.
+    pub(crate) fn local<P: AsRef<Utf8Path>>(
+        group: Group,
+        path: P,
+        prefix: Option<P>,
+        root: Option<P>,
+    ) -> Self {
+        let path = path.as_ref();
+        let best_relative_path = LocalKey::best_relative_path(
+            path,
+            prefix.as_ref().map(P::as_ref),
+            root.as_ref().map(P::as_ref),
+        );
         Self::Local(LocalKey {
             group,
-            prefix: prefix.map(|p| p.as_ref().to_path_buf()),
-            given_path: path.as_ref().to_path_buf(),
+            given_path: path.to_path_buf(),
+            best_relative_path,
         })
     }
 
@@ -260,28 +313,15 @@ impl InputKey {
         })
     }
 
-    /// Returns a path for this [`InputKey`] that's suitable for SARIF
-    /// outputs.
+    /// Returns the "best" relative path for this [`InputKey`].
     ///
-    /// This is similar to [`InputKey::presentation_path`] in terms of being
-    /// a relative path (if the input is relative), but it also strips
-    /// the prefix from local paths, if one is present.
-    ///
-    /// For example, if the user runs `zizmor .`, then an input at
-    /// `./.github/workflows/foo.yml` will be returned as `.github/workflows/foo.yml`,
-    /// rather than `./.github/workflows/foo.yml`.
-    ///
-    /// This is needed for GitHub's interpretation of SARIF, which is brittle
-    /// with absolute paths but _also_ doesn't like relative paths that
-    /// start with relative directory markers.
-    pub(crate) fn sarif_path(&self) -> &str {
+    /// Unlike [`InputKey::presentation_path`], local input paths are made
+    /// relative to the root of their group's Git repository when possible.
+    /// This matches what SARIF consumers like GitHub's "Advanced Security"
+    /// expect.
+    pub(crate) fn best_relative_path(&self) -> &str {
         match self {
-            InputKey::Local(local) => local
-                .prefix
-                .as_ref()
-                .and_then(|pfx| local.given_path.strip_prefix(pfx).ok())
-                .unwrap_or_else(|| &local.given_path)
-                .as_str(),
+            InputKey::Local(local) => &local.best_relative_path,
             InputKey::Remote(remote) => remote.path.as_str(),
             InputKey::Stdin(_) => "<stdin>",
         }
@@ -344,17 +384,20 @@ impl From<&RepoSlug> for Group {
 
 /// A group of inputs collected from the same source.
 pub(crate) struct InputGroup {
-    /// The collected inputs.
-    inputs: BTreeMap<InputKey, AuditInput>,
     /// The configuration for this group.
     config: Config,
+    /// The group's root directory (as an absolute path), if applicable and inferable.
+    root: Option<Utf8PathBuf>,
+    /// The collected inputs.
+    inputs: BTreeMap<InputKey, AuditInput>,
 }
 
 impl InputGroup {
-    pub(crate) fn new(config: Config) -> Self {
+    pub(crate) fn new(config: Config, root: Option<Utf8PathBuf>) -> Self {
         Self {
-            inputs: Default::default(),
             config,
+            root,
+            inputs: Default::default(),
         }
     }
 
@@ -366,6 +409,58 @@ impl InputGroup {
         self.inputs.insert(input.key().clone(), input);
 
         Ok(())
+    }
+
+    /// Given a path to an input file, attempt to discover the Git repository root that it belongs
+    /// to, if any.
+    ///
+    /// This is a rough approximation of what `git rev-parse --show-toplevel` does.
+    ///
+    /// Returns `None` if the path is not within a Git repository or if the root can't be determined for any reason.
+    pub(crate) fn discover_root(path: &Utf8Path) -> Option<Utf8PathBuf> {
+        Self::discover_root_with_ceilings(path, &GIT_CEILING_DIRECTORIES)
+    }
+
+    fn discover_root_with_ceilings(
+        path: &Utf8Path,
+        ceilings: &HashSet<Utf8PathBuf>,
+    ) -> Option<Utf8PathBuf> {
+        // Canonicalize first; this also avoids a `parent()` of `Some("")`
+        // for inputs like `foo.yml`.
+        let canonical = match path.canonicalize_utf8() {
+            Ok(canonical) => canonical,
+            Err(_) => {
+                tracing::trace!("failed to find a canonical path for {path}");
+                return None;
+            }
+        };
+
+        let mut candidate = if canonical.is_file() {
+            canonical.parent()?.to_path_buf()
+        } else {
+            canonical
+        };
+
+        loop {
+            if ceilings.contains(&candidate) {
+                tracing::trace!("hit a GIT_CEILING_DIRECTORIES entry at {candidate}");
+                break;
+            }
+
+            tracing::trace!("checking if {candidate} is a Git repository root");
+            if candidate.join(".git").is_dir() {
+                return Some(candidate);
+            }
+
+            if let Some(parent) = candidate.parent() {
+                candidate = parent.to_path_buf();
+            } else {
+                break;
+            }
+        }
+
+        tracing::trace!("no Git repository root found for {path}");
+        None
     }
 
     pub(crate) fn register(
@@ -414,21 +509,22 @@ impl InputGroup {
             .parent()
             .is_some_and(|parent| parent.ends_with(".github/workflows"));
 
-        let mut group = Self::new(config);
+        let mut group = Self::new(config, Self::discover_root(path));
+        let root = group.root.as_deref();
 
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
             (Some("dependabot"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(Group(path.as_str().into()), path, None),
+                InputKey::local(Group(path.as_str().into()), path, None, root),
                 InputKind::Dependabot,
             ),
             (Some("action"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(Group(path.as_str().into()), path, None),
+                InputKey::local(Group(path.as_str().into()), path, None, root),
                 InputKind::Action,
             ),
             (Some(_), Some("yml" | "yaml")) => (
-                InputKey::local(Group(path.as_str().into()), path, None),
+                InputKey::local(Group(path.as_str().into()), path, None, root),
                 InputKind::Workflow,
             ),
             _ => return Err(CollectionError::InvalidExtension),
@@ -448,7 +544,7 @@ impl InputGroup {
     ) -> Result<Self, CollectionError> {
         let config = Config::discover(options, || Config::discover_local(path)).await?;
 
-        let mut group = Self::new(config);
+        let mut group = Self::new(config, Self::discover_root(path));
 
         // Start with all filters disabled, i.e. walk everything.
         let mut walker = ignore::WalkBuilder::new(path);
@@ -473,10 +569,14 @@ impl InputGroup {
                 .git_exclude(true);
         }
 
+        // Clone once outside the loop so each iteration's `key` construction
+        // doesn't conflict with the mutable borrow `group.register(..)` takes.
+        let root = group.root.clone();
         for entry in walker.build() {
             let entry = entry?;
             let entry = <&Utf8Path>::try_from(entry.path())
                 .map_err(|e| CollectionError::InvalidPath(e, entry.path().into()))?;
+            let root = root.as_deref();
 
             if options.mode_set.workflows()
                 && entry.is_file()
@@ -485,7 +585,7 @@ impl InputGroup {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path));
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path), root);
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
                     CollectionError::Inner(
                         CollectionError::Io(e).into(),
@@ -500,7 +600,7 @@ impl InputGroup {
                 && entry.is_file()
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
-                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path));
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path), root);
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
                     CollectionError::Inner(
                         CollectionError::Io(e).into(),
@@ -518,7 +618,7 @@ impl InputGroup {
                     Some("dependabot.yml" | "dependabot.yaml")
                 )
             {
-                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path));
+                let key = InputKey::local(Group(path.as_str().into()), entry, Some(path), root);
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
                     CollectionError::Inner(
                         CollectionError::Io(e).into(),
@@ -541,7 +641,7 @@ impl InputGroup {
         let client = gh_client.ok_or_else(|| CollectionError::NoGitHubClient(slug.clone()))?;
 
         let config = Config::discover(options, || Config::discover_remote(client, &slug)).await?;
-        let mut group = Self::new(config);
+        let mut group = Self::new(config, None);
 
         if options.mode_set.workflows_only() {
             // Performance: if we're *only* collecting workflows, then we
@@ -572,7 +672,7 @@ impl InputGroup {
             .read_to_string(&mut contents)
             .map_err(CollectionError::Io)?;
 
-        let mut group = Self::new(Config::default());
+        let mut group = Self::new(Config::default(), None);
         let key = InputKey::stdin();
 
         // Infer the input type by trying each parser in order.
@@ -625,6 +725,39 @@ impl InputGroup {
         self.inputs.len()
     }
 }
+
+/// Cached parse of the process's `GIT_CEILING_DIRECTORIES`.
+static GIT_CEILING_DIRECTORIES: LazyLock<HashSet<Utf8PathBuf>> = LazyLock::new(|| {
+    let Ok(raw) = std::env::var("GIT_CEILING_DIRECTORIES") else {
+        return HashSet::new();
+    };
+
+    let separator = if cfg!(windows) { ';' } else { ':' };
+    let mut resolve = true;
+    let mut ceilings = HashSet::new();
+    for entry in raw.split(separator) {
+        // Per `git` docs, an empty entry means that all subsequent
+        // entries are not resolved.
+        // See: <https://git-scm.com/docs/git#Documentation/git.txt-GITCEILINGDIRECTORIES>
+        if entry.is_empty() {
+            resolve = false;
+            continue;
+        }
+        let path = Utf8Path::new(entry);
+        if !path.is_absolute() {
+            continue;
+        }
+        let resolved = if resolve {
+            path.canonicalize_utf8().ok()
+        } else {
+            Some(path.to_path_buf())
+        };
+        if let Some(p) = resolved {
+            ceilings.insert(p);
+        }
+    }
+    ceilings
+});
 
 pub(crate) struct InputRegistry {
     // NOTE: We use a BTreeMap here to ensure that registered inputs
@@ -681,20 +814,24 @@ impl InputRegistry {
         &self
             .groups
             .get(group)
-            .expect("API misuse: requested config for an un-registered input")
+            .expect("API misuse: requested an un-registered input group")
             .config
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr as _;
+    use std::{collections::HashSet, str::FromStr as _};
+
+    use camino::Utf8PathBuf;
+
+    use crate::registry::input::InputGroup;
 
     use super::{InputKey, RepoSlug};
 
     #[test]
     fn test_input_key_display() {
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None);
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None, None);
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
@@ -716,19 +853,25 @@ mod tests {
 
     #[test]
     fn test_input_key_local_presentation_path() {
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None);
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None, None);
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"));
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"), None);
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo/bar/"));
+        let local = InputKey::local(
+            "fakegroup".into(),
+            "/foo/bar/baz.yml",
+            Some("/foo/bar/"),
+            None,
+        );
         assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
 
         let local = InputKey::local(
             "fakegroup".into(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
             Some("/home/runner/work/repo/repo"),
+            None,
         );
         assert_eq!(
             local.presentation_path(),
@@ -737,24 +880,93 @@ mod tests {
     }
 
     #[test]
-    fn test_input_key_local_sarif_path() {
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None);
-        assert_eq!(local.sarif_path(), "/foo/bar/baz.yml");
+    fn test_input_key_local_best_relative_path() {
+        // "Rootless" cases: with no group root, best_relative_path falls back to
+        // stripping the input's own prefix (if any), else returns the path
+        // as-is.
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None, None);
+        assert_eq!(local.best_relative_path(), "/foo/bar/baz.yml");
 
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"));
-        assert_eq!(local.sarif_path(), "bar/baz.yml");
+        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"), None);
+        assert_eq!(local.best_relative_path(), "bar/baz.yml");
 
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo/bar/"));
-        assert_eq!(local.sarif_path(), "baz.yml");
+        let local = InputKey::local(
+            "fakegroup".into(),
+            "/foo/bar/baz.yml",
+            Some("/foo/bar/"),
+            None,
+        );
+        assert_eq!(local.best_relative_path(), "baz.yml");
 
         let local = InputKey::local(
             "fakegroup".into(),
             "/home/runner/work/repo/repo/.github/workflows/baz.yml",
             Some("/home/runner/work/repo/repo"),
+            None,
         );
-        assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
+        assert_eq!(local.best_relative_path(), ".github/workflows/baz.yml");
 
-        let local = InputKey::local("fakegroup".into(), "./.github/workflows/baz.yml", Some("."));
-        assert_eq!(local.sarif_path(), ".github/workflows/baz.yml");
+        let local = InputKey::local(
+            "fakegroup".into(),
+            "./.github/workflows/baz.yml",
+            Some("."),
+            None,
+        );
+        assert_eq!(local.best_relative_path(), ".github/workflows/baz.yml");
+
+        // "Rooted" case: with a real root, best_relative_path is canonical-then-strip.
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let temp_path = Utf8PathBuf::try_from(temp_dir.path().to_path_buf())
+            .unwrap()
+            .canonicalize_utf8()
+            .unwrap();
+
+        let child = temp_path.join("foo/bar/baz.yml");
+        std::fs::create_dir_all(child.parent().unwrap()).unwrap();
+        std::fs::write(&child, "contents").unwrap();
+
+        let local = InputKey::local("fakegroup".into(), child, None, Some(temp_path));
+        assert_eq!(local.best_relative_path(), "foo/bar/baz.yml");
+    }
+
+    #[test]
+    fn test_discover_root_respects_ceiling() {
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let temp_path = Utf8PathBuf::try_from(temp_dir.path().to_path_buf())
+            .unwrap()
+            .canonicalize_utf8()
+            .unwrap();
+
+        std::fs::create_dir(temp_path.join(".git")).unwrap();
+        let child = temp_path.join("project/subdir");
+        std::fs::create_dir_all(&child).unwrap();
+
+        // No ceiling: the walk finds the fake repo.
+        assert_eq!(
+            InputGroup::discover_root_with_ceilings(&child, &HashSet::new()),
+            Some(temp_path.clone()),
+        );
+
+        // The repo itself is a ceiling: the walk stops before examining it.
+        assert_eq!(
+            InputGroup::discover_root_with_ceilings(&child, &HashSet::from([temp_path.clone()]),),
+            None,
+        );
+
+        // An ancestor above the repo is the ceiling, so the repo is still found.
+        let parent_ceiling = temp_path.parent().unwrap().to_path_buf();
+        assert_eq!(
+            InputGroup::discover_root_with_ceilings(&child, &HashSet::from([parent_ceiling]),),
+            Some(temp_path.clone()),
+        );
+
+        // File inputs: canonicalize then walk from the file's parent.
+        let workflow_file = temp_path.join(".github/workflows/test.yml");
+        std::fs::create_dir_all(workflow_file.parent().unwrap()).unwrap();
+        std::fs::write(&workflow_file, "").unwrap();
+        assert_eq!(
+            InputGroup::discover_root_with_ceilings(&workflow_file, &HashSet::new()),
+            Some(temp_path),
+        );
     }
 }

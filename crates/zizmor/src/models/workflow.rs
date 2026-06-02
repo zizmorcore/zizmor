@@ -727,7 +727,7 @@ jobs:
 
         let workflow = Workflow::from_string(
             workflow.into(),
-            crate::InputKey::local("fakegroup".into(), "dummy", None),
+            crate::InputKey::local("fakegroup".into(), "dummy", None, None),
         )?;
 
         // `foo` unifies in favor of the more permissive capability,

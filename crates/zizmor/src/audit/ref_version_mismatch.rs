@@ -272,7 +272,7 @@ mod tests {
 
     #[cfg(feature = "gh-token-tests")]
     fn workflow_from_string(workflow_content: &str, path: &str) -> Workflow {
-        let key = InputKey::local("fakegroup".into(), path, None::<&str>);
+        let key = InputKey::local("fakegroup".into(), path, None, None);
         Workflow::from_string(workflow_content.to_string(), key).unwrap()
     }
 
@@ -349,7 +349,7 @@ runs:
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # some comment
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "action.yml", None::<&str>);
+        let key = InputKey::local("fakegroup".into(), "action.yml", None, None);
         let action = Action::from_string(action_content.to_string(), key).unwrap();
         let step = action.steps().unwrap().next().unwrap();
         let uses_location = step
@@ -376,7 +376,7 @@ runs:
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "action.yml", None::<&str>);
+        let key = InputKey::local("fakegroup".into(), "action.yml", None, None);
         let action = Action::from_string(action_content.to_string(), key).unwrap();
         let step = action.steps().unwrap().next().unwrap();
 
@@ -741,7 +741,7 @@ jobs:
                     uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v9.9.9
         "#;
 
-        let key = InputKey::local("fakegroup".into(), "test_nonexistent_ref.yml", None::<&str>);
+        let key = InputKey::local("fakegroup".into(), "test_nonexistent_ref.yml", None, None);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(

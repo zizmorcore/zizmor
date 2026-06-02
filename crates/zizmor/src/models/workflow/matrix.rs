@@ -317,7 +317,7 @@ jobs:
 
         let workflow = Workflow::from_string(
             workflow_yaml.into(),
-            InputKey::local("fakegroup".into(), "test.yml", None),
+            InputKey::local("fakegroup".into(), "test.yml", None, None),
         )
         .unwrap();
 
@@ -344,8 +344,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -385,8 +385,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -426,8 +426,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -467,8 +467,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -508,8 +508,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -549,8 +549,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -590,8 +590,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -634,8 +634,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -678,8 +678,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -722,8 +722,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -766,8 +766,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -810,8 +810,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -854,8 +854,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -901,8 +901,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            prefix: None,
                             given_path: "test.yml",
+                            best_relative_path: "test.yml",
                         },
                     ),
                     annotation: "this expansion",
@@ -974,7 +974,7 @@ jobs:
 
         let workflow = Workflow::from_string(
             workflow_yaml.into(),
-            InputKey::local("fakegroup".into(), "test.yml", None),
+            InputKey::local("fakegroup".into(), "test.yml", None, None),
         )?;
 
         let job = {
@@ -1025,7 +1025,7 @@ jobs:
 
         let workflow = Workflow::from_string(
             workflow_yaml.into(),
-            InputKey::local("fakegroup".into(), "test.yml", None),
+            InputKey::local("fakegroup".into(), "test.yml", None, None),
         )?;
 
         let job = {

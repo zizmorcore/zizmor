@@ -4314,6 +4314,7 @@ dependencies = [
  "serde_json",
  "subfeature",
  "tar",
+ "tempfile",
  "terminal-link",
  "thiserror 2.0.18",
  "tikv-jemallocator",
