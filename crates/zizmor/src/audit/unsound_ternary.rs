@@ -72,16 +72,6 @@ impl Audit for UnsoundTernary {
 impl UnsoundTernary {
     fn unsound_true_values<'src>(expr: &'src SpannedExpr<'src>) -> Vec<&'src SpannedExpr<'src>> {
         if expr.constant_reducible() {
-            vec![]
-        } else {
-            Self::walk_tree_for_unsound_true_values(expr)
-        }
-    }
-
-    fn walk_tree_for_unsound_true_values<'src>(
-        expr: &'src SpannedExpr<'src>,
-    ) -> Vec<&'src SpannedExpr<'src>> {
-        if expr.constant_reducible() {
             return vec![];
         }
 
@@ -90,12 +80,12 @@ impl UnsoundTernary {
         match &expr.inner {
             Expr::Call(call) => {
                 for arg in &call.args {
-                    values.extend(Self::walk_tree_for_unsound_true_values(arg));
+                    values.extend(Self::unsound_true_values(arg));
                 }
             }
             Expr::Context(context) => {
                 for part in &context.parts {
-                    values.extend(Self::walk_tree_for_unsound_true_values(part));
+                    values.extend(Self::unsound_true_values(part));
                 }
             }
             Expr::BinExpr(BinExpr { op: BinOp::Or, .. }) => {
@@ -113,33 +103,27 @@ impl UnsoundTernary {
                 }
 
                 for operand in operands {
-                    values.extend(Self::walk_tree_for_unsound_true_values(operand));
+                    values.extend(Self::unsound_true_values(operand));
                 }
             }
             Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {
-                values.extend(Self::walk_tree_for_unsound_true_values(lhs));
-                values.extend(Self::walk_tree_for_unsound_true_values(rhs));
+                values.extend(Self::unsound_true_values(lhs));
+                values.extend(Self::unsound_true_values(rhs));
             }
             Expr::UnExpr { op: _, expr } => {
-                values.extend(Self::walk_tree_for_unsound_true_values(expr));
+                values.extend(Self::unsound_true_values(expr));
             }
-            Expr::Index(expr) => values.extend(Self::walk_tree_for_unsound_true_values(expr)),
+            Expr::Index(expr) => values.extend(Self::unsound_true_values(expr)),
             _ => {}
         }
 
         values
     }
 
+    /// Recursively collects operands of `||` expressions.
     fn or_operands<'src>(expr: &'src SpannedExpr<'src>) -> Vec<&'src SpannedExpr<'src>> {
         let mut operands = vec![];
-        Self::push_or_operands(expr, &mut operands);
-        operands
-    }
 
-    fn push_or_operands<'src>(
-        expr: &'src SpannedExpr<'src>,
-        operands: &mut Vec<&'src SpannedExpr<'src>>,
-    ) {
         if !expr.constant_reducible()
             && let Expr::BinExpr(BinExpr {
                 lhs,
@@ -147,11 +131,13 @@ impl UnsoundTernary {
                 rhs,
             }) = &expr.inner
         {
-            Self::push_or_operands(lhs, operands);
-            Self::push_or_operands(rhs, operands);
+            operands.extend(Self::or_operands(lhs));
+            operands.extend(Self::or_operands(rhs));
         } else {
             operands.push(expr);
         }
+
+        operands
     }
 
     fn is_falsy(expr: &SpannedExpr) -> bool {
