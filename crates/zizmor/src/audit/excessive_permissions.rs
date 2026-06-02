@@ -17,6 +17,7 @@ static KNOWN_PERMISSIONS: LazyLock<HashMap<&str, Severity>> = LazyLock::new(|| {
         ("artifact-metadata", Severity::Medium),
         ("attestations", Severity::High),
         ("checks", Severity::Medium),
+        ("code-quality", Severity::Medium),
         ("contents", Severity::High),
         ("deployments", Severity::High),
         ("discussions", Severity::Medium),
