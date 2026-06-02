@@ -56,6 +56,9 @@ of `zizmor`.
 * Fixed a bug where [ref-version-mismatch] would fail to identify some valid
   version comments (#2073)
 
+* Fixed a bug where `zizmor` would present partial paths for some inputs
+  when using `--format=github` (#1748)
+
 ### Changes ⚠️
 
 * The [impostor-commit] audit no longer suggests auto-fixes,
