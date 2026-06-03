@@ -68,6 +68,8 @@ impl UnpinnedImages {
                                         }
                                         // Non-string leaves (contexts, calls, etc.)
                                         // can't be analyzed statically.
+                                        // TODO: Need to handle `matrix` contexts here like
+                                        // we do for simple expressions above.
                                         _ => {
                                             findings.push(self.build_finding(
                                                 &leaf_location,
