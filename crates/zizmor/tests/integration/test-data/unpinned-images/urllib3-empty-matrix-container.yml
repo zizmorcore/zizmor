@@ -1,0 +1,56 @@
+# minimized from urllib3/urllib3's CI workflow:
+# https://github.com/urllib3/urllib3/blob/f4c411c09119f7999b29300b306d156992d699e6/.github/workflows/ci.yml#L37-L97
+
+name: CI
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: "read"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.14t", "3.15"]
+        os:
+          - macos-15
+          - windows-latest
+          - ubuntu-24.04
+        nox-session: ['']
+        container: ['']
+        include:
+          - experimental: false
+          # Test with the minimum supported pyOpenSSL for OpenSSL 1.1.1.
+          # Debian Bullseye was the last release with OpenSSL 1.1.1, and
+          # 3.13-bullseye was the last published image.
+          - python-version: "3.13"
+            os: ubuntu-24.04
+            container: python:3.13-bullseye
+            experimental: false
+            nox-session: test_min_pyopenssl
+          # NOT OK: unpinned
+          - python-version: "3.13"
+            os: ubuntu-24.04
+            container: python
+            experimental: false
+            nox-session: test_unpinned_container
+          # OK: missing container
+          - python-version: "3.13"
+            os: ubuntu-24.04
+            experimental: false
+            nox-session: test_missing_container
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    continue-on-error: ${{ matrix.experimental }}
+    timeout-minutes: 10
+    steps:
+      - name: Noop
+        run: true

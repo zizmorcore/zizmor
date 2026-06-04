@@ -203,6 +203,36 @@ fn test_matrix_in_image_regular() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_urllib3_empty_matrix_container_regular() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "unpinned-images/urllib3-empty-matrix-container.yml"
+            ))
+            .run()?,
+        @"
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:51:5
+       |
+    20 |       matrix:
+       |       ------ this matrix
+    ...
+    41 |             container: python
+       |             ----------------- this expansion of matrix.container
+    ...
+    51 |     container: ${{ matrix.container }}
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+       |
+       = note: audit confidence → High
+
+    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_issue_1942_repro() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
