@@ -58,7 +58,7 @@ Here are some different ways you can run `zizmor` locally:
     zizmor repo-a/ ../../repo-b/
 
     # collect only workflows, not composite actions or Dependabot configs
-    zizmor --collect=workflows
+    zizmor --collect=workflows repo-a/
     ```
 
 === "On one or more remote repositories"
