@@ -148,7 +148,7 @@ zizmor --strict-collection example/example
 * **Online**: `zizmor` will fetch remote repositories
   as necessary, and will perform all audits that require
   online access.
-* **Online sans audits**: `zizmor` will fetch remote repositories
+* **Online without audits**: `zizmor` will fetch remote repositories
   as necessary, but will skip any audits that require online access.
 
 `zizmor` attempts to select a default operating mode based on the user's
@@ -157,7 +157,7 @@ environment:
 - If `ZIZMOR_OFFLINE` is set, then `zizmor` runs in offline mode.
 - If `GH_TOKEN`, `GITHUB_TOKEN` or `ZIZMOR_GITHUB_TOKEN` is set, then `zizmor` runs in online mode with audits.
     - Additionally `ZIZMOR_NO_ONLINE_AUDITS` is set, then `zizmor` runs
-      online sans audits.
+      online without audits.
 - If neither `ZIZMOR_OFFLINE` nor `GH_TOKEN`/`GITHUB_TOKEN`/`ZIZMOR_GITHUB_TOKEN` are set, then `zizmor` runs
   in offline mode.
 
@@ -169,7 +169,7 @@ flowchart TD
   B -- No --> D{GH_TOKEN/GITHUB_TOKEN/ZIZMOR_GITHUB_TOKEN set?}
   D -- No --> C
   D -- Yes --> E{ZIZMOR_NO_ONLINE_AUDITS set?}
-  E -- Yes --> F[Online sans audits mode]
+  E -- Yes --> F[Online without audits mode]
   E -- No --> G[Online mode]
 ```
 
