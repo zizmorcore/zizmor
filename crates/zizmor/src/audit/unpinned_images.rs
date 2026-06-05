@@ -125,6 +125,9 @@ impl UnpinnedImages {
                         } else {
                             // Try and parse the expanded value as an image reference.
                             let image = DockerUses::parse(&expansion.value);
+                            if image.image().is_empty() {
+                                continue;
+                            }
                             match (image.tag(), image.hash()) {
                                 // Image is pinned by hash.
                                 (_, Some(_)) => continue,
