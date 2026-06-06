@@ -283,6 +283,10 @@ mod tests {
             (&["npx", "foobar@1.2.3"][..], false),
             // TODO: flip to `true` once `pip install` is covered.
             (&["pip", "install", "requests"][..], false),
+            // In the future we should consider catching wrapped commands, those using `sudo` and so on.
+            // (&["sudo", "gem", "install", "rails"][..], true),
+            // (&["bundle", "exec", "gem", "install", "rails"][..], true),
+
         ] {
             let cmd = args[0];
             let args_iter = args[1..].iter().copied();
