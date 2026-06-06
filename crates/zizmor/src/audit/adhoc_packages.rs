@@ -44,7 +44,7 @@ impl AdhocPackages {
     fn is_adhoc_install_command<'a>(cmd: &'a str, args: impl Iterator<Item = &'a str>) -> bool {
         let mut args = args;
         match cmd {
-            // TODO: Add support for `pip install pkg`, etc later.
+            // TODO: Add support for `pip install pkg`, `yarn install pkg`, etc. later.
             "gem" => {
                 // Require at least one non-flag argument after `install` so we
                 // don't flag malformed invocations like `gem install`.
@@ -258,10 +258,11 @@ mod tests {
             (&["gem", "env"][..], false),
             // `bundle install` is lockfile-aware, so it should stay false.
             (&["bundle", "install"][..], false),
-            // `npm install`/`npx` is also disallowed.
+            // `npm install pkg` is also disallowed.
             (&["npm", "install", "lodash"][..], true),
             (&["npm", "install", "oxlint@1.55.0"][..], true),
             (&["npm", "install", "--no-fund", "oxlint@1.55.0"][..], true),
+            (&["npm", "install", "oxlint@^1.55.0"][..], true),
             // `npm install` aliases — `i`/`add` are common; `isnt` etc. are
             // documented typo-tolerant aliases.
             (&["npm", "i", "lodash"][..], true),
@@ -275,7 +276,7 @@ mod tests {
             (&["npm", "install", "--help"][..], false),
             (&["npm", "install", "--no-fund"][..], false),
             (&["npm", "ci"][..], false),
-            // `npx` is not flagged for now.
+            // `npx` is not flagged for now, should be considered in the future.
             (&["npx", "foobar"][..], false),
             (&["npx", "-y", "foobar"][..], false),
             (&["npx", "--yes", "foobar"][..], false),

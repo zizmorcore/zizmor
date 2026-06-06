@@ -33,9 +33,13 @@ hazards:
 - Without a lockfile to pin against, the workflow always installs whichever
   version the registry currently advertises. A compromised release of an
   upstream dependency is therefore picked up automatically on the next run.
+- Without a lockfile, the sub-dependencies of the adhoc package are also
+  unpinned, and so packages you may not know about would also be installed
+  with their latest version, even if you have pinned to a specific version
+  in the install command (`#!bash npm install foo@1.2.3`).
 - Lockfiles record content hashes that can be cross-checked against the
-  registry. Ad-hoc installs perform no such verification, so a compromised
-  package is harder to detect after the fact.
+  registry. Ad-hoc installs perform no such verification, and so a registry
+  compromise would be able to send malicious packages to your CI runs.
 - Reproducibility is lost: re-running the same workflow can install different
   versions of the same package over time.
 
@@ -45,24 +49,20 @@ Currently this audit flags:
   including those with extra flags or version specifiers (e.g. `-v 13.0.6`).
   Other subcommands like `#!bash gem build` or `#!bash gem push` are not
   flagged.
-- `#!bash npm install <pkg>` and `#!bash npm exec <pkg>` invocations,
-  including their documented aliases (e.g. `#!bash npm i <pkg>`,
-  `#!bash npm add <pkg>`, `#!bash npm x <pkg>`). `#!bash npm install`/
-  `#!bash npm i` with no package name (which installs from
+- `#!bash npm install <pkg>` invocations, including its documented aliases
+  (e.g. `#!bash npm i <pkg>`, `#!bash npm add <pkg>`). `#!bash npm install`/
+  `#!bash npm i` with no package name (which installs from 
   `package-lock.json`) and `#!bash npm ci` are not flagged.
-- `#!bash npx -y <pkg>` / `#!bash npx --yes <pkg>` invocations, which skip
-  the install prompt and pull the package straight from the registry.
-  `#!bash npx <pkg>` without `-y`/`--yes` is not flagged, since it typically
-  runs a binary already installed via a lockfile.
 
 This audit analyzes `#!yaml run:` steps written in either bash (the default on
 Linux/macOS runners) or PowerShell (the default on Windows runners).
 
 ### Remediation
 
-Add the package to a manifest that produces a lockfile (e.g. a `Gemfile`),
-commit the resulting lockfile, and install via the corresponding lockfile-aware
-command (e.g. `#!bash bundle install`).
+Add the package to a manifest that produces a lockfile (e.g. a `Gemfile` or
+`package.json`), commit the resulting lockfile, and install via the
+corresponding lockfile-aware command (`#!bash bundle install`, `#!bash npm ci`,
+etc.).
 
 !!! example
 
