@@ -140,36 +140,6 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
        = note: audit confidence → High
 
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
-      --> @@INPUT@@:70:14
-       |
-    70 |         run: npm exec lodash
-       |         ---  ^^^^^^^^^^^^^^^ installs a package outside of a lockfile
-       |         |
-       |         this step
-       |
-       = note: audit confidence → High
-
-    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
-      --> @@INPUT@@:75:14
-       |
-    75 |         run: npx -y lodash
-       |         ---  ^^^^^^^^^^^^^ installs a package outside of a lockfile
-       |         |
-       |         this step
-       |
-       = note: audit confidence → High
-
-    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
-      --> @@INPUT@@:79:14
-       |
-    79 |         run: npx --yes lodash@1.2.3
-       |         ---  ^^^^^^^^^^^^^^^^^^^^^^ installs a package outside of a lockfile
-       |         |
-       |         this step
-       |
-       = note: audit confidence → High
-
-    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
        --> @@INPUT@@:123:14
         |
     123 |         run: gem install rake
@@ -190,16 +160,6 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
         = note: audit confidence → High
 
     help[adhoc-packages]: ad-hoc package installation outside of a lockfile
-       --> @@INPUT@@:131:14
-        |
-    131 |         run: npx -y lodash
-        |         ---  ^^^^^^^^^^^^^ installs a package outside of a lockfile
-        |         |
-        |         this step
-        |
-        = note: audit confidence → High
-
-    help[adhoc-packages]: ad-hoc package installation outside of a lockfile
        --> @@INPUT@@:137:11
         |
     135 |         run: |
@@ -210,7 +170,7 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
         |
         = note: audit confidence → High
 
-    20 findings: 0 informational, 20 low, 0 medium, 0 high
+    16 findings: 0 informational, 16 low, 0 medium, 0 high
     "#
     );
 

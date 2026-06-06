@@ -66,22 +66,8 @@ impl AdhocPackages {
                         "install" | "i" | "in" | "ins" | "inst" | "insta" | "instal" | "isnt"
                         | "isnta" | "isntal" | "isntall" | "add",
                     ) => args.any(|arg| !arg.starts_with('-')),
-                    // `npm exec` triggers an install when either a package
-                    // name is given positionally or via `-p`/`--package`.
-                    Some("exec" | "x") => args.any(|arg| {
-                        !arg.starts_with('-')
-                            || matches!(arg, "-p" | "--package")
-                            || arg.starts_with("-p=")
-                            || arg.starts_with("--package=")
-                    }),
                     _ => false,
                 }
-            }
-            // Only hit npx if it has -y or --yes, to avoid flagging npx
-            // invocations that run a package installed via lockfile.
-            "npx" => {
-                args.any(|arg| arg == "-y" || arg == "--yes")
-                    && args.any(|arg| !arg.starts_with('-'))
             }
             _ => false,
         }
@@ -285,31 +271,14 @@ mod tests {
             (&["npm", "i", "--help"][..], false),
             (&["npm", "i"][..], false),
             (&["npm", "install", "package-with-dashes"][..], true),
-            (&["npx", "-y", "lodash"][..], true),
-            (&["npx", "--yes", "lodash"][..], true),
-            (&["npx", "--yes", "lodash@1.2.3"][..], true),
-            (&["npm", "exec", "lodash"][..], true),
-            (&["npm", "exec", "lodash@1.2.3"][..], true),
-            // `npm x` is an alias for `npm exec`.
-            (&["npm", "x", "lodash"][..], true),
-            (&["npm", "x", "--package=lodash"][..], true),
-            // `npm exec` with `-p`/`--package` installs the named package
-            // even when only flags are present (i.e. no positional pkg).
-            (&["npm", "exec", "-p", "lodash"][..], true),
-            (&["npm", "exec", "--package", "lodash"][..], true),
-            (&["npm", "exec", "-p=lodash"][..], true),
-            (&["npm", "exec", "--package=lodash"][..], true),
-            (&["npm", "exec", "--package=lodash", "--", "ls"][..], true),
-            (&["npm", "exec", "--package=lodash@1.2.3"][..], true),
-            (&["npm", "exec", "-p=lodash@1.2.3"][..], true),
-            (&["npm", "exec", "--ws", "--", "eslint", "./*.js"][..], true),
             // npm flags without a package shouldn't be flagged.
             (&["npm", "install", "--help"][..], false),
             (&["npm", "install", "--no-fund"][..], false),
             (&["npm", "ci"][..], false),
-            // `npx` without `-y` or `--yes` shouldn't be flagged, as it means they are
-            // running a package that was installed already.
+            // `npx` is not flagged for now.
             (&["npx", "foobar"][..], false),
+            (&["npx", "-y", "foobar"][..], false),
+            (&["npx", "--yes", "foobar"][..], false),
             (&["npx", "foobar@1.2.3"][..], false),
             // TODO: flip to `true` once `pip install` is covered.
             (&["pip", "install", "requests"][..], false),
