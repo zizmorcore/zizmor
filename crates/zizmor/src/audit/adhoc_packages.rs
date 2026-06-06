@@ -55,7 +55,7 @@ impl AdhocPackages {
                     && args.any(|arg| !arg.starts_with('-'))
             }
             "npm" => {
-                // Looking for `npm install <pkg>` or `npm exec <pkg>`, where
+                // Looking for `npm install <pkg>` where
                 // the subcommand is the first non-flag argument.
                 let mut args = args.skip_while(|arg| arg.starts_with('-'));
                 match args.next() {
