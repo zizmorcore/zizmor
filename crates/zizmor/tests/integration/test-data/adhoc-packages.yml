@@ -146,6 +146,12 @@ jobs:
       - name: not-vulnerable-pwsh-1
         run: npm ci
 
-      # OK: `bundle install` is fine and lockfile-respecting.
+      # OK: `npm install` in pwsh.
       - name: not-vulnerable-pwsh-2
+        run: npm install
+      - name: not-vulnerable-pwsh-2a
+        run: npm i
+
+      # OK: `bundle install` is fine and lockfile-respecting.
+      - name: not-vulnerable-pwsh-3
         run: bundle install
