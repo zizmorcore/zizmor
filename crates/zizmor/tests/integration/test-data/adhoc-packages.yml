@@ -52,6 +52,8 @@ jobs:
       # NOT OK: ad-hoc `npm install` with a version pin.
       - name: vulnerable-8
         run: npm install oxlint@1.55.0
+      - name: vulnerable-8a
+        run: npm install oxlint@^1.55.0
 
       # NOT OK: ad-hoc `npm install` with extra flags.
       - name: vulnerable-9
@@ -64,19 +66,6 @@ jobs:
       # NOT OK: `npm add` is also an alias for `npm install`.
       - name: vulnerable-9b
         run: npm add lodash
-
-      # NOT OK: ad-hoc `npm exec`.
-      - name: vulnerable-10
-        run: npm exec lodash
-
-      # NOT OK: `npx -y` skips the install prompt and pulls the package
-      # directly from the registry.
-      - name: vulnerable-11
-        run: npx -y lodash
-
-      # NOT OK: `npx --yes` is the long form of `npx -y`.
-      - name: vulnerable-12
-        run: npx --yes lodash@1.2.3
 
       # TODO: enable once `pip install` is covered.
       # # NOT OK: ad-hoc `pip install`.
@@ -104,15 +93,13 @@ jobs:
       - name: not-vulnerable-4
         run: npm ci
 
+      - name: not-vulnerable-5
+        run: npm install
+
       # OK: `npm install` without a package name uses the project's
       # package-lock.json.
-      - name: not-vulnerable-5
-        run: npm install --no-fund
-
-      # OK: `npx <pkg>` without `-y`/`--yes` runs a package that's
-      # already installed via a lockfile.
       - name: not-vulnerable-6
-        run: npx foobar
+        run: npm install --no-fund
 
   vulnerable-pwsh:
     name: vulnerable-pwsh
@@ -126,16 +113,30 @@ jobs:
       - name: vulnerable-pwsh-2
         run: npm install lodash
 
-      # NOT OK: `npx -y` in pwsh.
+      # NOT OK: ad-hoc `npm install` in pwsh.
       - name: vulnerable-pwsh-3
-        run: npx -y lodash
+        run: npm i lodash
+
+      # NOT OK: ad-hoc `npm install` with version pin in pwsh.
+      - name: vulnerable-pwsh-4
+        run: npm install lodash@1.2.3
+      - name: vulnerable-pwsh-4a
+        run: npm install lodash@^1.2.3
 
       # NOT OK: multiline pwsh `run:` with a `gem install`.
-      - name: vulnerable-pwsh-4
+      - name: vulnerable-pwsh-5
         run: |
           Write-Host "Hello"
           gem install foo
           Write-Host "Goodbye"
+
+      # NOT OK: installing multiple gems.
+      - name: vulnerable-pwsh-6
+        run: gem install foo bar baz
+
+      # NOT OK: installing a gem with a specific version.
+      - name: vulnerable-pwsh-7
+        run: gem install foo@1.2.3
 
   not-vulnerable-pwsh:
     name: not-vulnerable-pwsh
@@ -145,6 +146,6 @@ jobs:
       - name: not-vulnerable-pwsh-1
         run: npm ci
 
-      # OK: bare `npx foobar` in pwsh.
+      # OK: `bundle install` is fine and lockfile-respecting.
       - name: not-vulnerable-pwsh-2
-        run: npx foobar
+        run: bundle install
