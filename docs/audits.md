@@ -22,40 +22,28 @@ Legend:
 
 [adhoc-packages.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/adhoc-packages.yml
 
-Detects `#!yaml run:` steps that install packages ad hoc, outside of a
-lockfile-managed manifest.
+Detects `#!yaml run:` steps that install packages in an ad-hoc manner, i.e. outside of a managed
+and locked manifest.
 
 Installing packages directly with commands like `#!bash gem install <pkg>` or
-`#!bash npm install <pkg>` sidesteps the project's lockfile (e.g.
-`Gemfile.lock`, `package-lock.json`), which causes several supply-chain
-hazards:
+`#!bash npm install <pkg>` represents a potential risk:
 
-- Without a lockfile to pin against, the workflow always installs whichever
-  version the registry currently advertises. A compromised release of an
-  upstream dependency is therefore picked up automatically on the next run.
-- Without a lockfile, the sub-dependencies of the adhoc package are also
-  unpinned, and so packages you may not know about would also be installed
-  with their latest version, even if you have pinned to a specific version
-  in the install command (`#!bash npm install foo@1.2.3`).
-- Lockfiles record content hashes that can be cross-checked against the
-  registry. Ad-hoc installs perform no such verification, and so a registry
-  compromise would be able to send malicious packages to your CI runs.
-- Reproducibility is lost: re-running the same workflow can install different
-  versions of the same package over time.
+- Packages that are installed in an ad-hoc manner are often not pinned to
+  a specific version, meaning that the installer will often use whatever latest
+  version is available. This makes it easier to accidentally pick up a compromised
+  version of a package in your workflows.
+- Even if a version is specified, the sub-dependencies of a package are
+  typically still unpinned. For example, `#!bash npm install foo@1.2.3`
+  will install a specific version of `foo`, but `foo`'s dependencies
+  will be newly resolved and may undermine the user's intent of a safe
+  cutoff.
 
-Currently this audit flags:
+This audit currently detects ad-hoc installation patterns for the following ecosystems and tools:
 
-- `#!bash gem install <pkg>` invocations (and the alias `#!bash gem i <pkg>`),
-  including those with extra flags or version specifiers (e.g. `-v 13.0.6`).
-  Other subcommands like `#!bash gem build` or `#!bash gem push` are not
-  flagged.
-- `#!bash npm install <pkg>` invocations, including its documented aliases
-  (e.g. `#!bash npm i <pkg>`, `#!bash npm add <pkg>`). `#!bash npm install`/
-  `#!bash npm i` with no package name (which installs from 
-  `package-lock.json`) and `#!bash npm ci` are not flagged.
-
-This audit analyzes `#!yaml run:` steps written in either bash (the default on
-Linux/macOS runners) or PowerShell (the default on Windows runners).
+| Ecosystem | Tools |
+|-----------|-------|
+| JavaScript | `npm` |
+| Ruby | `gem` |
 
 ### Remediation
 
