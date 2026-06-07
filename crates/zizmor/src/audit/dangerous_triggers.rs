@@ -1,10 +1,11 @@
 use github_actions_models::common::Uses;
-use github_actions_models::workflow::Job;
 use github_actions_models::workflow::job::StepBody;
+use github_actions_models::workflow::{Job, Trigger};
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::audit::AuditError;
 use crate::config::Config;
+use crate::finding::location::SymbolicLocation;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::workflow::Workflow;
@@ -19,6 +20,18 @@ audit_meta!(
 );
 
 impl DangerousTriggers {
+    fn trigger_location<'doc>(
+        workflow: &'doc Workflow,
+        trigger: &'static str,
+    ) -> SymbolicLocation<'doc> {
+        let base = workflow.location().primary().with_keys(["on".into()]);
+
+        match &workflow.on {
+            Trigger::Events(_) => base.with_keys([trigger.into()]),
+            Trigger::BareEvent(_) | Trigger::BareEvents(_) => base,
+        }
+    }
+
     fn is_labeler_exception(workflow: &Workflow) -> bool {
         // If a workflow has exactly one job, that job has exactly one step,
         // and that step is `actions/labeler`, then we suppress any
@@ -58,10 +71,7 @@ impl Audit for DangerousTriggers {
                     .confidence(Confidence::Medium)
                     .severity(Severity::High)
                     .add_location(
-                        workflow
-                            .location()
-                            .primary()
-                            .with_keys(["on".into()])
+                        Self::trigger_location(workflow, "pull_request_target")
                             .annotated("pull_request_target is almost always used insecurely"),
                     )
                     .build(workflow)?,
@@ -73,10 +83,7 @@ impl Audit for DangerousTriggers {
                     .confidence(Confidence::Medium)
                     .severity(Severity::High)
                     .add_location(
-                        workflow
-                            .location()
-                            .primary()
-                            .with_keys(["on".into()])
+                        Self::trigger_location(workflow, "workflow_run")
                             .annotated("workflow_run is almost always used insecurely"),
                     )
                     .build(workflow)?,
