@@ -11,7 +11,7 @@ of `zizmor`.
 
 ### New Features 🌈
 
-* **New audit**: [typosquat-uses] detects `uses:` clauses that reference likely
+* **New audit**: [typosquat-uses] detects `#!yaml uses:` clauses that reference likely
   typoed actions (#1985)
 
     Many thanks to @andrew for proposing and implementing this improvement!
@@ -20,6 +20,11 @@ of `zizmor`.
   don't evaluate as expected (#2085)
 
     Many thanks to @terror for proposing and implementing this improvement!
+
+* **New audit**: [adhoc-packages] detects `#!yaml run:` steps that install packages
+  in an ad-hoc manner (#2061)
+
+    Many thanks to @connorshea for proposing and implementing this improvement!
 
 ### Enhancements 🌱
 
@@ -1887,5 +1892,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [github-app]: ./audits.md#github-app
 [unpinned-tools]: ./audits.md#unpinned-tools
 [typosquat-uses]: ./audits.md#typosquat-uses
+[unsound-ternary]: ./audits.md#unsound-ternary
+[adhoc-packages]: ./audits.md#adhoc-packages
 
 [exit code]: ./usage.md#exit-codes
