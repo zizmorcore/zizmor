@@ -1,0 +1,30 @@
+name: issue-2097-repro
+on:
+  push:
+    branches: [main]
+permissions: {}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  container-test-job:
+    name: issue-2097-repro
+    runs-on: ubuntu-latest
+
+    services:
+      database:
+        image: "${{ matrix.mysql || '' }}"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php-version: 8.5
+            name: phpstan-dba tests
+            mysql: "mysql:8.4.9@sha256:c36050afdca850f23cef85703f84c7531a5ae155a11b5ee1c60acb09937c4084" # 8.4.9
+
+          - php-version: 8.5
+            name: phpstan-dba tests
+
+    steps:
+      - run: true
