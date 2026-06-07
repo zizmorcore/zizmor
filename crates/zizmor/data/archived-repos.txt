@@ -35,6 +35,7 @@ azure/webapps-container-deploy
 cedrickring/golang-action
 cirrus-actions/rebase
 contributor-assistant/github-action
+convictional/trigger-workflow-and-wait
 cpcloud/flake-update-action
 crazy-max/ghaction-docker-buildx
 crazy-max/ghaction-hugo
