@@ -25,7 +25,7 @@ pub(crate) struct AdhocPackages {
 audit_meta!(
     AdhocPackages,
     "adhoc-packages",
-    "ad-hoc package installation outside of a lockfile"
+    "ad-hoc installation of packages"
 );
 
 impl AdhocPackages {
