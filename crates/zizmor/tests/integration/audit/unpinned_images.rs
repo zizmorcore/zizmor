@@ -279,3 +279,17 @@ fn test_docker_action() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_issue_2097_repro() -> anyhow::Result<()> {
+    // `${{ matrix.mysql || '' }}` expands to either a hash-pinned image or an
+    // empty (absent) container, so there's nothing to report.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-images/issue-2097-repro.yml"))
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
