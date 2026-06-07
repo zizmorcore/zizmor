@@ -243,6 +243,9 @@
     "RulesConfig": {
       "type": "object",
       "properties": {
+        "adhoc-packages": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "anonymous-definition": {
           "$ref": "#/definitions/BaseRuleConfig"
         },

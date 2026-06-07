@@ -1,0 +1,157 @@
+name: adhoc-packages
+
+on: push
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vulnerable:
+    name: vulnerable
+    runs-on: ubuntu-latest
+    steps:
+      # NOT OK: ad-hoc `gem install`.
+      - name: vulnerable-1
+        run: gem install rake
+
+      # NOT OK: ad-hoc `gem install` with multiple packages.
+      - name: vulnerable-2
+        run: gem install rake rspec
+
+      # NOT OK: ad-hoc `gem install` with a version pin.
+      - name: vulnerable-3
+        run: gem install rake:13.0.6
+
+      # NOT OK: ad-hoc `gem install` with a different kind of version pin.
+      - name: vulnerable-4
+        run: gem install rake -v 13.0.6
+
+      # NOT OK: ad-hoc `gem install` with extra flags.
+      - name: vulnerable-5
+        run: gem install --no-document rake
+
+      # NOT OK: `gem i` is an alias for `gem install`.
+      - name: vulnerable-5a
+        run: gem i rake
+
+      # NOT OK: multiple ad-hoc `gem install` invocations in a multi-line `run:`.
+      - name: vulnerable-6
+        run: |
+          echo "Hello"
+          gem install foo
+          gem install bar
+          echo "Goodbye"
+
+      # NOT OK: ad-hoc `npm install`.
+      - name: vulnerable-7
+        run: npm install lodash
+
+      # NOT OK: ad-hoc `npm install` with a version pin.
+      - name: vulnerable-8
+        run: npm install oxlint@1.55.0
+      - name: vulnerable-8a
+        run: npm install oxlint@^1.55.0
+
+      # NOT OK: ad-hoc `npm install` with extra flags.
+      - name: vulnerable-9
+        run: npm install --no-fund oxlint@1.55.0
+
+      # NOT OK: `npm i` is an alias for `npm install`.
+      - name: vulnerable-9a
+        run: npm i lodash
+
+      # NOT OK: `npm add` is also an alias for `npm install`.
+      - name: vulnerable-9b
+        run: npm add lodash
+
+      # TODO: enable once `pip install` is covered.
+      # # NOT OK: ad-hoc `pip install`.
+      # - name: vulnerable-13
+      #   run: pip install requests
+
+  not-vulnerable:
+    name: not-vulnerable
+    runs-on: ubuntu-latest
+    steps:
+      # OK: `bundle install` uses the project's Gemfile.lock.
+      - name: not-vulnerable-1
+        run: bundle install
+
+      # OK: other gem subcommands are not flagged.
+      - name: not-vulnerable-2
+        run: gem build foo.gemspec
+
+      # OK: `gem install` without a package name is malformed,
+      # but we don't flag it.
+      - name: not-vulnerable-3
+        run: gem install --help
+
+      # OK: `npm ci` is lockfile-aware.
+      - name: not-vulnerable-4
+        run: npm ci
+
+      - name: not-vulnerable-5
+        run: npm install
+
+      # OK: `npm install` without a package name uses the project's
+      # package-lock.json.
+      - name: not-vulnerable-6
+        run: npm install --no-fund
+
+  vulnerable-pwsh:
+    name: vulnerable-pwsh
+    runs-on: windows-latest
+    steps:
+      # NOT OK: ad-hoc `gem install` in pwsh.
+      - name: vulnerable-pwsh-1
+        run: gem install rake
+
+      # NOT OK: ad-hoc `npm install` in pwsh.
+      - name: vulnerable-pwsh-2
+        run: npm install lodash
+
+      # NOT OK: ad-hoc `npm install` in pwsh.
+      - name: vulnerable-pwsh-3
+        run: npm i lodash
+
+      # NOT OK: ad-hoc `npm install` with version pin in pwsh.
+      - name: vulnerable-pwsh-4
+        run: npm install lodash@1.2.3
+      - name: vulnerable-pwsh-4a
+        run: npm install lodash@^1.2.3
+
+      # NOT OK: multiline pwsh `run:` with a `gem install`.
+      - name: vulnerable-pwsh-5
+        run: |
+          Write-Host "Hello"
+          gem install foo
+          Write-Host "Goodbye"
+
+      # NOT OK: installing multiple gems.
+      - name: vulnerable-pwsh-6
+        run: gem install foo bar baz
+
+      # NOT OK: installing a gem with a specific version.
+      - name: vulnerable-pwsh-7
+        run: gem install foo@1.2.3
+
+  not-vulnerable-pwsh:
+    name: not-vulnerable-pwsh
+    runs-on: windows-latest
+    steps:
+      # OK: `npm ci` in pwsh.
+      - name: not-vulnerable-pwsh-1
+        run: npm ci
+
+      # OK: `npm install` in pwsh.
+      - name: not-vulnerable-pwsh-2
+        run: npm install
+      - name: not-vulnerable-pwsh-2a
+        run: npm i
+
+      # OK: `bundle install` is fine and lockfile-respecting.
+      - name: not-vulnerable-pwsh-3
+        run: bundle install
