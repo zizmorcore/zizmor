@@ -67,6 +67,9 @@ of `zizmor`.
 * Fixed a bug where [unpinned-images] would incorrectly flag empty matrix
   expansions as unpinned container image references (#2102)
 
+* Fixed a bug where [unpinned-images] would incorrectly flag some `matrix`
+  expansions as unpinned (#2098)
+
 ### Changes ⚠️
 
 * The [impostor-commit] audit no longer suggests auto-fixes,
