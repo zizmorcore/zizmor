@@ -194,12 +194,20 @@ pub(crate) struct AuditRuleConfig {
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawConfig {
+    #[serde(default)]
     rules: HashMap<String, AuditRuleConfig>,
 }
 
 impl RawConfig {
     fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
-        yaml_serde::from_str(contents).map_err(ConfigErrorInner::Syntax)
+        // An empty or comment-only config file produces a YAML null document.
+        // Treat that the same as an empty mapping (no rule overrides).
+        let value: yaml_serde::Value =
+            yaml_serde::from_str(contents).map_err(ConfigErrorInner::Syntax)?;
+        if value.is_null() {
+            return Ok(Self::default());
+        }
+        yaml_serde::from_value(value).map_err(ConfigErrorInner::Syntax)
     }
 
     fn rule_config<T>(&self, ident: &'static str) -> Result<Option<T>, ConfigErrorInner>
@@ -795,7 +803,29 @@ impl Config {
 mod tests {
     use std::str::FromStr;
 
-    use super::WorkflowRule;
+    use super::{RawConfig, WorkflowRule};
+
+    #[test]
+    fn test_load_empty_config() {
+        // An empty file should parse as a default config (no rule overrides).
+        let config = RawConfig::load("").expect("empty config should be valid");
+        assert!(config.rules.is_empty());
+    }
+
+    #[test]
+    fn test_load_comment_only_config() {
+        // A file with only YAML comments should parse as a default config.
+        let contents = "# All rules are now enabled — no overrides needed.\n# rules:\n";
+        let config = RawConfig::load(contents).expect("comment-only config should be valid");
+        assert!(config.rules.is_empty());
+    }
+
+    #[test]
+    fn test_load_rules_missing_key() {
+        // A mapping with no `rules` key should parse as a default config.
+        let config = RawConfig::load("{}").expect("empty mapping should be valid");
+        assert!(config.rules.is_empty());
+    }
 
     #[test]
     fn test_parse_workflow_rule() -> anyhow::Result<()> {
