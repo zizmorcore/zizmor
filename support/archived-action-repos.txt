@@ -54,6 +54,8 @@ cirrus-actions/rebase
 
 contributor-assistant/github-action
 
+convictional/trigger-workflow-and-wait
+
 cpcloud/flake-update-action
 
 crazy-max/ghaction-docker-buildx
