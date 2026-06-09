@@ -806,25 +806,17 @@ mod tests {
     use super::{RawConfig, WorkflowRule};
 
     #[test]
-    fn test_load_empty_config() {
-        // An empty file should parse as a default config (no rule overrides).
-        let config = RawConfig::load("").expect("empty config should be valid");
-        assert!(config.rules.is_empty());
-    }
-
-    #[test]
-    fn test_load_comment_only_config() {
-        // A file with only YAML comments should parse as a default config.
-        let contents = "# All rules are now enabled — no overrides needed.\n# rules:\n";
-        let config = RawConfig::load(contents).expect("comment-only config should be valid");
-        assert!(config.rules.is_empty());
-    }
-
-    #[test]
-    fn test_load_rules_missing_key() {
-        // A mapping with no `rules` key should parse as a default config.
-        let config = RawConfig::load("{}").expect("empty mapping should be valid");
-        assert!(config.rules.is_empty());
+    fn test_load_empty_or_no_rules() {
+        // All of these should parse as a default config with no rule overrides.
+        for (label, contents) in [
+            ("empty file", ""),
+            ("comment-only file", "# All rules are now enabled.\n# rules:\n"),
+            ("empty mapping", "{}"),
+        ] {
+            let config = RawConfig::load(contents)
+                .unwrap_or_else(|e| panic!("{label}: expected valid config, got {e}"));
+            assert!(config.rules.is_empty(), "{label}: expected no rules");
+        }
     }
 
     #[test]

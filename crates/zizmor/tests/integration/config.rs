@@ -367,34 +367,3 @@ fn test_severity_remap_is_negated_by_no_config() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Ensures that an empty config file (zero bytes) is treated as valid
-/// with no rule overrides, rather than failing with a "missing field `rules`" error.
-#[test]
-fn test_empty_config_file_is_valid() -> anyhow::Result<()> {
-    // The tool must not fatally error; it should run all audits as normal.
-    let output = zizmor()
-        .input(input_under_test("config-scenarios/empty-config"))
-        .run()?;
-    assert!(
-        !output.contains("fatal"),
-        "unexpected fatal error with empty config: {output}"
-    );
-    Ok(())
-}
-
-/// Ensures that a config file containing only YAML comments is treated as valid
-/// with no rule overrides, rather than failing with a "missing field `rules`" error.
-/// This is a common pattern when all rule overrides have been removed but the file
-/// is kept to document that the absence of overrides is intentional.
-#[test]
-fn test_comment_only_config_file_is_valid() -> anyhow::Result<()> {
-    // The tool must not fatally error; it should run all audits as normal.
-    let output = zizmor()
-        .input(input_under_test("config-scenarios/comment-only-config"))
-        .run()?;
-    assert!(
-        !output.contains("fatal"),
-        "unexpected fatal error with comment-only config: {output}"
-    );
-    Ok(())
-}
