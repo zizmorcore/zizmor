@@ -226,11 +226,24 @@ GitHub Actions setup:
 `zizmor` can be integrated directly into your IDE or editor of choice,
 giving you real-time feedback on your workflows and action definitions.
 
+### Zed
+
+`zizmor` has an official extension for Zed!
+
+You can install it from the [Zed Marketplace](https://zed.dev/extensions/zizmor).
+
+The extension does *not* come with `zizmor` itself, so you will need to
+[separately install](./installation.md) `zizmor` in order for the extension
+to work.
+
+See @zizmorcore/zizmor-zed for more information.
+
 ### Visual Studio Code
 
 `zizmor` has an official extension for Visual Studio Code!
 
 You can install it from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=zizmor.zizmor-vscode).
+
 The extension does *not* come with `zizmor` itself, so you will need to
 [separately install](./installation.md) `zizmor` in order for the extension
 to work.
