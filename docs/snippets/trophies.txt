@@ -204,6 +204,7 @@ erlang/rebar3#3001
 esl/MongooseIM#4435
 ethereum/hevm#615
 external-secrets/external-secrets#5368
+falconry/falcon#2652
 fastapi/asyncer#555
 fastapi/fastapi#15607
 fastapi/full-stack-fastapi-template#2260

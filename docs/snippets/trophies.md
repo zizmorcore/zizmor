@@ -969,6 +969,14 @@
         - external-secrets/external-secrets#5368
 
 
+-   ![](https://github.com/falconry.png?size=40){ width="40" loading=lazy align=left } falconry
+
+    ---
+
+    ??? example "Examples"
+        - falconry/falcon#2652
+
+
 -   ![](https://github.com/fastapi.png?size=40){ width="40" loading=lazy align=left } fastapi
 
     ---
