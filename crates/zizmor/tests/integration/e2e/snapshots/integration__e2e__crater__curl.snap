@@ -75,7 +75,7 @@ warning[ref-version-mismatch]: action's hash pin has mismatched or missing versi
   --> .github/workflows/windows.yml:57:87
    |
 57 |       - uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # v6
-   |         ---------------------------------------------------------------------------   ^^ points to commit 711d29f3da23
+   |         ---------------------------------------------------------------------------   ^^ points to commit 3f0a3f9f988f
    |         |
    |         is pointed to by tag v6.0.0
    |
