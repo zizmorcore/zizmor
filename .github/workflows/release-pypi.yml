@@ -39,7 +39,7 @@ jobs:
           #   target: ppc64le
           #   manylinux: "2_28"
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Build wheels
@@ -69,7 +69,7 @@ jobs:
           - runner: ubuntu-24.04
             target: armv7
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Build wheels
@@ -95,7 +95,7 @@ jobs:
           - runner: windows-latest
             target: x86
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Build wheels
@@ -120,7 +120,7 @@ jobs:
           - runner: macos-15
             target: aarch64
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Build wheels
@@ -138,7 +138,7 @@ jobs:
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Build sdist
@@ -169,7 +169,7 @@ jobs:
       #   uses: astral-sh/attest-action@f35111fb79f1e4f0150a1ee16cfd4399e3151bdb # v0.0.5
       #   with:
       #     paths: "wheels-*/*"
-      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       - name: Publish to PyPI
         if: ${{ inputs.release-tag != '' }}
         run: uv publish --trusted-publishing=always wheels-*/*
