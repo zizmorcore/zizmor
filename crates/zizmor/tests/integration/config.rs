@@ -366,4 +366,3 @@ fn test_severity_remap_is_negated_by_no_config() -> anyhow::Result<()> {
 
     Ok(())
 }
-
