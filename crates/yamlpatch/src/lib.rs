@@ -532,22 +532,16 @@ fn apply_single_patch(
                 ));
             }
 
-            let feature = route_to_feature_pretty(&patch.route, document)?;
-
-            // For removal, we need to remove the entire line including leading whitespace
-            // TODO: This isn't sound, e.g. removing `b:` from `{a: a, b: b}` will
-            // remove the entire line.
-            let start_pos = {
-                let range = line_span(document, feature.location.byte_span.0);
-                range.start
-            };
-            let end_pos = {
-                let range = line_span(document, feature.location.byte_span.1);
-                range.end
-            };
+            // Delegate to `yamlpath`, which computes the precise byte span
+            // to delete based on the value's *actual* container kind in the
+            // parse tree (block mapping/sequence vs. flow mapping/sequence).
+            // This keeps removal sound for values nested inside flow
+            // collections, where naive line-based removal would corrupt the
+            // surrounding structure.
+            let span = document.removal_span(&patch.route)?;
 
             let mut result = content.to_string();
-            result.replace_range(start_pos..end_pos, "");
+            result.replace_range(span, "");
 
             result
         }
