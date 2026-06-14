@@ -34,8 +34,7 @@ impl Finding<'_> {
         let title = self.ident;
 
         let message = format!(
-            "{filename}:{start_line}: {desc}: {annotation}",
-            filename = primary.symbolic.key.filename(),
+            "{filepath}:{start_line}: {desc}: {annotation}",
             desc = self.desc,
             annotation = primary.symbolic.annotation,
         );
