@@ -37,6 +37,11 @@ of `zizmor`.
 
 * The [excessive-permissions] audit is now aware of the `code-quality` permission (#2088)
 
+* The [unpinned-uses] audit's auto-fix now pins to the full resolved version
+  (e.g. `# v6.0.2`) when fixing a major-version ref (e.g. `actions/checkout@v6`),
+  avoiding a follow-up [ref-version-mismatch] finding when the major tag is
+  later moved forward (#2093)
+
 ### Performance Improvements 🚄
 
 * Most online audits are significantly faster, thanks to more precise retry handling (#2036)

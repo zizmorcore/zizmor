@@ -70,6 +70,20 @@ impl UnpinnedUses {
             }
         };
 
+        // Resolve the commit back to its longest tag so the version comment
+        // reflects the full version (e.g. `v6.0.2`) rather than the major ref
+        // (e.g. `v6`) the user wrote. Pinning to the full version avoids a
+        // later `ref-version-mismatch` finding when the major tag is moved
+        // forward by the upstream maintainers.
+        // Fall back to the original ref if the commit has no matching tag.
+        let comment_ref = match client
+            .longest_tag_for_commit(uses.owner(), uses.repo(), &commit)
+            .await
+        {
+            Ok(Some(tag)) => tag.name,
+            _ => uses.git_ref().to_string(),
+        };
+
         let action = if let Some(subpath) = uses.subpath() {
             format!("{}/{}", uses.slug(), subpath)
         } else {
@@ -91,7 +105,7 @@ impl UnpinnedUses {
                 Patch {
                     route: parent.route().with_key("uses"),
                     operation: Op::EmplaceComment {
-                        new: format!("# {ref}", ref = uses.git_ref()).into(),
+                        new: format!("# {comment_ref}").into(),
                     },
                 },
             ],
@@ -546,6 +560,65 @@ jobs:
             runs-on: ubuntu-latest
             steps:
               - uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
+        ");
+    }
+
+    #[tokio::test]
+    async fn test_fix_major_version_pins_to_full_version() {
+        // `actions/checkout@v1` is an end-of-life major tag: it no longer
+        // moves, so its resolved commit and full version are stable. The fix
+        // should expand the `# v1` major ref to the full `# v1.2.0` version.
+        let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with major-only ref
+        uses: actions/checkout@v1
+"#;
+
+        let key = InputKey::local(
+            "fakegroup".into(),
+            "test_unpinned_uses_major.yml",
+            None::<&str>,
+        );
+        let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
+
+        let state = crate::state::AuditState::new(
+            false,
+            Some(
+                github::Client::new(
+                    &github::GitHubHost::default(),
+                    &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
+                    "/tmp".into(),
+                )
+                .unwrap(),
+            ),
+        );
+
+        let audit = UnpinnedUses::new(&state).unwrap();
+
+        let input = workflow.into();
+        let findings = audit
+            .audit(UnpinnedUses::ident(), &input, &Config::default())
+            .await
+            .unwrap();
+
+        let new_doc = findings[0].fixes[0].apply(input.as_document()).unwrap();
+        insta::assert_snapshot!(new_doc.source(), @"
+
+        name: Test
+        on: push
+        permissions: {}
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout with major-only ref
+                uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
         ");
     }
 
