@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
@@ -70,18 +72,17 @@ impl UnpinnedUses {
             }
         };
 
-        // Resolve the commit back to its longest tag so the version comment
-        // reflects the full version (e.g. `v6.0.2`) rather than the major ref
-        // (e.g. `v6`) the user wrote. Pinning to the full version avoids a
-        // later `ref-version-mismatch` finding when the major tag is moved
-        // forward by the upstream maintainers.
-        // Fall back to the original ref if the commit has no matching tag.
-        let comment_ref = match client
+        // Resolve the commit back to its longest tag; pinning to the full
+        // version avoids any later `ref-version-mismatch` findings when the
+        // major tag is mutated by the upstream.
+        let longest_tag = match client
             .longest_tag_for_commit(uses.owner(), uses.repo(), &commit)
             .await
         {
-            Ok(Some(tag)) => tag.name,
-            _ => uses.git_ref().to_string(),
+            Ok(Some(tag)) => Cow::Owned(tag.name),
+            // Our original tag -> commit lookup succeeded, but this reverse lookup
+            // failed, which makes no sense. Just fall back to what we know.
+            _ => Cow::Borrowed(uses.git_ref()),
         };
 
         let action = if let Some(subpath) = uses.subpath() {
@@ -105,7 +106,7 @@ impl UnpinnedUses {
                 Patch {
                     route: parent.route().with_key("uses"),
                     operation: Op::EmplaceComment {
-                        new: format!("# {comment_ref}").into(),
+                        new: format!("# {longest_tag}").into(),
                     },
                 },
             ],
@@ -563,11 +564,10 @@ jobs:
         ");
     }
 
+    /// Tests that we expand a major version ref like `@v1` to the full version `v1.2.0`
+    /// in the fix's inserted comment.
     #[tokio::test]
     async fn test_fix_major_version_pins_to_full_version() {
-        // `actions/checkout@v1` is an end-of-life major tag: it no longer
-        // moves, so its resolved commit and full version are stable. The fix
-        // should expand the `# v1` major ref to the full `# v1.2.0` version.
         let workflow_content = r#"
 name: Test
 on: push
