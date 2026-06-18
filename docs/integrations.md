@@ -82,6 +82,9 @@ GitHub Actions setup:
       pull_request:
         branches: ["**"]
 
+    env:
+      ZIZMOR_VERSION: 1.25.2
+
     permissions: {}
 
     jobs:
@@ -102,7 +105,7 @@ GitHub Actions setup:
             uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
           - name: Run zizmor 🌈
-            run: uvx 'zizmor@<version>' --format=sarif . > results.sarif # (2)!
+            run: uvx "zizmor@${ZIZMOR_VERSION}" --format=sarif . > results.sarif # (2)!
             env:
               GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
 
@@ -155,6 +158,9 @@ GitHub Actions setup:
       pull_request:
         branches: ["**"]
 
+    env:
+      ZIZMOR_VERSION: 1.25.2
+
     jobs:
       zizmor:
         name: zizmor via PyPI
@@ -171,7 +177,7 @@ GitHub Actions setup:
             uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
           - name: Run zizmor 🌈
-            run: uvx 'zizmor@<version>' --format=github . # (2)!
+            run: uvx "zizmor@${ZIZMOR_VERSION}" --format=github . # (2)!
             env:
               GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
     ```
