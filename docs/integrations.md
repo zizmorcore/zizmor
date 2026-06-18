@@ -189,11 +189,6 @@ GitHub Actions setup:
         be rendered; all subsequent findings will be logged in the actions log but
         **will not be rendered** as annotations.
 
-!!! tip
-
-    If your project already manages tool dependencies with `uv`, you can keep
-    `zizmor` in a dependency group and run it with `uv run` instead.
-
 [zizmor package from PyPI]: https://pypi.org/p/zizmor
 
 [SARIF]: https://sarifweb.azurewebsites.net/
