@@ -116,11 +116,7 @@ GitHub Actions setup:
     1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
 
     2. This installs a pinned [zizmor package from PyPI], since it's
-       pre-compiled and therefore completes much faster. You could instead
-       compile `zizmor` within CI/CD with
-       `cargo install 'zizmor@<version>'`. Replace `<version>` with the release
-       you want, and keep the pin current with your usual dependency update
-       tooling.
+       pre-compiled and therefore completes much faster.
 
     For more inspiration, see `zizmor`'s own [repository workflow scan], as well
     as GitHub's example of [running ESLint] as a security workflow.
@@ -183,11 +179,7 @@ GitHub Actions setup:
     1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
 
     2. This installs a pinned [zizmor package from PyPI], since it's
-       pre-compiled and therefore completes much faster. You could instead
-       compile `zizmor` within CI/CD with
-       `cargo install 'zizmor@<version>'`. Replace `<version>` with the release
-       you want, and keep the pin current with your usual dependency update
-       tooling.
+       pre-compiled and therefore completes much faster.
 
     !!! warning
 
