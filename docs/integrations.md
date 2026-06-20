@@ -82,11 +82,14 @@ GitHub Actions setup:
       pull_request:
         branches: ["**"]
 
+    env:
+      ZIZMOR_VERSION: 1.25.2
+
     permissions: {}
 
     jobs:
       zizmor:
-        name: zizmor latest via PyPI
+        name: zizmor via PyPI
         runs-on: ubuntu-latest
         permissions:
           security-events: write # Required for upload-sarif (used by zizmor-action) to upload SARIF files.
@@ -102,7 +105,7 @@ GitHub Actions setup:
             uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
           - name: Run zizmor 🌈
-            run: uvx zizmor --format=sarif . > results.sarif # (2)!
+            run: uvx "zizmor@${ZIZMOR_VERSION}" --format=sarif . > results.sarif # (2)!
             env:
               GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
 
@@ -115,9 +118,8 @@ GitHub Actions setup:
 
     1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
 
-    2. This installs the [zizmor package from PyPI], since it's pre-compiled
-       and therefore completes much faster. You could instead compile `zizmor`
-       within CI/CD with `cargo install zizmor`.
+    2. This installs a pinned [zizmor package from PyPI], since it's
+       pre-compiled and therefore completes much faster.
 
     For more inspiration, see `zizmor`'s own [repository workflow scan], as well
     as GitHub's example of [running ESLint] as a security workflow.
@@ -156,9 +158,12 @@ GitHub Actions setup:
       pull_request:
         branches: ["**"]
 
+    env:
+      ZIZMOR_VERSION: 1.25.2
+
     jobs:
       zizmor:
-        name: zizmor latest via PyPI
+        name: zizmor via PyPI
         runs-on: ubuntu-latest
         permissions:
           contents: read # Only needed for private repos. Needed to clone the repo.
@@ -172,16 +177,15 @@ GitHub Actions setup:
             uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
           - name: Run zizmor 🌈
-            run: uvx zizmor --format=github . # (2)!
+            run: uvx "zizmor@${ZIZMOR_VERSION}" --format=github . # (2)!
             env:
               GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
     ```
 
     1. Optional: Remove the `env:` block to only run `zizmor`'s offline audits.
 
-    2. This installs the [zizmor package from PyPI], since it's pre-compiled
-       and therefore completes much faster. You could instead compile `zizmor`
-       within CI/CD with `cargo install zizmor`.
+    2. This installs a pinned [zizmor package from PyPI], since it's
+       pre-compiled and therefore completes much faster.
 
     !!! warning
 
