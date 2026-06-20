@@ -447,6 +447,7 @@ impl InputGroup {
                 break;
             }
 
+            // TODO: Handle worktrees?
             tracing::trace!("checking if {candidate} is a Git repository root");
             if candidate.join(".git").is_dir() {
                 return Some(candidate);
