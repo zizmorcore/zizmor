@@ -194,7 +194,7 @@ of `zizmor`.
     Many thanks to @reubenwong97 for implementing this fix!
 
 * Fixed a bug where `dependabot.yml` files containing a private cargo
-  repository couldn't be parsed (#1976)
+  repository couldn't be parsed (#1974)
 
 * Fixed a bug where zizmor's input validation warnings lacked
   a mention of which files failed to validate (#1980)
@@ -268,7 +268,7 @@ of `zizmor`.
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [concurrency-limits] audit reported findings
-  at the job level instead of the workflow level (#1627)
+  at the job level instead of the workflow level (#1793)
 
 * Fixed a bug where `with: ${{ expr }}` clauses would cause a crash.
   `artipacked` audit emits a pedantic finding on such clauses. (#1772)
@@ -307,7 +307,7 @@ of `zizmor`.
 
 * Fixed a bug where the [ref-version-mismatch] audit would incorrectly parse
   prerelease version comments (such as `# v6-beta`), causing some findings
-  to appear unresolvable (#1870)
+  to appear unresolvable (#1871)
 
 * Fixed a bug where various string comparisons in expressions did not perfectly
   match GitHub's own special uppercasing semantics (#1879)
@@ -1868,6 +1868,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [artipacked]: ./audits.md#artipacked
 [excessive-permissions]: ./audits.md#excessive-permissions
 [cache-poisoning]: ./audits.md#cache-poisoning
+[dangerous-triggers]: ./audits.md#dangerous-triggers
 [github-env]: ./audits.md#github-env
 [template-injection]: ./audits.md#template-injection
 [secrets-inherit]: ./audits.md#secrets-inherit
