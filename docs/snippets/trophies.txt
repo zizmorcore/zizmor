@@ -104,6 +104,7 @@ bitwarden/server#6409
 blakeblackshear/frigate#15490
 bloomberg/memray#922
 bloomberg/pystack#292
+bluesky-social/social-app#10779
 boto/boto3#4755
 boto/botocore#3665
 boto/s3transfer#374
@@ -222,6 +223,7 @@ freemocap/freemocap#659
 freqtrade/freqtrade@5efad94d3de54d7c33731a40113f7218d46dd801
 freqtrade/technical@5fcb81bb1fcf269702de1634e59bb0ba87953ef2
 freqtrade/technical@63037a14d72be329dd35d4dced122705333af133
+G-Research/consuldotnet#640
 gaphor/gaphor#3658
 gechr/WhichSpace@e32d710e7e17102dd6eecd522aa1b511b961fcf3
 GenericMappingTools/pygmt#3861
@@ -333,6 +335,7 @@ Julian/lean.nvim@4f9d48499b002ab361a4351142cae2f6f5403646
 junit-team/junit-framework#4838
 junit-team/junit-framework#4840
 jupyterhub/jupyterhub#5049
+jupyterlab/jupyter-ai#1577
 kanidm/kanidm#3430
 kata-containers/kata-containers#11392
 kata-containers/kata-containers#11475
@@ -407,9 +410,11 @@ mozilla/fx-private-relay#6364
 mozilla/fxa#18628
 mozilla/neqo#2413
 mozilla/neqo#2721
+mvanhorn/last30days-skill#472
 napari/napari#8811
 napari/napari#8885
 narwhals-dev/narwhals#1567
+NaturalIntelligence/fast-xml-parser#841
 nedbat/coveragepy@675c2f8c6c36771c85929ac9e1190b13e0269344
 neocmakelsp/neocmakelsp#216
 neovim/neovim#38230
@@ -456,6 +461,7 @@ orion-rs/orion#490
 ossf/allstar#818
 otter-sec/anchor#4594
 Ouranosinc/xclim#2023
+owid/owid-grapher#6615
 oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
@@ -469,6 +475,7 @@ pendulum-project/ntpd-rs#2139
 pentacent/keila@7eb6aeb61d0b191bc8fca13f4deef0bd422ac8d3
 pgautoupgrade/docker-pgautoupgrade#221
 philips-software/amp-devcontainer#830
+php/pie#634
 PlasmaPy/PlasmaPy#2975
 pnpm/pnpm#11608
 PowerDNS/pdns#15600
@@ -535,8 +542,11 @@ PyVRP/PyVRP#670
 quarkslab/quokka#46
 quay/quay#5887
 ranaroussi/yfinance#2735
+rancher/fleet#5301
 rancher/rancher#54439
 ratatui/ratatui#1961
+ratatui/tui-widgets#249
+raydak-labs/configarr#457
 renovatebot/github-action#1025
 renovatebot/renovate#42346
 reubeno/brush#534
@@ -544,6 +554,7 @@ reubeno/brush#535
 rkyv/rkyv#611
 rocicorp/mono#6052
 rolldown/rolldown#3861
+roostorg/osprey#350
 rsyslog/rsyslog#6808
 ruby/ruby#16273
 rubygems/rubygems#8702
@@ -574,6 +585,7 @@ scientific-python/repo-review#257
 scikit-build/scikit-build-core#983
 scikit-image/scikit-image#7662
 scroll-tech/go-ethereum#1146
+Setasign/FPDI#253
 sharkdp/fd#1828
 sigstore/cosign#3959
 sigstore/fulcio#1910
@@ -651,6 +663,7 @@ tstyche/tstyche@477b8b9c52f59c141918e1c164ad59644d64f81f
 TypeCellOS/BlockNote#2764
 typescript-eslint/typescript-eslint#12329
 ua-parser/uap-python#250
+ubicloud/ubicloud#5472
 UKGovernmentBEIS/inspect_evals#1597
 UKGovernmentBEIS/inspect_evals#1599
 ultrajson/ultrajson#650
@@ -672,6 +685,7 @@ vitest-dev/vitest#10375
 vlang/v#22681
 VowpalWabbit/vowpal_wabbit#4918
 VSCodium/vscodium#2795
+wagtail/wagtail#14285
 wagtail/wagtail-localize#843
 wasmCloud/wasmCloud#5129
 wgsl-analyzer/wgsl-analyzer#844

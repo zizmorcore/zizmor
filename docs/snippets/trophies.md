@@ -386,6 +386,14 @@
         - bloomberg/pystack#292
 
 
+-   ![](https://github.com/bluesky-social.png?size=40){ width="40" loading=lazy align=left } bluesky-social
+
+    ---
+
+    ??? example "Examples"
+        - bluesky-social/social-app#10779
+
+
 -   ![](https://github.com/boto.png?size=40){ width="40" loading=lazy align=left } boto
 
     ---
@@ -1064,6 +1072,14 @@
         - freqtrade/technical@63037a14d72be329dd35d4dced122705333af133
 
 
+-   ![](https://github.com/G-Research.png?size=40){ width="40" loading=lazy align=left } G-Research
+
+    ---
+
+    ??? example "Examples"
+        - G-Research/consuldotnet#640
+
+
 -   ![](https://github.com/gaphor.png?size=40){ width="40" loading=lazy align=left } gaphor
 
     ---
@@ -1546,6 +1562,14 @@
         - jupyterhub/jupyterhub#5049
 
 
+-   ![](https://github.com/jupyterlab.png?size=40){ width="40" loading=lazy align=left } jupyterlab
+
+    ---
+
+    ??? example "Examples"
+        - jupyterlab/jupyter-ai#1577
+
+
 -   ![](https://github.com/kanidm.png?size=40){ width="40" loading=lazy align=left } kanidm
 
     ---
@@ -1942,6 +1966,14 @@
         - mozilla/neqo#2721
 
 
+-   ![](https://github.com/mvanhorn.png?size=40){ width="40" loading=lazy align=left } mvanhorn
+
+    ---
+
+    ??? example "Examples"
+        - mvanhorn/last30days-skill#472
+
+
 -   ![](https://github.com/napari.png?size=40){ width="40" loading=lazy align=left } napari
 
     ---
@@ -1957,6 +1989,14 @@
 
     ??? example "Examples"
         - narwhals-dev/narwhals#1567
+
+
+-   ![](https://github.com/NaturalIntelligence.png?size=40){ width="40" loading=lazy align=left } NaturalIntelligence
+
+    ---
+
+    ??? example "Examples"
+        - NaturalIntelligence/fast-xml-parser#841
 
 
 -   ![](https://github.com/nedbat.png?size=40){ width="40" loading=lazy align=left } nedbat
@@ -2194,6 +2234,14 @@
         - Ouranosinc/xclim#2023
 
 
+-   ![](https://github.com/owid.png?size=40){ width="40" loading=lazy align=left } owid
+
+    ---
+
+    ??? example "Examples"
+        - owid/owid-grapher#6615
+
+
 -   ![](https://github.com/oxc-project.png?size=40){ width="40" loading=lazy align=left } oxc-project
 
     ---
@@ -2268,6 +2316,14 @@
 
     ??? example "Examples"
         - philips-software/amp-devcontainer#830
+
+
+-   ![](https://github.com/php.png?size=40){ width="40" loading=lazy align=left } php
+
+    ---
+
+    ??? example "Examples"
+        - php/pie#634
 
 
 -   ![](https://github.com/PlasmaPy.png?size=40){ width="40" loading=lazy align=left } PlasmaPy
@@ -2593,6 +2649,7 @@
     ---
 
     ??? example "Examples"
+        - rancher/fleet#5301
         - rancher/rancher#54439
 
 
@@ -2602,6 +2659,15 @@
 
     ??? example "Examples"
         - ratatui/ratatui#1961
+        - ratatui/tui-widgets#249
+
+
+-   ![](https://github.com/raydak-labs.png?size=40){ width="40" loading=lazy align=left } raydak-labs
+
+    ---
+
+    ??? example "Examples"
+        - raydak-labs/configarr#457
 
 
 -   ![](https://github.com/renovatebot.png?size=40){ width="40" loading=lazy align=left } renovatebot
@@ -2644,6 +2710,14 @@
 
     ??? example "Examples"
         - rolldown/rolldown#3861
+
+
+-   ![](https://github.com/roostorg.png?size=40){ width="40" loading=lazy align=left } roostorg
+
+    ---
+
+    ??? example "Examples"
+        - roostorg/osprey#350
 
 
 -   ![](https://github.com/rsyslog.png?size=40){ width="40" loading=lazy align=left } rsyslog
@@ -2793,6 +2867,14 @@
 
     ??? example "Examples"
         - scroll-tech/go-ethereum#1146
+
+
+-   ![](https://github.com/Setasign.png?size=40){ width="40" loading=lazy align=left } Setasign
+
+    ---
+
+    ??? example "Examples"
+        - Setasign/FPDI#253
 
 
 -   ![](https://github.com/sharkdp.png?size=40){ width="40" loading=lazy align=left } sharkdp
@@ -3173,6 +3255,14 @@
         - ua-parser/uap-python#250
 
 
+-   ![](https://github.com/ubicloud.png?size=40){ width="40" loading=lazy align=left } ubicloud
+
+    ---
+
+    ??? example "Examples"
+        - ubicloud/ubicloud#5472
+
+
 -   ![](https://github.com/UKGovernmentBEIS.png?size=40){ width="40" loading=lazy align=left } UKGovernmentBEIS
 
     ---
@@ -3290,6 +3380,7 @@
     ---
 
     ??? example "Examples"
+        - wagtail/wagtail#14285
         - wagtail/wagtail-localize#843
 
 
