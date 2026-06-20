@@ -487,7 +487,7 @@ mod tests {
 
         let workflow = Workflow::from_string(
             workflow.into(),
-            InputKey::local("fakegroup".into(), "dummy", None),
+            InputKey::local("fakegroup".into(), "dummy", None, None),
         )
         .unwrap();
 

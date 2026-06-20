@@ -311,7 +311,7 @@ jobs:
         uses: actions/checkout@v6.0.1
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "test_unpinned_uses.yml", None::<&str>);
+        let key = InputKey::local("fakegroup".into(), "test_unpinned_uses.yml", None, None);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(
@@ -365,7 +365,7 @@ jobs:
 
         let workflow_content = workflow_content.replace("\n", "\r\n");
 
-        let key = InputKey::local("fakegroup".into(), "test_unpinned_uses.yml", None::<&str>);
+        let key = InputKey::local("fakegroup".into(), "test_unpinned_uses.yml", None, None);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(
@@ -420,7 +420,8 @@ jobs:
         let key = InputKey::local(
             "fakegroup".into(),
             "test_unpinned_uses_overwrites_comment.yml",
-            None::<&str>,
+            None,
+            None,
         );
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
@@ -472,7 +473,7 @@ jobs:
         uses: actions/checkout@v6.0.1
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "test_unpinned_uses.yml", None::<&str>);
+        let key = InputKey::local("fakegroup".into(), "test_unpinned_uses.yml", None, None);
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
         let state = crate::state::AuditState::new(
@@ -526,7 +527,8 @@ jobs:
         let key = InputKey::local(
             "fakegroup".into(),
             "test_unpinned_uses_subpath.yml",
-            None::<&str>,
+            None,
+            None,
         );
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
@@ -583,7 +585,8 @@ jobs:
         let key = InputKey::local(
             "fakegroup".into(),
             "test_unpinned_uses_major.yml",
-            None::<&str>,
+            None,
+            None,
         );
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
@@ -639,7 +642,8 @@ jobs:
         let key = InputKey::local(
             "fakegroup".into(),
             "test_no_fix_for_already_pinned.yml",
-            None::<&str>,
+            None,
+            None,
         );
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 
@@ -681,7 +685,8 @@ jobs:
         let key = InputKey::local(
             "fakegroup".into(),
             "test_no_fix_for_non_version_ref.yml",
-            None::<&str>,
+            None,
+            None,
         );
         let workflow = Workflow::from_string(workflow_content.to_string(), key).unwrap();
 

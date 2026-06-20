@@ -265,17 +265,17 @@ impl Backend {
         let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
             AuditInput::from(Action::from_string(
                 params.text,
-                InputKey::local("lsp".into(), path, None),
+                InputKey::local("lsp".into(), path, None, None),
             )?)
         } else if matches!(path.file_name(), Some("dependabot.yml" | "dependabot.yaml")) {
             AuditInput::from(Dependabot::from_string(
                 params.text,
-                InputKey::local("lsp".into(), path, None),
+                InputKey::local("lsp".into(), path, None, None),
             )?)
         } else if matches!(path.extension(), Some("yml" | "yaml")) {
             AuditInput::from(Workflow::from_string(
                 params.text,
-                InputKey::local("lsp".into(), path, None),
+                InputKey::local("lsp".into(), path, None, None),
             )?)
         } else {
             anyhow::bail!("asked to audit unexpected file: {path}");
@@ -314,7 +314,10 @@ impl Backend {
             config
         };
 
-        let mut group = InputGroup::new(config);
+        // Note: we don't bother discovering the root directory
+        // for LSP inputs, since LSP diagnostics are always tied
+        // to a specific file, identified by an opaque URI.
+        let mut group = InputGroup::new(config, None);
         group.register_input(input)?;
         let mut input_registry = InputRegistry::new();
         input_registry.groups.insert("lsp".into(), group);

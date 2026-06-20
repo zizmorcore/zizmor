@@ -5,29 +5,43 @@ use std::{env::current_dir, io::ErrorKind, sync::LazyLock};
 
 use assert_cmd::{Command, cargo};
 
-static TEST_PREFIX: LazyLock<Utf8PathBuf> = LazyLock::new(|| {
-    let current_dir = current_dir().expect("Cannot figure out current directory");
+/// The absolute path to the zizmor crate's root directory.
+static ZIZMOR_ROOT: LazyLock<Utf8PathBuf> =
+    LazyLock::new(|| Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")));
 
-    let file_path = current_dir
+/// The absolute path to the repository's root directory.
+///
+/// This is `ZIZMOR_ROOT/../..` since the `zizmor` crate
+/// lives at `repo_root/crates/zizmor`.
+static REPO_ROOT: LazyLock<Utf8PathBuf> =
+    LazyLock::new(|| ZIZMOR_ROOT.parent().unwrap().parent().unwrap().into());
+
+static CURRENT_DIR: LazyLock<Utf8PathBuf> = LazyLock::new(|| {
+    let current_dir = current_dir().expect("Cannot figure out current directory");
+    Utf8PathBuf::try_from(current_dir).expect("Cannot create UTF-8 path from current directory")
+});
+
+static TEST_PREFIX: LazyLock<Utf8PathBuf> = LazyLock::new(|| {
+    let file_path = ZIZMOR_ROOT
         .join("tests")
         .join("integration")
         .join("test-data");
 
     if !file_path.exists() {
-        panic!("Cannot find test data directory: {}", file_path.display());
+        panic!("Cannot find test data directory: {file_path}");
     }
 
     Utf8PathBuf::try_from(file_path).expect("Cannot create UTF-8 path from test data directory")
 });
 
-pub fn input_under_test(name: &str) -> String {
+pub fn input_under_test(name: &str) -> Utf8PathBuf {
     let file_path = TEST_PREFIX.join(name);
 
     if !file_path.exists() {
         panic!("Cannot find input under test: {file_path}");
     }
 
-    file_path.to_string()
+    file_path
 }
 
 pub enum OutputMode {
@@ -43,7 +57,8 @@ pub struct Zizmor {
     unbuffer: bool,
     offline: bool,
     gh_token: bool,
-    inputs: Vec<String>,
+    inputs: Vec<Utf8PathBuf>,
+    working_dir: Utf8PathBuf,
     config: Option<String>,
     no_config: bool,
     output: OutputMode,
@@ -68,6 +83,7 @@ impl Zizmor {
             offline: true,
             gh_token: true,
             inputs: vec![],
+            working_dir: CURRENT_DIR.clone(),
             config: None,
             no_config: false,
             output: OutputMode::Stdout,
@@ -91,7 +107,7 @@ impl Zizmor {
         self
     }
 
-    pub fn input(mut self, input: impl Into<String>) -> Self {
+    pub fn input(mut self, input: impl Into<Utf8PathBuf>) -> Self {
         self.inputs.push(input.into());
         self
     }
@@ -256,14 +272,20 @@ impl Zizmor {
             // }
         }
 
-        let config_placeholder = "@@CONFIG@@";
         if let Some(config) = &self.config {
-            raw = raw.replace(config, config_placeholder);
+            raw = raw.replace(config, "@@CONFIG@@");
         }
 
         let input_placeholder = "@@INPUT@@";
         for input in &self.inputs {
-            raw = raw.replace(input, input_placeholder);
+            raw = raw.replace(input.as_str(), input_placeholder);
+
+            // Some output formats emit root-relative paths; redact those too.
+            if let Ok(abs) = input.canonicalize_utf8()
+                && let Ok(relative) = abs.strip_prefix(&*REPO_ROOT)
+            {
+                raw = raw.replace(relative.as_str(), input_placeholder);
+            }
         }
 
         // Normalize Windows '\' file paths to using '/', to get consistent snapshot test outputs
@@ -276,11 +298,28 @@ impl Zizmor {
                 .into_owned();
         }
 
-        // Fallback: replace any lingering absolute paths.
+        let working_dir_placeholder = "@@WORKING_DIR@@";
+        // Replace any absolute references to the working directory.
+        raw = raw.replace(self.working_dir.as_str(), working_dir_placeholder);
+
+        // Replace any relative references to the working directory.
+        if let Ok(relative) = self.working_dir.strip_prefix(&*REPO_ROOT) {
+            raw = raw.replace(relative.as_str(), working_dir_placeholder);
+        }
+
+        // Fallback: replace any lingering test prefix paths.
         // TODO: Maybe just use this everywhere instead of the special
         // replacements above?
         let test_prefix_placeholder = "@@TEST_PREFIX@@";
         raw = raw.replace(TEST_PREFIX.as_str(), test_prefix_placeholder);
+
+        if let Ok(relative) = TEST_PREFIX.strip_prefix(&*REPO_ROOT) {
+            raw = raw.replace(relative.as_str(), test_prefix_placeholder);
+        }
+
+        if let Ok(relartive) = TEST_PREFIX.strip_prefix(&*ZIZMOR_ROOT) {
+            raw = raw.replace(relartive.as_str(), test_prefix_placeholder);
+        }
 
         let version_placeholder = "@@VERSION@@";
         raw = raw.replace(env!("CARGO_PKG_VERSION"), version_placeholder);

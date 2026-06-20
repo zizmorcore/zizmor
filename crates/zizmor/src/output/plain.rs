@@ -69,7 +69,6 @@ pub(crate) fn finding_snippets<'doc>(
     let mut snippets = vec![];
     for (input_key, locations) in locations_by_workflow {
         let input = registry.get_input(input_key);
-
         let path = match render_links_mode {
             RenderLinks::Always => input.link().unwrap_or(input_key.presentation_path()),
             RenderLinks::Never => input_key.presentation_path(),

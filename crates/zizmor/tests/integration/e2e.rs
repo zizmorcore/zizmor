@@ -96,11 +96,11 @@ fn issue_1907() -> Result<()> {
             .working_dir(working_dir)
             .input("./workflows")
             .run()?,
-        @r"
-         INFO zizmor: 🌈 zizmor v@@VERSION@@
-         INFO audit: zizmor: 🌈 completed @@INPUT@@/test.yml
-        No findings to report. Good job! (1 suppressed)
-        "
+        @"
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
+     INFO audit: zizmor: 🌈 completed @@INPUT@@/test.yml
+    No findings to report. Good job! (1 suppressed)
+    "
     );
 
     Ok(())
@@ -642,12 +642,13 @@ fn issue_1745() -> Result<()> {
             .offline(true)
             .no_config(true)
             .working_dir(input_under_test("issue-1745-repro"))
-            .args([".github", "--format=github"])
+            .input(".github")
+            .args(["--format=github"])
             .run()?,
-        @r#"
-    ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
-    "#
+        @"
+    ::warning file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/@@INPUT@@/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/@@INPUT@@/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    "
     );
 
     insta::assert_snapshot!(
@@ -658,8 +659,8 @@ fn issue_1745() -> Result<()> {
             .args([".", "--format=github"])
             .run()?,
         @"
-    ::warning file=./.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=./.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::warning file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
     "
     );
 

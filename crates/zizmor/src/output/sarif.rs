@@ -92,7 +92,7 @@ fn build_rule(finding: &Finding) -> ReportingDescriptor {
 }
 
 fn build_results(findings: &[Finding]) -> Vec<SarifResult> {
-    findings.iter().map(|f| build_result(f)).collect()
+    findings.iter().map(build_result).collect()
 }
 
 fn build_result(finding: &Finding<'_>) -> SarifResult {
@@ -166,7 +166,7 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
 fn build_physical_location(location: &Location<'_>) -> PhysicalLocation {
     PhysicalLocation {
         artifact_location: ArtifactLocation {
-            uri: location.symbolic.key.sarif_path().into(),
+            uri: location.symbolic.key.best_relative_path().into(),
         },
         region: Region {
             // NOTE: SARIF lines/columns are 1-based.
