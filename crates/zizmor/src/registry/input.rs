@@ -569,8 +569,6 @@ impl InputGroup {
                 .git_exclude(true);
         }
 
-        // Clone once outside the loop so each iteration's `key` construction
-        // doesn't conflict with the mutable borrow `group.register(..)` takes.
         let root = group.root.clone();
         for entry in walker.build() {
             let entry = entry?;
