@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.26.0
+
 ### New Features 🌈
 
 * **New audit**: [typosquat-uses] detects `#!yaml uses:` clauses that reference likely
