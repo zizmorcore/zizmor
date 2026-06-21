@@ -9,6 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.26.1
+
+This is a small corrective release for [1.26.0](#1260).
+
 ## 1.26.0
 
 ### New Features 🌈
