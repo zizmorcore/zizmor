@@ -56,8 +56,7 @@ impl AdhocPackages {
             }
             "bundle" => {
                 // Disallow `bundle add` in CI, as it modifies the lockfile contents.
-                args.any(|arg| arg == "add")
-                    && args.any(|arg| !arg.starts_with('-'))
+                args.any(|arg| arg == "add") && args.any(|arg| !arg.starts_with('-'))
             }
             "npm" => {
                 // Looking for `npm install <pkg>` where
@@ -77,14 +76,12 @@ impl AdhocPackages {
             "yarn" => {
                 // Require at least one non-flag argument after `add` so we
                 // don't flag malformed invocations like `yarn add`.
-                args.any(|arg| arg == "add")
-                    && args.any(|arg| !arg.starts_with('-'))
+                args.any(|arg| arg == "add") && args.any(|arg| !arg.starts_with('-'))
             }
             "pnpm" => {
                 // Require at least one non-flag argument after `add` so we
                 // don't flag malformed invocations like `pnpm add`.
-                args.any(|arg| arg == "add")
-                    && args.any(|arg| !arg.starts_with('-'))
+                args.any(|arg| arg == "add") && args.any(|arg| !arg.starts_with('-'))
             }
             _ => false,
         }
