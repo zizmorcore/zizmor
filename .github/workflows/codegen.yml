@@ -164,3 +164,42 @@ jobs:
             Please review manually before merging.
           assignees: ${{ env.PR_ASSIGNEES }}
           reviewers: ${{ env.PR_ASSIGNEES }}
+
+  refresh-github-runners:
+    name: Refresh GitHub runners 🏃
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'zizmorcore' }}
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
+      - name: try to refresh GitHub runners
+        run: |
+          make sync-github-runners
+
+      - name: create PR
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          draft: true
+          commit-message: "[BOT] update GitHub runners list"
+          branch: refresh-github-runners
+          branch-suffix: timestamp
+          title: "[BOT] update GitHub runners list from GitHub"
+          body: |
+            :robot: :warning: :robot:
+
+            This is an automated pull request, updating the list of
+            official GitHub-hosted runners after a change to GitHub's
+            documentation was detected.
+
+            Please review manually before merging.
+          assignees: ${{ env.PR_ASSIGNEES }}
+          reviewers: ${{ env.PR_ASSIGNEES }}
