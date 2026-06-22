@@ -17,7 +17,7 @@ name: GitHub Actions Security Analysis with zizmor 🌈
 
 on:
   push:
-    branches: ["main"]
+    branches: [ $default-branch ]
   pull_request:
     branches: ["**"]
 
@@ -78,7 +78,7 @@ GitHub Actions setup:
 
     on:
       push:
-        branches: ["main"]
+        branches: [ $default-branch ]
       pull_request:
         branches: ["**"]
 
@@ -154,7 +154,7 @@ GitHub Actions setup:
 
     on:
       push:
-        branches: ["main"]
+        branches: [ $default-branch ]
       pull_request:
         branches: ["**"]
 
