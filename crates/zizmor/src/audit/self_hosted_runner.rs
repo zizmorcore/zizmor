@@ -5,17 +5,16 @@
 //! This audit is "auditor" only, since zizmor can't detect
 //! whether self-hosted runners are ephemeral or not.
 
-use github_actions_models::{
-    common::expr::{ExplicitExpr, LoE},
-    workflow::job::RunsOn,
-};
-
-use super::{Audit, AuditLoadError, Job, audit_meta};
-use crate::finding::location::Locatable as _;
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     AuditState,
     audit::AuditError,
     finding::{Confidence, Persona, Severity},
+};
+use crate::{
+    config::Config,
+    finding::{Finding, location::Locatable as _},
+    models::workflow::NormalJob,
 };
 
 pub(crate) struct SelfHostedRunner;
@@ -35,119 +34,42 @@ impl Audit for SelfHostedRunner {
         Ok(Self)
     }
 
-    async fn audit_workflow<'doc>(
+    async fn audit_normal_job<'doc>(
         &self,
-        workflow: &'doc crate::models::workflow::Workflow,
-        _config: &crate::config::Config,
-    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
-        let mut results = vec![];
-
-        for job in workflow.jobs() {
-            let Job::NormalJob(job) = job else {
-                continue;
-            };
-
-            match &job.runs_on {
-                LoE::Literal(RunsOn::Target(labels)) => {
-                    {
-                        let Some(label) = labels.first() else {
-                            continue;
-                        };
-
-                        if label == "self-hosted" {
-                            // All self-hosted runners start with the 'self-hosted'
-                            // label followed by any specifiers.
-                            results.push(
-                                Self::finding()
-                                    .confidence(Confidence::High)
-                                    .severity(Severity::Medium)
-                                    .persona(Persona::Auditor)
-                                    .add_location(
-                                        job.location()
-                                            .primary()
-                                            .with_keys(["runs-on".into()])
-                                            .annotated("self-hosted runner used here"),
-                                    )
-                                    .build(workflow)?,
-                            );
-                        } else if ExplicitExpr::from_curly(label).is_some() {
-                            // The job might also have its runner expanded via an
-                            // expression. Long-term we should perform this evaluation
-                            // to increase our confidence, but for now we flag it as
-                            // potentially expanding to self-hosted.
-                            results.push(
-                                Self::finding()
-                                    .confidence(Confidence::Low)
-                                    .severity(Severity::Medium)
-                                    .persona(Persona::Auditor)
-                                    .add_location(
-                                        job.location()
-                                            .primary()
-                                            .with_keys(["runs-on".into()])
-                                            .annotated(
-                                                "expression may expand into a self-hosted runner",
-                                            ),
-                                    )
-                                    .build(workflow)?,
-                            );
-                        }
-                    }
-                }
-                // NOTE: GHA docs are unclear on whether runner groups always
-                // imply self-hosted runners or not. All examples suggest that they
-                // do, but I'm not sure.
-                // See: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/managing-access-to-self-hosted-runners-using-groups
-                // See: https://docs.github.com/en/actions/writing-workflows/choosing-where-your-workflow-runs/choosing-the-runner-for-a-job
-                LoE::Literal(RunsOn::Group { .. }) => results.push(
-                    Self::finding()
-                        .confidence(Confidence::Low)
-                        .severity(Severity::Medium)
-                        .persona(Persona::Auditor)
-                        .add_location(
-                            job.location()
-                                .primary()
-                                .with_keys(["runs-on".into()])
-                                .annotated("runner group implies self-hosted runner"),
-                        )
-                        .build(workflow)?,
-                ),
-                // The entire `runs-on:` is an expression, which may or may
-                // not be a self-hosted runner when expanded, like above.
-                LoE::Expr(exp) => {
-                    let Some(matrix) = job.matrix() else {
-                        continue;
-                    };
-
-                    let self_hosted = matrix.expansions().iter().any(|expansion| {
-                        exp.as_bare() == expansion.path && expansion.value.contains("self-hosted")
-                    });
-
-                    if self_hosted {
-                        results.push(
-                            Self::finding()
-                                .confidence(Confidence::High)
-                                .severity(Severity::Medium)
-                                .persona(Persona::Auditor)
-                                .add_location(
-                                    job.location()
-                                        .with_keys(["strategy".into()])
-                                        .annotated("matrix declares self-hosted runner"),
-                                )
-                                .add_location(
-                                    job.location()
-                                        .primary()
-                                        .with_keys(["runs-on".into()])
-                                        .annotated(
-                                            "expression may expand into a self-hosted runner",
-                                        ),
-                                )
-                                .build(workflow)?,
-                        )
-                    }
-                }
-            }
+        job: &NormalJob<'doc>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        match job.is_self_hosted() {
+            // Definitely self hosted.
+            Some(true) => Ok(vec![
+                Self::finding()
+                    .confidence(Confidence::High)
+                    .severity(Severity::Medium)
+                    .persona(Persona::Auditor)
+                    .add_location(
+                        job.location()
+                            .primary()
+                            .with_keys(["runs-on".into()])
+                            .annotated("self-hosted runner used here"),
+                    )
+                    .build(job)?,
+            ]),
+            // Indeterminate.
+            None => Ok(vec![
+                Self::finding()
+                    .confidence(Confidence::Low)
+                    .severity(Severity::Medium)
+                    .persona(Persona::Auditor)
+                    .add_location(
+                        job.location()
+                            .primary()
+                            .with_keys(["runs-on".into()])
+                            .annotated("expression may expand into a self-hosted runner"),
+                    )
+                    .build(job)?,
+            ]),
+            // Not self hosted.
+            Some(false) => Ok(vec![]),
         }
-
-        Ok(results)
     }
 }
