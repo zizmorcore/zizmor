@@ -1,7 +1,7 @@
 //! Workflow jobs.
 
 use indexmap::IndexMap;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use yaml_serde::Value;
 
 use crate::common::expr::{BoE, LoE};
@@ -110,35 +110,177 @@ pub struct Step {
     #[serde(default)]
     pub env: LoE<Env>,
 
+    /// An optional boolean or expression that, if `true`, runs this step
+    /// asynchronously so the job immediately continues to the next step.
+    ///
+    /// See <https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/>.
+    #[serde(default)]
+    pub background: BoE,
+
     /// The `run:` or `uses:` body for this step.
     #[serde(flatten)]
     pub body: StepBody,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "kebab-case", untagged)]
+/// The body of a [`Step`], i.e. the action it performs.
+#[derive(Debug)]
 pub enum StepBody {
+    /// A step that runs an action.
     Uses {
         /// The GitHub Action being used.
-        #[serde(deserialize_with = "crate::common::step_uses")]
         uses: Uses,
-
         /// Any inputs to the action being used.
-        #[serde(default)]
         with: LoE<Env>,
     },
+    /// A step that runs a shell command.
     Run {
         /// The command to run.
-        #[serde(deserialize_with = "crate::common::bool_is_string")]
         run: String,
-
         /// An optional working directory to run [`StepBody::Run::run`] from.
         working_directory: Option<String>,
-
         /// An optional shell to run in. Defaults to the job or workflow's
         /// default shell.
         shell: Option<LoE<String>>,
     },
+    /// Runs a group of steps in parallel, then waits for all of them to finish.
+    ///
+    /// See <https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/>.
+    Parallel {
+        /// The group of steps to run in parallel.
+        parallel: Vec<Step>,
+    },
+    /// Pauses the job until one or more named background steps complete.
+    Wait {
+        /// One or more background step IDs to wait for.
+        wait: Vec<String>,
+    },
+    /// Pauses the job until all active background steps complete.
+    ///
+    /// The `wait-all` keyword takes no arguments.
+    WaitAll,
+    /// Gracefully terminates a single running background step by its ID.
+    Cancel {
+        /// The ID of the background step to cancel.
+        cancel: String,
+    },
+}
+
+impl<'de> Deserialize<'de> for StepBody {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        use serde::de::Error as _;
+
+        // A step body is identified by which of its mutually-exclusive keys is
+        // present. We dispatch on key presence rather than deriving an
+        // `untagged` enum, because the `wait-all:` step's value is the YAML
+        // null, which serde's untagged buffering cannot match against.
+        //
+        // These helper structs reuse the field-level custom deserializers.
+        #[derive(Deserialize)]
+        #[serde(rename_all = "kebab-case")]
+        struct UsesBody {
+            #[serde(deserialize_with = "crate::common::step_uses")]
+            uses: Uses,
+            #[serde(default)]
+            with: LoE<Env>,
+        }
+        #[derive(Deserialize)]
+        #[serde(rename_all = "kebab-case")]
+        struct RunBody {
+            #[serde(deserialize_with = "crate::common::bool_is_string")]
+            run: String,
+            working_directory: Option<String>,
+            shell: Option<LoE<String>>,
+        }
+        #[derive(Deserialize)]
+        struct ParallelBody {
+            parallel: Vec<Step>,
+        }
+        #[derive(Deserialize)]
+        struct WaitBody {
+            #[serde(deserialize_with = "crate::common::scalar_or_vector")]
+            wait: Vec<String>,
+        }
+        #[derive(Deserialize)]
+        struct CancelBody {
+            cancel: String,
+        }
+
+        let map: IndexMap<String, Value> = IndexMap::deserialize(deserializer)?;
+
+        enum Which {
+            Uses,
+            Run,
+            Parallel,
+            Wait,
+            WaitAll,
+            Cancel,
+        }
+        // Value-bearing keys are checked first to preserve their priority.
+        let which = if map.contains_key("uses") {
+            Which::Uses
+        } else if map.contains_key("run") {
+            Which::Run
+        } else if map.contains_key("parallel") {
+            Which::Parallel
+        } else if map.contains_key("wait") {
+            Which::Wait
+        } else if map.contains_key("wait-all") {
+            Which::WaitAll
+        } else if map.contains_key("cancel") {
+            Which::Cancel
+        } else {
+            return Err(D::Error::custom(
+                "step must define one of `uses`, `run`, `parallel`, `wait`, `wait-all`, or `cancel`",
+            ));
+        };
+
+        // `wait-all` carries no value, so it is determined purely by presence.
+        if let Which::WaitAll = which {
+            return Ok(StepBody::WaitAll);
+        }
+
+        let value = Value::Mapping(
+            map.into_iter()
+                .map(|(k, v)| (Value::String(k), v))
+                .collect(),
+        );
+        match which {
+            Which::Uses => {
+                let b: UsesBody = yaml_serde::from_value(value).map_err(D::Error::custom)?;
+                Ok(StepBody::Uses {
+                    uses: b.uses,
+                    with: b.with,
+                })
+            }
+            Which::Run => {
+                let b: RunBody = yaml_serde::from_value(value).map_err(D::Error::custom)?;
+                Ok(StepBody::Run {
+                    run: b.run,
+                    working_directory: b.working_directory,
+                    shell: b.shell,
+                })
+            }
+            Which::Parallel => {
+                let b: ParallelBody = yaml_serde::from_value(value).map_err(D::Error::custom)?;
+                Ok(StepBody::Parallel {
+                    parallel: b.parallel,
+                })
+            }
+            Which::Wait => {
+                let b: WaitBody = yaml_serde::from_value(value).map_err(D::Error::custom)?;
+                Ok(StepBody::Wait { wait: b.wait })
+            }
+            Which::Cancel => {
+                let b: CancelBody = yaml_serde::from_value(value).map_err(D::Error::custom)?;
+                Ok(StepBody::Cancel { cancel: b.cancel })
+            }
+            // Handled above by early return.
+            Which::WaitAll => unreachable!(),
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -273,5 +415,42 @@ matrix:
                 .to_string(),
             "runs-on must provide either `group` or one or more `labels`"
         );
+    }
+
+    #[test]
+    fn test_parallel_steps() {
+        use super::{Step, StepBody};
+
+        // `background` is accepted on a run step.
+        let step: Step = yaml_serde::from_str("run: echo hi\nbackground: true").unwrap();
+        assert!(matches!(step.background, LoE::Literal(true)));
+        assert!(matches!(step.body, StepBody::Run { .. }));
+
+        // `wait` accepts a single ID or a list of IDs.
+        let step: Step = yaml_serde::from_str("wait: build").unwrap();
+        let StepBody::Wait { wait } = step.body else {
+            panic!("expected a wait step");
+        };
+        assert_eq!(wait.len(), 1);
+        assert_eq!(wait[0], "build");
+        let step: Step = yaml_serde::from_str("wait: [a, b]").unwrap();
+        assert!(matches!(step.body, StepBody::Wait { .. }));
+
+        // `wait-all` takes no arguments.
+        let step: Step = yaml_serde::from_str("wait-all:").unwrap();
+        assert!(matches!(step.body, StepBody::WaitAll));
+
+        // `cancel` targets a single background step.
+        let step: Step = yaml_serde::from_str("cancel: build").unwrap();
+        assert!(matches!(step.body, StepBody::Cancel { .. }));
+
+        // `parallel` groups nested steps, which are themselves parsed as steps.
+        let step: Step =
+            yaml_serde::from_str("parallel:\n  - run: echo a\n  - run: echo b").unwrap();
+        let StepBody::Parallel { parallel } = step.body else {
+            panic!("expected a parallel step");
+        };
+        assert_eq!(parallel.len(), 2);
+        assert!(matches!(parallel[0].body, StepBody::Run { .. }));
     }
 }

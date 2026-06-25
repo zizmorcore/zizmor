@@ -548,6 +548,12 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
                 _working_directory: working_directory.as_deref(),
                 _shell: shell.as_ref(),
             },
+            // Parallel-steps control steps (`wait`, `wait-all`, `cancel`,
+            // `parallel`) are neither `uses:` nor `run:` steps.
+            StepBody::Parallel { .. }
+            | StepBody::Wait { .. }
+            | StepBody::WaitAll
+            | StepBody::Cancel { .. } => StepBodyCommon::Other,
         }
     }
 

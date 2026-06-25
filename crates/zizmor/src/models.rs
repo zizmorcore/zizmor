@@ -59,6 +59,9 @@ pub(crate) enum StepBodyCommon<'s> {
         _working_directory: Option<&'s str>,
         _shell: Option<&'s LoE<String>>,
     },
+    /// A step that is neither a `uses:` nor a `run:` step, such as a
+    /// parallel-steps control step (`wait`, `wait-all`, `cancel`, `parallel`).
+    Other,
 }
 
 /// Common interfaces between workflow and action steps.

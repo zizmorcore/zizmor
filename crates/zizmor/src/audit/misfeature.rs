@@ -106,6 +106,8 @@ impl Misfeature {
             }
             // No misfeature checks against non-actions `uses:` clauses, yet.
             StepBodyCommon::Uses { .. } => {}
+            // No misfeature checks against parallel-steps control steps.
+            StepBodyCommon::Other => {}
         }
 
         Ok(findings)
