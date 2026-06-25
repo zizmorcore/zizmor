@@ -473,12 +473,17 @@ impl<'doc> Iterator for Jobs<'doc> {
 /// provides access to the step's actual fields.
 #[derive(Clone)]
 pub(crate) struct Step<'doc> {
-    /// The step's index within its parent job.
+    /// The step's index within its immediate parent (the job's `steps`, or a
+    /// `parallel:` group it's nested in).
     pub(crate) index: usize,
     /// The inner step model.
     inner: &'doc workflow::job::Step,
     /// The parent [`Job`].
     pub(crate) parent: NormalJob<'doc>,
+    /// The yamlpath route from the parent job to this step, e.g. `[steps, 0]`
+    /// for a top-level step or `[steps, 0, parallel, 1]` for a step nested in a
+    /// `parallel:` group.
+    route: Vec<yamlpath::Component<'doc>>,
 }
 
 impl<'doc> std::ops::Deref for Step<'doc> {
@@ -494,7 +499,7 @@ impl<'doc> Locatable<'doc> for Step<'doc> {
     fn location(&self) -> SymbolicLocation<'doc> {
         self.parent
             .location()
-            .with_keys(["steps".into(), self.index.into()])
+            .with_keys(self.route.iter().cloned())
             .annotated("this step")
     }
 
@@ -568,11 +573,17 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
 }
 
 impl<'doc> Step<'doc> {
-    fn new(index: usize, inner: &'doc workflow::job::Step, parent: NormalJob<'doc>) -> Self {
+    fn new(
+        index: usize,
+        inner: &'doc workflow::job::Step,
+        parent: NormalJob<'doc>,
+        route: Vec<yamlpath::Component<'doc>>,
+    ) -> Self {
         Self {
             index,
             inner,
             parent,
+            route,
         }
     }
 
@@ -665,16 +676,20 @@ impl<'doc> Step<'doc> {
 /// Steps whose `if:` condition is statically known to be false are skipped,
 /// since such steps cannot execute and therefore can't violate any audits.
 pub(crate) struct Steps<'doc> {
-    inner: std::iter::Enumerate<std::slice::Iter<'doc, github_actions_models::workflow::job::Step>>,
-    parent: NormalJob<'doc>,
+    inner: std::vec::IntoIter<Step<'doc>>,
 }
 
 impl<'doc> Steps<'doc> {
-    /// Create a new [`Steps`].
+    /// Create a new [`Steps`], flattening any steps nested in `parallel:`
+    /// groups so that they're audited like top-level steps.
     fn new(job: &NormalJob<'doc>) -> Self {
+        let mut steps = Vec::new();
+        let prefix = [yamlpath::Component::from("steps")];
+        for (idx, step) in job.steps.iter().enumerate() {
+            collect_step(idx, step, job, &prefix, &mut steps);
+        }
         Self {
-            inner: job.steps.iter().enumerate(),
-            parent: job.clone(),
+            inner: steps.into_iter(),
         }
     }
 }
@@ -683,15 +698,39 @@ impl<'doc> Iterator for Steps<'doc> {
     type Item = Step<'doc>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        for (idx, step) in self.inner.by_ref() {
-            if let Some(cond) = step.r#if.as_ref()
-                && crate::models::if_is_statically_false(cond)
-            {
-                continue;
-            }
-            return Some(Step::new(idx, step, self.parent.clone()));
+        self.inner.next()
+    }
+}
+
+/// Recursively collects `step`, plus any steps nested in its `parallel:` group,
+/// into `acc`, building each step's yamlpath route from `prefix`.
+///
+/// Steps whose `if:` condition is statically known to be false are skipped (and
+/// not descended into), since such steps cannot execute and therefore can't
+/// violate any audits.
+fn collect_step<'doc>(
+    index: usize,
+    step: &'doc github_actions_models::workflow::job::Step,
+    job: &NormalJob<'doc>,
+    prefix: &[yamlpath::Component<'doc>],
+    acc: &mut Vec<Step<'doc>>,
+) {
+    if let Some(cond) = step.r#if.as_ref()
+        && crate::models::if_is_statically_false(cond)
+    {
+        return;
+    }
+
+    let mut route = prefix.to_vec();
+    route.push(index.into());
+    acc.push(Step::new(index, step, job.clone(), route.clone()));
+
+    // Descend into `parallel:` so the grouped steps are audited too.
+    if let StepBody::Parallel { parallel } = &step.body {
+        route.push("parallel".into());
+        for (child_index, child) in parallel.iter().enumerate() {
+            collect_step(child_index, child, job, &route, acc);
         }
-        None
     }
 }
 
@@ -746,6 +785,47 @@ jobs:
         // `workflow_dispatch` and `workflow_call` define it as a boolean.
         let bar_cap = workflow.get_input("bar").unwrap();
         assert_eq!(bar_cap, Capability::Fixed);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_steps_descend_into_parallel() -> anyhow::Result<()> {
+        use crate::models::{StepBodyCommon, StepCommon as _, workflow::Job};
+
+        let workflow = r#"
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo a
+      - parallel:
+          - run: echo b
+          - run: echo c
+"#;
+
+        let workflow = Workflow::from_string(
+            workflow.into(),
+            crate::InputKey::local("fakegroup".into(), "dummy", None, None),
+        )?;
+
+        let Some(Job::NormalJob(job)) = workflow.jobs().next() else {
+            panic!("expected a normal job");
+        };
+
+        let steps = job.steps().collect::<Vec<_>>();
+
+        // `run: echo a`, the `parallel:` step itself, then the two steps nested
+        // inside the `parallel:` group.
+        assert_eq!(steps.len(), 4);
+        assert!(matches!(steps[0].body(), StepBodyCommon::Run { .. }));
+        assert!(matches!(steps[1].body(), StepBodyCommon::Other));
+        assert!(matches!(steps[2].body(), StepBodyCommon::Run { .. }));
+        assert!(matches!(steps[3].body(), StepBodyCommon::Run { .. }));
+        // Nested steps carry their index within the `parallel:` group.
+        assert_eq!(steps[2].index(), 0);
+        assert_eq!(steps[3].index(), 1);
 
         Ok(())
     }
