@@ -287,6 +287,17 @@ impl InputKey {
         root: Option<P>,
     ) -> Self {
         let path = path.as_ref();
+
+        // Normalize path separators on Windows to ensure consistent output
+        // See: https://github.com/zizmorcore/zizmor/issues/2146
+        #[cfg(windows)]
+        let given_path = {
+            Utf8PathBuf::from(path.as_str().replace('\\', "/"))
+        };
+
+        #[cfg(not(windows))]
+        let given_path = path.to_path_buf();
+
         let best_relative_path = LocalKey::best_relative_path(
             path,
             prefix.as_ref().map(P::as_ref),
@@ -294,7 +305,7 @@ impl InputKey {
         );
         Self::Local(LocalKey {
             group,
-            given_path: path.to_path_buf(),
+            given_path,
             best_relative_path,
         })
     }
