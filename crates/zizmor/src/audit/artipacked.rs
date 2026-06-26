@@ -103,10 +103,10 @@ impl Artipacked {
         let mut vulnerable_checkouts = vec![];
         let mut vulnerable_uploads = vec![];
         for step in steps {
-            let StepBodyCommon::Uses {
+            let Some(StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
                 with,
-            } = &step.body()
+            }) = &step.body()
             else {
                 continue;
             };

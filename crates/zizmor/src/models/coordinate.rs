@@ -49,10 +49,10 @@ impl ActionCoordinate {
     pub(crate) fn usage<'doc>(&self, step: &impl StepCommon<'doc>) -> Option<Usage> {
         let uses_pattern = self.uses_pattern();
 
-        let StepBodyCommon::Uses {
+        let Some(StepBodyCommon::Uses {
             uses: Uses::Repository(uses),
             with,
-        } = step.body()
+        }) = step.body()
         else {
             return None;
         };

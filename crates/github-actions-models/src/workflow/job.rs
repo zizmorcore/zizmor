@@ -106,6 +106,11 @@ pub struct Step {
     #[serde(default)]
     pub continue_on_error: BoE,
 
+    /// Whether the step runs asynchronously, i.e. does not block its successor from running.
+    // TODO: Is this allowed to be an expression?
+    #[serde(default)]
+    pub background: bool,
+
     /// An optional environment mapping for this step.
     #[serde(default)]
     pub env: LoE<Env>,
@@ -138,6 +143,21 @@ pub enum StepBody {
         /// An optional shell to run in. Defaults to the job or workflow's
         /// default shell.
         shell: Option<LoE<String>>,
+    },
+    Wait {
+        /// One or more steps, by ID, that this step is blocked by (i.e. waits for).
+        // TODO: Is this allowed to be an expression?
+        #[serde(default, deserialize_with = "crate::common::scalar_or_vector")]
+        wait: Vec<String>,
+    },
+    WaitAll {
+        /// A marker indicating that this step waits for all active background steps.
+        #[serde(default, deserialize_with = "crate::common::bool_or_unit")]
+        wait_all: bool,
+    },
+    Cancel {
+        /// A background step, by ID, that this step terminates.
+        cancel: String,
     },
 }
 

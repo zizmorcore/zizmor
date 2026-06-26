@@ -536,18 +536,19 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         self.job().matrix()
     }
 
-    fn body(&self) -> StepBodyCommon<'doc> {
+    fn body(&self) -> Option<StepBodyCommon<'doc>> {
         match &self.body {
-            StepBody::Uses { uses, with } => StepBodyCommon::Uses { uses, with },
+            StepBody::Uses { uses, with } => Some(StepBodyCommon::Uses { uses, with }),
             StepBody::Run {
                 run,
                 working_directory,
                 shell,
-            } => StepBodyCommon::Run {
+            } => Some(StepBodyCommon::Run {
                 run,
                 _working_directory: working_directory.as_deref(),
                 _shell: shell.as_ref(),
-            },
+            }),
+            _ => None,
         }
     }
 

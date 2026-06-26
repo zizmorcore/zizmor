@@ -192,10 +192,10 @@ impl Obfuscation {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        if let crate::models::StepBodyCommon::Uses {
+        if let Some(crate::models::StepBodyCommon::Uses {
             uses: Uses::Repository(uses),
             with,
-        } = step.body()
+        }) = step.body()
         {
             let obfuscated_annotations = self.obfuscated_repo_uses(uses);
             if !obfuscated_annotations.is_empty() {

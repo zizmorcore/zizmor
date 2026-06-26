@@ -78,8 +78,12 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
     /// Composite action steps have no matrix.
     fn matrix(&self) -> Option<Matrix<'doc>>;
 
-    /// Returns a [`StepBodyCommon`] for this step.
-    fn body(&self) -> StepBodyCommon<'doc>;
+    /// Returns a [`StepBodyCommon`] for this step, if there is one.
+    ///
+    /// Not all steps have a common body across actions and workflows.
+    /// For example, at the moment, bodies that control step parallelism
+    /// are unique to workflows.
+    fn body(&self) -> Option<StepBodyCommon<'doc>>;
 
     /// Returns the document which contains this step.
     fn document(&self) -> &'doc yamlpath::Document;

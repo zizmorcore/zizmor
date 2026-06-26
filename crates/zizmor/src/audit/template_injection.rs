@@ -117,10 +117,10 @@ impl TemplateInjection {
         Vec<SymbolicLocation<'doc>>,
     )> {
         match step.body() {
-            models::StepBodyCommon::Uses {
+            Some(models::StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
                 with: LoE::Literal(with),
-            } => TemplateInjection::action_injection_sinks(uses)
+            }) => TemplateInjection::action_injection_sinks(uses)
                 .iter()
                 .filter_map(|input| {
                     let input = *input;
@@ -154,7 +154,7 @@ impl TemplateInjection {
                         })
                 })
                 .collect(),
-            models::StepBodyCommon::Run { run, .. } => {
+            Some(models::StepBodyCommon::Run { run, .. }) => {
                 vec![(
                     run,
                     step.location().with_keys(["run".into()]),
@@ -178,7 +178,7 @@ impl TemplateInjection {
         step: &impl StepCommon<'doc>,
     ) -> Option<String> {
         // Only provide fixes for run steps
-        if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
+        if !matches!(step.body(), Some(models::StepBodyCommon::Run { .. })) {
             return None;
         }
 
@@ -292,7 +292,7 @@ impl TemplateInjection {
         step: &impl StepCommon<'doc>,
     ) -> Option<Fix<'doc>> {
         // We can only fix `run:` steps for now.
-        if !matches!(step.body(), models::StepBodyCommon::Run { .. }) {
+        if !matches!(step.body(), Some(models::StepBodyCommon::Run { .. })) {
             return None;
         }
 

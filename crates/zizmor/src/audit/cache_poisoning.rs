@@ -383,10 +383,10 @@ impl<'a> CacheControlField<'a> {
                 field_type: ControlFieldType::Boolean,
                 ..
             } = control
-            && let StepBodyCommon::Uses {
+            && let Some(StepBodyCommon::Uses {
                 with: LoE::Literal(with),
                 ..
-            } = step.body()
+            }) = step.body()
             && let Some(raw_value) = with.get(*field_name)
         {
             Some(CacheControlField {

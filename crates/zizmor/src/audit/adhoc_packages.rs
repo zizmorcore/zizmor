@@ -166,7 +166,7 @@ impl AdhocPackages {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        let StepBodyCommon::Run { run, .. } = step.body() else {
+        let Some(StepBodyCommon::Run { run, .. }) = step.body() else {
             return Ok(findings);
         };
 

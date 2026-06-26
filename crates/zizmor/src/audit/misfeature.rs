@@ -28,7 +28,11 @@ impl Misfeature {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        match step.body() {
+        let Some(step_body) = step.body() else {
+            return Ok(findings);
+        };
+
+        match step_body {
             StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
                 with: LoE::Literal(with),
