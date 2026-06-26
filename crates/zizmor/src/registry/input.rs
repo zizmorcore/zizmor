@@ -291,9 +291,7 @@ impl InputKey {
         // Normalize path separators on Windows to ensure consistent output
         // See: https://github.com/zizmorcore/zizmor/issues/2146
         #[cfg(windows)]
-        let given_path = {
-            Utf8PathBuf::from(path.as_str().replace('\\', "/"))
-        };
+        let given_path = { Utf8PathBuf::from(path.as_str().replace('\\', "/")) };
 
         #[cfg(not(windows))]
         let given_path = path.to_path_buf();
@@ -978,5 +976,28 @@ mod tests {
             InputGroup::discover_root_with_ceilings(&workflow_file, &HashSet::new()),
             Some(temp_path),
         );
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_input_key_windows_path_normalization() {
+        let local = InputKey::local(
+            "fakegroup".into(),
+            r".github\workflows\test.yaml",
+            None,
+            None,
+        );
+        assert_eq!(local.presentation_path(), ".github/workflows/test.yaml");
+
+        let local = InputKey::local("fakegroup".into(), r".github/", None, None);
+        assert_eq!(local.presentation_path(), ".github/");
+
+        let local = InputKey::local(
+            "fakegroup".into(),
+            r".github/workflows\test.yaml",
+            None,
+            None,
+        );
+        assert_eq!(local.presentation_path(), ".github/workflows/test.yaml");
     }
 }
