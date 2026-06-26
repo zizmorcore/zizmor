@@ -28,8 +28,10 @@ fn test_load_all() {
         let sample_workflow = sample_workflow.unwrap().path();
         let workflow_contents = std::fs::read_to_string(&sample_workflow).unwrap();
 
-        let wf = yaml_serde::from_str::<Workflow>(&workflow_contents);
-        assert!(wf.is_ok(), "failed to parse {sample_workflow:?}");
+        match yaml_serde::from_str::<Workflow>(&workflow_contents) {
+            Ok(_) => (),
+            Err(e) => panic!("{e}"),
+        }
     }
 }
 

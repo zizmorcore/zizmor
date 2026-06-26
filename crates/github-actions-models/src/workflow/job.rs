@@ -121,7 +121,7 @@ pub struct Step {
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "kebab-case", untagged)]
+#[serde(rename_all_fields = "kebab-case", untagged)]
 pub enum StepBody {
     Uses {
         /// The GitHub Action being used.
@@ -147,12 +147,12 @@ pub enum StepBody {
     Wait {
         /// One or more steps, by ID, that this step is blocked by (i.e. waits for).
         // TODO: Is this allowed to be an expression?
-        #[serde(default, deserialize_with = "crate::common::scalar_or_vector")]
+        #[serde(deserialize_with = "crate::common::scalar_or_vector")]
         wait: Vec<String>,
     },
     WaitAll {
         /// A marker indicating that this step waits for all active background steps.
-        #[serde(default, deserialize_with = "crate::common::bool_or_unit")]
+        #[serde(deserialize_with = "crate::common::bool_or_unit")]
         wait_all: bool,
     },
     Cancel {
@@ -230,7 +230,7 @@ pub enum Secrets {
 mod tests {
     use crate::{
         common::{EnvValue, expr::LoE},
-        workflow::job::{Matrix, Secrets},
+        workflow::job::{Matrix, Secrets, StepBody},
     };
 
     use super::{RunsOn, Strategy};
@@ -293,5 +293,23 @@ matrix:
                 .to_string(),
             "runs-on must provide either `group` or one or more `labels`"
         );
+    }
+
+    #[test]
+    fn test_stepbody_working_directory() {
+        let step = r#"
+run: foo
+working-directory: /tmp
+"#;
+
+        insta::assert_debug_snapshot!(&yaml_serde::from_str::<StepBody>(step).unwrap(), @r#"
+        Run {
+            run: "foo",
+            working_directory: Some(
+                "/tmp",
+            ),
+            shell: None,
+        }
+        "#);
     }
 }

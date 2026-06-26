@@ -1,0 +1,24 @@
+# https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepswait-all
+name: Name
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Start database
+        id: db
+        run: docker run -d postgres:15
+        background: true
+
+      - name: Start cache
+        id: cache
+        run: docker run -d redis:7
+        background: true
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Wait for all services to stop
+        wait-all:

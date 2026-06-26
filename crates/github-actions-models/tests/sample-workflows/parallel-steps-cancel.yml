@@ -1,0 +1,19 @@
+# https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepswait-all
+name: Name
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Start long-running monitor
+        id: monitor
+        run: ./scripts/monitor.sh
+        background: true
+
+      - name: Run the main task
+        run: npm test
+
+      - name: Stop the monitor
+        cancel: monitor

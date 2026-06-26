@@ -134,7 +134,7 @@ pub struct Step {
 
 /// The body of a composite action step.
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "kebab-case", untagged)]
+#[serde(rename_all_fields = "kebab-case", untagged)]
 pub enum StepBody {
     /// A step that uses another GitHub Action.
     Uses {

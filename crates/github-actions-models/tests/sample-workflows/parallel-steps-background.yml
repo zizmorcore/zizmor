@@ -1,0 +1,19 @@
+# https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-running-a-step-in-the-background
+name: Name
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Start server
+        id: server
+        run: npm start
+        background: true
+
+      - name: Run tests against the server
+        run: npm test
+
+      - name: Wait for the server step to finish
+        wait: server
