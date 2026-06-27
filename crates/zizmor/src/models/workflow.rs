@@ -564,8 +564,19 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
                 _working_directory: working_directory.as_deref(),
                 _shell: shell.as_ref(),
             }),
-            StepBody::Cancel { .. } | StepBody::Wait { .. } | StepBody::WaitAll { .. } => None,
-            _ => todo!(),
+            StepBody::Cancel { .. }
+            | StepBody::Wait { .. }
+            | StepBody::WaitAll { .. }
+            | StepBody::Parallel { .. } => {
+                // NOTE: This should be unreachable in practice, since `Steps` should only produce
+                // `Step` instances that have been flattened/filtered. The debug assertion
+                // here is just in case we change that in the future.
+                debug_assert!(
+                    false,
+                    "called StepCommon::body on a workflow step that don't have a StepBodyCommon representation"
+                );
+                None
+            }
         }
     }
 
