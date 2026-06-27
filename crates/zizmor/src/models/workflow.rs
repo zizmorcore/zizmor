@@ -9,7 +9,7 @@ use github_actions_models::{
     workflow::{
         self, Trigger,
         event::{BareEvent, OptionalBody},
-        job::{self, RunsOn, StepBody},
+        job::{self, RunBody, RunsOn, StepBody, UsesBody},
     },
 };
 use terminal_link::Link;
@@ -525,7 +525,7 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
     }
 
     fn uses(&self) -> Option<&'doc common::Uses> {
-        let StepBody::Uses { uses, .. } = &self.inner.body else {
+        let StepBody::Uses(UsesBody { uses, .. }) = &self.inner.body else {
             return None;
         };
 
@@ -538,12 +538,12 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
 
     fn body(&self) -> Option<StepBodyCommon<'doc>> {
         match &self.body {
-            StepBody::Uses { uses, with } => Some(StepBodyCommon::Uses { uses, with }),
-            StepBody::Run {
+            StepBody::Uses(UsesBody { uses, with }) => Some(StepBodyCommon::Uses { uses, with }),
+            StepBody::Run(RunBody {
                 run,
                 working_directory,
                 shell,
-            } => Some(StepBodyCommon::Run {
+            }) => Some(StepBodyCommon::Run {
                 run,
                 _working_directory: working_directory.as_deref(),
                 _shell: shell.as_ref(),
@@ -586,11 +586,11 @@ impl<'doc> Step<'doc> {
     ///
     /// Invariant: panics if the step is not a `run:` step.
     pub(crate) fn shell(&self) -> Option<(&str, SymbolicLocation<'doc>)> {
-        let StepBody::Run {
+        let StepBody::Run(RunBody {
             run: _,
             working_directory: _,
             shell,
-        } = &self.inner.body
+        }) = &self.inner.body
         else {
             panic!("API misuse: can't call shell() on a uses: step")
         };

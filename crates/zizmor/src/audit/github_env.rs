@@ -2,7 +2,7 @@ use std::ops::{Deref as _, Range};
 
 use anyhow::{Context as _, Result};
 use github_actions_models::action;
-use github_actions_models::workflow::job::StepBody;
+use github_actions_models::workflow::job::{RunBody, StepBody};
 use tree_sitter::{
     Language, Parser, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
 };
@@ -393,7 +393,7 @@ impl Audit for GitHubEnv {
             return Ok(findings);
         }
 
-        if let StepBody::Run { run, .. } = &step.deref().body {
+        if let StepBody::Run(RunBody { run, .. }) = &step.deref().body {
             let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
                 tracing::warn!(
                     "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}; assuming bash",

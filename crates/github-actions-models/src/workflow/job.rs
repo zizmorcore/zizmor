@@ -123,27 +123,8 @@ pub struct Step {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all_fields = "kebab-case", untagged)]
 pub enum StepBody {
-    Uses {
-        /// The GitHub Action being used.
-        #[serde(deserialize_with = "crate::common::step_uses")]
-        uses: Uses,
-
-        /// Any inputs to the action being used.
-        #[serde(default)]
-        with: LoE<Env>,
-    },
-    Run {
-        /// The command to run.
-        #[serde(deserialize_with = "crate::common::bool_is_string")]
-        run: String,
-
-        /// An optional working directory to run [`StepBody::Run::run`] from.
-        working_directory: Option<String>,
-
-        /// An optional shell to run in. Defaults to the job or workflow's
-        /// default shell.
-        shell: Option<LoE<String>>,
-    },
+    Uses(UsesBody),
+    Run(RunBody),
     Wait {
         /// One or more steps, by ID, that this step is blocked by (i.e. waits for).
         // TODO: Is this allowed to be an expression?
@@ -159,6 +140,35 @@ pub enum StepBody {
         /// A background step, by ID, that this step terminates.
         cancel: String,
     },
+}
+
+/// The body of a `uses:`-style step clause.
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub struct UsesBody {
+    /// The GitHub Action being used.
+    #[serde(deserialize_with = "crate::common::step_uses")]
+    pub uses: Uses,
+
+    /// Any inputs to the action being used.
+    #[serde(default)]
+    pub with: LoE<Env>,
+}
+
+/// The body of a `run:`-style step clause.
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub struct RunBody {
+    /// The command to run.
+    #[serde(deserialize_with = "crate::common::bool_is_string")]
+    pub run: String,
+
+    /// An optional working directory to run [`StepBody::Run::run`] from.
+    pub working_directory: Option<String>,
+
+    /// An optional shell to run in. Defaults to the job or workflow's
+    /// default shell.
+    pub shell: Option<LoE<String>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -303,13 +313,15 @@ working-directory: /tmp
 "#;
 
         insta::assert_debug_snapshot!(&yaml_serde::from_str::<StepBody>(step).unwrap(), @r#"
-        Run {
-            run: "foo",
-            working_directory: Some(
-                "/tmp",
-            ),
-            shell: None,
-        }
+        Run(
+            RunBody {
+                run: "foo",
+                working_directory: Some(
+                    "/tmp",
+                ),
+                shell: None,
+            },
+        )
         "#);
     }
 }
