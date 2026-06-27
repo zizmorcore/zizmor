@@ -63,8 +63,17 @@ pub(crate) enum StepBodyCommon<'s> {
 
 /// Common interfaces between workflow and action steps.
 pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
-    /// Returns the step's index within its parent job or action.
-    fn index(&self) -> usize;
+    /// Returns an `Ord` implementation suitable for ordering two steps
+    /// within the same job. Ordering across jobs is not defined.
+    ///
+    /// At the moment, a step's ordering is defined lexically, i.e.
+    /// a step that appears lexically before another step is considered
+    /// first, even if step-level parallelism may change their execution order.
+    ///
+    /// This is an API rather than a derivation for each `StepCommon`
+    /// so that each implementation doesn't need to derive the entire
+    /// stack of traits implied by ordering (`PartialEq`, `PartialOrd`, etc).
+    fn ord(&self) -> impl Ord;
 
     /// Returns whether the given `env.name` environment access is "static,"
     /// i.e. is not influenced by another expression.

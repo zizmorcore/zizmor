@@ -13,7 +13,7 @@ use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::StepCommon as _;
-use crate::models::{workflow::JobCommon as _, workflow::Step};
+use crate::models::workflow::Step;
 use crate::state::AuditState;
 use crate::utils;
 use crate::utils::once::static_regex;
@@ -396,10 +396,9 @@ impl Audit for GitHubEnv {
         if let StepBody::Run(RunBody { run, .. }) = &step.deref().body {
             let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
                 tracing::warn!(
-                    "github-env: couldn't determine shell type for {workflow}:{job} step {stepno}; assuming bash",
+                    "github-env: couldn't determine shell type for {workflow} step {loc:#?}; assuming bash",
                     workflow = step.workflow().key.presentation_path(),
-                    job = step.parent.id(),
-                    stepno = step.index
+                    loc = step.location(),
                 );
 
                 // If we can't infer a shell for this `run:`, assume that it's

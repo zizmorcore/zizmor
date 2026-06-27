@@ -202,7 +202,7 @@ impl Artipacked {
                 .iter()
                 .cartesian_product(vulnerable_uploads.iter())
             {
-                if checkout.index() < upload.index() {
+                if checkout.ord() < upload.ord() {
                     let severity =
                         Self::determine_severity(*is_v6_or_higher, vulnerable_uploads.is_empty());
 

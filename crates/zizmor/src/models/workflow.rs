@@ -469,12 +469,17 @@ impl<'doc> Iterator for Jobs<'doc> {
 
 /// Represents a single step in a normal workflow job.
 ///
+/// [`Step`]s are produced by the [`Steps`] iterator, meaning that they present
+/// a "flattened" representation as documented there.
+///
 /// This type implements [`std::ops::Deref`] for [`workflow::job::Step`], which
 /// provides access to the step's actual fields.
 #[derive(Clone)]
 pub(crate) struct Step<'doc> {
-    /// The step's index within its parent job.
-    pub(crate) index: usize,
+    /// The step's index within its parent job's `steps:` block.
+    steps_index: usize,
+    /// The step's index within its `parallel:` block, if it's within one.
+    parallel_index: Option<usize>,
     /// The inner step model.
     inner: &'doc workflow::job::Step,
     /// The parent [`Job`].
@@ -492,10 +497,19 @@ impl<'doc> std::ops::Deref for Step<'doc> {
 impl<'doc> Locatable<'doc> for Step<'doc> {
     /// This step's [`SymbolicLocation`].
     fn location(&self) -> SymbolicLocation<'doc> {
-        self.parent
-            .location()
-            .with_keys(["steps".into(), self.index.into()])
-            .annotated("this step")
+        if let Some(parallel_index) = self.parallel_index {
+            self.job().location().with_keys([
+                "steps".into(),
+                self.steps_index.into(),
+                "parallel".into(),
+                parallel_index.into(),
+            ])
+        } else {
+            self.job()
+                .location()
+                .with_keys(["steps".into(), self.steps_index.into()])
+        }
+        .annotated("this step")
     }
 
     fn location_with_grip(&self) -> SymbolicLocation<'doc> {
@@ -516,8 +530,10 @@ impl HasInputs for Step<'_> {
 }
 
 impl<'doc> StepCommon<'doc> for Step<'doc> {
-    fn index(&self) -> usize {
-        self.index
+    fn ord(&self) -> impl Ord {
+        // Observe that the ordering of steps takes their parallel nesting
+        // into account, if present.
+        (self.steps_index, self.parallel_index)
     }
 
     fn env_is_static(&self, ctx: &context::Context) -> bool {
@@ -548,7 +564,8 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
                 _working_directory: working_directory.as_deref(),
                 _shell: shell.as_ref(),
             }),
-            _ => None,
+            StepBody::Cancel { .. } | StepBody::Wait { .. } | StepBody::WaitAll { .. } => None,
+            _ => todo!(),
         }
     }
 
@@ -563,9 +580,15 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
 }
 
 impl<'doc> Step<'doc> {
-    fn new(index: usize, inner: &'doc workflow::job::Step, parent: NormalJob<'doc>) -> Self {
+    fn new(
+        steps_index: usize,
+        parallel_index: Option<usize>,
+        inner: &'doc workflow::job::Step,
+        parent: NormalJob<'doc>,
+    ) -> Self {
         Self {
-            index,
+            steps_index,
+            parallel_index,
             inner,
             parent,
         }
@@ -657,18 +680,66 @@ impl<'doc> Step<'doc> {
 
 /// An iterable container for steps within a [`Job`].
 ///
+/// This iterator flattens steps that are nested under a `parallel:` pseudo-step.
+/// For example, this job:
+///
+/// ```yaml
+/// steps:
+///   - run: echo a
+///   - parallel:
+///     - run: echo b
+///     - run: echo c
+/// ```
+///
+/// ...becomes a flat iterator over the three `run:` blocks, with the `parallel:`
+/// block itself not directly surfaced by iteration.
+///
 /// Steps whose `if:` condition is statically known to be false are skipped,
 /// since such steps cannot execute and therefore can't violate any audits.
 pub(crate) struct Steps<'doc> {
-    inner: std::iter::Enumerate<std::slice::Iter<'doc, github_actions_models::workflow::job::Step>>,
+    inner: std::vec::IntoIter<(
+        usize,         /* step index */
+        Option<usize>, /* parallel index */
+        &'doc job::Step,
+    )>,
+    // inner: std::iter::Enumerate<std::slice::Iter<'doc, github_actions_models::workflow::job::Step>>,
     parent: NormalJob<'doc>,
 }
 
 impl<'doc> Steps<'doc> {
+    /// Flatten a job's steps into a tuple of `(index, step, location)`.
+    fn flatten_steps(
+        job: &NormalJob<'doc>,
+    ) -> Vec<(
+        usize,         /* step index */
+        Option<usize>, /* parallel index */
+        &'doc job::Step,
+    )> {
+        let mut steps = vec![];
+
+        for (step_idx, step) in job.steps.iter().enumerate() {
+            match &step.body {
+                StepBody::Uses(_) | StepBody::Run(_) => steps.push((step_idx, None, step)),
+                StepBody::Wait { .. } | StepBody::WaitAll { .. } | StepBody::Cancel { .. } => {
+                    continue;
+                }
+                StepBody::Parallel {
+                    parallel: parallel_steps,
+                } => {
+                    for (par_idx, step) in parallel_steps.iter().enumerate() {
+                        steps.push((step_idx, Some(par_idx), step));
+                    }
+                }
+            }
+        }
+
+        steps
+    }
+
     /// Create a new [`Steps`].
     fn new(job: &NormalJob<'doc>) -> Self {
         Self {
-            inner: job.steps.iter().enumerate(),
+            inner: Self::flatten_steps(job).into_iter(),
             parent: job.clone(),
         }
     }
@@ -678,13 +749,13 @@ impl<'doc> Iterator for Steps<'doc> {
     type Item = Step<'doc>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        for (idx, step) in self.inner.by_ref() {
+        for (step_idx, par_idx, step) in self.inner.by_ref() {
             if let Some(cond) = step.r#if.as_ref()
                 && crate::models::if_is_statically_false(cond)
             {
                 continue;
             }
-            return Some(Step::new(idx, step, self.parent.clone()));
+            return Some(Step::new(step_idx, par_idx, step, self.parent.clone()));
         }
         None
     }

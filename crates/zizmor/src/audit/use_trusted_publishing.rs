@@ -12,7 +12,6 @@ use crate::{
     models::{
         StepBodyCommon, StepCommon,
         coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle},
-        workflow::JobCommon as _,
     },
     state::AuditState,
     utils,
@@ -453,10 +452,9 @@ impl Audit for UseTrustedPublishing {
         {
             let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
                 tracing::debug!(
-                    "use-trusted-publishing: couldn't determine shell type for {workflow}:{job} step {stepno}",
+                    "use-trusted-publishing: couldn't determine shell type for {workflow} step {loc:#?}",
                     workflow = step.workflow().key.filename(),
-                    job = step.parent.id(),
-                    stepno = step.index
+                    loc = step.location(),
                 );
 
                 "bash"

@@ -172,8 +172,8 @@ impl AdhocPackages {
 
         let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
             tracing::debug!(
-                "adhoc-packages: couldn't determine shell for step {idx}; assuming bash",
-                idx = step.index()
+                "adhoc-packages: couldn't determine shell for step {loc:#?}; assuming bash",
+                loc = step.location()
             );
             "bash"
         });

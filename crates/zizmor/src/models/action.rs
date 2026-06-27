@@ -242,7 +242,7 @@ impl HasInputs for CompositeStep<'_> {
 }
 
 impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
-    fn index(&self) -> usize {
+    fn ord(&self) -> impl Ord {
         self.index
     }
 

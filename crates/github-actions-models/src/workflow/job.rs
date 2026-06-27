@@ -140,6 +140,13 @@ pub enum StepBody {
         /// A background step, by ID, that this step terminates.
         cancel: String,
     },
+    Parallel {
+        /// One or more steps to run in parallel.
+        // NOTE: This is an overapproximation, since parallel blocks
+        // do not allow nested `parallel` locks, or pseudo-steps like `cancel`.
+        // TODO: Ratchet this down to just the steps that parallel blocks do allow.
+        parallel: Vec<Step>,
+    },
 }
 
 /// The body of a `uses:`-style step clause.
