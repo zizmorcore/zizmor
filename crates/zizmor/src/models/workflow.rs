@@ -25,7 +25,7 @@ use crate::{
         workflow::matrix::Matrix,
     },
     registry::input::CollectionError,
-    utils::{self, WORKFLOW_VALIDATOR, from_str_with_validation},
+    utils::{self, WORKFLOW_VALIDATOR, from_str_with_validation, once::warn_once},
 };
 
 /// Represents an entire GitHub Actions workflow.
@@ -698,7 +698,7 @@ impl<'doc> Step<'doc> {
 /// since such steps cannot execute and therefore can't violate any audits.
 pub(crate) struct Steps<'doc> {
     inner: std::vec::IntoIter<(
-        usize,         /* step index */
+        usize,         /* steps index */
         Option<usize>, /* parallel index */
         &'doc job::Step,
     )>,
@@ -707,11 +707,11 @@ pub(crate) struct Steps<'doc> {
 }
 
 impl<'doc> Steps<'doc> {
-    /// Flatten a job's steps into a tuple of `(index, step, location)`.
+    /// Flatten a job's steps into a tuple of `(steps_index, parallel_index, step)`.
     fn flatten_steps(
         job: &NormalJob<'doc>,
     ) -> Vec<(
-        usize,         /* step index */
+        usize,         /* steps index */
         Option<usize>, /* parallel index */
         &'doc job::Step,
     )> {
@@ -726,6 +726,13 @@ impl<'doc> Steps<'doc> {
                 StepBody::Parallel {
                     parallel: parallel_steps,
                 } => {
+                    // TODO: Remove once stabilized.
+                    warn_once!(
+                        "one or more inputs contains parallel steps; zizmor's support \
+                        for these is currently experimental. see \
+                        https://docs.zizmor.sh/usage/#parallel-step for details"
+                    );
+
                     for (par_idx, step) in parallel_steps.iter().enumerate() {
                         steps.push((step_idx, Some(par_idx), step));
                     }
