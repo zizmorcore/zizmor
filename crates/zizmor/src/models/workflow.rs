@@ -708,29 +708,41 @@ impl<'doc> Step<'doc> {
 /// Steps whose `if:` condition is statically known to be false are skipped,
 /// since such steps cannot execute and therefore can't violate any audits.
 pub(crate) struct Steps<'doc> {
-    inner: std::vec::IntoIter<(
-        usize,         /* steps index */
-        Option<usize>, /* parallel index */
-        &'doc job::Step,
-    )>,
-    // inner: std::iter::Enumerate<std::slice::Iter<'doc, github_actions_models::workflow::job::Step>>,
+    /// Iterator over the job's top-level steps.
+    outer: std::iter::Enumerate<std::slice::Iter<'doc, job::Step>>,
+    /// When iterating a `parallel:` pseudo-step, holds its `steps` index along
+    /// with an iterator over its nested steps. `None` otherwise.
+    parallel: Option<(usize, std::iter::Enumerate<std::slice::Iter<'doc, job::Step>>)>,
     parent: NormalJob<'doc>,
 }
 
 impl<'doc> Steps<'doc> {
-    /// Flatten a job's steps into a tuple of `(steps_index, parallel_index, step)`.
-    fn flatten_steps(
-        job: &NormalJob<'doc>,
-    ) -> Vec<(
-        usize,         /* steps index */
-        Option<usize>, /* parallel index */
-        &'doc job::Step,
-    )> {
-        let mut steps = vec![];
+    /// Create a new [`Steps`].
+    fn new(job: &NormalJob<'doc>) -> Self {
+        Self {
+            outer: job.steps.iter().enumerate(),
+            parallel: None,
+            parent: job.clone(),
+        }
+    }
 
-        for (step_idx, step) in job.steps.iter().enumerate() {
+    /// Yield the next flattened `(steps_index, parallel_index, step)`, expanding
+    /// `parallel:` pseudo-steps inline. Unlike [`Iterator::next`], this does not
+    /// filter out statically-disabled steps.
+    fn next_raw(&mut self) -> Option<(usize, Option<usize>, &'doc job::Step)> {
+        loop {
+            // Drain any in-progress `parallel:` block before advancing the
+            // outer iterator.
+            if let Some((step_idx, par_iter)) = self.parallel.as_mut() {
+                if let Some((par_idx, step)) = par_iter.next() {
+                    return Some((*step_idx, Some(par_idx), step));
+                }
+                self.parallel = None;
+            }
+
+            let (step_idx, step) = self.outer.next()?;
             match &step.body {
-                StepBody::Uses(_) | StepBody::Run(_) => steps.push((step_idx, None, step)),
+                StepBody::Uses(_) | StepBody::Run(_) => return Some((step_idx, None, step)),
                 StepBody::Wait { .. } | StepBody::WaitAll { .. } | StepBody::Cancel { .. } => {
                     continue;
                 }
@@ -744,21 +756,9 @@ impl<'doc> Steps<'doc> {
                         https://docs.zizmor.sh/usage/#parallel-step for details"
                     );
 
-                    for (par_idx, step) in parallel_steps.iter().enumerate() {
-                        steps.push((step_idx, Some(par_idx), step));
-                    }
+                    self.parallel = Some((step_idx, parallel_steps.iter().enumerate()));
                 }
             }
-        }
-
-        steps
-    }
-
-    /// Create a new [`Steps`].
-    fn new(job: &NormalJob<'doc>) -> Self {
-        Self {
-            inner: Self::flatten_steps(job).into_iter(),
-            parent: job.clone(),
         }
     }
 }
@@ -767,7 +767,8 @@ impl<'doc> Iterator for Steps<'doc> {
     type Item = Step<'doc>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        for (step_idx, par_idx, step) in self.inner.by_ref() {
+        while let Some((step_idx, par_idx, step)) = self.next_raw() {
+            // Skip steps whose `if:` is statically known to be false.
             if let Some(cond) = step.r#if.as_ref()
                 && crate::models::if_is_statically_false(cond)
             {
