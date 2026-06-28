@@ -1,0 +1,16 @@
+name: parallel-steps-basic
+on:
+  push:
+
+permissions: write-all
+
+jobs:
+  hackme:
+    name: hackme
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - parallel:
+          - name: hackme
+            run: echo "${{ github.event.pull_request.title }}"

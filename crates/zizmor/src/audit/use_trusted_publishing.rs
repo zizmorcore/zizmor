@@ -12,7 +12,6 @@ use crate::{
     models::{
         StepBodyCommon, StepCommon,
         coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle},
-        workflow::JobCommon as _,
     },
     state::AuditState,
     utils,
@@ -448,15 +447,14 @@ impl Audit for UseTrustedPublishing {
         // a strict filter. This ended up being overly imprecise, since a lot
         // of publishing commands use trusted publishing implicitly if
         // the environment supports it. We reverted this with #1191.
-        if let StepBodyCommon::Run { run, .. } = step.body()
+        if let Some(StepBodyCommon::Run { run, .. }) = step.body()
             && !step.parent.has_id_token()
         {
             let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
                 tracing::debug!(
-                    "use-trusted-publishing: couldn't determine shell type for {workflow}:{job} step {stepno}",
+                    "use-trusted-publishing: couldn't determine shell type for {workflow} step {loc:#?}",
                     workflow = step.workflow().key.filename(),
-                    job = step.parent.id(),
-                    stepno = step.index
+                    loc = step.location(),
                 );
 
                 "bash"

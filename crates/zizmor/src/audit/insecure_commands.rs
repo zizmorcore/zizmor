@@ -3,7 +3,7 @@ use std::ops::Deref as _;
 use github_actions_models::action;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
-use github_actions_models::workflow::job::StepBody;
+use github_actions_models::workflow::job::{RunBody, StepBody};
 use yamlpatch::{Op, Patch};
 
 use super::{AuditLoadError, Job, audit_meta};
@@ -94,11 +94,11 @@ impl InsecureCommands {
         steps
             .into_iter()
             .filter_map(|step| {
-                let StepBody::Run {
+                let StepBody::Run(RunBody {
                     run: _,
                     working_directory: _,
                     shell: _,
-                } = &step.deref().body
+                }) = &step.deref().body
                 else {
                     return None;
                 };

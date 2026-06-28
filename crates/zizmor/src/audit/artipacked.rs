@@ -103,10 +103,10 @@ impl Artipacked {
         let mut vulnerable_checkouts = vec![];
         let mut vulnerable_uploads = vec![];
         for step in steps {
-            let StepBodyCommon::Uses {
+            let Some(StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
                 with,
-            } = &step.body()
+            }) = &step.body()
             else {
                 continue;
             };
@@ -202,7 +202,7 @@ impl Artipacked {
                 .iter()
                 .cartesian_product(vulnerable_uploads.iter())
             {
-                if checkout.index() < upload.index() {
+                if checkout.ord() < upload.ord() {
                     let severity =
                         Self::determine_severity(*is_v6_or_higher, vulnerable_uploads.is_empty());
 

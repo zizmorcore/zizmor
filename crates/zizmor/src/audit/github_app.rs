@@ -27,10 +27,10 @@ impl GitHubApp {
         &self,
         step: &impl StepCommon<'doc>,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        let StepBodyCommon::Uses {
+        let Some(StepBodyCommon::Uses {
             uses: Uses::Repository(uses),
             with,
-        } = step.body()
+        }) = step.body()
         else {
             return Ok(vec![]);
         };

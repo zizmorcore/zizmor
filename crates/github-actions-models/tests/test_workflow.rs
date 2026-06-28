@@ -8,7 +8,7 @@ use github_actions_models::{
     workflow::{
         Job, Trigger, Workflow,
         event::OptionalBody,
-        job::{RunsOn, StepBody},
+        job::{RunBody, RunsOn, StepBody, UsesBody},
     },
 };
 
@@ -28,8 +28,10 @@ fn test_load_all() {
         let sample_workflow = sample_workflow.unwrap().path();
         let workflow_contents = std::fs::read_to_string(&sample_workflow).unwrap();
 
-        let wf = yaml_serde::from_str::<Workflow>(&workflow_contents);
-        assert!(wf.is_ok(), "failed to parse {sample_workflow:?}");
+        match yaml_serde::from_str::<Workflow>(&workflow_contents) {
+            Ok(_) => (),
+            Err(e) => panic!("{e}"),
+        }
     }
 }
 
@@ -53,20 +55,16 @@ fn test_pip_audit_ci() {
     );
     assert_eq!(test_job.steps.len(), 3);
 
-    let StepBody::Uses {
-        uses,
-        with: LoE::Literal(with),
-    } = &test_job.steps[0].body
-    else {
+    let StepBody::Uses(uses) = &test_job.steps[0].body else {
         panic!("expected uses step");
     };
-    assert_eq!(uses, &Uses::parse("actions/checkout@v4.1.1").unwrap());
-    assert!(with.is_empty());
+    assert_eq!(&uses.uses, &Uses::parse("actions/checkout@v4.1.1").unwrap());
+    assert!(matches!(&uses.with, LoE::Literal(with) if with.is_empty()));
 
-    let StepBody::Uses {
+    let StepBody::Uses(UsesBody {
         uses,
         with: LoE::Literal(with),
-    } = &test_job.steps[1].body
+    }) = &test_job.steps[1].body
     else {
         panic!("expected uses step");
     };
@@ -75,11 +73,11 @@ fn test_pip_audit_ci() {
     assert_eq!(with["cache"].to_string(), "pip");
     assert_eq!(with["cache-dependency-path"].to_string(), "pyproject.toml");
 
-    let StepBody::Run {
+    let StepBody::Run(RunBody {
         run,
         working_directory,
         shell,
-    } = &test_job.steps[2].body
+    }) = &test_job.steps[2].body
     else {
         panic!("expected run step");
     };

@@ -30,10 +30,10 @@ impl UnpinnedTools {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        let StepBodyCommon::Uses {
+        let Some(StepBodyCommon::Uses {
             uses: Uses::Repository(uses),
             with: LoE::Literal(with),
-        } = step.body()
+        }) = step.body()
         else {
             return Ok(findings);
         };

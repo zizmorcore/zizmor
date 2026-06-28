@@ -220,6 +220,9 @@ pub(crate) trait Locatable<'doc> {
     fn location_with_grip(&self) -> SymbolicLocation<'doc> {
         self.location()
     }
+
+    // TODO(ww): Some kind of `breadcrumbs() -> Vec<SymbolicLocation>`
+    // that allows locatables to render their provenance.
 }
 
 pub(crate) trait Routable<'a, 'doc> {

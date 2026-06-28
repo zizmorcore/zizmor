@@ -50,7 +50,7 @@ There are four input sources that `zizmor` knows about:
     ```bash
     # pipe a workflow from stdin
     cat workflow.yml | zizmor -
-    
+
     # or use a heredoc
     zizmor - <<'EOF'
     on: push
@@ -61,12 +61,12 @@ There are four input sources that `zizmor` knows about:
           - uses: actions/checkout@v3
     EOF
     ```
-    
+
     When reading from stdin, `zizmor` automatically infers the input type
     (workflow, action, or Dependabot config).
-    
+
     !!! note
-    
+
         `-` cannot be combined with other inputs, and `--fix` is not
         supported with stdin input.
 
@@ -108,7 +108,7 @@ zizmor --collect=workflows,actions example/example
     `--collect=workflows-only` and `--collect=actions-only` are
     deprecated aliases for `--collect=workflows` and
     `--collect=actions`, respectively, as of `v1.15.0`.
-  
+
     Users should switch to the non-deprecated forms, as the deprecated
     forms will be removed in a future release.
 
@@ -276,7 +276,7 @@ option:
 zizmor --show-audit-urls=always ...
 
 # never show audit documentation URLs
-zizmor --show-audit-urls=never ... 
+zizmor --show-audit-urls=never ...
 ```
 
 !!! note
@@ -1000,7 +1000,31 @@ layer of (arbitrarily deep) indirection and misalignment between the
 deserialized object model (which is what `zizmor` analyzes) and the source
 representation (which `zizmor` spans back to).
 
-If you're having issues with inputs containing anchors, see 
+If you're having issues with inputs containing anchors, see
 [Troubleshooting - YAML anchors].
 
 [Troubleshooting - YAML anchors]: ./troubleshooting.md#yaml-anchors
+
+### Parallel steps { #parallel-steps }
+
+!!! tip
+
+    Support for parallel steps is available in `v1.27.0` and later.
+
+!!! warning "Experimental"
+
+    `zizmor`'s support for parallel steps is currently **experimental**.
+    You will probably encounter bugs if you run `zizmor` on a workflow
+    that uses parallel steps; please
+    [report any issues you have](https://github.com/zizmorcore/zizmor/issues/new)!
+
+As of June 2026, GitHub Actions [supports parallel steps]. This support adds
+several news features to Actions's syntax, most notably a `#!yaml parallel:` block
+under which steps can be defined to make them run in parallel, rather than
+the default of serial execution.
+
+`zizmor` makes an effort to handle parallel steps in the same way that serial
+steps are handled. In other words: anything that _would_ be flagged in a serial
+step _should_ also be flagged if nested inside a `#!yaml parallel:` block.
+
+[supports parallel steps]: https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/

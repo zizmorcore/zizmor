@@ -166,14 +166,14 @@ impl AdhocPackages {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        let StepBodyCommon::Run { run, .. } = step.body() else {
+        let Some(StepBodyCommon::Run { run, .. }) = step.body() else {
             return Ok(findings);
         };
 
         let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
             tracing::debug!(
-                "adhoc-packages: couldn't determine shell for step {idx}; assuming bash",
-                idx = step.index()
+                "adhoc-packages: couldn't determine shell for step {loc:#?}; assuming bash",
+                loc = step.location()
             );
             "bash"
         });

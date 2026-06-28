@@ -242,7 +242,7 @@ impl HasInputs for CompositeStep<'_> {
 }
 
 impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
-    fn index(&self) -> usize {
+    fn ord(&self) -> impl Ord {
         self.index
     }
 
@@ -262,8 +262,8 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         None
     }
 
-    fn body(&self) -> StepBodyCommon<'doc> {
-        match &self.body {
+    fn body(&self) -> Option<StepBodyCommon<'doc>> {
+        Some(match &self.body {
             action::StepBody::Uses { uses, with } => StepBodyCommon::Uses { uses, with },
             action::StepBody::Run {
                 run,
@@ -274,7 +274,7 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
                 _working_directory: working_directory.as_deref(),
                 _shell: Some(shell),
             },
-        }
+        })
     }
 
     fn document(&self) -> &'doc yamlpath::Document {

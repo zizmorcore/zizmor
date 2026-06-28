@@ -158,6 +158,33 @@ where
     SoV::deserialize(de).map(Into::into)
 }
 
+/// A "bool or unit" type, for places where GitHub Actions uses
+/// a bare key (like `wait:`) to indicate a "true" value.
+///
+/// This only appears internally, as an intermediate type for `bool_or_unit`.
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(untagged)]
+enum BoU {
+    Bool(bool),
+    Unit(()),
+}
+
+impl From<BoU> for bool {
+    fn from(value: BoU) -> Self {
+        match value {
+            BoU::Bool(bool) => bool,
+            BoU::Unit(_) => true,
+        }
+    }
+}
+
+pub(crate) fn bool_or_unit<'de, D>(de: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    BoU::deserialize(de).map(Into::into)
+}
+
 /// A bool or string. This is useful for cases where GitHub Actions contextually
 /// reinterprets a YAML boolean as a string, e.g. `run: true` really means
 /// `run: 'true'`.
@@ -1097,5 +1124,20 @@ mod tests {
             ).map(|d| d.0).unwrap_err(),
             @r#"Error("malformed `uses` ref: owner/repo slug is too short: workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89")"#
         );
+    }
+
+    #[test]
+    fn test_bool_or_unit() {
+        #[derive(Deserialize)]
+        struct Dummy {
+            #[serde(deserialize_with = "crate::common::bool_or_unit")]
+            x: bool,
+        }
+
+        assert_eq!(yaml_serde::from_str::<Dummy>("x:").unwrap().x, true);
+        // TODO: Not sure if this is an overcorrection.
+        assert_eq!(yaml_serde::from_str::<Dummy>("x: null").unwrap().x, true);
+        assert_eq!(yaml_serde::from_str::<Dummy>("x: true").unwrap().x, true);
+        assert_eq!(yaml_serde::from_str::<Dummy>("x: false").unwrap().x, false)
     }
 }

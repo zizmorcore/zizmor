@@ -8,6 +8,7 @@ mod anchors;
 mod collect;
 mod crater;
 mod json_v1;
+mod parallel_steps;
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
