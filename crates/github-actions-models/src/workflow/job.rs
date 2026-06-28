@@ -355,7 +355,7 @@ background: true
                     "/tmp",
                 ),
                 shell: None,
-                common: StepCommon {
+                shared: SharedStepFields {
                     id: Some(
                         "test-id",
                     ),
