@@ -139,7 +139,7 @@ pub enum ParallelStep {
 /// Fields that are shared across both `uses:` and `run:` steps.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub struct StepCommon {
+pub struct SharedStepFields {
     /// An optional ID for this step.
     pub id: Option<String>,
 
@@ -181,7 +181,7 @@ pub struct UsesStep {
 
     /// Shared fields for this step.
     #[serde(flatten)]
-    pub common: StepCommon,
+    pub shared: SharedStepFields,
 }
 
 #[derive(Deserialize, Debug)]
@@ -200,7 +200,7 @@ pub struct RunStep {
 
     /// Shared fields for this step.
     #[serde(flatten)]
-    pub common: StepCommon,
+    pub shared: SharedStepFields,
 }
 
 #[derive(Deserialize, Debug)]

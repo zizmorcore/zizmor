@@ -597,29 +597,29 @@ impl<'doc> Step<'doc> {
 
     pub(crate) fn name(&self) -> Option<&'doc str> {
         match self.inner {
-            StepInner::Uses(uses) => uses.common.name.as_deref(),
-            StepInner::Run(run) => run.common.name.as_deref(),
+            StepInner::Uses(uses) => uses.shared.name.as_deref(),
+            StepInner::Run(run) => run.shared.name.as_deref(),
         }
     }
 
     pub(crate) fn id(&self) -> Option<&'doc str> {
         match self.inner {
-            StepInner::Uses(uses) => uses.common.id.as_deref(),
-            StepInner::Run(run) => run.common.id.as_deref(),
+            StepInner::Uses(uses) => uses.shared.id.as_deref(),
+            StepInner::Run(run) => run.shared.id.as_deref(),
         }
     }
 
     pub(crate) fn r#if(&self) -> Option<&'doc common::If> {
         match self.inner {
-            StepInner::Uses(uses) => uses.common.r#if.as_ref(),
-            StepInner::Run(run) => run.common.r#if.as_ref(),
+            StepInner::Uses(uses) => uses.shared.r#if.as_ref(),
+            StepInner::Run(run) => run.shared.r#if.as_ref(),
         }
     }
 
     pub(crate) fn env(&self) -> &'doc LoE<common::Env> {
         match self.inner {
-            StepInner::Uses(uses) => &uses.common.env,
-            StepInner::Run(run) => &run.common.env,
+            StepInner::Uses(uses) => &uses.shared.env,
+            StepInner::Run(run) => &run.shared.env,
         }
     }
 
@@ -802,8 +802,8 @@ impl<'doc> Iterator for Steps<'doc> {
         while let Some((step_idx, par_idx, step)) = self.next_raw() {
             // Skip steps whose `if:` is statically known to be false.
             let r#if = match step {
-                StepInner::Uses(uses) => uses.common.r#if.as_ref(),
-                StepInner::Run(run) => run.common.r#if.as_ref(),
+                StepInner::Uses(uses) => uses.shared.r#if.as_ref(),
+                StepInner::Run(run) => run.shared.r#if.as_ref(),
             };
 
             if let Some(cond) = r#if

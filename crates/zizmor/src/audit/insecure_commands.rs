@@ -95,11 +95,11 @@ impl InsecureCommands {
         steps
             .into_iter()
             .filter_map(|step| {
-                let StepInner::Run(job::RunStep { common, .. }) = &step.deref() else {
+                let StepInner::Run(job::RunStep { shared, .. }) = &step.deref() else {
                     return None;
                 };
 
-                match &common.env {
+                match &shared.env {
                     // The entire environment block is an expression, which we
                     // can't follow (for now). Emit an auditor-only finding.
                     LoE::Expr(_) => {
