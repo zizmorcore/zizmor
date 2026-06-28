@@ -90,6 +90,9 @@ impl Audit for SecretsOutsideEnvironment {
                         .persona(Persona::Auditor)
                         .severity(Severity::Medium)
                         .confidence(Confidence::High)
+                        // Make the entire job a hidden span, so that the user can place
+                        // an ignore comment anywhere in the job.
+                        .add_location(job.location().hidden())
                         .add_location(job.location().key_only())
                         .add_raw_location(Location::new(
                             job.location()

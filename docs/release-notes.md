@@ -15,6 +15,11 @@ of `zizmor`.
   specify parallel steps. See [Usage - Parallel steps](./usage.md#parallel-steps)
   for more information (#2153)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [secrets-outside-env] audit would not honor
+  ignore comments within the same job scope (#2157)
+
 ## 1.26.1
 
 This is a small corrective release for [1.26.0](#1260).
