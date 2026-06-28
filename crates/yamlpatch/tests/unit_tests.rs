@@ -1401,6 +1401,37 @@ fn test_remove_sole_flow_member_does_not_collapse_parent() {
 }
 
 #[test]
+fn test_remove_sole_env_key_preserves_step_sequence_marker() {
+    // Regression: removing the only key under a *step-level* `env:` collapses
+    // `env` (good), but here `env:` is the first key of a `-` step item, so
+    // whole-line block removal also eats the `- ` marker. That turns the
+    // `steps:` list into a mapping and silently corrupts the document.
+    let yaml = "\
+jobs:
+  build:
+    steps:
+      - env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        run: echo hi
+";
+    insta::assert_snapshot!(
+        remove(
+            yaml,
+            route!("jobs", "build", "steps", 0, "env", "ACTIONS_ALLOW_UNSECURE_COMMANDS")
+        ),
+        @"
+    --- PATCH ---
+    jobs:
+      build:
+        steps:
+          - run: echo hi
+
+    --- END PATCH ---
+    "
+    );
+}
+
+#[test]
 fn test_multiple_operations_preserve_comments() {
     let original = r#"
 # Main configuration
