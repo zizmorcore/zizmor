@@ -9,7 +9,7 @@ use github_actions_models::{
     workflow::{
         self, Trigger,
         event::{BareEvent, OptionalBody},
-        job::{self, RunBody, RunsOn, StepBody, UsesBody},
+        job,
     },
 };
 use terminal_link::Link;
@@ -261,8 +261,8 @@ impl<'doc> NormalJob<'doc> {
         match &self.runs_on {
             // The entire runs-on is an expression, so there's nothing we can do.
             LoE::Expr(_) => None,
-            LoE::Literal(RunsOn::Group { group: _, labels })
-            | LoE::Literal(RunsOn::Target(labels)) => {
+            LoE::Literal(job::RunsOn::Group { group: _, labels })
+            | LoE::Literal(job::RunsOn::Target(labels)) => {
                 for label in labels {
                     match label.as_str() {
                         // Default self-hosted routing labels.
@@ -292,7 +292,7 @@ impl<'doc> NormalJob<'doc> {
     ) -> impl Iterator<Item = (&'doc common::If, SymbolicLocation<'doc>)> {
         self.r#if.iter().map(|cond| (cond, self.location())).chain(
             self.steps()
-                .filter_map(|step| step.r#if.as_ref().map(|cond| (cond, step.location()))),
+                .filter_map(|step| step.r#if().map(|cond| (cond, step.location()))),
         )
     }
 }
@@ -481,13 +481,13 @@ pub(crate) struct Step<'doc> {
     /// The step's index within its `parallel:` block, if it's within one.
     parallel_index: Option<usize>,
     /// The inner step model.
-    inner: &'doc workflow::job::Step,
+    inner: StepInner<'doc>,
     /// The parent [`Job`].
     pub(crate) parent: NormalJob<'doc>,
 }
 
 impl<'doc> std::ops::Deref for Step<'doc> {
-    type Target = &'doc workflow::job::Step;
+    type Target = StepInner<'doc>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -513,9 +513,9 @@ impl<'doc> Locatable<'doc> for Step<'doc> {
     }
 
     fn location_with_grip(&self) -> SymbolicLocation<'doc> {
-        if self.inner.name.is_some() {
+        if self.name().is_some() {
             self.location().with_keys(["name".into()])
-        } else if self.inner.id.is_some() {
+        } else if self.id().is_some() {
             self.location().with_keys(["id".into()])
         } else {
             self.location()
@@ -537,11 +537,11 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
     }
 
     fn env_is_static(&self, ctx: &context::Context) -> bool {
-        utils::env_is_static(ctx, &[&self.env, &self.job().env, &self.workflow().env])
+        utils::env_is_static(ctx, &[self.env(), &self.job().env, &self.workflow().env])
     }
 
     fn uses(&self) -> Option<&'doc common::Uses> {
-        let StepBody::Uses(UsesBody { uses, .. }) = &self.inner.body else {
+        let StepInner::Uses(job::UsesStep { uses, .. }) = &self.inner else {
             return None;
         };
 
@@ -553,30 +553,20 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
     }
 
     fn body(&self) -> Option<StepBodyCommon<'doc>> {
-        match &self.body {
-            StepBody::Uses(UsesBody { uses, with }) => Some(StepBodyCommon::Uses { uses, with }),
-            StepBody::Run(RunBody {
+        match &self.inner {
+            StepInner::Uses(job::UsesStep { uses, with, .. }) => {
+                Some(StepBodyCommon::Uses { uses, with })
+            }
+            StepInner::Run(job::RunStep {
                 run,
                 working_directory,
                 shell,
+                ..
             }) => Some(StepBodyCommon::Run {
                 run,
                 _working_directory: working_directory.as_deref(),
                 _shell: shell.as_ref(),
             }),
-            StepBody::Cancel { .. }
-            | StepBody::Wait { .. }
-            | StepBody::WaitAll { .. }
-            | StepBody::Parallel { .. } => {
-                // NOTE: This should be unreachable in practice, since `Steps` should only produce
-                // `Step` instances that have been flattened/filtered. The debug assertion
-                // here is just in case we change that in the future.
-                debug_assert!(
-                    false,
-                    "called StepCommon::body on a workflow step that don't have a StepBodyCommon representation"
-                );
-                None
-            }
         }
     }
 
@@ -594,7 +584,7 @@ impl<'doc> Step<'doc> {
     fn new(
         steps_index: usize,
         parallel_index: Option<usize>,
-        inner: &'doc workflow::job::Step,
+        inner: StepInner<'doc>,
         parent: NormalJob<'doc>,
     ) -> Self {
         Self {
@@ -602,6 +592,34 @@ impl<'doc> Step<'doc> {
             parallel_index,
             inner,
             parent,
+        }
+    }
+
+    pub(crate) fn name(&self) -> Option<&'doc str> {
+        match self.inner {
+            StepInner::Uses(uses) => uses.shared.name.as_deref(),
+            StepInner::Run(run) => run.shared.name.as_deref(),
+        }
+    }
+
+    pub(crate) fn id(&self) -> Option<&'doc str> {
+        match self.inner {
+            StepInner::Uses(uses) => uses.shared.id.as_deref(),
+            StepInner::Run(run) => run.shared.id.as_deref(),
+        }
+    }
+
+    pub(crate) fn r#if(&self) -> Option<&'doc common::If> {
+        match self.inner {
+            StepInner::Uses(uses) => uses.shared.r#if.as_ref(),
+            StepInner::Run(run) => run.shared.r#if.as_ref(),
+        }
+    }
+
+    pub(crate) fn env(&self) -> &'doc LoE<common::Env> {
+        match self.inner {
+            StepInner::Uses(uses) => &uses.shared.env,
+            StepInner::Run(run) => &run.shared.env,
         }
     }
 
@@ -620,12 +638,7 @@ impl<'doc> Step<'doc> {
     ///
     /// Invariant: panics if the step is not a `run:` step.
     pub(crate) fn shell(&self) -> Option<(&str, SymbolicLocation<'doc>)> {
-        let StepBody::Run(RunBody {
-            run: _,
-            working_directory: _,
-            shell,
-        }) = &self.inner.body
-        else {
+        let StepInner::Run(job::RunStep { shell, .. }) = &self.inner else {
             panic!("API misuse: can't call shell() on a uses: step")
         };
 
@@ -689,6 +702,15 @@ impl<'doc> Step<'doc> {
     }
 }
 
+/// The subset of [`job::Step`] variants that get expressed through
+/// the [`Step`] API. This is used to reduce the number of unreachable
+/// typestates we need to match against.
+#[derive(Clone)]
+pub(crate) enum StepInner<'doc> {
+    Uses(&'doc job::UsesStep),
+    Run(&'doc job::RunStep),
+}
+
 /// An iterable container for steps within a [`Job`].
 ///
 /// This iterator flattens steps that are nested under a `parallel:` pseudo-step.
@@ -714,7 +736,7 @@ pub(crate) struct Steps<'doc> {
     /// with an iterator over its nested steps. `None` otherwise.
     parallel: Option<(
         usize,
-        std::iter::Enumerate<std::slice::Iter<'doc, job::Step>>,
+        std::iter::Enumerate<std::slice::Iter<'doc, job::ParallelStep>>,
     )>,
     parent: NormalJob<'doc>,
 }
@@ -732,25 +754,32 @@ impl<'doc> Steps<'doc> {
     /// Yield the next flattened `(steps_index, parallel_index, step)`, expanding
     /// `parallel:` pseudo-steps inline. Unlike [`Iterator::next`], this does not
     /// filter out statically-disabled steps.
-    fn next_raw(&mut self) -> Option<(usize, Option<usize>, &'doc job::Step)> {
+    fn next_raw(&mut self) -> Option<(usize, Option<usize>, StepInner<'doc>)> {
         loop {
             // Drain any in-progress `parallel:` block before advancing the
             // outer iterator.
             if let Some((step_idx, par_iter)) = self.parallel.as_mut() {
                 if let Some((par_idx, step)) = par_iter.next() {
+                    let step = match step {
+                        job::ParallelStep::Uses(uses) => StepInner::Uses(uses),
+                        job::ParallelStep::Run(run) => StepInner::Run(run),
+                    };
+
                     return Some((*step_idx, Some(par_idx), step));
                 }
                 self.parallel = None;
             }
 
             let (step_idx, step) = self.outer.next()?;
-            match &step.body {
-                StepBody::Uses(_) | StepBody::Run(_) => return Some((step_idx, None, step)),
-                StepBody::Wait { .. } | StepBody::WaitAll { .. } | StepBody::Cancel { .. } => {
+            match &step {
+                job::Step::Uses(uses) => return Some((step_idx, None, StepInner::Uses(uses))),
+                job::Step::Run(run) => return Some((step_idx, None, StepInner::Run(run))),
+                job::Step::Wait { .. } | job::Step::WaitAll { .. } | job::Step::Cancel { .. } => {
                     continue;
                 }
-                StepBody::Parallel {
+                job::Step::Parallel {
                     parallel: parallel_steps,
+                    ..
                 } => {
                     // TODO: Remove once stabilized.
                     warn_once!(
@@ -772,7 +801,12 @@ impl<'doc> Iterator for Steps<'doc> {
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((step_idx, par_idx, step)) = self.next_raw() {
             // Skip steps whose `if:` is statically known to be false.
-            if let Some(cond) = step.r#if.as_ref()
+            let r#if = match step {
+                StepInner::Uses(uses) => uses.shared.r#if.as_ref(),
+                StepInner::Run(run) => run.shared.r#if.as_ref(),
+            };
+
+            if let Some(cond) = r#if
                 && crate::models::if_is_statically_false(cond)
             {
                 continue;

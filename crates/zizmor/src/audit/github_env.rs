@@ -2,7 +2,7 @@ use std::ops::{Deref as _, Range};
 
 use anyhow::{Context as _, Result};
 use github_actions_models::action;
-use github_actions_models::workflow::job::{RunBody, StepBody};
+use github_actions_models::workflow::job;
 use tree_sitter::{
     Language, Parser, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
 };
@@ -13,7 +13,7 @@ use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::StepCommon as _;
-use crate::models::workflow::Step;
+use crate::models::workflow::{Step, StepInner};
 use crate::state::AuditState;
 use crate::utils;
 use crate::utils::once::static_regex;
@@ -393,7 +393,7 @@ impl Audit for GitHubEnv {
             return Ok(findings);
         }
 
-        if let StepBody::Run(RunBody { run, .. }) = &step.deref().body {
+        if let StepInner::Run(job::RunStep { run, .. }) = &step.deref() {
             let shell = step.shell().map(|s| s.0).unwrap_or_else(|| {
                 tracing::warn!(
                     "github-env: couldn't determine shell type for {workflow} step {loc:#?}; assuming bash",

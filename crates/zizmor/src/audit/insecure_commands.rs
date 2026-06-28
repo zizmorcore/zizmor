@@ -3,7 +3,7 @@ use std::ops::Deref as _;
 use github_actions_models::action;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
-use github_actions_models::workflow::job::{RunBody, StepBody};
+use github_actions_models::workflow::job;
 use yamlpatch::{Op, Patch};
 
 use super::{AuditLoadError, Job, audit_meta};
@@ -13,6 +13,7 @@ use crate::finding::location::Locatable as _;
 use crate::finding::{
     Confidence, Finding, Fix, FixDisposition, Persona, Severity, location::SymbolicLocation,
 };
+use crate::models::workflow::StepInner;
 use crate::models::{AsDocument, workflow::Steps, workflow::Workflow};
 use crate::state::AuditState;
 
@@ -94,16 +95,11 @@ impl InsecureCommands {
         steps
             .into_iter()
             .filter_map(|step| {
-                let StepBody::Run(RunBody {
-                    run: _,
-                    working_directory: _,
-                    shell: _,
-                }) = &step.deref().body
-                else {
+                let StepInner::Run(job::RunStep { shared, .. }) = &step.deref() else {
                     return None;
                 };
 
-                match &step.env {
+                match &shared.env {
                     // The entire environment block is an expression, which we
                     // can't follow (for now). Emit an auditor-only finding.
                     LoE::Expr(_) => {

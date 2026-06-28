@@ -1,0 +1,24 @@
+# https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsparallel
+
+name: Name
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - parallel:
+          - name: Build frontend
+            run: npm run build:frontend
+
+          - name: Build backend
+            run: npm run build:backend
+
+          - name: Build docs
+            run: npm run build:docs
+
+      - name: Run tests after all builds complete
+        run: npm test
