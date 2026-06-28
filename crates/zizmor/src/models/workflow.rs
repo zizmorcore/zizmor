@@ -537,7 +537,7 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
     }
 
     fn env_is_static(&self, ctx: &context::Context) -> bool {
-        utils::env_is_static(ctx, &[&self.env(), &self.job().env, &self.workflow().env])
+        utils::env_is_static(ctx, &[self.env(), &self.job().env, &self.workflow().env])
     }
 
     fn uses(&self) -> Option<&'doc common::Uses> {
