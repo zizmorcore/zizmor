@@ -1,0 +1,24 @@
+on: [push]
+
+name: ISSUE-2157-REPRO
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: vulnerable-1
+        run: echo ${FOO}
+        env:
+          # This ignore comment is not on the same line as the secret,
+          # but it is still honored because the finding has a hidden
+          # span for the entire job.
+          # zizmor: ignore[secrets-outside-env]
+          FOO: ${{ secrets.FOO }}
