@@ -712,7 +712,10 @@ pub(crate) struct Steps<'doc> {
     outer: std::iter::Enumerate<std::slice::Iter<'doc, job::Step>>,
     /// When iterating a `parallel:` pseudo-step, holds its `steps` index along
     /// with an iterator over its nested steps. `None` otherwise.
-    parallel: Option<(usize, std::iter::Enumerate<std::slice::Iter<'doc, job::Step>>)>,
+    parallel: Option<(
+        usize,
+        std::iter::Enumerate<std::slice::Iter<'doc, job::Step>>,
+    )>,
     parent: NormalJob<'doc>,
 }
 
