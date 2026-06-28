@@ -88,7 +88,7 @@ impl Audit for BotConditions {
 
         // Step-level conditions
         for step in job.steps() {
-            if let Some(If::Expr(expr)) = &step.r#if {
+            if let Some(If::Expr(expr)) = &step.r#if() {
                 conds.push((
                     expr,
                     step.location_with_grip(),

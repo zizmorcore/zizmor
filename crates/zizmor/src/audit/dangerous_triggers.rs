@@ -1,6 +1,6 @@
 use github_actions_models::common::Uses;
 use github_actions_models::workflow::Job;
-use github_actions_models::workflow::job::{StepBody, UsesBody};
+use github_actions_models::workflow::job::{Step, UsesStep};
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::audit::AuditError;
@@ -28,10 +28,10 @@ impl DangerousTriggers {
         if workflow.jobs.len() == 1
             && let Some((_, Job::NormalJob(job))) = workflow.jobs.get_index(0)
             && let [step] = job.steps.as_slice()
-            && let StepBody::Uses(UsesBody {
+            && let Step::Uses(UsesStep {
                 uses: Uses::Repository(uses),
                 ..
-            }) = &step.body
+            }) = &step
             && uses.matches("actions/labeler")
         {
             return true;

@@ -86,8 +86,60 @@ pub enum DeploymentEnvironment {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all_fields = "kebab-case", untagged)]
+pub enum Step {
+    Uses(UsesStep),
+    Run(RunStep),
+    Wait {
+        /// An optional name for this step.
+        name: Option<String>,
+
+        /// An optional ID for this step.
+        id: Option<String>,
+
+        /// One or more steps, by ID, that this step is blocked by (i.e. waits for).
+        #[serde(deserialize_with = "crate::common::scalar_or_vector")]
+        wait: Vec<String>,
+    },
+    WaitAll {
+        /// An optional name for this step.
+        name: Option<String>,
+
+        /// An optional ID for this step.
+        id: Option<String>,
+
+        /// A marker indicating that this step waits for all active background steps.
+        #[serde(deserialize_with = "crate::common::bool_or_unit")]
+        wait_all: bool,
+    },
+    Cancel {
+        /// An optional name for this step.
+        name: Option<String>,
+
+        /// An optional ID for this step.
+        id: Option<String>,
+
+        /// A background step, by ID, that this step terminates.
+        cancel: String,
+    },
+    Parallel {
+        /// One or more steps to run in parallel.
+        parallel: Vec<ParallelStep>,
+    },
+}
+
+/// The subset of steps that are valid within a `parallel:` block.
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum ParallelStep {
+    Uses(UsesStep),
+    Run(RunStep),
+}
+
+/// Fields that are shared across both `uses:` and `run:` steps.
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub struct Step {
+pub struct StepCommon {
     /// An optional ID for this step.
     pub id: Option<String>,
 
@@ -114,45 +166,11 @@ pub struct Step {
     /// An optional environment mapping for this step.
     #[serde(default)]
     pub env: LoE<Env>,
-
-    /// The `run:` or `uses:` body for this step.
-    #[serde(flatten)]
-    pub body: StepBody,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all_fields = "kebab-case", untagged)]
-pub enum StepBody {
-    Uses(UsesBody),
-    Run(RunBody),
-    Wait {
-        /// One or more steps, by ID, that this step is blocked by (i.e. waits for).
-        // TODO: Is this allowed to be an expression?
-        #[serde(deserialize_with = "crate::common::scalar_or_vector")]
-        wait: Vec<String>,
-    },
-    WaitAll {
-        /// A marker indicating that this step waits for all active background steps.
-        #[serde(deserialize_with = "crate::common::bool_or_unit")]
-        wait_all: bool,
-    },
-    Cancel {
-        /// A background step, by ID, that this step terminates.
-        cancel: String,
-    },
-    Parallel {
-        /// One or more steps to run in parallel.
-        // NOTE: This is an overapproximation, since parallel blocks
-        // do not allow nested `parallel` locks, or pseudo-steps like `cancel`.
-        // TODO: Ratchet this down to just the steps that parallel blocks do allow.
-        parallel: Vec<Step>,
-    },
-}
-
-/// The body of a `uses:`-style step clause.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub struct UsesBody {
+pub struct UsesStep {
     /// The GitHub Action being used.
     #[serde(deserialize_with = "crate::common::step_uses")]
     pub uses: Uses,
@@ -160,23 +178,123 @@ pub struct UsesBody {
     /// Any inputs to the action being used.
     #[serde(default)]
     pub with: LoE<Env>,
+
+    /// Shared fields for this step.
+    #[serde(flatten)]
+    pub common: StepCommon,
 }
 
-/// The body of a `run:`-style step clause.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub struct RunBody {
+pub struct RunStep {
     /// The command to run.
     #[serde(deserialize_with = "crate::common::bool_is_string")]
     pub run: String,
 
-    /// An optional working directory to run [`StepBody::Run::run`] from.
+    /// An optional working directory to run [`RunStep::run`] from.
     pub working_directory: Option<String>,
 
     /// An optional shell to run in. Defaults to the job or workflow's
     /// default shell.
     pub shell: Option<LoE<String>>,
+
+    /// Shared fields for this step.
+    #[serde(flatten)]
+    pub common: StepCommon,
 }
+
+// #[derive(Deserialize, Debug)]
+// #[serde(rename_all = "kebab-case")]
+// pub struct Step {
+//     /// An optional ID for this step.
+//     pub id: Option<String>,
+
+//     /// An optional expression that prevents this step from running unless it evaluates to `true`.
+//     pub r#if: Option<If>,
+
+//     /// An optional name for this step.
+//     pub name: Option<String>,
+
+//     /// An optional timeout for this step, in minutes.
+//     /// GitHub takes the floor of any non-whole numeric value provided.
+//     pub timeout_minutes: Option<LoE<f64>>,
+
+//     /// An optional boolean or expression that, if `true`, prevents the job from failing when
+//     /// this step fails.
+//     #[serde(default)]
+//     pub continue_on_error: BoE,
+
+//     /// Whether the step runs asynchronously, i.e. does not block its successor from running.
+//     // TODO: Is this allowed to be an expression?
+//     #[serde(default)]
+//     pub background: bool,
+
+//     /// An optional environment mapping for this step.
+//     #[serde(default)]
+//     pub env: LoE<Env>,
+
+//     /// The `run:` or `uses:` body for this step.
+//     #[serde(flatten)]
+//     pub body: StepBody,
+// }
+
+// #[derive(Deserialize, Debug)]
+// #[serde(rename_all_fields = "kebab-case", untagged)]
+// pub enum StepBody {
+//     Uses(UsesBody),
+//     Run(RunBody),
+//     Wait {
+//         /// One or more steps, by ID, that this step is blocked by (i.e. waits for).
+//         // TODO: Is this allowed to be an expression?
+//         #[serde(deserialize_with = "crate::common::scalar_or_vector")]
+//         wait: Vec<String>,
+//     },
+//     WaitAll {
+//         /// A marker indicating that this step waits for all active background steps.
+//         #[serde(deserialize_with = "crate::common::bool_or_unit")]
+//         wait_all: bool,
+//     },
+//     Cancel {
+//         /// A background step, by ID, that this step terminates.
+//         cancel: String,
+//     },
+//     Parallel {
+//         /// One or more steps to run in parallel.
+//         // NOTE: This is an overapproximation, since parallel blocks
+//         // do not allow nested `parallel` locks, or pseudo-steps like `cancel`.
+//         // TODO: Ratchet this down to just the steps that parallel blocks do allow.
+//         parallel: Vec<Step>,
+//     },
+// }
+
+// /// The body of a `uses:`-style step clause.
+// #[derive(Deserialize, Debug)]
+// #[serde(rename_all = "kebab-case")]
+// pub struct UsesBody {
+//     /// The GitHub Action being used.
+//     #[serde(deserialize_with = "crate::common::step_uses")]
+//     pub uses: Uses,
+
+//     /// Any inputs to the action being used.
+//     #[serde(default)]
+//     pub with: LoE<Env>,
+// }
+
+// /// The body of a `run:`-style step clause.
+// #[derive(Deserialize, Debug)]
+// #[serde(rename_all = "kebab-case")]
+// pub struct RunBody {
+//     /// The command to run.
+//     #[serde(deserialize_with = "crate::common::bool_is_string")]
+//     pub run: String,
+
+//     /// An optional working directory to run [`StepBody::Run::run`] from.
+//     pub working_directory: Option<String>,
+
+//     /// An optional shell to run in. Defaults to the job or workflow's
+//     /// default shell.
+//     pub shell: Option<LoE<String>>,
+// }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
@@ -247,7 +365,7 @@ pub enum Secrets {
 mod tests {
     use crate::{
         common::{EnvValue, expr::LoE},
-        workflow::job::{Matrix, Secrets, StepBody},
+        workflow::job::{Matrix, Secrets, Step},
     };
 
     use super::{RunsOn, Strategy};
@@ -313,20 +431,40 @@ matrix:
     }
 
     #[test]
-    fn test_stepbody_working_directory() {
+    fn test_step_working_directory() {
         let step = r#"
+name: test
+id: test-id
 run: foo
 working-directory: /tmp
+background: true
 "#;
 
-        insta::assert_debug_snapshot!(&yaml_serde::from_str::<StepBody>(step).unwrap(), @r#"
+        insta::assert_debug_snapshot!(&yaml_serde::from_str::<Step>(step).unwrap(), @r#"
         Run(
-            RunBody {
+            RunStep {
                 run: "foo",
                 working_directory: Some(
                     "/tmp",
                 ),
                 shell: None,
+                common: StepCommon {
+                    id: Some(
+                        "test-id",
+                    ),
+                    if: None,
+                    name: Some(
+                        "test",
+                    ),
+                    timeout_minutes: None,
+                    continue_on_error: Literal(
+                        false,
+                    ),
+                    background: true,
+                    env: Literal(
+                        {},
+                    ),
+                },
             },
         )
         "#);
