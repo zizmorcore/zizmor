@@ -30,7 +30,7 @@ yamlpatch = { path = "crates/yamlpatch", version = "1.26.1" }
 zizmor-sarif = { path = "crates/zizmor-sarif", version = "1.26.1" }
 
 anyhow = "1.0.102"
-itertools = "0.14.0"
+itertools = "0.15.0"
 annotate-snippets = "0.12.16"
 anstream = "1.0.0"
 assert_cmd = "2.2.2"
