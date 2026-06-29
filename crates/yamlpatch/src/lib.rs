@@ -533,11 +533,7 @@ fn apply_single_patch(
             }
 
             // Delegate to `yamlpath`, which computes the precise byte span
-            // to delete based on the value's *actual* container kind in the
-            // parse tree (block mapping/sequence vs. flow mapping/sequence).
-            // This keeps removal sound for values nested inside flow
-            // collections, where naive line-based removal would corrupt the
-            // surrounding structure.
+            // to delete based on the value's  container kind.
             let span = document.removal_span(&patch.route)?;
 
             let mut result = content.to_string();

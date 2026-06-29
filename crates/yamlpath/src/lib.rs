@@ -713,16 +713,8 @@ impl Document {
     /// [`Self::source`] in order to remove the value at `route`, together
     /// with the structural "affixes" appropriate to the value's container.
     ///
-    /// Unlike naive line-based removal, this is aware of the value's
-    /// *actual* container kind (block mapping, block sequence, flow
-    /// mapping, or flow sequence) as determined by the parse tree. This
-    /// makes removal sound even for values nested inside flow collections,
-    /// where line-based removal would corrupt the document. For example,
-    /// removing `b` from `{a: 1, b: 2}` yields `{a: 1}` rather than
-    /// deleting the whole line, and the container kind is resolved from
-    /// the tree rather than by sniffing for `{`/`[` tokens, so deeply
-    /// nested mixtures like `[{a: 1}, {b: 2}]` or `{x: [1, 2]}` resolve
-    /// correctly.
+    /// This is aware of the value's container kind as determined by the
+    /// parse tree.
     ///
     /// The affixes removed depend on the container:
     ///
