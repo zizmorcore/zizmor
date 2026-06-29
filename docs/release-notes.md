@@ -15,10 +15,19 @@ of `zizmor`.
   specify parallel steps. See [Usage - Parallel steps](./usage.md#parallel-steps)
   for more information (#2153)
 
+### Enhancements 🌱
+
+* The [secrets-inherit] audit now also flags reusable workflows that declare
+  `#!yaml on.workflow_call.secrets: inherit`, since this forces every caller to
+  hand over all of their secrets (#1673)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [secrets-outside-env] audit would not honor
   ignore comments within the same job scope (#2157)
+
+* Fixed a deserialization failure that caused zizmor to skip *all* audits on
+  any reusable workflow declaring `#!yaml on.workflow_call.secrets: inherit` (#1673)
 
 ## 1.26.1
 

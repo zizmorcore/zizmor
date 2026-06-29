@@ -8,7 +8,7 @@ use github_actions_models::{
     common::{self, expr::LoE},
     workflow::{
         self, Trigger,
-        event::{BareEvent, OptionalBody},
+        event::{BareEvent, OptionalBody, WorkflowCall, WorkflowCallSecrets},
         job,
     },
 };
@@ -170,6 +170,23 @@ impl Workflow {
             Trigger::BareEvents(events) => events.contains(&BareEvent::WorkflowCall),
             Trigger::Events(events) => !matches!(events.workflow_call, OptionalBody::Missing),
         }
+    }
+
+    /// Whether this workflow declares `on.workflow_call.secrets: inherit`,
+    /// i.e. whether it's a reusable workflow that unconditionally inherits
+    /// all of its caller's secrets.
+    pub(crate) fn has_workflow_call_secrets_inherit(&self) -> bool {
+        matches!(
+            &self.on,
+            Trigger::Events(events)
+                if matches!(
+                    &events.workflow_call,
+                    OptionalBody::Body(WorkflowCall {
+                        secrets: Some(WorkflowCallSecrets::Inherit),
+                        ..
+                    })
+                )
+        )
     }
 
     /// Whether this workflow is triggered by exactly one event.

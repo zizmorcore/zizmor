@@ -1,10 +1,11 @@
 use github_actions_models::workflow::job::Secrets;
 use subfeature::Subfeature;
 
-use super::{Audit, AuditLoadError, AuditState, audit_meta};
+use super::{Audit, AuditLoadError, AuditState, Job, Workflow, audit_meta};
 use crate::{
     audit::AuditError,
-    finding::{Confidence, location::Locatable as _},
+    config::Config,
+    finding::{Confidence, Finding, Severity, location::Locatable as _},
 };
 
 pub(crate) struct SecretsInherit;
@@ -24,11 +25,47 @@ impl Audit for SecretsInherit {
         Ok(Self)
     }
 
+    async fn audit_workflow<'doc>(
+        &self,
+        workflow: &'doc Workflow,
+        config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let mut findings = vec![];
+
+        // Callee-side: a reusable workflow declaring `on.workflow_call.secrets: inherit`
+        // forces *every* caller to over-scope by handing it all of their secrets.
+        if workflow.has_workflow_call_secrets_inherit() {
+            findings.push(
+                Self::finding()
+                    .add_location(
+                        workflow
+                            .location()
+                            .primary()
+                            .with_keys(["on".into(), "workflow_call".into(), "secrets".into()])
+                            .annotated("this reusable workflow inherits all caller secrets"),
+                    )
+                    .confidence(Confidence::High)
+                    .severity(Severity::Medium)
+                    .build(workflow)?,
+            );
+        }
+
+        // Caller-side: preserve the per-job auditing that the default
+        // `audit_workflow` implementation would otherwise perform.
+        for job in workflow.jobs() {
+            if let Job::ReusableWorkflowCallJob(reusable) = job {
+                findings.extend(self.audit_reusable_job(&reusable, config).await?);
+            }
+        }
+
+        Ok(findings)
+    }
+
     async fn audit_reusable_job<'doc>(
         &self,
         job: &super::ReusableWorkflowCallJob<'doc>,
-        _config: &crate::config::Config,
-    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
         if matches!(job.secrets, Some(Secrets::Inherit)) {
