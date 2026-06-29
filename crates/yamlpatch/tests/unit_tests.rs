@@ -1432,6 +1432,45 @@ jobs:
 }
 
 #[test]
+fn test_remove_first_step_key_slides_nested_sibling_onto_marker() {
+    // The sibling that slides onto the `- ` marker keeps its own nested
+    // block correctly indented.
+    let yaml = "\
+steps:
+  - env:
+      X: 1
+    uses:
+      a: b
+";
+    insta::assert_snapshot!(remove(yaml, route!("steps", 0, "env")), @"
+    --- PATCH ---
+    steps:
+      - uses:
+          a: b
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_non_first_step_key_keeps_marker() {
+    // Removing a key that does not share the `- ` line uses ordinary
+    // whole-line removal, leaving the marker (and first key) intact.
+    let yaml = "\
+steps:
+  - env: prod
+    run: echo hi
+";
+    insta::assert_snapshot!(remove(yaml, route!("steps", 0, "run")), @"
+    --- PATCH ---
+    steps:
+      - env: prod
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
 fn test_multiple_operations_preserve_comments() {
     let original = r#"
 # Main configuration

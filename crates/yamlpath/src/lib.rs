@@ -844,6 +844,51 @@ impl Document {
             .any(|child| child.id() != element.id() && Self::is_content_node(&child))
     }
 
+    /// If `element` is the first key of a block mapping that is the inline
+    /// value of a block sequence item (so it shares its line with the
+    /// item's `- ` marker), return the next sibling key, which should slide
+    /// onto the marker's line when `element` is removed. Returns `None` in
+    /// every other case, where ordinary whole-line removal is correct.
+    fn sequence_item_inline_next_sibling<'b>(element: &Node<'b>) -> Option<Node<'b>> {
+        if !element.is_block_mapping_pair() {
+            return None;
+        }
+
+        // The mapping pair must live directly inside a block mapping that is
+        // itself the inline value of a block sequence item:
+        //   block_sequence_item -> block_node -> block_mapping -> (element)
+        let container = element.parent()?;
+        if !container.is_block_mapping() {
+            return None;
+        }
+        let block_node = container.parent()?;
+        if !block_node.is_block_node() {
+            return None;
+        }
+        let item = block_node.parent()?;
+        if !item.is_block_sequence_item() {
+            return None;
+        }
+
+        // Only the mapping's first key shares the item's `- ` line; for any
+        // other key, whole-line removal does not touch the marker.
+        let dash = item.child(0)?;
+        if dash.start_position().row != element.start_position().row {
+            return None;
+        }
+
+        // Return the content sibling that follows `element` (the key that
+        // slides onto the marker's line). If there is none, `element` is the
+        // mapping's sole key and the caller would have collapsed the whole
+        // item instead, so fall back to ordinary removal.
+        let mut cursor = container.walk();
+        let mut content = container
+            .named_children(&mut cursor)
+            .filter(|child| Self::is_content_node(child));
+        content.find(|child| child.id() == element.id())?;
+        content.next()
+    }
+
     /// Walk up from a resolved node to the element node that is a direct
     /// child of its enclosing mapping or sequence, returning the
     /// `(element, container)` pair.
@@ -865,10 +910,21 @@ impl Document {
         }
     }
 
-    /// Compute the whole-line(s) removal span for an `element` in a block
-    /// container, including leading indentation, any trailing same-line
-    /// comment, and the trailing newline.
+    /// Compute the removal span for an `element` in a block container.
+    ///
+    /// Normally this removes the element's entire line(s), including leading
+    /// indentation, any trailing same-line comment, and the trailing
+    /// newline. There is one special case: when `element` is the first key
+    /// of a block mapping that is the inline value of a block sequence item,
+    /// it shares its line with the item's `- ` marker. Naive whole-line
+    /// removal would delete that marker and silently turn the sequence into
+    /// a mapping, so instead we remove up to the next sibling key's start,
+    /// which preserves the `- ` marker and slides that key onto its line.
     fn block_removal_span(&self, element: &Node) -> core::ops::Range<usize> {
+        if let Some(next) = Self::sequence_item_inline_next_sibling(element) {
+            return element.start_byte()..next.start_byte();
+        }
+
         let start_byte = element.start_byte();
         let end_byte = element.end_byte();
 
