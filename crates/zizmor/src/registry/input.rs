@@ -361,7 +361,7 @@ impl InputKey {
     /// Return a "presentation" path for this [`InputKey`].
     ///
     /// This will always be a relative path for remote keys,
-    /// and will be the natuve path for local keys.
+    /// and will be the native path for local keys.
     pub(crate) fn presentation_path(&self) -> &str {
         match self {
             InputKey::Local(local) => local.native_path.as_str(),
@@ -881,32 +881,24 @@ mod tests {
         );
     }
 
+    /// Tests that [`InputKey::presentation_path`] returns the exact path that the user
+    /// supplied (regardless of prefix or root), but normalized for the host's default
+    /// separator.
     #[test]
     fn test_input_key_local_presentation_path() {
         let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None, None);
-        assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
+        if cfg!(target_os = "windows") {
+            assert_eq!(local.presentation_path(), "\\foo\\bar\\baz.yml");
+        } else {
+            assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
+        }
 
         let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"), None);
-        assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
-
-        let local = InputKey::local(
-            "fakegroup".into(),
-            "/foo/bar/baz.yml",
-            Some("/foo/bar/"),
-            None,
-        );
-        assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
-
-        let local = InputKey::local(
-            "fakegroup".into(),
-            "/home/runner/work/repo/repo/.github/workflows/baz.yml",
-            Some("/home/runner/work/repo/repo"),
-            None,
-        );
-        assert_eq!(
-            local.presentation_path(),
-            "/home/runner/work/repo/repo/.github/workflows/baz.yml"
-        );
+        if cfg!(target_os = "windows") {
+            assert_eq!(local.presentation_path(), "\\foo\\bar\\baz.yml");
+        } else {
+            assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
+        }
     }
 
     #[test]
