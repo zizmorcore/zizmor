@@ -166,7 +166,7 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
 fn build_physical_location(location: &Location<'_>) -> PhysicalLocation {
     PhysicalLocation {
         artifact_location: ArtifactLocation {
-            uri: location.symbolic.key.best_relative_path().into(),
+            uri: location.symbolic.key.best_identifier().into(),
         },
         region: Region {
             // NOTE: SARIF lines/columns are 1-based.

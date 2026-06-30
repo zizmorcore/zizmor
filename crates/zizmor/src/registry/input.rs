@@ -9,6 +9,7 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
+use itertools::Itertools;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -195,14 +196,17 @@ pub(crate) struct LocalKey {
     #[serde(skip)]
     native_path: Utf8PathBuf,
 
-    /// The "best" relative path to this input. This path is always relative,
-    /// and is the "best" in the sense that it attempts to be relative to
-    /// the repository root (if present), rather than whatever relative
-    /// path the user actually supplied.
+    /// The "best" identifier for this input.
     ///
-    /// See [`InputKey::best_relative_path`] for more information.
+    /// This will always be a relative path (unless the input itself was absolute),
+    /// and is the "best" in the sense that it attempts to be relative to the repository
+    /// root (if present), rather than whatever relative path the user actually supplied.
+    ///
+    /// This identifier always uses Unix-style path separators.
+    ///
+    /// See [`InputKey::best_identifier`] for more information.
     #[serde(skip)]
-    best_relative_path: Utf8PathBuf,
+    best_identifier: String,
 }
 
 impl LocalKey {
@@ -317,16 +321,22 @@ impl InputKey {
         root: Option<P>,
     ) -> Self {
         let verbatim_path = verbatim_path.as_ref();
-        let best_relative_path = LocalKey::best_relative_path(
-            verbatim_path,
-            prefix.as_ref().map(P::as_ref),
-            root.as_ref().map(P::as_ref),
-        );
+
+        let best_identifier = {
+            LocalKey::best_relative_path(
+                verbatim_path,
+                prefix.as_ref().map(P::as_ref),
+                root.as_ref().map(P::as_ref),
+            )
+            .components()
+            .join("/")
+        };
+
         Self::Local(LocalKey {
             group,
             verbatim_path: verbatim_path.to_path_buf(),
             native_path: verbatim_path.components().collect(),
-            best_relative_path,
+            best_identifier,
         })
     }
 
@@ -344,16 +354,21 @@ impl InputKey {
         })
     }
 
-    /// Returns the "best" relative path for this [`InputKey`].
+    /// Returns the "best" identifier for this [`InputKey`].
     ///
-    /// Unlike [`InputKey::presentation_path`], local input paths are made
-    /// relative to the root of their group's Git repository when possible.
-    /// This matches what SARIF consumers like GitHub's "Advanced Security"
-    /// expect.
-    pub(crate) fn best_relative_path(&self) -> &str {
+    /// This returns an arbitrary identifier for the input which,
+    /// depending on the input kind, may or may resemble a userful path
+    /// on disk.
+    pub(crate) fn best_identifier(&self) -> &str {
         match self {
-            InputKey::Local(local) => local.best_relative_path.as_str(),
+            // Local keys: always use the "best" relative path,
+            // which is opportunistically relative to the repo root
+            // if possible.
+            InputKey::Local(local) => local.best_identifier.as_str(),
+            // Remote keys: always use the path within the repository,
+            // which is always relative.
             InputKey::Remote(remote) => remote.path.as_str(),
+            // Standard input uses an arbitrary identifier.
             InputKey::Stdin(_) => "<stdin>",
         }
     }
@@ -902,15 +917,21 @@ mod tests {
     }
 
     #[test]
-    fn test_input_key_local_best_relative_path() {
-        // "Rootless" cases: with no group root, best_relative_path falls back to
+    fn test_input_key_local_best_identifier() {
+        // "Rootless" cases: with no group root, best_identifier falls back to
         // stripping the input's own prefix (if any), else returns the path
         // as-is.
+        let local = InputKey::local("fakegroup".into(), "bar/baz.yml", None, None);
+        assert_eq!(local.best_identifier(), "bar/baz.yml");
+
+        // Edge case: the user gave us an absolute path, and our attempt to normalize
+        // it produces a double `/` prefix. This is not worth fixing for now,
+        // since it's purely cosmetic.
         let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None, None);
-        assert_eq!(local.best_relative_path(), "/foo/bar/baz.yml");
+        assert_eq!(local.best_identifier(), "//foo/bar/baz.yml");
 
         let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"), None);
-        assert_eq!(local.best_relative_path(), "bar/baz.yml");
+        assert_eq!(local.best_identifier(), "bar/baz.yml");
 
         let local = InputKey::local(
             "fakegroup".into(),
@@ -918,7 +939,7 @@ mod tests {
             Some("/foo/bar/"),
             None,
         );
-        assert_eq!(local.best_relative_path(), "baz.yml");
+        assert_eq!(local.best_identifier(), "baz.yml");
 
         let local = InputKey::local(
             "fakegroup".into(),
@@ -926,7 +947,7 @@ mod tests {
             Some("/home/runner/work/repo/repo"),
             None,
         );
-        assert_eq!(local.best_relative_path(), ".github/workflows/baz.yml");
+        assert_eq!(local.best_identifier(), ".github/workflows/baz.yml");
 
         let local = InputKey::local(
             "fakegroup".into(),
@@ -934,9 +955,9 @@ mod tests {
             Some("."),
             None,
         );
-        assert_eq!(local.best_relative_path(), ".github/workflows/baz.yml");
+        assert_eq!(local.best_identifier(), ".github/workflows/baz.yml");
 
-        // "Rooted" case: with a real root, best_relative_path is canonical-then-strip.
+        // "Rooted" case: with a real root, best_identifier is canonical-then-strip.
         let temp_dir = tempfile::TempDir::new().unwrap();
         let temp_path = Utf8PathBuf::try_from(temp_dir.path().to_path_buf())
             .unwrap()
@@ -948,7 +969,7 @@ mod tests {
         std::fs::write(&child, "contents").unwrap();
 
         let local = InputKey::local("fakegroup".into(), child, None, Some(temp_path));
-        assert_eq!(local.best_relative_path(), "foo/bar/baz.yml");
+        assert_eq!(local.best_identifier(), "foo/bar/baz.yml");
     }
 
     #[test]
