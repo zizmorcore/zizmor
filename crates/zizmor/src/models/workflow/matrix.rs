@@ -344,7 +344,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -385,7 +386,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -426,7 +428,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -467,7 +470,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -508,7 +512,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -549,7 +554,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -590,7 +596,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -634,7 +641,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -678,7 +686,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -722,7 +731,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -766,7 +776,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -810,7 +821,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -854,7 +866,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),
@@ -901,7 +914,8 @@ jobs:
                             group: Group(
                                 "fakegroup",
                             ),
-                            given_path: "test.yml",
+                            verbatim_path: "test.yml",
+                            native_path: "test.yml",
                             best_relative_path: "test.yml",
                         },
                     ),

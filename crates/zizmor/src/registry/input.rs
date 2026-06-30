@@ -182,13 +182,37 @@ pub(crate) struct LocalKey {
     /// The group this input belongs to.
     #[serde(skip)]
     group: Group,
-    /// The given path to the input. This can be absolute or relative.
-    pub(crate) given_path: Utf8PathBuf,
+
+    /// The verbatim path to the input, exactly as the user supplied it.
+    /// This can be absolute or relative.
+    verbatim_path: Utf8PathBuf,
+
+    /// The "native" path to the input. This is the same as [`Self::verbatim_path`],
+    /// but normalized for the host's default separator. For example, if the user
+    /// supplies a verbatim path of `./foo.yml`, this will be `.\foo.yml` on Windows.
+    ///
+    /// This can be absolute or relative.
     #[serde(skip)]
-    best_relative_path: String,
+    native_path: Utf8PathBuf,
+
+    /// The "best" relative path to this input. This path is always relative,
+    /// and is the "best" in the sense that it attempts to be relative to
+    /// the repository root (if present), rather than whatever relative
+    /// path the user actually supplied.
+    ///
+    /// See [`InputKey::best_relative_path`] for more information.
+    #[serde(skip)]
+    best_relative_path: Utf8PathBuf,
 }
 
 impl LocalKey {
+    /// Returns a real path to this [`LocalKey`]'s input, on disk.
+    ///
+    /// This path may be relative or absolute.
+    pub(crate) fn path(&self) -> &Utf8Path {
+        &self.verbatim_path
+    }
+
     /// Produce the "best" relative path for a given path.
     ///
     /// This path is the "best" in the sense that it's intended to be maximally
@@ -196,18 +220,24 @@ impl LocalKey {
     /// consumers (like GitHub's "Advanced Security") expect paths to be relative
     /// to the root of the repository, even if the user supplied them to the tool
     /// as absolute or relative to some other directory.
+    ///
+    /// NOTE: The path returned by this API is *not* guaranteed to be relative to
+    /// the current directory, if the current directory is not the same as the
+    /// repository root. As such, consumers of this API *must not* assume that they
+    /// can naively test these paths for existence, etc. without first resolving
+    /// them against the repository root.
     fn best_relative_path<P: AsRef<Utf8Path>>(
         given_path: P,
         prefix: Option<P>,
         root: Option<P>,
-    ) -> String {
+    ) -> Utf8PathBuf {
         // Happy path: we have a root directory and the input
         // is relative to it once canonicalized.
         if let Some(root) = root
             && let Ok(canonical) = given_path.as_ref().canonicalize_utf8()
             && let Ok(relative) = canonical.strip_prefix(root.as_ref())
         {
-            return relative.as_str().to_owned();
+            return relative.to_owned();
         }
 
         // Semi-happy path: we don't have a root directory,
@@ -216,12 +246,12 @@ impl LocalKey {
         if let Some(prefix) = prefix
             && let Ok(stripped) = given_path.as_ref().strip_prefix(prefix.as_ref())
         {
-            return stripped.as_str().to_owned();
+            return stripped.to_owned();
         }
 
         // Sad path: no root or known prefix, so we return the
         // given path as-is and hope for the best.
-        given_path.as_ref().as_str().to_owned()
+        given_path.as_ref().to_owned()
     }
 }
 
@@ -258,7 +288,7 @@ pub(crate) enum InputKey {
 impl std::fmt::Display for InputKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InputKey::Local(local) => write!(f, "file://{path}", path = local.given_path),
+            InputKey::Local(local) => write!(f, "file://{path}", path = local.verbatim_path),
             InputKey::Remote(remote) => {
                 // No ref means assume HEAD, i.e. whatever's on the default branch.
                 let git_ref = remote.slug.git_ref.as_deref().unwrap_or("HEAD");
@@ -282,19 +312,20 @@ impl InputKey {
     /// "best" relative path for output rendering purposes.
     pub(crate) fn local<P: AsRef<Utf8Path>>(
         group: Group,
-        path: P,
+        verbatim_path: P,
         prefix: Option<P>,
         root: Option<P>,
     ) -> Self {
-        let path = path.as_ref();
+        let verbatim_path = verbatim_path.as_ref();
         let best_relative_path = LocalKey::best_relative_path(
-            path,
+            verbatim_path,
             prefix.as_ref().map(P::as_ref),
             root.as_ref().map(P::as_ref),
         );
         Self::Local(LocalKey {
             group,
-            given_path: path.to_path_buf(),
+            verbatim_path: verbatim_path.to_path_buf(),
+            native_path: verbatim_path.components().collect(),
             best_relative_path,
         })
     }
@@ -321,7 +352,7 @@ impl InputKey {
     /// expect.
     pub(crate) fn best_relative_path(&self) -> &str {
         match self {
-            InputKey::Local(local) => &local.best_relative_path,
+            InputKey::Local(local) => &local.best_relative_path.as_str(),
             InputKey::Remote(remote) => remote.path.as_str(),
             InputKey::Stdin(_) => "<stdin>",
         }
@@ -330,10 +361,10 @@ impl InputKey {
     /// Return a "presentation" path for this [`InputKey`].
     ///
     /// This will always be a relative path for remote keys,
-    /// and will be the given path for local keys.
+    /// and will be the natuve path for local keys.
     pub(crate) fn presentation_path(&self) -> &str {
         match self {
-            InputKey::Local(local) => local.given_path.as_str(),
+            InputKey::Local(local) => local.native_path.as_str(),
             InputKey::Remote(remote) => remote.path.as_str(),
             InputKey::Stdin(_) => "<stdin>",
         }
@@ -345,7 +376,7 @@ impl InputKey {
         // is a construction invariant of all `InputKey` variants.
         match self {
             InputKey::Local(local) => local
-                .given_path
+                .verbatim_path
                 .file_name()
                 .expect("expected input key to have a filename component"),
             InputKey::Remote(remote) => remote
