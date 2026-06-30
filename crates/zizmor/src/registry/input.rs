@@ -352,7 +352,7 @@ impl InputKey {
     /// expect.
     pub(crate) fn best_relative_path(&self) -> &str {
         match self {
-            InputKey::Local(local) => &local.best_relative_path.as_str(),
+            InputKey::Local(local) => local.best_relative_path.as_str(),
             InputKey::Remote(remote) => remote.path.as_str(),
             InputKey::Stdin(_) => "<stdin>",
         }
