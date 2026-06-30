@@ -70,7 +70,11 @@ fn run_testcase(path: &Path) {
 
         match feature {
             Some(feature) => {
-                assert_eq!(document.extract_with_leading_whitespace(&feature), expected)
+                assert_eq!(
+                    document.extract_with_leading_whitespace(&feature),
+                    expected,
+                    "testcase: {path:?}, query: {query:?}"
+                );
             }
             None => assert_eq!(expected, "<<empty>>"),
         }
