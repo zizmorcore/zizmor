@@ -875,7 +875,7 @@ impl InputRegistry {
 mod tests {
     use std::{collections::HashSet, str::FromStr as _};
 
-    use camino::Utf8PathBuf;
+    use camino::{Utf8Path, Utf8PathBuf};
 
     use crate::registry::input::InputGroup;
 
@@ -931,8 +931,14 @@ mod tests {
         let local = InputKey::local("fakegroup".into(), "bar/baz.yml", None, None);
         assert_eq!(local.best_identifier(), "bar/baz.yml");
 
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None, None);
-        assert_eq!(local.best_identifier(), "/foo/bar/baz.yml");
+        // Rootless with an absolute input passes through as-is.
+        let absolute = if cfg!(windows) {
+            Utf8Path::new(r"C:\foo\bar\baz.yml")
+        } else {
+            Utf8Path::new("/foo/bar/baz.yml")
+        };
+        let local = InputKey::local("fakegroup".into(), absolute, None, None);
+        assert_eq!(local.best_identifier(), absolute);
 
         let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"), None);
         assert_eq!(local.best_identifier(), "bar/baz.yml");
