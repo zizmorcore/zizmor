@@ -9,7 +9,7 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
-use itertools::Itertools;
+use itertools::Itertools as _;
 use serde::Serialize;
 use thiserror::Error;
 
