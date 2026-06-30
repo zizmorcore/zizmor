@@ -323,13 +323,20 @@ impl InputKey {
         let verbatim_path = verbatim_path.as_ref();
 
         let best_identifier = {
-            LocalKey::best_relative_path(
+            let best_relative_path = LocalKey::best_relative_path(
                 verbatim_path,
                 prefix.as_ref().map(P::as_ref),
                 root.as_ref().map(P::as_ref),
-            )
-            .components()
-            .join("/")
+            );
+
+            if best_relative_path.is_relative() {
+                best_relative_path.components().join("/")
+            } else {
+                // Stupid edge case: if user supplied an absolute path and
+                // we couldn't make it relative, then there's no sane normalization
+                // we can perform. Just return it as-is.
+                best_relative_path.into()
+            }
         };
 
         Self::Local(LocalKey {
@@ -924,11 +931,8 @@ mod tests {
         let local = InputKey::local("fakegroup".into(), "bar/baz.yml", None, None);
         assert_eq!(local.best_identifier(), "bar/baz.yml");
 
-        // Edge case: the user gave us an absolute path, and our attempt to normalize
-        // it produces a double `/` prefix. This is not worth fixing for now,
-        // since it's purely cosmetic.
         let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None, None);
-        assert_eq!(local.best_identifier(), "//foo/bar/baz.yml");
+        assert_eq!(local.best_identifier(), "/foo/bar/baz.yml");
 
         let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"), None);
         assert_eq!(local.best_identifier(), "bar/baz.yml");
