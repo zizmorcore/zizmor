@@ -52,6 +52,7 @@ jobs:
 
       - name: Test dependencies
         if: matrix.os == 'ubuntu-latest'
+        shell: bash
         run: |
           # Don't waste time on man-db updates
           sudo apt-get remove --purge man-db
@@ -60,8 +61,7 @@ jobs:
 
       - name: Determine test features
         id: features
-        env:
-          IS_LINUX: ${{ matrix.os == 'ubuntu-latest' }}
+        shell: bash
         run: |
           FEATURES="crater-tests,tty-tests,schema"
           if [ "${IS_LINUX}" != "true" ]; then
@@ -70,14 +70,19 @@ jobs:
           fi
 
           echo "features=$FEATURES" >> $GITHUB_OUTPUT
+        env:
+          IS_LINUX: ${{ matrix.os == 'ubuntu-latest' }}
 
       - name: Test
+        shell: bash
         run: cargo test --features "${TEST_FEATURES}"
         env:
           TEST_FEATURES: ${{ steps.features.outputs.features }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Test snippets
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
         run: |
           make snippets
           git diff --exit-code
