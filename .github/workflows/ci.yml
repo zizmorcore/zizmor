@@ -36,7 +36,11 @@ jobs:
 
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -47,15 +51,30 @@ jobs:
       - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
 
       - name: Test dependencies
+        if: matrix.os == 'ubuntu-latest'
         run: |
           # Don't waste time on man-db updates
           sudo apt-get remove --purge man-db
           # Needed for tty-tests
           sudo apt install -y expect
 
-      - name: Test
-        run: cargo test --features crater-tests,tty-tests,schema
+      - name: Determine test features
+        id: features
         env:
+          IS_LINUX: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          FEATURES="crater-tests,tty-tests,schema"
+          if [ "${IS_LINUX}" != "true" ]; then
+            # tty-tests only get run on Linux, for now.
+            FEATURES="crater-tests,schema"
+          fi
+
+          echo "features=$FEATURES" >> $GITHUB_OUTPUT
+
+      - name: Test
+        run: cargo test --features "${TEST_FEATURES}"
+        env:
+          TEST_FEATURES: ${{ steps.features.outputs.features }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Test snippets
