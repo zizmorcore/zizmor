@@ -66,15 +66,50 @@ pub struct Zizmor {
     show_audit_urls: bool,
 }
 
+/// Environment variables that influence zizmor's behavior or output, scrubbed
+/// from the child's inherited environment so runs are deterministic regardless
+/// of the ambient environment. A test that exercises one of these sets it back
+/// explicitly (e.g. `RUST_LOG` via [`Zizmor::setenv`], `GH_TOKEN` when online).
+const SCRUBBED_ENV_VARS: &[&str] = &[
+    "CI",
+    "RUST_LOG",
+    "NO_COLOR",
+    "FORCE_COLOR",
+    "CLICOLOR",
+    "CLICOLOR_FORCE",
+    "GIT_CEILING_DIRECTORIES",
+];
+
+/// Environment variable prefixes scrubbed for the same reason as
+/// [`SCRUBBED_ENV_VARS`]. Covers the token/host vars (`GH_TOKEN`, `GH_HOST`,
+/// `GITHUB_TOKEN`, `ZIZMOR_GITHUB_TOKEN`), every `ZIZMOR_*` CLI env alias, and
+/// the ambient GitHub Actions context (`GITHUB_*`, `RUNNER_*`, `ACTIONS_*`).
+const SCRUBBED_ENV_PREFIXES: &[&str] = &["GH_", "GITHUB_", "ZIZMOR_", "RUNNER_", "ACTIONS_"];
+
 impl Zizmor {
     /// Create a new zizmor runner.
     pub fn new() -> Self {
         let mut cmd = Command::new(cargo::cargo_bin!());
 
-        // Our child `zizmor` process starts with a clean environment, to
-        // ensure we explicitly test interactions with things like `CI`
-        // and `GH_TOKEN`.
-        cmd.env_clear();
+        // We want the child `zizmor` process to explicitly opt into things like
+        // `CI` and `GH_TOKEN`, rather than picking them up from the ambient
+        // environment. A blanket `env_clear()` does that, but it also strips the
+        // OS plumbing the child needs to actually run — most painfully
+        // `SystemRoot` on Windows, whose absence breaks the DNS resolver and TLS
+        // stack (online tests then fail with `os error 11003`). So instead we
+        // inherit the environment and scrub only the variables that would change
+        // zizmor's behavior; see [`SCRUBBED_ENV_VARS`] and [`SCRUBBED_ENV_PREFIXES`].
+        for (key, _) in std::env::vars_os() {
+            let scrub = key.to_str().is_some_and(|name| {
+                SCRUBBED_ENV_VARS.contains(&name)
+                    || SCRUBBED_ENV_PREFIXES
+                        .iter()
+                        .any(|prefix| name.starts_with(prefix))
+            });
+            if scrub {
+                cmd.env_remove(&key);
+            }
+        }
 
         Self {
             cmd,
