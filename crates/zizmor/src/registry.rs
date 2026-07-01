@@ -16,12 +16,16 @@ pub(crate) mod input;
 
 pub(crate) struct AuditRegistry {
     pub(crate) audits: IndexMap<&'static str, Box<dyn Audit + Send + Sync>>,
+    /// Identifiers of audits that were known but skipped during loading
+    /// (e.g. because they require network access or a GitHub API token).
+    skipped: Vec<&'static str>,
 }
 
 impl AuditRegistry {
     fn empty() -> Self {
         Self {
             audits: Default::default(),
+            skipped: Default::default(),
         }
     }
 
@@ -38,7 +42,8 @@ impl AuditRegistry {
                 match base::new(&audit_state) {
                     Ok(audit) => registry.register_audit(base::ident(), Box::new(audit)),
                     Err(AuditLoadError::Skip(e)) => {
-                        tracing::debug!("skipping {audit}: {e}", audit = base::ident())
+                        tracing::debug!("skipping {audit}: {e}", audit = base::ident());
+                        registry.skipped.push(base::ident());
                     }
                 }
             }};
@@ -89,6 +94,22 @@ impl AuditRegistry {
 
     pub(crate) fn len(&self) -> usize {
         self.audits.len()
+    }
+
+    /// Returns the identifiers of all registered audits, in registration order.
+    pub(crate) fn idents(&self) -> impl Iterator<Item = &'static str> {
+        self.audits.keys().copied()
+    }
+
+    /// Returns the identifiers of audits that were skipped at load time
+    /// (e.g. because they require a GitHub API token or online access).
+    pub(crate) fn skipped_idents(&self) -> &[&'static str] {
+        &self.skipped
+    }
+
+    /// Retain only the audits whose identifiers are in `selected`.
+    pub(crate) fn retain_selected(&mut self, selected: &std::collections::HashSet<&str>) {
+        self.audits.retain(|ident, _| selected.contains(ident));
     }
 
     pub(crate) fn register_audit(
