@@ -91,14 +91,9 @@ impl Zizmor {
     pub fn new() -> Self {
         let mut cmd = Command::new(cargo::cargo_bin!());
 
-        // We want the child `zizmor` process to explicitly opt into things like
-        // `CI` and `GH_TOKEN`, rather than picking them up from the ambient
-        // environment. A blanket `env_clear()` does that, but it also strips the
-        // OS plumbing the child needs to actually run — most painfully
-        // `SystemRoot` on Windows, whose absence breaks the DNS resolver and TLS
-        // stack (online tests then fail with `os error 11003`). So instead we
-        // inherit the environment and scrub only the variables that would change
-        // zizmor's behavior; see [`SCRUBBED_ENV_VARS`] and [`SCRUBBED_ENV_PREFIXES`].
+        // Scrub our environment of any pre-existing variables
+        // that would influence our tests. Individual tests
+        // will re-add these as necessary.
         for (key, _) in std::env::vars_os() {
             let scrub = key.to_str().is_some_and(|name| {
                 SCRUBBED_ENV_VARS.contains(&name)
@@ -386,23 +381,7 @@ impl Zizmor {
 /// occurrence with `placeholder`.
 ///
 /// A single logical path can surface in zizmor's output under several different
-/// spellings, especially on Windows:
-///
-/// * verbatim, exactly as `needle` was constructed. This may mix `/` and `\`,
-///   since e.g. `Utf8Path::join` preserves any separators inside the joined
-///   component (`test-data`.join(`"anchors/foo.yml"`) -> `test-data\anchors/foo.yml`).
-/// * "native", with separators normalized to the host's default (all `\` on
-///   Windows). This is what `InputKey::presentation_path` (i.e. `native_path`,
-///   built via `components().collect()`) emits.
-/// * "forward", with every separator forced to `/`. Some outputs are always
-///   forward-slash regardless of platform: `InputKey::best_identifier` and the
-///   repo-root-relative identifiers used by the GitHub and SARIF formats.
-/// * any of the above with backslashes JSON-escaped (`\` -> `\\`), as emitted by
-///   any `serde_json`-serialized output (the JSON and SARIF formats).
-///
-/// We redact all of them so snapshots stay identical across platforms. On Unix
-/// every spelling coincides and there are no backslashes to escape, so this
-/// collapses to a single replacement.
+/// spellings, especially on Windows. This attempts to handle all of them.
 fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str) {
     let verbatim = needle.as_str();
     if verbatim.is_empty() {
