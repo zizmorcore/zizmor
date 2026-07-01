@@ -15,6 +15,11 @@ of `zizmor`.
   specify parallel steps. See [Usage - Parallel steps](./usage.md#parallel-steps)
   for more information (#2153)
 
+### Enhancements 🌱
+
+* zizmor's handling of paths is now more consistent, particularly
+  when run on Windows (#2163)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [secrets-outside-env] audit would not honor
