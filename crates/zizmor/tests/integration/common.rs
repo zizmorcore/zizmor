@@ -272,6 +272,14 @@ impl Zizmor {
             // }
         }
 
+        // On Windows, canonicalized paths surface with a `\\?\` verbatim prefix
+        // that has no cross-platform analogue (e.g. zizmor logs canonicalized
+        // config-discovery candidates). Strip it up front so the paths below
+        // redact cleanly and match the Unix snapshots.
+        if cfg!(windows) {
+            raw = raw.replace(r"\\?\", "");
+        }
+
         if let Some(config) = &self.config {
             // The config is often an `input_under_test(..)` path, so it needs
             // the same multi-spelling treatment as the inputs below.
@@ -282,22 +290,16 @@ impl Zizmor {
         for input in &self.inputs {
             redact(&mut raw, input, input_placeholder);
 
-            // Some output formats emit root-relative paths; redact those too.
-            if let Ok(abs) = input.canonicalize_utf8()
-                && let Ok(relative) = abs.strip_prefix(&*REPO_ROOT)
-            {
-                redact(&mut raw, relative, input_placeholder);
+            // Some output formats (GitHub, SARIF) emit repo-root-relative
+            // identifiers; redact those too. Canonicalization yields a `\\?\`
+            // prefix on Windows, so strip it before comparing against the
+            // (non-verbatim) repo root.
+            if let Ok(abs) = input.canonicalize_utf8() {
+                let abs = abs.as_str().strip_prefix(r"\\?\").unwrap_or(abs.as_str());
+                if let Ok(relative) = Utf8Path::new(abs).strip_prefix(&*REPO_ROOT) {
+                    redact(&mut raw, relative, input_placeholder);
+                }
             }
-        }
-
-        // Normalize Windows '\' file paths to using '/', to get consistent snapshot test outputs
-        if cfg!(windows) {
-            let input_path_regex = Regex::new(&format!(r"{input_placeholder}[\\/\w.-]+"))?;
-            raw = input_path_regex
-                .replace_all(&raw, |captures: &Captures| {
-                    captures.get(0).unwrap().as_str().replace("\\", "/")
-                })
-                .into_owned();
         }
 
         let working_dir_placeholder = "@@WORKING_DIR@@";
@@ -326,6 +328,21 @@ impl Zizmor {
         let version_placeholder = "@@VERSION@@";
         raw = raw.replace(env!("CARGO_PKG_VERSION"), version_placeholder);
 
+        // On Windows, zizmor emits host-native `\` separators where the Unix
+        // snapshots have `/`. Now that every path is redacted to a placeholder,
+        // normalize the separators that follow any path placeholder — including
+        // consecutive ones like `@@WORKING_DIR@@\@@TEST_PREFIX@@\...`, whose `\`
+        // came from the joined absolute path rather than from a redacted needle.
+        if cfg!(windows) {
+            let placeholder_path_regex =
+                Regex::new(r"(@@INPUT@@|@@WORKING_DIR@@|@@TEST_PREFIX@@|@@CONFIG@@)[\\/\w.-]*")?;
+            raw = placeholder_path_regex
+                .replace_all(&raw, |captures: &Captures| {
+                    captures.get(0).unwrap().as_str().replace('\\', "/")
+                })
+                .into_owned();
+        }
+
         Ok(raw)
     }
 }
@@ -342,12 +359,15 @@ impl Zizmor {
 /// * "native", with separators normalized to the host's default (all `\` on
 ///   Windows). This is what `InputKey::presentation_path` (i.e. `native_path`,
 ///   built via `components().collect()`) emits.
-/// * either of the above with backslashes JSON-escaped (`\` -> `\\`), as emitted
-///   by any `serde_json`-serialized output (the JSON and SARIF formats).
+/// * "forward", with every separator forced to `/`. Some outputs are always
+///   forward-slash regardless of platform: `InputKey::best_identifier` and the
+///   repo-root-relative identifiers used by the GitHub and SARIF formats.
+/// * any of the above with backslashes JSON-escaped (`\` -> `\\`), as emitted by
+///   any `serde_json`-serialized output (the JSON and SARIF formats).
 ///
 /// We redact all of them so snapshots stay identical across platforms. On Unix
-/// the native and verbatim forms coincide and there are no backslashes to
-/// escape, so this collapses to a single replacement.
+/// every spelling coincides and there are no backslashes to escape, so this
+/// collapses to a single replacement.
 fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str) {
     let verbatim = needle.as_str();
     if verbatim.is_empty() {
@@ -356,19 +376,30 @@ fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str) {
         return;
     }
 
-    // The host-native spelling, matching `InputKey::native_path`.
-    let native = needle.components().collect::<Utf8PathBuf>();
-
-    let mut forms = vec![verbatim];
-    if native.as_str() != verbatim {
-        forms.push(native.as_str());
+    // The host-native spelling, matching `InputKey::native_path`. `components()`
+    // drops a trailing separator, so restore it when `verbatim` had one: an
+    // input passed as `foo/bar/` should still consume the separator in
+    // `foo/bar/baz.yml` -> `@@INPUT@@baz.yml`, exactly as it does on Unix.
+    let mut native = needle.components().collect::<Utf8PathBuf>().into_string();
+    if verbatim.ends_with(['/', '\\']) && !native.is_empty() {
+        native.push(std::path::MAIN_SEPARATOR);
     }
 
-    for form in forms {
-        *haystack = haystack.replace(form, placeholder);
+    let mut forms = vec![
+        verbatim.to_owned(),
+        native.clone(),
+        verbatim.replace('\\', "/"),
+        native.replace('\\', "/"),
+    ];
+    forms.sort_unstable();
+    forms.dedup();
+
+    for form in &forms {
+        *haystack = haystack.replace(form.as_str(), placeholder);
         // serde_json escapes '\' as '\\'; redact that spelling too.
         if form.contains('\\') {
-            *haystack = haystack.replace(&form.replace('\\', r"\\"), placeholder);
+            let escaped = form.replace('\\', r"\\");
+            *haystack = haystack.replace(escaped.as_str(), placeholder);
         }
     }
 }
