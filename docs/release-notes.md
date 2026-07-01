@@ -20,6 +20,8 @@ of `zizmor`.
 * The [secrets-inherit] audit now also flags reusable workflows that declare
   `#!yaml on.workflow_call.secrets: inherit`, since this forces every caller to
   hand over all of their secrets (#1673)
+* zizmor's handling of paths is now more consistent, particularly
+  when run on Windows (#2163)
 
 ### Bug Fixes 🐛
 

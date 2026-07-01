@@ -1,5 +1,5 @@
 use anyhow::{Context as _, Result};
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use regex::{Captures, Regex};
 use std::{env::current_dir, io::ErrorKind, sync::LazyLock};
 
@@ -66,15 +66,45 @@ pub struct Zizmor {
     show_audit_urls: bool,
 }
 
+/// Environment variables that influence zizmor's behavior or output, scrubbed
+/// from the child's inherited environment so runs are deterministic regardless
+/// of the ambient environment. A test that exercises one of these sets it back
+/// explicitly (e.g. `RUST_LOG` via [`Zizmor::setenv`], `GH_TOKEN` when online).
+const SCRUBBED_ENV_VARS: &[&str] = &[
+    "CI",
+    "RUST_LOG",
+    "NO_COLOR",
+    "FORCE_COLOR",
+    "CLICOLOR",
+    "CLICOLOR_FORCE",
+    "GIT_CEILING_DIRECTORIES",
+];
+
+/// Environment variable prefixes scrubbed for the same reason as
+/// [`SCRUBBED_ENV_VARS`]. Covers the token/host vars (`GH_TOKEN`, `GH_HOST`,
+/// `GITHUB_TOKEN`, `ZIZMOR_GITHUB_TOKEN`), every `ZIZMOR_*` CLI env alias, and
+/// the ambient GitHub Actions context (`GITHUB_*`, `RUNNER_*`, `ACTIONS_*`).
+const SCRUBBED_ENV_PREFIXES: &[&str] = &["GH_", "GITHUB_", "ZIZMOR_", "RUNNER_", "ACTIONS_"];
+
 impl Zizmor {
     /// Create a new zizmor runner.
     pub fn new() -> Self {
         let mut cmd = Command::new(cargo::cargo_bin!());
 
-        // Our child `zizmor` process starts with a clean environment, to
-        // ensure we explicitly test interactions with things like `CI`
-        // and `GH_TOKEN`.
-        cmd.env_clear();
+        // Scrub our environment of any pre-existing variables
+        // that would influence our tests. Individual tests
+        // will re-add these as necessary.
+        for (key, _) in std::env::vars_os() {
+            let scrub = key.to_str().is_some_and(|name| {
+                SCRUBBED_ENV_VARS.contains(&name)
+                    || SCRUBBED_ENV_PREFIXES
+                        .iter()
+                        .any(|prefix| name.starts_with(prefix))
+            });
+            if scrub {
+                cmd.env_remove(&key);
+            }
+        }
 
         Self {
             cmd,
@@ -272,59 +302,119 @@ impl Zizmor {
             // }
         }
 
+        // On Windows, canonicalized paths surface with a `\\?\` verbatim prefix
+        // that has no cross-platform analogue (e.g. zizmor logs canonicalized
+        // config-discovery candidates). Strip it up front so the paths below
+        // redact cleanly and match the Unix snapshots.
+        if cfg!(windows) {
+            raw = raw.replace(r"\\?\", "");
+        }
+
         if let Some(config) = &self.config {
-            raw = raw.replace(config, "@@CONFIG@@");
+            // The config is often an `input_under_test(..)` path, so it needs
+            // the same multi-spelling treatment as the inputs below.
+            redact(&mut raw, Utf8Path::new(config), "@@CONFIG@@");
         }
 
         let input_placeholder = "@@INPUT@@";
         for input in &self.inputs {
-            raw = raw.replace(input.as_str(), input_placeholder);
+            redact(&mut raw, input, input_placeholder);
 
-            // Some output formats emit root-relative paths; redact those too.
-            if let Ok(abs) = input.canonicalize_utf8()
-                && let Ok(relative) = abs.strip_prefix(&*REPO_ROOT)
-            {
-                raw = raw.replace(relative.as_str(), input_placeholder);
+            // Some output formats (GitHub, SARIF) emit repo-root-relative
+            // identifiers; redact those too. Canonicalization yields a `\\?\`
+            // prefix on Windows, so strip it before comparing against the
+            // (non-verbatim) repo root.
+            if let Ok(abs) = input.canonicalize_utf8() {
+                let abs = abs.as_str().strip_prefix(r"\\?\").unwrap_or(abs.as_str());
+                if let Ok(relative) = Utf8Path::new(abs).strip_prefix(&*REPO_ROOT) {
+                    redact(&mut raw, relative, input_placeholder);
+                }
             }
-        }
-
-        // Normalize Windows '\' file paths to using '/', to get consistent snapshot test outputs
-        if cfg!(windows) {
-            let input_path_regex = Regex::new(&format!(r"{input_placeholder}[\\/\w.-]+"))?;
-            raw = input_path_regex
-                .replace_all(&raw, |captures: &Captures| {
-                    captures.get(0).unwrap().as_str().replace("\\", "/")
-                })
-                .into_owned();
         }
 
         let working_dir_placeholder = "@@WORKING_DIR@@";
         // Replace any absolute references to the working directory.
-        raw = raw.replace(self.working_dir.as_str(), working_dir_placeholder);
+        redact(&mut raw, &self.working_dir, working_dir_placeholder);
 
         // Replace any relative references to the working directory.
         if let Ok(relative) = self.working_dir.strip_prefix(&*REPO_ROOT) {
-            raw = raw.replace(relative.as_str(), working_dir_placeholder);
+            redact(&mut raw, relative, working_dir_placeholder);
         }
 
         // Fallback: replace any lingering test prefix paths.
         // TODO: Maybe just use this everywhere instead of the special
         // replacements above?
         let test_prefix_placeholder = "@@TEST_PREFIX@@";
-        raw = raw.replace(TEST_PREFIX.as_str(), test_prefix_placeholder);
+        redact(&mut raw, &*TEST_PREFIX, test_prefix_placeholder);
 
         if let Ok(relative) = TEST_PREFIX.strip_prefix(&*REPO_ROOT) {
-            raw = raw.replace(relative.as_str(), test_prefix_placeholder);
+            redact(&mut raw, relative, test_prefix_placeholder);
         }
 
-        if let Ok(relartive) = TEST_PREFIX.strip_prefix(&*ZIZMOR_ROOT) {
-            raw = raw.replace(relartive.as_str(), test_prefix_placeholder);
+        if let Ok(relative) = TEST_PREFIX.strip_prefix(&*ZIZMOR_ROOT) {
+            redact(&mut raw, relative, test_prefix_placeholder);
         }
 
         let version_placeholder = "@@VERSION@@";
         raw = raw.replace(env!("CARGO_PKG_VERSION"), version_placeholder);
 
+        // On Windows, zizmor emits host-native `\` separators where the Unix
+        // snapshots have `/`. Now that every path is redacted to a placeholder,
+        // normalize the separators that follow any path placeholder — including
+        // consecutive ones like `@@WORKING_DIR@@\@@TEST_PREFIX@@\...`, whose `\`
+        // came from the joined absolute path rather than from a redacted needle.
+        if cfg!(windows) {
+            let placeholder_path_regex =
+                Regex::new(r"(@@INPUT@@|@@WORKING_DIR@@|@@TEST_PREFIX@@|@@CONFIG@@)[\\/\w.-]*")?;
+            raw = placeholder_path_regex
+                .replace_all(&raw, |captures: &Captures| {
+                    captures.get(0).unwrap().as_str().replace('\\', "/")
+                })
+                .into_owned();
+        }
+
         Ok(raw)
+    }
+}
+
+/// Redacts every on-disk spelling of `needle` in `haystack`, replacing each
+/// occurrence with `placeholder`.
+///
+/// A single logical path can surface in zizmor's output under several different
+/// spellings, especially on Windows. This attempts to handle all of them.
+fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str) {
+    let verbatim = needle.as_str();
+    if verbatim.is_empty() {
+        // Guard against `str::replace("", ..)`, which would splice the
+        // placeholder in between every character.
+        return;
+    }
+
+    // The host-native spelling, matching `InputKey::native_path`. `components()`
+    // drops a trailing separator, so restore it when `verbatim` had one: an
+    // input passed as `foo/bar/` should still consume the separator in
+    // `foo/bar/baz.yml` -> `@@INPUT@@baz.yml`, exactly as it does on Unix.
+    let mut native = needle.components().collect::<Utf8PathBuf>().into_string();
+    if verbatim.ends_with(['/', '\\']) && !native.is_empty() {
+        native.push(std::path::MAIN_SEPARATOR);
+    }
+
+    let mut forms = vec![
+        verbatim.to_owned(),
+        native.clone(),
+        verbatim.replace('\\', "/"),
+        native.replace('\\', "/"),
+    ];
+    forms.sort_unstable();
+    forms.dedup();
+
+    for form in &forms {
+        *haystack = haystack.replace(form.as_str(), placeholder);
+        // serde_json escapes '\' as '\\'; redact that spelling too.
+        if form.contains('\\') {
+            let escaped = form.replace('\\', r"\\");
+            *haystack = haystack.replace(escaped.as_str(), placeholder);
+        }
     }
 }
 

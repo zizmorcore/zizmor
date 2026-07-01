@@ -18,7 +18,7 @@ use std::{
     ops::{Deref, RangeBounds},
 };
 
-use line_index::LineIndex;
+use line_index::{LineIndex, TextSize};
 use serde::Serialize;
 use thiserror::Error;
 use tree_sitter::{Language, Node, Parser};
@@ -707,6 +707,298 @@ impl Document {
         }
 
         self.query_node(route, QueryMode::KeyOnly).map(|n| n.into())
+    }
+
+    /// Computes the byte range that should be deleted from the document's
+    /// [`Self::source`] in order to remove the value at `route`, together
+    /// with the structural "affixes" appropriate to the value's container.
+    ///
+    /// This is aware of the value's container kind as determined by the
+    /// parse tree.
+    ///
+    /// The affixes removed depend on the container:
+    ///
+    /// - In block mappings and sequences, the value's entire line (or
+    ///   lines, for multi-line values) is removed, including leading
+    ///   indentation, any trailing same-line comment, and the trailing
+    ///   newline.
+    /// - In flow mappings and sequences, the value is removed along with a
+    ///   single adjacent comma (the following one if present, otherwise
+    ///   the preceding one) and any whitespace separating it from its
+    ///   neighbor, so the surrounding flow collection stays well-formed. A
+    ///   sole remaining member collapses cleanly to `{}` or `[]`.
+    ///
+    /// The element is resolved at its own lexical site: a final alias is
+    /// **not** followed, so removing `b` from `{a: &x 1, b: *x}` deletes
+    /// `b: *x` rather than the anchor definition it points to.
+    ///
+    /// When removing the sole member of a *block* container would leave a
+    /// dangling null parent (e.g. removing the only key under `env:` would
+    /// leave `env:` with a null value), the enclosing element is removed
+    /// instead, repeating upward. Flow containers are left as explicit
+    /// `{}`/`[]`, which are valid, so they are not collapsed.
+    ///
+    /// The returned range is a half-open `[start, end)` byte range into
+    /// [`Self::source`].
+    pub fn removal_span(&self, route: &Route) -> Result<core::ops::Range<usize>, QueryError> {
+        let Some(last) = route.route.last() else {
+            return Err(QueryError::Other(
+                "cannot compute a removal span for the empty (root) route".into(),
+            ));
+        };
+
+        // Resolve the element to remove at its own lexical site. Crucially,
+        // we do not follow a final alias: `query_node(.., Exact)` would
+        // resolve a terminal `*alias` to the anchor definition elsewhere in
+        // the document, so removing it would corrupt an unrelated location.
+        let seed = match last {
+            // For a key, the key node sits at the reference site, and its
+            // enclosing pair is the element to remove. `KeyOnly` navigates
+            // the reference site even when the value is an alias.
+            Component::Key(_) => self.query_node(route, QueryMode::KeyOnly)?,
+            // For an index, select the item node directly from the parent
+            // sequence (via `flatten_sequence`, which keeps aliased items
+            // as-is) so an aliased element isn't resolved away.
+            Component::Index(idx) => {
+                let parent_route = route
+                    .parent()
+                    .expect("non-empty route always has a parent route");
+                let parent = self.query_node(&parent_route, QueryMode::Exact)?;
+
+                let sequence = if parent.is_sequence() {
+                    parent
+                } else {
+                    let mut cursor = parent.walk();
+                    parent
+                        .named_children(&mut cursor)
+                        .find(|child| child.is_sequence())
+                        .ok_or(QueryError::ExpectedList(*idx))?
+                };
+
+                let items = self.flatten_sequence(&sequence)?;
+                *items
+                    .get(*idx)
+                    .ok_or(QueryError::ExhaustedList(*idx, items.len()))?
+            }
+        };
+
+        let (mut element, mut container) = Self::walk_to_container(seed)?;
+
+        // Collapse dangling block parents: if `element` is the only content
+        // member of a *block* container, removing it would leave that
+        // container empty, which serializes to a null-valued parent (e.g.
+        // `env:` with nothing under it). In that case, remove the
+        // container's enclosing element instead, repeating upward. Block
+        // containers only ever nest inside other block containers, so this
+        // never crosses into flow. Flow containers are left as explicit
+        // `{}`/`[]`, which are valid, so they are not collapsed.
+        while (container.is_block_mapping() || container.is_block_sequence())
+            && Self::is_sole_content_child(&container, &element)
+        {
+            match Self::walk_to_container(container) {
+                Ok((outer_element, outer_container)) => {
+                    element = outer_element;
+                    container = outer_container;
+                }
+                // Reached the top-level container, which has no enclosing
+                // element to collapse into; remove the element as-is.
+                Err(_) => break,
+            }
+        }
+
+        // NOTE: `container` is always one of `block_mapping`,
+        // `block_sequence`, `flow_mapping`, or `flow_sequence` by
+        // construction in `walk_to_container`.
+        let span = if container.is_block_mapping() || container.is_block_sequence() {
+            self.block_removal_span(&element)
+        } else {
+            self.flow_removal_span(&element, &container)
+        };
+
+        Ok(span)
+    }
+
+    /// Returns whether `node` is a "content" member of a collection, i.e. a
+    /// mapping pair, a block sequence item, or a flow node (a flow sequence
+    /// element or a bare flow-mapping key). Punctuation, comments, and
+    /// anchors are not content members.
+    fn is_content_node(node: &Node) -> bool {
+        node.is_pair() || node.is_block_sequence_item() || node.is_flow_node()
+    }
+
+    /// Returns whether `element` is the only content member of `container`,
+    /// i.e. removing it would leave `container` empty. Comments, anchors,
+    /// and punctuation do not count as content.
+    fn is_sole_content_child(container: &Node, element: &Node) -> bool {
+        let mut cursor = container.walk();
+        !container
+            .named_children(&mut cursor)
+            .any(|child| child.id() != element.id() && Self::is_content_node(&child))
+    }
+
+    /// If `element` is the first key of a block mapping that is the inline
+    /// value of a block sequence item (so it shares its line with the
+    /// item's `- ` marker), return the next sibling key, which should slide
+    /// onto the marker's line when `element` is removed. Returns `None` in
+    /// every other case, where ordinary whole-line removal is correct.
+    fn sequence_item_inline_next_sibling<'b>(element: &Node<'b>) -> Option<Node<'b>> {
+        if !element.is_block_mapping_pair() {
+            return None;
+        }
+
+        // The mapping pair must live directly inside a block mapping that is
+        // itself the inline value of a block sequence item:
+        //   block_sequence_item -> block_node -> block_mapping -> (element)
+        let container = element.parent()?;
+        if !container.is_block_mapping() {
+            return None;
+        }
+        let block_node = container.parent()?;
+        if !block_node.is_block_node() {
+            return None;
+        }
+        let item = block_node.parent()?;
+        if !item.is_block_sequence_item() {
+            return None;
+        }
+
+        // Only the mapping's first key shares the item's `- ` line; for any
+        // other key, whole-line removal does not touch the marker.
+        let dash = item.child(0)?;
+        if dash.start_position().row != element.start_position().row {
+            return None;
+        }
+
+        // Return the content sibling that follows `element` (the key that
+        // slides onto the marker's line). If there is none, `element` is the
+        // mapping's sole key and the caller would have collapsed the whole
+        // item instead, so fall back to ordinary removal.
+        let mut cursor = container.walk();
+        let mut content = container
+            .named_children(&mut cursor)
+            .filter(|child| Self::is_content_node(child));
+        content.find(|child| child.id() == element.id())?;
+        content.next()
+    }
+
+    /// Walk up from a resolved node to the element node that is a direct
+    /// child of its enclosing mapping or sequence, returning the
+    /// `(element, container)` pair.
+    ///
+    /// The container kind is derived from the parse tree, so this is
+    /// robust against arbitrary nesting of flow and block collections.
+    fn walk_to_container(seed: Node<'_>) -> Result<(Node<'_>, Node<'_>), QueryError> {
+        let mut element = seed;
+        loop {
+            let parent = element.parent().ok_or_else(|| {
+                QueryError::Other("value to remove has no enclosing container".into())
+            })?;
+
+            if parent.is_mapping() || parent.is_sequence() {
+                return Ok((element, parent));
+            }
+
+            element = parent;
+        }
+    }
+
+    /// Compute the removal span for an `element` in a block container.
+    ///
+    /// Normally this removes the element's entire line(s), including leading
+    /// indentation, any trailing same-line comment, and the trailing
+    /// newline. There is one special case: when `element` is the first key
+    /// of a block mapping that is the inline value of a block sequence item,
+    /// it shares its line with the item's `- ` marker. Naive whole-line
+    /// removal would delete that marker and silently turn the sequence into
+    /// a mapping, so instead we remove up to the next sibling key's start,
+    /// which preserves the `- ` marker and slides that key onto its line.
+    fn block_removal_span(&self, element: &Node) -> core::ops::Range<usize> {
+        if let Some(next) = Self::sequence_item_inline_next_sibling(element) {
+            return element.start_byte()..next.start_byte();
+        }
+
+        let start_byte = element.start_byte();
+        let end_byte = element.end_byte();
+
+        let start_line = self
+            .line_index
+            .line_col(TextSize::new(start_byte as u32))
+            .line;
+        // `end_byte` is exclusive, so the last byte that actually belongs
+        // to the element is `end_byte - 1`. Empty elements can't occur
+        // here, but guard against underflow regardless.
+        let last_byte = end_byte.saturating_sub(1).max(start_byte);
+        let end_line = self
+            .line_index
+            .line_col(TextSize::new(last_byte as u32))
+            .line;
+
+        let start = self
+            .line_index
+            .line(start_line)
+            .map(|range| usize::from(range.start()))
+            .unwrap_or(start_byte);
+        let end = self
+            .line_index
+            .line(end_line)
+            .map(|range| usize::from(range.end()))
+            .unwrap_or(end_byte);
+
+        start..end
+    }
+
+    /// Compute the removal span for an `element` in a flow container,
+    /// removing the element plus a single adjacent comma separator (and
+    /// the whitespace up to the next neighbor) so the collection remains
+    /// well-formed.
+    fn flow_removal_span(&self, element: &Node, container: &Node) -> core::ops::Range<usize> {
+        let source = self.source().as_bytes();
+
+        // Collect the container's children, including the anonymous comma
+        // and bracket tokens, so we can locate the separators adjacent to
+        // the element.
+        let mut cursor = container.walk();
+        let children: Vec<Node> = container.children(&mut cursor).collect();
+
+        // The element is always a direct child of its container here, so
+        // this lookup is infallible in practice.
+        let pos = children
+            .iter()
+            .position(|child| child.id() == element.id())
+            .unwrap_or(0);
+
+        let following_comma = children[pos + 1..].iter().find(|child| child.kind() == ",");
+        let preceding_comma = children[..pos]
+            .iter()
+            .rev()
+            .find(|child| child.kind() == ",");
+
+        if let Some(comma) = following_comma {
+            // Not the last element: remove the element, the following
+            // comma, and any whitespace up to the next neighbor (which may
+            // include a newline and indentation for multi-line flows).
+            let start = element.start_byte();
+            let mut end = comma.end_byte();
+            while end < source.len() && matches!(source[end], b' ' | b'\t' | b'\r' | b'\n') {
+                end += 1;
+            }
+            start..end
+        } else if let Some(comma) = preceding_comma {
+            // Last element: remove the preceding comma through the element.
+            comma.start_byte()..element.end_byte()
+        } else {
+            // Only element in the container: drop everything between the
+            // delimiters so the collection collapses cleanly to `{}`/`[]`,
+            // including any interior whitespace around the element. The
+            // first and last children of a flow collection are always its
+            // opening and closing delimiter tokens.
+            match (children.first(), children.last()) {
+                (Some(open), Some(close)) if open.end_byte() <= close.start_byte() => {
+                    open.end_byte()..close.start_byte()
+                }
+                _ => element.start_byte()..element.end_byte(),
+            }
+        }
     }
 
     /// Returns a string slice of the original document corresponding to

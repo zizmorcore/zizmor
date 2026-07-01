@@ -1094,6 +1094,382 @@ permissions:
     ");
 }
 
+/// Apply a single `Op::Remove` at `route` to `yaml` and return the
+/// resulting source wrapped with `format_patch` for snapshotting.
+fn remove(yaml: &str, route: yamlpath::Route) -> String {
+    let document = yamlpath::Document::new(yaml).unwrap();
+    let result = apply_yaml_patches(
+        &document,
+        &[Patch {
+            route,
+            operation: Op::Remove,
+        }],
+    )
+    .unwrap();
+    format_patch(result.source())
+}
+
+#[test]
+fn test_remove_block_sequence_member() {
+    insta::assert_snapshot!(remove("items:\n  - a\n  - b\n  - c\n", route!("items", 1)), @"
+    --- PATCH ---
+    items:
+      - a
+      - c
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_flow_mapping_member() {
+    // The flow mapping stays intact; only the targeted member (and its
+    // separator) is removed.
+
+    // First member: the following comma and space go with it.
+    insta::assert_snapshot!(remove("m: { a: 1, b: 2, c: 3 }\n", route!("m", "a")), @"
+    --- PATCH ---
+    m: { b: 2, c: 3 }
+
+    --- END PATCH ---
+    ");
+
+    // Middle member.
+    insta::assert_snapshot!(remove("m: { a: 1, b: 2, c: 3 }\n", route!("m", "b")), @"
+    --- PATCH ---
+    m: { a: 1, c: 3 }
+
+    --- END PATCH ---
+    ");
+
+    // Last member: the preceding comma goes with it.
+    insta::assert_snapshot!(remove("m: { a: 1, b: 2, c: 3 }\n", route!("m", "c")), @"
+    --- PATCH ---
+    m: { a: 1, b: 2 }
+
+    --- END PATCH ---
+    ");
+
+    // Only member: collapses to an empty flow mapping.
+    insta::assert_snapshot!(remove("m: {a: 1}\n", route!("m", "a")), @"
+    --- PATCH ---
+    m: {}
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_flow_sequence_member() {
+    insta::assert_snapshot!(remove("s: [a, b, c]\n", route!("s", 0)), @"
+    --- PATCH ---
+    s: [b, c]
+
+    --- END PATCH ---
+    ");
+
+    insta::assert_snapshot!(remove("s: [a, b, c]\n", route!("s", 1)), @"
+    --- PATCH ---
+    s: [a, c]
+
+    --- END PATCH ---
+    ");
+
+    insta::assert_snapshot!(remove("s: [a, b, c]\n", route!("s", 2)), @"
+    --- PATCH ---
+    s: [a, b]
+
+    --- END PATCH ---
+    ");
+
+    // Only element: collapses to an empty flow sequence.
+    insta::assert_snapshot!(remove("s: [a]\n", route!("s", 0)), @"
+    --- PATCH ---
+    s: []
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_nested_flow_collections() {
+    // These are the cases that token-sniffing (`contains('{')` /
+    // `contains('[')`) cannot handle: the container kind is resolved from
+    // the parse tree, not from which bracket characters happen to appear.
+
+    // A flow mapping nested inside a flow sequence.
+    insta::assert_snapshot!(remove("matrix: [{os: linux}, {os: windows}]\n", route!("matrix", 0)), @"
+    --- PATCH ---
+    matrix: [{os: windows}]
+
+    --- END PATCH ---
+    ");
+
+    // Removing a key from a flow mapping that is itself an element of a
+    // flow sequence.
+    insta::assert_snapshot!(remove("s: [{a: 1, b: 2}]\n", route!("s", 0, "a")), @"
+    --- PATCH ---
+    s: [{b: 2}]
+
+    --- END PATCH ---
+    ");
+
+    // A flow sequence nested inside a flow mapping.
+    insta::assert_snapshot!(remove("m: {x: [1, 2, 3]}\n", route!("m", "x", 1)), @"
+    --- PATCH ---
+    m: {x: [1, 3]}
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_multiline_flow_mapping_member() {
+    let yaml = "m: {\n  a: 1,\n  b: 2,\n  c: 3\n}\n";
+
+    // Middle member keeps the surrounding indentation well-formed.
+    insta::assert_snapshot!(remove(yaml, route!("m", "b")), @"
+    --- PATCH ---
+    m: {
+      a: 1,
+      c: 3
+    }
+
+    --- END PATCH ---
+    ");
+
+    // Last member drops the preceding comma and its line.
+    insta::assert_snapshot!(remove(yaml, route!("m", "c")), @"
+    --- PATCH ---
+    m: {
+      a: 1,
+      b: 2
+    }
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_sole_flow_member_collapses_with_spaces() {
+    // Interior whitespace around the sole member is dropped too.
+    insta::assert_snapshot!(remove("m: { a: 1 }\n", route!("m", "a")), @"
+    --- PATCH ---
+    m: {}
+
+    --- END PATCH ---
+    ");
+    insta::assert_snapshot!(remove("s: [ a ]\n", route!("s", 0)), @"
+    --- PATCH ---
+    s: []
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_does_not_follow_final_alias() {
+    // Removing `b` (whose value is the alias `*x`) must delete `b: *x`, not
+    // the anchor definition `a: &x 1` that the alias resolves to.
+    let yaml = "m:\n  a: &x 1\n  b: *x\n";
+    insta::assert_snapshot!(remove(yaml, route!("m", "b")), @"
+    --- PATCH ---
+    m:
+      a: &x 1
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_block_valued_key_removes_subtree() {
+    let yaml = "a:\n  x: 1\n  y: 2\nb: 3\n";
+    insta::assert_snapshot!(remove(yaml, route!("a")), @"
+    --- PATCH ---
+    b: 3
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_flow_sequence_member_nested_in_block_mapping() {
+    // The value is a flow sequence on the same line as its block-mapping
+    // key; only the flow element is removed, not the whole line.
+    let yaml = "a: [1, 2, 3]\nb: 4\n";
+    insta::assert_snapshot!(remove(yaml, route!("a", 1)), @"
+    --- PATCH ---
+    a: [1, 3]
+    b: 4
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_flow_member_preserves_trailing_line_comment() {
+    let yaml = "s: [a, b, c]  # tail\n";
+    insta::assert_snapshot!(remove(yaml, route!("s", 1)), @"
+    --- PATCH ---
+    s: [a, c]  # tail
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_collapses_empty_block_mapping_parent() {
+    // Removing the only key under `env:` would leave a dangling `env:`
+    // (null value), so the whole `env:` block is removed instead.
+    let yaml = "env:\n  ONLY: 1\nother: 2\n";
+    insta::assert_snapshot!(remove(yaml, route!("env", "ONLY")), @"
+    --- PATCH ---
+    other: 2
+
+    --- END PATCH ---
+    ");
+
+    // With a sibling present, only the targeted key is removed.
+    let yaml = "env:\n  A: 1\n  B: 2\nother: 3\n";
+    insta::assert_snapshot!(remove(yaml, route!("env", "A")), @"
+    --- PATCH ---
+    env:
+      B: 2
+    other: 3
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_collapses_nested_block_chain() {
+    // A chain of single-key mappings collapses all the way up to the first
+    // ancestor that retains other content.
+    let yaml = "a:\n  b:\n    c: 1\nd: 2\n";
+    insta::assert_snapshot!(remove(yaml, route!("a", "b", "c")), @"
+    --- PATCH ---
+    d: 2
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_collapses_empty_block_sequence_parent() {
+    let yaml = "list:\n  - x\nother: 2\n";
+    insta::assert_snapshot!(remove(yaml, route!("list", 0)), @"
+    --- PATCH ---
+    other: 2
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_collapse_stops_at_populated_ancestor() {
+    // Realistic case: collapsing `env` must not disturb its sibling
+    // `runs-on` under the same job.
+    let yaml = "jobs:\n  build:\n    env:\n      ONLY: 1\n    runs-on: ubuntu\n";
+    insta::assert_snapshot!(remove(yaml, route!("jobs", "build", "env", "ONLY")), @"
+    --- PATCH ---
+    jobs:
+      build:
+        runs-on: ubuntu
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_sole_flow_member_does_not_collapse_parent() {
+    // Flow containers are valid when empty, so they are left as `{}`/`[]`
+    // rather than collapsing the enclosing key.
+    insta::assert_snapshot!(remove("env: {ONLY: 1}\nother: 2\n", route!("env", "ONLY")), @"
+    --- PATCH ---
+    env: {}
+    other: 2
+
+    --- END PATCH ---
+    ");
+    insta::assert_snapshot!(remove("tags: [only]\nother: 2\n", route!("tags", 0)), @"
+    --- PATCH ---
+    tags: []
+    other: 2
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_sole_env_key_preserves_step_sequence_marker() {
+    // Regression: removing the only key under a *step-level* `env:` collapses
+    // `env` (good), but here `env:` is the first key of a `-` step item, so
+    // whole-line block removal also eats the `- ` marker. That turns the
+    // `steps:` list into a mapping and silently corrupts the document.
+    let yaml = "\
+jobs:
+  build:
+    steps:
+      - env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        run: echo hi
+";
+    insta::assert_snapshot!(
+        remove(
+            yaml,
+            route!("jobs", "build", "steps", 0, "env", "ACTIONS_ALLOW_UNSECURE_COMMANDS")
+        ),
+        @"
+    --- PATCH ---
+    jobs:
+      build:
+        steps:
+          - run: echo hi
+
+    --- END PATCH ---
+    "
+    );
+}
+
+#[test]
+fn test_remove_first_step_key_slides_nested_sibling_onto_marker() {
+    // The sibling that slides onto the `- ` marker keeps its own nested
+    // block correctly indented.
+    let yaml = "\
+steps:
+  - env:
+      X: 1
+    uses:
+      a: b
+";
+    insta::assert_snapshot!(remove(yaml, route!("steps", 0, "env")), @"
+    --- PATCH ---
+    steps:
+      - uses:
+          a: b
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_remove_non_first_step_key_keeps_marker() {
+    // Removing a key that does not share the `- ` line uses ordinary
+    // whole-line removal, leaving the marker (and first key) intact.
+    let yaml = "\
+steps:
+  - env: prod
+    run: echo hi
+";
+    insta::assert_snapshot!(remove(yaml, route!("steps", 0, "run")), @"
+    --- PATCH ---
+    steps:
+      - env: prod
+
+    --- END PATCH ---
+    ");
+}
+
 #[test]
 fn test_multiple_operations_preserve_comments() {
     let original = r#"

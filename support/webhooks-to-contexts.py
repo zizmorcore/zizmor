@@ -376,6 +376,6 @@ if __name__ == "__main__":
         patterns_to_capabilities[context] = "fixed"
 
     with _OUT.open("w") as io:
-        writer = csv.writer(io)
+        writer = csv.writer(io, lineterminator="\n")
         for pattern, cap in sorted(patterns_to_capabilities.items(), key=itemgetter(0)):
             writer.writerow([pattern, cap])
