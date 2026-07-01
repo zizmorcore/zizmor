@@ -9,6 +9,7 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
+use itertools::Itertools as _;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -182,13 +183,40 @@ pub(crate) struct LocalKey {
     /// The group this input belongs to.
     #[serde(skip)]
     group: Group,
-    /// The given path to the input. This can be absolute or relative.
-    pub(crate) given_path: Utf8PathBuf,
+
+    /// The verbatim path to the input, exactly as the user supplied it.
+    /// This can be absolute or relative.
+    verbatim_path: Utf8PathBuf,
+
+    /// The "native" path to the input. This is the same as [`Self::verbatim_path`],
+    /// but normalized for the host's default separator. For example, if the user
+    /// supplies a verbatim path of `./foo.yml`, this will be `.\foo.yml` on Windows.
+    ///
+    /// This can be absolute or relative.
     #[serde(skip)]
-    best_relative_path: String,
+    native_path: Utf8PathBuf,
+
+    /// The "best" identifier for this input.
+    ///
+    /// This will always be a relative path (unless the input itself was absolute),
+    /// and is the "best" in the sense that it attempts to be relative to the repository
+    /// root (if present), rather than whatever relative path the user actually supplied.
+    ///
+    /// This identifier always uses Unix-style path separators.
+    ///
+    /// See [`InputKey::best_identifier`] for more information.
+    #[serde(skip)]
+    best_identifier: String,
 }
 
 impl LocalKey {
+    /// Returns a real path to this [`LocalKey`]'s input, on disk.
+    ///
+    /// This path may be relative or absolute.
+    pub(crate) fn path(&self) -> &Utf8Path {
+        &self.verbatim_path
+    }
+
     /// Produce the "best" relative path for a given path.
     ///
     /// This path is the "best" in the sense that it's intended to be maximally
@@ -196,18 +224,24 @@ impl LocalKey {
     /// consumers (like GitHub's "Advanced Security") expect paths to be relative
     /// to the root of the repository, even if the user supplied them to the tool
     /// as absolute or relative to some other directory.
+    ///
+    /// NOTE: The path returned by this API is *not* guaranteed to be relative to
+    /// the current directory, if the current directory is not the same as the
+    /// repository root. As such, consumers of this API *must not* assume that they
+    /// can naively test these paths for existence, etc. without first resolving
+    /// them against the repository root.
     fn best_relative_path<P: AsRef<Utf8Path>>(
         given_path: P,
         prefix: Option<P>,
         root: Option<P>,
-    ) -> String {
+    ) -> Utf8PathBuf {
         // Happy path: we have a root directory and the input
         // is relative to it once canonicalized.
         if let Some(root) = root
             && let Ok(canonical) = given_path.as_ref().canonicalize_utf8()
             && let Ok(relative) = canonical.strip_prefix(root.as_ref())
         {
-            return relative.as_str().to_owned();
+            return relative.to_owned();
         }
 
         // Semi-happy path: we don't have a root directory,
@@ -216,12 +250,12 @@ impl LocalKey {
         if let Some(prefix) = prefix
             && let Ok(stripped) = given_path.as_ref().strip_prefix(prefix.as_ref())
         {
-            return stripped.as_str().to_owned();
+            return stripped.to_owned();
         }
 
         // Sad path: no root or known prefix, so we return the
         // given path as-is and hope for the best.
-        given_path.as_ref().as_str().to_owned()
+        given_path.as_ref().to_owned()
     }
 }
 
@@ -258,7 +292,7 @@ pub(crate) enum InputKey {
 impl std::fmt::Display for InputKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InputKey::Local(local) => write!(f, "file://{path}", path = local.given_path),
+            InputKey::Local(local) => write!(f, "file://{path}", path = local.verbatim_path),
             InputKey::Remote(remote) => {
                 // No ref means assume HEAD, i.e. whatever's on the default branch.
                 let git_ref = remote.slug.git_ref.as_deref().unwrap_or("HEAD");
@@ -282,20 +316,34 @@ impl InputKey {
     /// "best" relative path for output rendering purposes.
     pub(crate) fn local<P: AsRef<Utf8Path>>(
         group: Group,
-        path: P,
+        verbatim_path: P,
         prefix: Option<P>,
         root: Option<P>,
     ) -> Self {
-        let path = path.as_ref();
-        let best_relative_path = LocalKey::best_relative_path(
-            path,
-            prefix.as_ref().map(P::as_ref),
-            root.as_ref().map(P::as_ref),
-        );
+        let verbatim_path = verbatim_path.as_ref();
+
+        let best_identifier = {
+            let best_relative_path = LocalKey::best_relative_path(
+                verbatim_path,
+                prefix.as_ref().map(P::as_ref),
+                root.as_ref().map(P::as_ref),
+            );
+
+            if best_relative_path.is_relative() {
+                best_relative_path.components().join("/")
+            } else {
+                // Stupid edge case: if user supplied an absolute path and
+                // we couldn't make it relative, then there's no sane normalization
+                // we can perform. Just return it as-is.
+                best_relative_path.into()
+            }
+        };
+
         Self::Local(LocalKey {
             group,
-            given_path: path.to_path_buf(),
-            best_relative_path,
+            verbatim_path: verbatim_path.to_path_buf(),
+            native_path: verbatim_path.components().collect(),
+            best_identifier,
         })
     }
 
@@ -313,16 +361,21 @@ impl InputKey {
         })
     }
 
-    /// Returns the "best" relative path for this [`InputKey`].
+    /// Returns the "best" identifier for this [`InputKey`].
     ///
-    /// Unlike [`InputKey::presentation_path`], local input paths are made
-    /// relative to the root of their group's Git repository when possible.
-    /// This matches what SARIF consumers like GitHub's "Advanced Security"
-    /// expect.
-    pub(crate) fn best_relative_path(&self) -> &str {
+    /// This returns an arbitrary identifier for the input which,
+    /// depending on the input kind, may or may resemble a userful path
+    /// on disk.
+    pub(crate) fn best_identifier(&self) -> &str {
         match self {
-            InputKey::Local(local) => &local.best_relative_path,
+            // Local keys: always use the "best" relative path,
+            // which is opportunistically relative to the repo root
+            // if possible.
+            InputKey::Local(local) => local.best_identifier.as_str(),
+            // Remote keys: always use the path within the repository,
+            // which is always relative.
             InputKey::Remote(remote) => remote.path.as_str(),
+            // Standard input uses an arbitrary identifier.
             InputKey::Stdin(_) => "<stdin>",
         }
     }
@@ -330,10 +383,10 @@ impl InputKey {
     /// Return a "presentation" path for this [`InputKey`].
     ///
     /// This will always be a relative path for remote keys,
-    /// and will be the given path for local keys.
+    /// and will be the native path for local keys.
     pub(crate) fn presentation_path(&self) -> &str {
         match self {
-            InputKey::Local(local) => local.given_path.as_str(),
+            InputKey::Local(local) => local.native_path.as_str(),
             InputKey::Remote(remote) => remote.path.as_str(),
             InputKey::Stdin(_) => "<stdin>",
         }
@@ -345,7 +398,7 @@ impl InputKey {
         // is a construction invariant of all `InputKey` variants.
         match self {
             InputKey::Local(local) => local
-                .given_path
+                .verbatim_path
                 .file_name()
                 .expect("expected input key to have a filename component"),
             InputKey::Remote(remote) => remote
@@ -822,7 +875,7 @@ impl InputRegistry {
 mod tests {
     use std::{collections::HashSet, str::FromStr as _};
 
-    use camino::Utf8PathBuf;
+    use camino::{Utf8Path, Utf8PathBuf};
 
     use crate::registry::input::InputGroup;
 
@@ -850,44 +903,45 @@ mod tests {
         );
     }
 
+    /// Tests that [`InputKey::presentation_path`] returns the exact path that the user
+    /// supplied (regardless of prefix or root), but normalized for the host's default
+    /// separator.
     #[test]
     fn test_input_key_local_presentation_path() {
         let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None, None);
-        assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
+        if cfg!(target_os = "windows") {
+            assert_eq!(local.presentation_path(), "\\foo\\bar\\baz.yml");
+        } else {
+            assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
+        }
 
         let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"), None);
-        assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
-
-        let local = InputKey::local(
-            "fakegroup".into(),
-            "/foo/bar/baz.yml",
-            Some("/foo/bar/"),
-            None,
-        );
-        assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
-
-        let local = InputKey::local(
-            "fakegroup".into(),
-            "/home/runner/work/repo/repo/.github/workflows/baz.yml",
-            Some("/home/runner/work/repo/repo"),
-            None,
-        );
-        assert_eq!(
-            local.presentation_path(),
-            "/home/runner/work/repo/repo/.github/workflows/baz.yml"
-        );
+        if cfg!(target_os = "windows") {
+            assert_eq!(local.presentation_path(), "\\foo\\bar\\baz.yml");
+        } else {
+            assert_eq!(local.presentation_path(), "/foo/bar/baz.yml");
+        }
     }
 
     #[test]
-    fn test_input_key_local_best_relative_path() {
-        // "Rootless" cases: with no group root, best_relative_path falls back to
+    fn test_input_key_local_best_identifier() {
+        // "Rootless" cases: with no group root, best_identifier falls back to
         // stripping the input's own prefix (if any), else returns the path
         // as-is.
-        let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", None, None);
-        assert_eq!(local.best_relative_path(), "/foo/bar/baz.yml");
+        let local = InputKey::local("fakegroup".into(), "bar/baz.yml", None, None);
+        assert_eq!(local.best_identifier(), "bar/baz.yml");
+
+        // Rootless with an absolute input passes through as-is.
+        let absolute = if cfg!(windows) {
+            Utf8Path::new(r"C:\foo\bar\baz.yml")
+        } else {
+            Utf8Path::new("/foo/bar/baz.yml")
+        };
+        let local = InputKey::local("fakegroup".into(), absolute, None, None);
+        assert_eq!(local.best_identifier(), absolute);
 
         let local = InputKey::local("fakegroup".into(), "/foo/bar/baz.yml", Some("/foo"), None);
-        assert_eq!(local.best_relative_path(), "bar/baz.yml");
+        assert_eq!(local.best_identifier(), "bar/baz.yml");
 
         let local = InputKey::local(
             "fakegroup".into(),
@@ -895,7 +949,7 @@ mod tests {
             Some("/foo/bar/"),
             None,
         );
-        assert_eq!(local.best_relative_path(), "baz.yml");
+        assert_eq!(local.best_identifier(), "baz.yml");
 
         let local = InputKey::local(
             "fakegroup".into(),
@@ -903,7 +957,7 @@ mod tests {
             Some("/home/runner/work/repo/repo"),
             None,
         );
-        assert_eq!(local.best_relative_path(), ".github/workflows/baz.yml");
+        assert_eq!(local.best_identifier(), ".github/workflows/baz.yml");
 
         let local = InputKey::local(
             "fakegroup".into(),
@@ -911,9 +965,9 @@ mod tests {
             Some("."),
             None,
         );
-        assert_eq!(local.best_relative_path(), ".github/workflows/baz.yml");
+        assert_eq!(local.best_identifier(), ".github/workflows/baz.yml");
 
-        // "Rooted" case: with a real root, best_relative_path is canonical-then-strip.
+        // "Rooted" case: with a real root, best_identifier is canonical-then-strip.
         let temp_dir = tempfile::TempDir::new().unwrap();
         let temp_path = Utf8PathBuf::try_from(temp_dir.path().to_path_buf())
             .unwrap()
@@ -925,7 +979,7 @@ mod tests {
         std::fs::write(&child, "contents").unwrap();
 
         let local = InputKey::local("fakegroup".into(), child, None, Some(temp_path));
-        assert_eq!(local.best_relative_path(), "foo/bar/baz.yml");
+        assert_eq!(local.best_identifier(), "foo/bar/baz.yml");
     }
 
     #[test]

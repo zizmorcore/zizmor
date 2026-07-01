@@ -29,7 +29,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                                 "feature_kind": "Normal",
                                 "key": {
                                   "Local": {
-                                    "given_path": "@@INPUT@@"
+                                    "verbatim_path": "@@INPUT@@"
                                   }
                                 },
                                 "kind": "Related",
@@ -78,7 +78,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                                 "feature_kind": "Normal",
                                 "key": {
                                   "Local": {
-                                    "given_path": "@@INPUT@@"
+                                    "verbatim_path": "@@INPUT@@"
                                   }
                                 },
                                 "kind": "Primary",
@@ -136,7 +136,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                       "feature_kind": "Normal",
                       "key": {
                         "Local": {
-                          "given_path": "@@INPUT@@"
+                          "verbatim_path": "@@INPUT@@"
                         }
                       },
                       "kind": "Primary",
@@ -204,7 +204,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                                 "feature_kind": "Normal",
                                 "key": {
                                   "Local": {
-                                    "given_path": "@@INPUT@@"
+                                    "verbatim_path": "@@INPUT@@"
                                   }
                                 },
                                 "kind": "Primary",
@@ -256,7 +256,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                       "feature_kind": "Normal",
                       "key": {
                         "Local": {
-                          "given_path": "@@INPUT@@"
+                          "verbatim_path": "@@INPUT@@"
                         }
                       },
                       "kind": "Primary",
@@ -325,7 +325,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                                 },
                                 "key": {
                                   "Local": {
-                                    "given_path": "@@INPUT@@"
+                                    "verbatim_path": "@@INPUT@@"
                                   }
                                 },
                                 "kind": "Primary",
@@ -383,7 +383,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                                 "feature_kind": "KeyOnly",
                                 "key": {
                                   "Local": {
-                                    "given_path": "@@INPUT@@"
+                                    "verbatim_path": "@@INPUT@@"
                                   }
                                 },
                                 "kind": "Related",
@@ -454,7 +454,7 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                       },
                       "key": {
                         "Local": {
-                          "given_path": "@@INPUT@@"
+                          "verbatim_path": "@@INPUT@@"
                         }
                       },
                       "kind": "Primary",

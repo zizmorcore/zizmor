@@ -17,7 +17,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "this step",
@@ -65,7 +65,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "may expand into attacker-controllable code",
@@ -124,7 +124,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "action accepts arbitrary code",
@@ -175,7 +175,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "via this input",
@@ -240,7 +240,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "action is not pinned to a hash (required by blanket policy)",
@@ -309,7 +309,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "image is not pinned to a tag, branch, or hash ref",
@@ -378,7 +378,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "image is not pinned to a tag, branch, or hash ref",
@@ -447,7 +447,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "contains(..) condition can be bypassed if attacker can control 'github.ref'",
@@ -509,7 +509,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "contains(..) condition can be bypassed if attacker can control 'env.GITHUB_REF_NAME'",
@@ -571,7 +571,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "contains(..) condition can be bypassed if attacker can control 'github.ref_name'",
@@ -633,7 +633,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "contains(..) condition can be bypassed if attacker can control 'github.actor'",
@@ -695,7 +695,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "given_path": "@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "contains(..) condition can be bypassed if attacker can control 'runner.name'",

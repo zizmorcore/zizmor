@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use anyhow::{Context as _, Result};
-use camino::Utf8PathBuf;
+use camino::Utf8Path;
 use owo_colors::OwoColorize as _;
 
 use crate::{
@@ -80,7 +80,7 @@ pub fn apply_fixes(
         };
 
         let input = registry.get_input(input_key);
-        let file_path = &local.given_path;
+        let file_path = local.path();
 
         let mut file_applied_fixes = Vec::new();
         let mut current_document = input.as_document().clone();
@@ -127,10 +127,7 @@ pub fn apply_fixes(
     })
 }
 
-fn print_summary(
-    applied_fixes: &[(&Utf8PathBuf, usize)],
-    failed_fixes: &[(&str, &Utf8PathBuf, String)],
-) {
+fn print_summary(applied_fixes: &[(&Utf8Path, usize)], failed_fixes: &[(&str, &Utf8Path, String)]) {
     anstream::eprintln!("\n{}", "Fix Summary".green().bold());
 
     if !applied_fixes.is_empty() {

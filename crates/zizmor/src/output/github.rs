@@ -28,7 +28,7 @@ impl Finding<'_> {
         // NOTE: We intentionally only use the start line, since our spans
         // sometimes end at EOF and GitHub's annotations don't handle that
         // gracefully.
-        let filepath = primary.symbolic.key.best_relative_path();
+        let filepath = primary.symbolic.key.best_identifier();
         let start_line = primary.concrete.location.start_point.row + 1;
         let title = self.ident;
 
