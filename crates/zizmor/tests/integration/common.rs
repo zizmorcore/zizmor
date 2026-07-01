@@ -1,5 +1,5 @@
 use anyhow::{Context as _, Result};
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use regex::{Captures, Regex};
 use std::{env::current_dir, io::ErrorKind, sync::LazyLock};
 
@@ -273,18 +273,20 @@ impl Zizmor {
         }
 
         if let Some(config) = &self.config {
-            raw = raw.replace(config, "@@CONFIG@@");
+            // The config is often an `input_under_test(..)` path, so it needs
+            // the same multi-spelling treatment as the inputs below.
+            redact(&mut raw, Utf8Path::new(config), "@@CONFIG@@");
         }
 
         let input_placeholder = "@@INPUT@@";
         for input in &self.inputs {
-            raw = raw.replace(input.as_str(), input_placeholder);
+            redact(&mut raw, input, input_placeholder);
 
             // Some output formats emit root-relative paths; redact those too.
             if let Ok(abs) = input.canonicalize_utf8()
                 && let Ok(relative) = abs.strip_prefix(&*REPO_ROOT)
             {
-                raw = raw.replace(relative.as_str(), input_placeholder);
+                redact(&mut raw, relative, input_placeholder);
             }
         }
 
@@ -300,31 +302,74 @@ impl Zizmor {
 
         let working_dir_placeholder = "@@WORKING_DIR@@";
         // Replace any absolute references to the working directory.
-        raw = raw.replace(self.working_dir.as_str(), working_dir_placeholder);
+        redact(&mut raw, &self.working_dir, working_dir_placeholder);
 
         // Replace any relative references to the working directory.
         if let Ok(relative) = self.working_dir.strip_prefix(&*REPO_ROOT) {
-            raw = raw.replace(relative.as_str(), working_dir_placeholder);
+            redact(&mut raw, relative, working_dir_placeholder);
         }
 
         // Fallback: replace any lingering test prefix paths.
         // TODO: Maybe just use this everywhere instead of the special
         // replacements above?
         let test_prefix_placeholder = "@@TEST_PREFIX@@";
-        raw = raw.replace(TEST_PREFIX.as_str(), test_prefix_placeholder);
+        redact(&mut raw, &*TEST_PREFIX, test_prefix_placeholder);
 
         if let Ok(relative) = TEST_PREFIX.strip_prefix(&*REPO_ROOT) {
-            raw = raw.replace(relative.as_str(), test_prefix_placeholder);
+            redact(&mut raw, relative, test_prefix_placeholder);
         }
 
-        if let Ok(relartive) = TEST_PREFIX.strip_prefix(&*ZIZMOR_ROOT) {
-            raw = raw.replace(relartive.as_str(), test_prefix_placeholder);
+        if let Ok(relative) = TEST_PREFIX.strip_prefix(&*ZIZMOR_ROOT) {
+            redact(&mut raw, relative, test_prefix_placeholder);
         }
 
         let version_placeholder = "@@VERSION@@";
         raw = raw.replace(env!("CARGO_PKG_VERSION"), version_placeholder);
 
         Ok(raw)
+    }
+}
+
+/// Redacts every on-disk spelling of `needle` in `haystack`, replacing each
+/// occurrence with `placeholder`.
+///
+/// A single logical path can surface in zizmor's output under several different
+/// spellings, especially on Windows:
+///
+/// * verbatim, exactly as `needle` was constructed. This may mix `/` and `\`,
+///   since e.g. `Utf8Path::join` preserves any separators inside the joined
+///   component (`test-data`.join(`"anchors/foo.yml"`) -> `test-data\anchors/foo.yml`).
+/// * "native", with separators normalized to the host's default (all `\` on
+///   Windows). This is what `InputKey::presentation_path` (i.e. `native_path`,
+///   built via `components().collect()`) emits.
+/// * either of the above with backslashes JSON-escaped (`\` -> `\\`), as emitted
+///   by any `serde_json`-serialized output (the JSON and SARIF formats).
+///
+/// We redact all of them so snapshots stay identical across platforms. On Unix
+/// the native and verbatim forms coincide and there are no backslashes to
+/// escape, so this collapses to a single replacement.
+fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str) {
+    let verbatim = needle.as_str();
+    if verbatim.is_empty() {
+        // Guard against `str::replace("", ..)`, which would splice the
+        // placeholder in between every character.
+        return;
+    }
+
+    // The host-native spelling, matching `InputKey::native_path`.
+    let native = needle.components().collect::<Utf8PathBuf>();
+
+    let mut forms = vec![verbatim];
+    if native.as_str() != verbatim {
+        forms.push(native.as_str());
+    }
+
+    for form in forms {
+        *haystack = haystack.replace(form, placeholder);
+        // serde_json escapes '\' as '\\'; redact that spelling too.
+        if form.contains('\\') {
+            *haystack = haystack.replace(&form.replace('\\', r"\\"), placeholder);
+        }
     }
 }
 
