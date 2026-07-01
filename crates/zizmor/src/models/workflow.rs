@@ -3,7 +3,13 @@
 //! These models enrich the models under [`github_actions_models::workflow`],
 //! providing higher-level APIs for zizmor to use.
 
-use github_actions_expressions::context::{self};
+use std::sync::LazyLock;
+
+use fst::Set;
+use github_actions_expressions::{
+    Expr,
+    context::{self},
+};
 use github_actions_models::{
     common::{self, expr::LoE},
     workflow::{
@@ -27,6 +33,11 @@ use crate::{
     registry::input::CollectionError,
     utils::{self, WORKFLOW_VALIDATOR, from_str_with_validation, once::warn_once},
 };
+
+static GITHUB_RUNNERS_FST: LazyLock<Set<&[u8]>> = LazyLock::new(|| {
+    fst::Set::new(include_bytes!(concat!(env!("OUT_DIR"), "/github-runners.fst")).as_slice())
+        .expect("couldn't initialize github runners FST")
+});
 
 /// Represents an entire GitHub Actions workflow.
 ///
@@ -230,6 +241,64 @@ impl<'doc> NormalJob<'doc> {
     /// An iterator of this job's constituent [`Step`]s.
     pub(crate) fn steps(&self) -> Steps<'doc> {
         Steps::new(self)
+    }
+
+    /// Returns whether this job is "self-hosted," i.e. runs on a self-hosted
+    /// runner rather than one of GitHub's official runner images.
+    ///
+    /// Returns `None` if the job's self-hosted status is indeterminate, e.g.
+    /// driven by a user-controlled `${{ input.ABC }}` expression.
+    ///
+    /// TODO: This should probably be memoized on `NormalJob` rather than computed
+    /// on the fly.
+    pub(crate) fn is_self_hosted(&self) -> Option<bool> {
+        match &self.runs_on {
+            // If we have `runs-on: ...` or `runs-on: [...]`,
+            // we consider the job self-hosted if all of the labels
+            // match a well-known runner label.
+            // NOTE: This will mis-flag something like `runs-on: macos-${{ matrix.macos-version }}`.
+            // We should probably handle that as an explicit indeterminate case.
+            LoE::Literal(RunsOn::Target(labels)) => Some(
+                labels
+                    .iter()
+                    .any(|label| !GITHUB_RUNNERS_FST.contains(label.as_bytes())),
+            ),
+            // NOTE: GHA docs are unclear on whether runner groups always
+            // imply self-hosted runners or not. All examples suggest that they
+            // do, but I'm not sure.
+            // See: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/managing-access-to-self-hosted-runners-using-groups
+            // See: https://docs.github.com/en/actions/writing-workflows/choosing-where-your-workflow-runs/choosing-the-runner-for-a-job
+            LoE::Literal(RunsOn::Group { .. }) => Some(true),
+            // The user did something like `runs-on: ${{ matrix.os }}`.
+            // In the happy case we can extract this from the matrix.
+            LoE::Expr(expr) => {
+                let Ok(expr) = Expr::parse(expr.as_bare()) else {
+                    return None;
+                };
+
+                if let Expr::Context(context) = &*expr
+                    && context.child_of("matrix")
+                    && let Some(matrix) = self.matrix()
+                {
+                    tracing::trace!(
+                        "looking for self-hosted runners in expansion of {expr}",
+                        expr = expr.origin.raw
+                    );
+                    // Happy path: the expression is a matrix context and the job
+                    // has a matrix, so we can analyze it.
+                    // TODO: Plumb the expansion locations here.
+                    Some(
+                        matrix.expansions().iter().any(|expansion| {
+                            !GITHUB_RUNNERS_FST.contains(expansion.value.as_bytes())
+                        }),
+                    )
+                } else {
+                    // Sad path: we can't analyze (yet) whatever the user put
+                    // in their expression for `runs-on`.
+                    None
+                }
+            }
+        }
     }
 
     /// Returns whether this job has the `id-token: write` permission.
