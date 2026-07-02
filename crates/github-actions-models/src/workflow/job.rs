@@ -7,7 +7,7 @@ use yaml_serde::Value;
 use crate::common::expr::{BoE, LoE};
 use crate::common::{DockerUses, Env, If, Permissions, Uses, custom_error};
 
-use super::{Concurrency, Defaults};
+use super::{Concurrency, Defaults, Secrets};
 
 /// A "normal" GitHub Actions workflow job, i.e. a job composed of one
 /// or more steps on a runner.
@@ -260,19 +260,14 @@ pub struct ReusableWorkflowCallJob {
     pub secrets: Option<Secrets>,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "kebab-case")]
-pub enum Secrets {
-    Inherit,
-    #[serde(untagged)]
-    Env(#[serde(default)] Env),
-}
-
 #[cfg(test)]
 mod tests {
     use crate::{
         common::{EnvValue, expr::LoE},
-        workflow::job::{Matrix, Secrets, Step},
+        workflow::{
+            Secrets,
+            job::{Matrix, Step},
+        },
     };
 
     use super::{RunsOn, Strategy};

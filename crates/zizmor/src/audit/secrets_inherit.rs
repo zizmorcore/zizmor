@@ -1,4 +1,4 @@
-use github_actions_models::workflow::job::Secrets;
+use github_actions_models::workflow::{Secrets, Trigger, event::OptionalBody};
 use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, AuditState, Job, Workflow, audit_meta};
@@ -34,7 +34,10 @@ impl Audit for SecretsInherit {
 
         // Callee-side: a reusable workflow declaring `on.workflow_call.secrets: inherit`
         // forces *every* caller to over-scope by handing it all of their secrets.
-        if workflow.has_workflow_call_secrets_inherit() {
+        if let Trigger::Events(events) = &workflow.on
+            && let OptionalBody::Body(workflow_call) = &events.workflow_call
+            && matches!(workflow_call.secrets, Some(Secrets::Inherit))
+        {
             findings.push(
                 Self::finding()
                     .add_location(

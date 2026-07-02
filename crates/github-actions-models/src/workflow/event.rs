@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::EnvValue;
 
+use super::Secrets;
+
 /// "Bare" workflow event triggers.
 ///
 /// These appear when a workflow is triggered with an event with no context,
@@ -237,22 +239,7 @@ pub struct WorkflowCall {
     pub inputs: IndexMap<String, WorkflowCallInput>,
     #[serde(default)]
     pub outputs: IndexMap<String, WorkflowCallOutput>,
-    pub secrets: Option<WorkflowCallSecrets>,
-}
-
-/// The `secrets` field of a `workflow_call` event trigger body.
-///
-/// A reusable workflow can declare the secrets it accepts either as an
-/// explicit mapping of named secrets, or with the bare string `inherit`,
-/// which unconditionally forwards all of the calling workflow's secrets.
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
-#[serde(rename_all = "kebab-case")]
-pub enum WorkflowCallSecrets {
-    /// `secrets: inherit`
-    Inherit,
-    /// An explicit mapping of named secrets.
-    #[serde(untagged)]
-    Map(IndexMap<String, Option<WorkflowCallSecret>>),
+    pub secrets: Option<Secrets<Option<WorkflowCallSecret>>>,
 }
 
 /// A single input in a `workflow_call` event trigger body.
@@ -378,13 +365,13 @@ issue_comment:";
 
     #[test]
     fn test_workflow_call_secrets() {
-        use super::{WorkflowCall, WorkflowCallSecrets};
+        use super::{Secrets, WorkflowCall};
 
         // `secrets: inherit` (the bare string) parses as `Inherit`.
         let call = yaml_serde::from_str::<WorkflowCall>("secrets: inherit").unwrap();
-        assert_eq!(call.secrets, Some(WorkflowCallSecrets::Inherit));
+        assert_eq!(call.secrets, Some(Secrets::Inherit));
 
-        // An explicit mapping parses as `Map`.
+        // An explicit mapping parses as `Env`.
         let call = yaml_serde::from_str::<WorkflowCall>(
             "
 secrets:
@@ -393,7 +380,7 @@ secrets:
 ",
         )
         .unwrap();
-        let Some(WorkflowCallSecrets::Map(secrets)) = call.secrets else {
+        let Some(Secrets::Env(secrets)) = call.secrets else {
             panic!("unexpected secrets variant");
         };
         assert!(secrets.contains_key("my-secret"));
