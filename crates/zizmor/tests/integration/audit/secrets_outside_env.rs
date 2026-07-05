@@ -9,14 +9,14 @@ fn test_secrets_outside_env() -> Result<()> {
             .input(input_under_test("secrets-outside-env.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @"
+        @r"
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:20:20
+      --> @@INPUT@@:21:20
        |
     12 |   test:
        |   ---- this job
     ...
-    20 |           FOO: ${{ secrets.FOO }}
+    21 |           FOO: ${{ secrets.FOO }}
        |                    ^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
@@ -62,47 +62,47 @@ fn test_config_allow_none() -> Result<()> {
         .input(input_under_test("secrets-outside-env/multiple-secrets.yml"))
         .config(input_under_test("secrets-outside-env/configs/allow-none.yml"))
         .run()?,
-        @"
+        @r"
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:20:30
+      --> @@INPUT@@:21:30
        |
     12 |   test:
        |   ---- this job
     ...
-    20 |           NOT_SO_SECRET: ${{ secrets.NOT_SO_SECRET }}
+    21 |           NOT_SO_SECRET: ${{ secrets.NOT_SO_SECRET }}
        |                              ^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
 
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:25:30
+      --> @@INPUT@@:26:30
        |
     12 |   test:
        |   ---- this job
     ...
-    25 |           NOT_SO_SECRET: ${{ secrets.not_so_secret }}
+    26 |           NOT_SO_SECRET: ${{ secrets.not_so_secret }}
        |                              ^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
 
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:30:30
+      --> @@INPUT@@:31:30
        |
     12 |   test:
        |   ---- this job
     ...
-    30 |           NOT_SO_SECRET: ${{ secrets['not_so_secret'] }}
+    31 |           NOT_SO_SECRET: ${{ secrets['not_so_secret'] }}
        |                              ^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
 
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:35:35
+      --> @@INPUT@@:36:35
        |
     12 |   test:
        |   ---- this job
     ...
-    35 |           ALSO_NOT_SO_SECRET: ${{ secrets.ALSO_NOT_SO_SECRET }}
+    36 |           ALSO_NOT_SO_SECRET: ${{ secrets.ALSO_NOT_SO_SECRET }}
        |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High
@@ -121,14 +121,14 @@ fn test_config_allow_one() -> Result<()> {
         .input(input_under_test("secrets-outside-env/multiple-secrets.yml"))
         .config(input_under_test("secrets-outside-env/configs/allow-one.yml"))
         .run()?,
-        @"
+        @r"
     warning[secrets-outside-env]: secrets referenced without a dedicated environment
-      --> @@INPUT@@:35:35
+      --> @@INPUT@@:36:35
        |
     12 |   test:
        |   ---- this job
     ...
-    35 |           ALSO_NOT_SO_SECRET: ${{ secrets.ALSO_NOT_SO_SECRET }}
+    36 |           ALSO_NOT_SO_SECRET: ${{ secrets.ALSO_NOT_SO_SECRET }}
        |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
        |
        = note: audit confidence → High

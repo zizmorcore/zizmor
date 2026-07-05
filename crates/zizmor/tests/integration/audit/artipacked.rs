@@ -4,11 +4,11 @@ use crate::common::{input_under_test, zizmor};
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor().input(input_under_test("artipacked.yml")).run()?,
-        @"
+        @r"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
-      --> @@INPUT@@:22:9
+      --> @@INPUT@@:23:9
        |
-    22 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    23 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
@@ -28,11 +28,11 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
             .input(input_under_test("artipacked.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
-      --> @@INPUT@@:22:9
+      --> @@INPUT@@:23:9
        |
-    22 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    23 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
@@ -52,23 +52,23 @@ fn test_auditor_persona() -> anyhow::Result<()> {
             .input(input_under_test("artipacked.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @"
+        @r"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
-      --> @@INPUT@@:22:9
+      --> @@INPUT@@:23:9
        |
-    22 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    23 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
     warning[artipacked]: credential persistence through GitHub Actions artifacts
-      --> @@INPUT@@:28:9
+      --> @@INPUT@@:30:9
        |
-    28 |         - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    30 |         - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
        |  _________^
-    29 | |         with:
-    30 | |           persist-credentials: true
+    31 | |         with:
+    32 | |           persist-credentials: true
        | |____________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
@@ -94,14 +94,14 @@ fn test_issue_447() -> anyhow::Result<()> {
             .run()?,
         @r#"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
-      --> @@INPUT@@:24:9
+      --> @@INPUT@@:25:9
        |
-    24 |         - name: true-positive
+    25 |         - name: true-positive
        |  _________^
-    25 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    26 | |         with:
-    27 | |           # finding in auditor mode only
-    28 | |           persist-credentials: "true"
+    26 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    27 | |         with:
+    28 | |           # finding in auditor mode only
+    29 | |           persist-credentials: "true"
        | |______________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
@@ -125,14 +125,14 @@ fn test_issue_1709() -> anyhow::Result<()> {
             .input(input_under_test("artipacked/issue-1709-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
-      --> @@INPUT@@:18:9
+      --> @@INPUT@@:19:9
        |
-    18 |         - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    19 |         - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
        |  _________^
-    19 | |         with:
-    20 | |           persist-credentials: ${{ github.event_name == 'pull_request' }}
+    20 | |         with:
+    21 | |           persist-credentials: ${{ github.event_name == 'pull_request' }}
        | |__________________________________________________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
@@ -153,13 +153,13 @@ fn test_issue_1709() -> anyhow::Result<()> {
 fn test_issue_1769() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor().input(input_under_test("artipacked/issue-1769-repro.yml")).args(["--persona=pedantic"]).run()?,
-        @"
+        @r"
     info[artipacked]: credential persistence through GitHub Actions artifacts
-      --> @@INPUT@@:19:9
+      --> @@INPUT@@:20:9
        |
-    18 |       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # zizmor: ignore[obfuscation]
+    19 |       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # zizmor: ignore[obfuscation]
        |               --------------------------------------------------------- this checkout
-    19 |         with: ${{ fromJson(steps.setup.outputs.options) }}
+    20 |         with: ${{ fromJson(steps.setup.outputs.options) }}
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may not set persist-credentials: false
        |
        = note: audit confidence → High

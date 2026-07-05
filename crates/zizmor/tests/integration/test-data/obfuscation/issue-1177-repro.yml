@@ -16,5 +16,6 @@ jobs:
     if: ${{ !contains(fromJSON('["push", "pull_request"]'), github.event_name) }}
     name: issue-1177-repro
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - run: true

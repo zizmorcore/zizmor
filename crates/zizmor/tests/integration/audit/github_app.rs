@@ -6,7 +6,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("github-app.yml"))
             .run()?,
-        @"
+        @r"
     error[github-app]: dangerous use of GitHub App tokens
       --> @@INPUT@@:21:11
        |
@@ -62,7 +62,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → High
        = tip: specify at least one `permission-<name>` input to limit the token's permissions
 
-    5 findings: 0 informational, 0 low, 0 medium, 5 high
+    6 findings (1 suppressed): 0 informational, 0 low, 0 medium, 5 high
     ");
     Ok(())
 }

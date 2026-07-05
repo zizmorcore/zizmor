@@ -11,6 +11,7 @@ jobs:
   unpinned-0:
     name: unpinned-0
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       # PEDANTIC: pinned but unhashed
       - uses: actions/checkout@v3

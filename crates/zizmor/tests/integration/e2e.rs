@@ -97,10 +97,10 @@ fn issue_1907() -> Result<()> {
             .working_dir(working_dir)
             .input("./workflows")
             .run()?,
-        @"
+        @r"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
      INFO audit: zizmor: 🌈 completed @@INPUT@@/test.yml
-    No findings to report. Good job! (1 suppressed)
+    No findings to report. Good job! (2 suppressed)
     "
     );
 
@@ -437,7 +437,7 @@ fn issue_1065() -> Result<()> {
             .output(OutputMode::Both)
             .input(input_under_test("issue-1065.yml"))
             .run()?,
-        @"
+        @r"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
      INFO audit: zizmor: 🌈 completed @@INPUT@@
     warning[excessive-permissions]: overly broad permissions
@@ -464,7 +464,7 @@ fn issue_1065() -> Result<()> {
        |
        = note: audit confidence → High
 
-    5 findings (3 suppressed): 0 informational, 0 low, 1 medium, 1 high
+    6 findings (4 suppressed): 0 informational, 0 low, 1 medium, 1 high
     "
     );
 
@@ -750,12 +750,13 @@ fn test_github_output() -> Result<()> {
             .input(input_under_test("several-vulnerabilities.yml"))
             .args(["--persona=auditor", "--format=github"])
             .run()?,
-        @"
+        @r"
     ::error file=@@INPUT@@,line=5,title=excessive-permissions::several-vulnerabilities.yml:5: overly broad permissions: uses write-all permissions
     ::error file=@@INPUT@@,line=11,title=excessive-permissions::several-vulnerabilities.yml:11: overly broad permissions: uses write-all permissions
     ::error file=@@INPUT@@,line=2,title=dangerous-triggers::several-vulnerabilities.yml:2: use of fundamentally insecure workflow trigger: pull_request_target is almost always used insecurely
     ::error file=@@INPUT@@,line=16,title=template-injection::several-vulnerabilities.yml:16: code injection via template expansion: may expand into attacker-controllable code
     ::warning file=@@INPUT@@,line=2,title=concurrency-limits::several-vulnerabilities.yml:2: insufficient job-level concurrency limits: workflow is missing concurrency setting
+    ::warning file=@@INPUT@@,line=8,title=timeout-minutes::several-vulnerabilities.yml:8: missing timeout-minutes: job missing timeout-minutes
     "
     );
 
@@ -801,7 +802,7 @@ fn test_no_ignores() -> Result<()> {
         zizmor()
             .input(input_under_test("ignore.yml"))
             .run()?,
-        @"No findings to report. Good job! (1 ignored)"
+        @"No findings to report. Good job! (1 ignored, 1 suppressed)"
     );
 
     // With `--no-ignores`, the ignored finding should be included in the output.
@@ -822,7 +823,7 @@ fn test_no_ignores() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    1 findings (1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 

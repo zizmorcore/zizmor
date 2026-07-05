@@ -29,17 +29,17 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
      7 | |
      8 | | permissions: {}
     ...  |
-    23 | |     steps:
-    24 | |       - run: "echo this job will trigger"
+    25 | |     steps:
+    26 | |       - run: "echo this job will trigger"
        | |__________________________________________^ this workflow
        |
        = note: audit confidence → High
        = tip: use 'name: ...' to give this workflow a name
 
     info[anonymous-definition]: workflow or action definition without a name
-      --> @@INPUT@@:21:3
+      --> @@INPUT@@:22:3
        |
-    21 |   will-trigger:
+    22 |   will-trigger:
        |   ^^^^^^^^^^^^ this job
        |
        = note: audit confidence → High

@@ -18,7 +18,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
             .args(["--persona=pedantic"])
             .run()?,
         @r"
-    warning[timeout_minutes]: missing timeout-minutes
+    warning[timeout-minutes]: missing timeout-minutes
       --> @@INPUT@@:31:3
        |
     31 | /   without-timeout:
@@ -32,7 +32,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    warning[timeout_minutes]: missing timeout-minutes
+    warning[timeout-minutes]: missing timeout-minutes
       --> @@INPUT@@:45:9
        |
     45 |         - name: 6-not-ok
@@ -58,7 +58,7 @@ fn test_auditor_persona() -> anyhow::Result<()> {
             .args(["--persona=auditor"])
             .run()?,
         @r"
-    warning[timeout_minutes]: missing timeout-minutes
+    warning[timeout-minutes]: missing timeout-minutes
       --> @@INPUT@@:31:3
        |
     31 | /   without-timeout:
@@ -72,7 +72,7 @@ fn test_auditor_persona() -> anyhow::Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    warning[timeout_minutes]: missing timeout-minutes
+    warning[timeout-minutes]: missing timeout-minutes
       --> @@INPUT@@:45:9
        |
     45 |         - name: 6-not-ok

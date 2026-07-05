@@ -59,7 +59,7 @@ fn test_github_path() -> Result<()> {
        |
        = note: audit confidence → Low
 
-    3 findings (1 ignored, 1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (1 ignored, 2 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -83,7 +83,7 @@ fn test_issue_397_repro() -> Result<()> {
        |
        = note: audit confidence → Low
 
-    3 findings (1 ignored, 1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (1 ignored, 2 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
