@@ -623,6 +623,13 @@ impl<'doc> Step<'doc> {
         }
     }
 
+    pub(crate) fn timeout_minutes(&self) -> &'doc Option<LoE<f64>> {
+        match self.inner {
+            StepInner::Uses(uses) => &uses.shared.timeout_minutes,
+            StepInner::Run(run) => &run.shared.timeout_minutes,
+        }
+    }
+
     /// Returns this step's parent [`NormalJob`].
     pub(crate) fn job(&self) -> &NormalJob<'doc> {
         &self.parent

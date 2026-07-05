@@ -1,0 +1,46 @@
+name: timeout-minutes
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  with-timeout:
+    name: with-timeout
+    runs-on: ubuntu-latest
+    timeout-minutes: 42
+    steps:
+      - name: 1-ok
+        run: echo ok
+
+  with-timeout-on-each-step:
+    name: with-timeout-on-each-step
+    runs-on: ubuntu-latest
+    steps:
+      - name: 2-ok
+        run: echo ok
+        timeout-minutes: 42
+      - name: 3-ok
+        run: echo ok
+        timeout-minutes: 37
+
+  without-timeout:
+    name: without-timeout
+    runs-on: ubuntu-latest
+    steps:
+      - name: 4-not-ok
+        run: echo not ok
+
+  with-timeout-on-some-step:
+    name: with-timeout-on-some-step
+    runs-on: ubuntu-latest
+    steps:
+      - name: 5-ok
+        run: echo ok
+        timeout-minutes: 42
+      - name: 6-not-ok
+        run: echo not ok
