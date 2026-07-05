@@ -5,7 +5,7 @@ use github_actions_models::workflow::job::StepBody;
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::audit::AuditError;
 use crate::config::Config;
-use crate::finding::{Confidence, Finding, Severity};
+use crate::finding::{Confidence, Finding, Severity, location::Locatable as _};
 use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::workflow::Workflow;
 use crate::state::AuditState;
@@ -52,35 +52,43 @@ impl Audit for DangerousTriggers {
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
-        if workflow.has_pull_request_target() && !Self::is_labeler_exception(workflow) {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::Medium)
-                    .severity(Severity::High)
-                    .add_location(
-                        workflow
-                            .location()
-                            .primary()
-                            .with_keys(["on".into()])
-                            .annotated("pull_request_target is almost always used insecurely"),
-                    )
-                    .build(workflow)?,
-            );
-        }
-        if workflow.has_workflow_run() {
-            findings.push(
-                Self::finding()
-                    .confidence(Confidence::Medium)
-                    .severity(Severity::High)
-                    .add_location(
-                        workflow
-                            .location()
-                            .primary()
-                            .with_keys(["on".into()])
-                            .annotated("workflow_run is almost always used insecurely"),
-                    )
-                    .build(workflow)?,
-            );
+        let mut reported_pull_request_target = false;
+        let mut reported_workflow_run = false;
+
+        for trigger in workflow.triggers() {
+            if trigger.is_pull_request_target()
+                && !reported_pull_request_target
+                && !Self::is_labeler_exception(workflow)
+            {
+                findings.push(
+                    Self::finding()
+                        .confidence(Confidence::Medium)
+                        .severity(Severity::High)
+                        .add_location(
+                            trigger
+                                .location()
+                                .primary()
+                                .annotated("pull_request_target is almost always used insecurely"),
+                        )
+                        .build(workflow)?,
+                );
+                reported_pull_request_target = true;
+            }
+            if trigger.is_workflow_run() && !reported_workflow_run {
+                findings.push(
+                    Self::finding()
+                        .confidence(Confidence::Medium)
+                        .severity(Severity::High)
+                        .add_location(
+                            trigger
+                                .location()
+                                .primary()
+                                .annotated("workflow_run is almost always used insecurely"),
+                        )
+                        .build(workflow)?,
+                );
+                reported_workflow_run = true;
+            }
         }
 
         Ok(findings)

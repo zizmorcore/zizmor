@@ -1,0 +1,12 @@
+name: block-sequence-trigger
+on:
+  - push
+  - pull_request_target
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"

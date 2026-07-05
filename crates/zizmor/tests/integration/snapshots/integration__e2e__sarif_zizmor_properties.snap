@@ -1,5 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
+assertion_line: 742
 expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabilities.yml\")).args([\"--format=sarif\"]).run()?"
 ---
 {
@@ -212,6 +213,9 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                                   "route": [
                                     {
                                       "Key": "on"
+                                    },
+                                    {
+                                      "Key": "pull_request_target"
                                     }
                                   ]
                                 }
@@ -230,11 +234,11 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                             "endColumn": 23,
                             "endLine": 3,
                             "snippet": {
-                              "text": "on:\n  pull_request_target:"
+                              "text": "  pull_request_target:"
                             },
                             "sourceLanguage": "yaml",
-                            "startColumn": 1,
-                            "startLine": 2
+                            "startColumn": 3,
+                            "startLine": 3
                           }
                         }
                       }
@@ -264,6 +268,9 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                         "route": [
                           {
                             "Key": "on"
+                          },
+                          {
+                            "Key": "pull_request_target"
                           }
                         ]
                       }
@@ -282,11 +289,11 @@ expression: "zizmor().offline(true).input(input_under_test(\"several-vulnerabili
                   "endColumn": 23,
                   "endLine": 3,
                   "snippet": {
-                    "text": "on:\n  pull_request_target:"
+                    "text": "  pull_request_target:"
                   },
                   "sourceLanguage": "yaml",
-                  "startColumn": 1,
-                  "startLine": 2
+                  "startColumn": 3,
+                  "startLine": 3
                 }
               }
             }

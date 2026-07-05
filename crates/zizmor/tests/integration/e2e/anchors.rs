@@ -139,16 +139,13 @@ fn test_trigger_paths_anchor() -> Result<()> {
             .run()?,
         @r#"
     error[dangerous-triggers]: use of fundamentally insecure workflow trigger
-     --> @@INPUT@@:2:1
+     --> @@INPUT@@:3:3
       |
-    2 | / on:
-    3 | |   pull_request_target:
+    3 | /   pull_request_target:
     4 | |     paths-ignore: &ignore
     5 | |       - "docs/**"
     6 | |       - "**.md"
-    7 | |   push:
-    8 | |     paths-ignore: *ignore
-      | |_________________________^ pull_request_target is almost always used insecurely
+      | |_______________^ pull_request_target is almost always used insecurely
       |
       = note: audit confidence → Medium
 
@@ -167,15 +164,10 @@ fn test_trigger_block_alias() -> Result<()> {
             .run()?,
         @r#"
     error[dangerous-triggers]: use of fundamentally insecure workflow trigger
-     --> @@INPUT@@:2:1
+     --> @@INPUT@@:7:3
       |
-    2 | / on:
-    3 | |   push: &trigger
-    4 | |     branches: [main]
-    5 | |     paths-ignore:
-    6 | |       - "**.md"
-    7 | |   pull_request_target: *trigger
-      | |_______________________________^ pull_request_target is almost always used insecurely
+    7 |   pull_request_target: *trigger
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ pull_request_target is almost always used insecurely
       |
       = note: audit confidence → Medium
 

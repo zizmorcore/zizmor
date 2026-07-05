@@ -1,0 +1,13 @@
+name: workflow-run-trigger
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"

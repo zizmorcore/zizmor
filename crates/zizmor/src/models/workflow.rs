@@ -145,6 +145,71 @@ impl Workflow {
         Jobs::new(self)
     }
 
+    /// A list of this workflow's declared triggers.
+    pub(crate) fn triggers(&self) -> Vec<WorkflowTrigger<'_>> {
+        match &self.on {
+            Trigger::BareEvent(event) => {
+                vec![WorkflowTrigger::new(
+                    self,
+                    bare_event_name(event),
+                    yamlpath::route!("on"),
+                )]
+            }
+            Trigger::BareEvents(events) => events
+                .iter()
+                .enumerate()
+                .map(|(idx, event)| {
+                    WorkflowTrigger::new(self, bare_event_name(event), yamlpath::route!("on", idx))
+                })
+                .collect(),
+            Trigger::Events(events) => {
+                let mut triggers = vec![];
+
+                macro_rules! push_if_present {
+                    ($field:ident, $name:literal) => {
+                        if !matches!(events.$field, OptionalBody::Missing) {
+                            triggers.push(WorkflowTrigger::new(
+                                self,
+                                $name,
+                                yamlpath::route!("on", $name),
+                            ));
+                        }
+                    };
+                }
+
+                push_if_present!(branch_protection_rule, "branch_protection_rule");
+                push_if_present!(check_run, "check_run");
+                push_if_present!(check_suite, "check_suite");
+                push_if_present!(discussion, "discussion");
+                push_if_present!(discussion_comment, "discussion_comment");
+                push_if_present!(issue_comment, "issue_comment");
+                push_if_present!(issues, "issues");
+                push_if_present!(label, "label");
+                push_if_present!(merge_group, "merge_group");
+                push_if_present!(milestone, "milestone");
+                push_if_present!(project, "project");
+                push_if_present!(project_card, "project_card");
+                push_if_present!(project_column, "project_column");
+                push_if_present!(pull_request, "pull_request");
+                push_if_present!(pull_request_comment, "pull_request_comment");
+                push_if_present!(pull_request_review, "pull_request_review");
+                push_if_present!(pull_request_review_comment, "pull_request_review_comment");
+                push_if_present!(pull_request_target, "pull_request_target");
+                push_if_present!(push, "push");
+                push_if_present!(registry_package, "registry_package");
+                push_if_present!(release, "release");
+                push_if_present!(repository_dispatch, "repository_dispatch");
+                push_if_present!(schedule, "schedule");
+                push_if_present!(watch, "watch");
+                push_if_present!(workflow_call, "workflow_call");
+                push_if_present!(workflow_dispatch, "workflow_dispatch");
+                push_if_present!(workflow_run, "workflow_run");
+
+                triggers
+            }
+        }
+    }
+
     /// Whether this workflow is triggered by pull_request_target.
     pub(crate) fn has_pull_request_target(&self) -> bool {
         match &self.on {
@@ -203,6 +268,79 @@ impl Workflow {
             feature_kind: SymbolicFeature::Normal,
             kind: Default::default(),
         }
+    }
+}
+
+fn bare_event_name(event: &BareEvent) -> &'static str {
+    match event {
+        BareEvent::BranchProtectionRule => "branch_protection_rule",
+        BareEvent::CheckRun => "check_run",
+        BareEvent::CheckSuite => "check_suite",
+        BareEvent::Create => "create",
+        BareEvent::Delete => "delete",
+        BareEvent::Deployment => "deployment",
+        BareEvent::DeploymentStatus => "deployment_status",
+        BareEvent::Discussion => "discussion",
+        BareEvent::DiscussionComment => "discussion_comment",
+        BareEvent::Fork => "fork",
+        BareEvent::Gollum => "gollum",
+        BareEvent::IssueComment => "issue_comment",
+        BareEvent::Issues => "issues",
+        BareEvent::Label => "label",
+        BareEvent::MergeGroup => "merge_group",
+        BareEvent::Milestone => "milestone",
+        BareEvent::PageBuild => "page_build",
+        BareEvent::Project => "project",
+        BareEvent::ProjectCard => "project_card",
+        BareEvent::ProjectColumn => "project_column",
+        BareEvent::Public => "public",
+        BareEvent::PullRequest => "pull_request",
+        BareEvent::PullRequestComment => "pull_request_comment",
+        BareEvent::PullRequestReview => "pull_request_review",
+        BareEvent::PullRequestReviewComment => "pull_request_review_comment",
+        BareEvent::PullRequestTarget => "pull_request_target",
+        BareEvent::Push => "push",
+        BareEvent::RegistryPackage => "registry_package",
+        BareEvent::Release => "release",
+        BareEvent::RepositoryDispatch => "repository_dispatch",
+        BareEvent::Status => "status",
+        BareEvent::Watch => "watch",
+        BareEvent::WorkflowCall => "workflow_call",
+        BareEvent::WorkflowDispatch => "workflow_dispatch",
+        BareEvent::WorkflowRun => "workflow_run",
+    }
+}
+
+/// A single declared workflow trigger.
+pub(crate) struct WorkflowTrigger<'doc> {
+    parent: &'doc Workflow,
+    name: &'static str,
+    route: yamlpath::Route<'doc>,
+}
+
+impl<'doc> WorkflowTrigger<'doc> {
+    fn new(parent: &'doc Workflow, name: &'static str, route: yamlpath::Route<'doc>) -> Self {
+        Self {
+            parent,
+            name,
+            route,
+        }
+    }
+
+    pub(crate) fn is_pull_request_target(&self) -> bool {
+        self.name == "pull_request_target"
+    }
+
+    pub(crate) fn is_workflow_run(&self) -> bool {
+        self.name == "workflow_run"
+    }
+}
+
+impl<'doc> Locatable<'doc> for WorkflowTrigger<'doc> {
+    fn location(&self) -> SymbolicLocation<'doc> {
+        let mut location = self.parent.location().annotated("this trigger");
+        location.route = self.route.clone();
+        location
     }
 }
 
