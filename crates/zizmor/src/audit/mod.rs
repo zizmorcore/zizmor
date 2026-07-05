@@ -52,6 +52,7 @@ pub(crate) mod self_repository;
 pub(crate) mod stale_action_refs;
 pub(crate) mod superfluous_actions;
 pub(crate) mod template_injection;
+pub(crate) mod timeout_minutes;
 pub(crate) mod typosquat_uses;
 pub(crate) mod undocumented_permissions;
 pub(crate) mod unpinned_images;

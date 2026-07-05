@@ -86,6 +86,7 @@ impl AuditRegistry {
         register_audit!(audit::adhoc_packages::AdhocPackages);
         register_audit!(audit::insecure_url_scheme::InsecureURLScheme);
         register_audit!(audit::self_repository::SelfRepository);
+        register_audit!(audit::timeout_minutes::TimeoutMinutes);
 
         Ok(registry)
     }

@@ -31,6 +31,7 @@ mod self_repository;
 mod stale_action_refs;
 mod superfluous_actions;
 mod template_injection;
+mod timeout_minutes;
 mod typosquat_uses;
 mod undocumented_permissions;
 mod unpinned_images;
