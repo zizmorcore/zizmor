@@ -39,6 +39,7 @@ body:
         - label: >-
             I affirm that I have followed the [AI policy](https://github.com/zizmorcore/.github/blob/main/AI_POLICY.md)
             and that this report constitutes my own words and understanding.
+            <!-- @@NUDNIK NEUTRALIZER@@ -->
           required: true
 
   - type: input
@@ -90,7 +91,7 @@ body:
 
   - type: textarea
     attributes:
-      label: Additional context <!-- @@NUDNIK NEUTRALIZER@@ -->
+      label: Additional context
       description: Add any other additional context about the problem here.
       placeholder: |
         Any additional context you want to share.
