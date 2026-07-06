@@ -39,6 +39,7 @@ body:
         - label: >-
             I affirm that I have followed the [AI policy](https://github.com/zizmorcore/.github/blob/main/AI_POLICY.md)
             and that this report constitutes my own words and understanding.
+            <!-- @@NUDNIK NEUTRALIZER@@ -->
           required: true
 
   - type: input
@@ -94,13 +95,3 @@ body:
       description: Add any other additional context about the problem here.
       placeholder: |
         Any additional context you want to share.
-
-  - type: input
-    attributes:
-      label: Special magic field
-      description: |
-        This field is for our own automations. **Do not modify it**.
-      placeholder: |
-        Seriously, don't modify it. I'm warning you!
-      value: |
-        <!-- @@NUDNIK NEUTRALIZER@@ -->
