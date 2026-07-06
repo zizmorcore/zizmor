@@ -102,4 +102,5 @@ body:
         This field is for our own automations. **Do not modify it**.
       placeholder: |
         Seriously, don't modify it. I'm warning you!
-      value: "@@NUDNIK NEUTRALIZER@@"
+      value: |
+        <!-- @@NUDNIK NEUTRALIZER@@ -->
