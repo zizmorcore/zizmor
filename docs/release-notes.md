@@ -30,6 +30,8 @@ of `zizmor`.
 
 * Fixed a deserialization failure that caused zizmor to skip *all* audits on
   any reusable workflow declaring `#!yaml on.workflow_call.secrets: inherit` (#1673)
+* Fixed a bug where the [ref-version-mismatch] audit would not honor
+  ignore comments within the same steps scope (#2177)
 
 ## 1.26.1
 

@@ -154,6 +154,7 @@ impl RefVersionMismatch {
                     .severity(Severity::Low)
                     .confidence(Confidence::High)
                     .persona(Persona::Pedantic)
+                    .add_location(step_location.hidden())
                     .add_location(uses_location.symbolic.primary().annotated(annotation))
                     .tip(tip);
 
@@ -211,7 +212,7 @@ impl RefVersionMismatch {
             .await
             .map_err(Self::err)?
         {
-            builder = builder.add_location(
+            builder = builder.add_location(step_location.hidden()).add_location(
                 uses_location
                     .symbolic
                     .annotated(format!("is pointed to by tag {tag}", tag = suggestion.name)),

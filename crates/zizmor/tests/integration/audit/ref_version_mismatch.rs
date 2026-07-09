@@ -167,7 +167,7 @@ fn test_issue_1853() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
+    3 findings (1 ignored, 1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -227,6 +227,21 @@ fn test_issue_2039() -> Result<()> {
             .input(input_under_test("ref-version-mismatch/issue-2039-repro.yml"))
             .run()?,
         @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
+
+/// Bug #2165: ignore comments not correctly handled elsewhere on the same step.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_issue_2165() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(false)
+            .input(input_under_test("ref-version-mismatch/issue-2165-repro.yml"))
+            .run()?,
+        @"No findings to report. Good job! (1 ignored, 1 suppressed)"
     );
 
     Ok(())

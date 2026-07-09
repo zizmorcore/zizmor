@@ -34,6 +34,7 @@ body:
         - label: >-
             I affirm that I have followed the [AI policy](https://github.com/zizmorcore/.github/blob/main/AI_POLICY.md)
             and that this request constitutes my own words and understanding.
+            <!-- @@NUDNIK NEUTRALIZER@@ -->
           required: true
 
   - type: textarea
@@ -58,3 +59,5 @@ body:
       label: Additional context
       description: |
         Any additional context, screenshots, or other material about the feature request.
+      placeholder: |
+        Any additional context you want to share.
