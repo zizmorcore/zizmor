@@ -25,6 +25,9 @@ of `zizmor`.
 * Fixed a bug where the [secrets-outside-env] audit would not honor
   ignore comments within the same job scope (#2157)
 
+* Fixed a bug where the [ref-version-mismatch] audit would not honor
+  ignore comments within the same steps scope (#2177)
+
 ## 1.26.1
 
 This is a small corrective release for [1.26.0](#1260).
