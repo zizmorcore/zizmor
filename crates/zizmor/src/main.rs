@@ -994,6 +994,8 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         // provides a GitHub API token. This snares some users, particularly if they're used
         // to the zizmor-action default (which is flipped, since GHA always has a token).
         //
+        // See: <https://github.com/zizmorcore/zizmor/issues/2178>
+        //
         // Note: we check `offline` rather than `no_online_audits` because the former is the
         // default, which the latter gets opted into explicitly.
         if app.network.offline {
