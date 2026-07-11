@@ -990,6 +990,18 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
         let _guard = span.enter();
 
+        // zizmor's default behavior is to run in offline mode, unless the user explicitly
+        // provides a GitHub API token. This snares some users, particularly if they're used
+        // to the zizmor-action default (which is flipped, since GHA always has a token).
+        //
+        // Note: we check `offline` rather than `no_online_audits` because the former is the
+        // default, which the latter gets opted into explicitly.
+        if app.network.offline {
+            warn!(
+                "zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details"
+            );
+        }
+
         for (input_key, input) in registry.iter_inputs() {
             Span::current().pb_set_message(input.key().filename());
 

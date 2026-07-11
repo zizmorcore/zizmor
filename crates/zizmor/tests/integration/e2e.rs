@@ -99,6 +99,7 @@ fn issue_1907() -> Result<()> {
             .run()?,
         @"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
+     WARN audit: zizmor: zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details
      INFO audit: zizmor: 🌈 completed @@INPUT@@/test.yml
     No findings to report. Good job! (1 suppressed)
     "
@@ -439,6 +440,7 @@ fn issue_1065() -> Result<()> {
             .run()?,
         @"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
+     WARN audit: zizmor: zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details
      INFO audit: zizmor: 🌈 completed @@INPUT@@
     warning[excessive-permissions]: overly broad permissions
       --> @@INPUT@@:12:3
@@ -485,6 +487,7 @@ fn warn_on_min_severity_unknown() -> Result<()> {
         @"
     WARN zizmor: `unknown` is a deprecated minimum severity that has no effect
     WARN zizmor: future versions of zizmor will reject this value
+    WARN zizmor: zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details
     "
     );
 
@@ -505,6 +508,7 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
         @"
     WARN zizmor: `unknown` is a deprecated minimum confidence that has no effect
     WARN zizmor: future versions of zizmor will reject this value
+    WARN zizmor: zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details
     "
     );
     Ok(())
