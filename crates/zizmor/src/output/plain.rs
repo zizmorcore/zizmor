@@ -8,7 +8,7 @@ use anstream::{eprintln, print, println};
 use owo_colors::OwoColorize as _;
 
 use crate::{
-    RenderLinks, ShowAuditUrls,
+    cli::{RenderLinks, ShowAuditUrls},
     finding::{
         Finding, FixDisposition, Severity,
         location::{Location, LocationKind},
