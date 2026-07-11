@@ -6,7 +6,7 @@ use annotate_snippets::renderer::{AnsiColor, Effects};
 use anstream::stream::IsTerminal;
 use camino::Utf8PathBuf;
 use clap::builder::{NonEmptyStringValueParser, Styles};
-use clap::{ArgAction, Args, CommandFactory, Parser, ValueEnum, ValueHint};
+use clap::{ArgAction, Args, CommandFactory as _, Parser, ValueEnum, ValueHint};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
 use etcetera::AppStrategy as _;

@@ -8,7 +8,7 @@ use std::{
 use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stderr};
 use anyhow::anyhow;
-use clap::{CommandFactory as _, Parser};
+use clap::{CommandFactory as _, Parser as _};
 use finding::{Confidence, Persona, Severity};
 use futures::stream::{FuturesOrdered, StreamExt as _};
 use indicatif::ProgressStyle;
