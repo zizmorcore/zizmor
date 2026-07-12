@@ -51,11 +51,23 @@ pub enum OutputMode {
     Both,
 }
 
+#[derive(Default)]
+pub enum NetworkMode {
+    /// The zizmor run is implicitly offline or online, i.e. depends
+    /// on whether `--gh-token`, etc.
+    #[default]
+    Default,
+    /// The `zizmor` run is explicitly offline, i.e. runs 100% offline
+    /// regardless of any other flags or state.
+    ExplicitOffline,
+    AssertOnline,
+}
+
 pub struct Zizmor {
     cmd: Command,
     stdin: Option<String>,
     unbuffer: bool,
-    offline: bool,
+    offline: NetworkMode,
     gh_token: bool,
     inputs: Vec<Utf8PathBuf>,
     working_dir: Utf8PathBuf,
@@ -110,7 +122,7 @@ impl Zizmor {
             cmd,
             stdin: None,
             unbuffer: false,
-            offline: true,
+            offline: NetworkMode::default(),
             gh_token: true,
             inputs: vec![],
             working_dir: CURRENT_DIR.clone(),
@@ -157,7 +169,7 @@ impl Zizmor {
         self
     }
 
-    pub fn offline(mut self, flag: bool) -> Self {
+    pub fn offline(mut self, flag: NetworkMode) -> Self {
         self.offline = flag;
         self
     }
@@ -193,16 +205,20 @@ impl Zizmor {
             self.cmd.write_stdin(stdin.as_bytes());
         }
 
-        if self.offline {
-            self.cmd.arg("--offline");
-        } else {
-            // If we're running in online mode, we pre-assert the
-            // presence of GH_TOKEN to make configuration failures more obvious.
-            let token =
-                std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
+        match self.offline {
+            NetworkMode::Default => (),
+            NetworkMode::ExplicitOffline => {
+                self.cmd.arg("--offline");
+            }
+            NetworkMode::AssertOnline => {
+                // If we're running in online mode, we pre-assert the
+                // presence of GH_TOKEN to make configuration failures more obvious.
+                let token =
+                    std::env::var("GH_TOKEN").context("online tests require GH_TOKEN to be set")?;
 
-            if self.gh_token {
-                self.cmd.env("GH_TOKEN", token);
+                if self.gh_token {
+                    self.cmd.env("GH_TOKEN", token);
+                }
             }
         }
 

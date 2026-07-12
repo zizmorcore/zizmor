@@ -1,13 +1,13 @@
 use anyhow::Result;
 
-use crate::common::{input_under_test, zizmor};
+use crate::common::{NetworkMode, input_under_test, zizmor};
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn test_default_persona() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .input(input_under_test("known-vulnerable-actions/setup-php.yml"))
             .run()?,
         @"
@@ -41,7 +41,7 @@ fn test_default_persona() -> Result<()> {
 fn test_config_allow() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .input(input_under_test("known-vulnerable-actions/setup-php.yml"))
             .config(input_under_test(
                 "known-vulnerable-actions/configs/allow.yml"

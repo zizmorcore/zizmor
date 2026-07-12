@@ -1,4 +1,4 @@
-use crate::common::{input_under_test, zizmor};
+use crate::common::{NetworkMode, input_under_test, zizmor};
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
@@ -6,7 +6,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("stale-action-refs.yml"))
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .args(["--persona=pedantic"])
             .run()?,
         @"

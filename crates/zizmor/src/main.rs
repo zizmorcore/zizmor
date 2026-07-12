@@ -346,8 +346,9 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         //
         // See: <https://github.com/zizmorcore/zizmor/issues/2178>
         //
-        // Note: we check `offline` rather than `no_online_audits` because the former is the
-        // default, which the latter gets opted into explicitly.
+        // Note: This check only fires if the user explicitly passes `--offline`, since by
+        // default `offline` is false (purely as a clap parsing artifact). This is confusing
+        // and should be cleaned up by pushing all of this into `AuditState` for normalization.
         if app.network.offline {
             warn!(
                 "zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details"

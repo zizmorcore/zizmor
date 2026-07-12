@@ -3,7 +3,6 @@ source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().output(OutputMode::Both).input(input_under_test(\"e2e-menagerie\")).run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
- WARN audit: zizmor: zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/dummy-action-2/action.yml
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/workflows/another-dummy.yml
  INFO audit: zizmor: 🌈 completed @@INPUT@@/.github/workflows/dummy.yml

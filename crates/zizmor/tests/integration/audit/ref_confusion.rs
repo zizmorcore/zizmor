@@ -1,4 +1,4 @@
-use crate::common::{input_under_test, zizmor};
+use crate::common::{NetworkMode, input_under_test, zizmor};
 use anyhow::Result;
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
@@ -7,7 +7,7 @@ fn test_ref_confusion() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("ref-confusion.yml"))
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .run()?,
         @"
     warning[ref-confusion]: git ref for action with ambiguous ref type
@@ -31,7 +31,7 @@ fn test_issue_518_repro() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("ref-confusion/issue-518-repro.yml"))
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .run()?,
         @"No findings to report. Good job! (1 ignored, 1 suppressed)"
     );

@@ -1,4 +1,4 @@
-use crate::common::{input_under_test, zizmor};
+use crate::common::{NetworkMode, input_under_test, zizmor};
 use anyhow::Result;
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
@@ -6,7 +6,7 @@ use anyhow::Result;
 fn test_ref_version_mismatch() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .output(crate::common::OutputMode::Both)
             .input(input_under_test("ref-version-mismatch.yml"))
             .run()?,
@@ -57,7 +57,7 @@ fn test_ref_version_mismatch() -> Result<()> {
 fn test_missing_version_comment_pedantic() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .args(["--persona=pedantic"])
             .input(input_under_test("ref-version-mismatch.yml"))
             .run()?,
@@ -136,7 +136,7 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
 fn test_nested_annotated_tags() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .input(input_under_test(
                 "ref-version-mismatch/nested-annotated-tags.yml"
             ))
@@ -152,7 +152,7 @@ fn test_nested_annotated_tags() -> Result<()> {
 fn test_issue_1853() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-1853-repro.yml"))
             .run()?,
         @"
@@ -179,7 +179,7 @@ fn test_issue_1853() -> Result<()> {
 fn test_issue_1869() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-1869-repro.yml"))
             .run()?,
         @"No findings to report. Good job! (1 suppressed)"
@@ -194,7 +194,7 @@ fn test_issue_1869() -> Result<()> {
 fn test_issue_1899() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-1899-repro.yml"))
             .run()?,
         @"No findings to report. Good job!"
@@ -209,7 +209,7 @@ fn test_issue_1899() -> Result<()> {
 fn test_issue_1938() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .args(["--persona=pedantic"])
             .input(input_under_test("ref-version-mismatch/issue-1938-repro.yml"))
             .run()?, @"No findings to report. Good job!");
@@ -223,7 +223,7 @@ fn test_issue_1938() -> Result<()> {
 fn test_issue_2039() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-2039-repro.yml"))
             .run()?,
         @"No findings to report. Good job!"
@@ -238,7 +238,7 @@ fn test_issue_2039() -> Result<()> {
 fn test_issue_2165() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-2165-repro.yml"))
             .run()?,
         @"No findings to report. Good job! (1 ignored, 1 suppressed)"
