@@ -24,7 +24,7 @@ const STYLES: Styles = Styles::styled()
     .placeholder(AnsiColor::Cyan.on_default());
 
 /// Finds security issues in GitHub Actions setups.
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 #[command(about, version, styles = STYLES)]
 #[command(disable_help_flag = true, disable_version_flag = true)]
 #[command(next_display_order = 1)]
@@ -181,7 +181,7 @@ pub(crate) struct OutputArgs {
     pub(crate) naches: bool,
 }
 
-#[derive(Args)]
+#[derive(Args, Debug)]
 #[command(next_help_heading = "Network Options")]
 pub(crate) struct NetworkArgs {
     /// Perform only offline operations.
@@ -227,7 +227,7 @@ pub(crate) struct NetworkArgs {
     pub(crate) cache_dir: Utf8PathBuf,
 }
 
-#[derive(Args)]
+#[derive(Args, Debug)]
 #[command(next_help_heading = "Options")]
 pub(crate) struct GlobalArgs {
     #[cfg(feature = "lsp")]
@@ -304,7 +304,7 @@ pub(crate) enum CliConfidence {
 }
 
 #[cfg(feature = "lsp")]
-#[derive(Args)]
+#[derive(Args, Debug)]
 #[group(multiple = true, conflicts_with = "inputs")]
 pub(crate) struct LspArgs {
     /// Run in language server mode (EXPERIMENTAL).

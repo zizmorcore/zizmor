@@ -510,6 +510,35 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
     Ok(())
 }
 
+/// Ensures that we emit an appropriate warning if the user is running
+/// in offline mode "implicitly," i.e. without an explicit `--offline`
+/// and without a GitHub token.
+#[test]
+fn warn_on_implicit_offline() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .offline(NetworkMode::Implicit)
+            .input(input_under_test("neutral.yml"))
+            .run()?,
+        @" WARN zizmor: zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details"
+    );
+
+    // Inverse: don't warn on explcit `--offline`, since the user's intent was clear.
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .offline(NetworkMode::ExplicitOffline)
+            .input(input_under_test("neutral.yml"))
+            .run()?,
+        @""
+    );
+
+    Ok(())
+}
+
 /// Regression test for #1207.
 ///
 /// Ensures that we correctly handle single-inputs that aren't given
@@ -678,7 +707,7 @@ fn test_cant_retrieve_offline() -> Result<()> {
     fatal: no audit was performed
     error: can't fetch remote repository: pypa/sampleproject
       |
-      = help: set a GitHub token with --gh-token or GH_TOKEN
+      = help: remove --offline to audit remote repositories
 
     Caused by:
         can't fetch remote repository: pypa/sampleproject

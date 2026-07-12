@@ -97,7 +97,7 @@ impl FromStr for GitHubHost {
 }
 
 /// A sanitized GitHub access token.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct GitHubToken(String);
 
 impl GitHubToken {

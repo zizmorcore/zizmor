@@ -18,7 +18,7 @@ use registry::{AuditRegistry, FindingRegistry};
 use state::AuditState;
 use terminal_link::Link;
 use thiserror::Error;
-use tracing::{Span, info_span, instrument, warn};
+use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt as _};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
@@ -202,7 +202,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         .or(app.network.github_token.take())
         .or(app.network.zizmor_github_token.take());
 
-    // Unset the GitHub token if we're in offline mode.
+    // Unset the GitHub token if we're in explicit offline mode.
     // We do this manually instead of with clap's `conflicts_with` because
     // we want to support explicitly enabling offline mode while still
     // having `GH_TOKEN` present in the environment.
@@ -245,6 +245,8 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     }
 
     tracing::info!("🌈 zizmor v{version}", version = env!("CARGO_PKG_VERSION"));
+
+    tracing::debug!("app: {app:?}");
 
     // Validate stdin input constraints: `-` must be the only input,
     // and cannot be combined with `--fix`.
@@ -345,12 +347,8 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         // to the zizmor-action default (which is flipped, since GHA always has a token).
         //
         // See: <https://github.com/zizmorcore/zizmor/issues/2178>
-        //
-        // Note: This check only fires if the user explicitly passes `--offline`, since by
-        // default `offline` is false (purely as a clap parsing artifact). This is confusing
-        // and should be cleaned up by pushing all of this into `AuditState` for normalization.
-        if app.network.offline {
-            warn!(
+        if !app.network.offline && state.gh_client.is_none() {
+            tracing::warn!(
                 "zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details"
             );
         }

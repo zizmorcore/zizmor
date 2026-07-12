@@ -55,10 +55,10 @@ pub enum OutputMode {
 pub enum NetworkMode {
     /// The zizmor run is implicitly offline or online, i.e. depends
     /// on whether `--gh-token`, etc.
-    #[default]
-    Default,
+    Implicit,
     /// The `zizmor` run is explicitly offline, i.e. runs 100% offline
     /// regardless of any other flags or state.
+    #[default]
     ExplicitOffline,
     AssertOnline,
 }
@@ -206,7 +206,7 @@ impl Zizmor {
         }
 
         match self.offline {
-            NetworkMode::Default => (),
+            NetworkMode::Implicit => (),
             NetworkMode::ExplicitOffline => {
                 self.cmd.arg("--offline");
             }
