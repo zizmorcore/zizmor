@@ -346,6 +346,11 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         // provides a GitHub API token. This snares some users, particularly if they're used
         // to the zizmor-action default (which is flipped, since GHA always has a token).
         //
+        // The way this is expressed below is slightly confusing: we want to know if the user *didn't*
+        // explcitly set `--offline` *and* they have no GH client (implying no token), which means
+        // that they're offline by default. We only want to warn in this state rather than explicit
+        // offline states to avoid spamming users who are intentionally running offline.
+        //
         // See: <https://github.com/zizmorcore/zizmor/issues/2178>
         if !app.network.offline && state.gh_client.is_none() {
             tracing::warn!(
