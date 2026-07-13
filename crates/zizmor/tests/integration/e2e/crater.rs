@@ -3,14 +3,14 @@
 //! The idea behind these tests is to detect (unintended) large changes
 //! between versions of zizmor.
 
-use crate::common::{OutputMode, zizmor};
+use crate::common::{NetworkMode, OutputMode, zizmor};
 
 #[cfg_attr(not(feature = "crater-tests"), ignore)]
 #[test]
 fn curl() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--persona=pedantic"])
             .input("curl/curl@6c8956c1cbf5cffcd2fd4571cf277e2eec280578")
@@ -24,7 +24,7 @@ fn curl() -> anyhow::Result<()> {
 fn libssh2() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--persona=pedantic"])
             .input("libssh2/libssh2@cb252b5909630dd439d3f80ca9318a99da253dbe")
@@ -38,7 +38,7 @@ fn libssh2() -> anyhow::Result<()> {
 fn warehouse() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--persona=pedantic"])
             .input("pypi/warehouse@9ed30d191788fcfa9c5be56bcce9b743e758903e")
@@ -52,7 +52,7 @@ fn warehouse() -> anyhow::Result<()> {
 fn pyca_cryptography() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--persona=pedantic"])
             .input("pyca/cryptography@43eb178ee3aae8d0060221118437b03c23570a41")
@@ -66,7 +66,7 @@ fn pyca_cryptography() -> anyhow::Result<()> {
 fn astral_sh_uv() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--persona=pedantic"])
             .input("astral-sh/uv@8ed803e507f41937d55865ae88c8c806573b3b9e")

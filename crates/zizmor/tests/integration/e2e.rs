@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 
-use crate::common::{OutputMode, input_under_test, zizmor};
+use crate::common::{NetworkMode, OutputMode, input_under_test, zizmor};
 
 mod anchors;
 mod collect;
@@ -18,7 +18,7 @@ fn gha_hazmat() -> Result<()> {
     // configuration.
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--no-online-audits"])
             .input("woodruffw/gha-hazmat@83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61")
@@ -35,7 +35,7 @@ fn issue_569() -> Result<()> {
     // expressions (i.e. inside comments).
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--no-online-audits", "--collect=workflows"])
             .input("python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6")
@@ -52,7 +52,7 @@ fn issue_726() -> Result<()> {
     // See: https://github.com/woodruffw-experiments/zizmor-bug-726
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--no-online-audits"])
             .input("woodruffw-experiments/zizmor-bug-726@a038d1a35")
@@ -406,7 +406,7 @@ fn issue_1116_strict_collection_remote_input() -> Result<()> {
     // Fails with `--strict-collection`.
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .expects_failure(1)
             .output(OutputMode::Stderr)
             .args(["--strict-collection"])
@@ -417,7 +417,7 @@ fn issue_1116_strict_collection_remote_input() -> Result<()> {
     // Works without `--strict-collection`.
     insta::assert_snapshot!(
         zizmor()
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Stderr)
             .input("woodruffw-experiments/zizmor-issue-1116@f41c414")
             .run()?
@@ -510,6 +510,35 @@ fn warn_on_min_confidence_unknown() -> Result<()> {
     Ok(())
 }
 
+/// Ensures that we emit an appropriate warning if the user is running
+/// in offline mode "implicitly," i.e. without an explicit `--offline`
+/// and without a GitHub token.
+#[test]
+fn warn_on_implicit_offline() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .offline(NetworkMode::Implicit)
+            .input(input_under_test("neutral.yml"))
+            .run()?,
+        @" WARN zizmor: zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details"
+    );
+
+    // Inverse: don't warn on explcit `--offline`, since the user's intent was clear.
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .offline(NetworkMode::ExplicitOffline)
+            .input(input_under_test("neutral.yml"))
+            .run()?,
+        @""
+    );
+
+    Ok(())
+}
+
 /// Regression test for #1207.
 ///
 /// Ensures that we correctly handle single-inputs that aren't given
@@ -541,7 +570,7 @@ fn issue_1286() -> Result<()> {
         zizmor()
             .expects_failure(1)
             .output(OutputMode::Both)
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .input(input_under_test("issue-1286.yml"))
             .run()?,
         @"
@@ -571,7 +600,7 @@ fn issue_1300() -> Result<()> {
         zizmor()
             .expects_failure(1)
             .output(OutputMode::Both)
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .args(["--collect=workflows"])
             .input("woodruffw-experiments/empty")
             .run()?,
@@ -601,7 +630,6 @@ fn issue_1300() -> Result<()> {
 fn issue_1341() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(true)
             .input(input_under_test(
                 "issue-1341-repro/.github/workflows/dependabot.yml"
             ))
@@ -640,7 +668,6 @@ fn issue_1356_lsp_mode_starts() -> Result<()> {
 fn issue_1745() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(true)
             .no_config(true)
             .working_dir(input_under_test("issue-1745-repro"))
             .input(".github")
@@ -654,7 +681,6 @@ fn issue_1745() -> Result<()> {
 
     insta::assert_snapshot!(
         zizmor()
-            .offline(true)
             .no_config(true)
             .working_dir(input_under_test("issue-1745-repro"))
             .args([".", "--format=github"])
@@ -674,7 +700,6 @@ fn test_cant_retrieve_offline() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .expects_failure(1)
-            .offline(true)
             .args(["pypa/sampleproject"])
             .run()?,
         @"
@@ -699,7 +724,7 @@ fn test_cant_retrieve_no_gh_token() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .expects_failure(1)
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .gh_token(false)
             .args(["pypa/sampleproject"])
             .run()?,
@@ -722,7 +747,6 @@ fn test_cant_retrieve_no_gh_token() -> Result<()> {
 fn test_github_output() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(true)
             .input(input_under_test("several-vulnerabilities.yml"))
             .args(["--persona=auditor", "--format=github"])
             .run()?,
@@ -742,7 +766,6 @@ fn test_github_output() -> Result<()> {
 fn test_sarif_zizmor_properties() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
-            .offline(true)
             .input(input_under_test("several-vulnerabilities.yml"))
             .args(["--format=sarif"])
             .run()?
@@ -755,7 +778,6 @@ fn test_sarif_zizmor_properties() -> Result<()> {
 #[test]
 fn test_show_urls() -> Result<()> {
     let with_urls = zizmor()
-        .offline(true)
         .show_audit_urls(true)
         .input(input_under_test("several-vulnerabilities.yml"))
         .run()?;
@@ -763,7 +785,6 @@ fn test_show_urls() -> Result<()> {
     assert!(with_urls.contains("audit documentation → "));
 
     let without_urls = zizmor()
-        .offline(true)
         .show_audit_urls(false)
         .input(input_under_test("several-vulnerabilities.yml"))
         .run()?;
@@ -778,7 +799,6 @@ fn test_no_ignores() -> Result<()> {
     // By default, the only finding should be ignored.
     insta::assert_snapshot!(
         zizmor()
-            .offline(true)
             .input(input_under_test("ignore.yml"))
             .run()?,
         @"No findings to report. Good job! (1 ignored)"
@@ -787,7 +807,6 @@ fn test_no_ignores() -> Result<()> {
     // With `--no-ignores`, the ignored finding should be included in the output.
     insta::assert_snapshot!(
         zizmor()
-            .offline(true)
             .input(input_under_test("ignore.yml"))
             .args(["--no-ignores"])
             .run()?,

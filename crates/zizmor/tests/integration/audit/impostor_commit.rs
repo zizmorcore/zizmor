@@ -1,4 +1,4 @@
-use crate::common::{input_under_test, zizmor};
+use crate::common::{NetworkMode, input_under_test, zizmor};
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
@@ -6,7 +6,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("impostor-commit.yml"))
-            .offline(false)
+            .offline(NetworkMode::AssertOnline)
             .run()?,
         @"
     error[impostor-commit]: commit with no history in referenced repository
@@ -38,7 +38,7 @@ fn test_peels_tag_sha_to_commit_sha() -> anyhow::Result<()> {
     insta::assert_snapshot!(
     zizmor()
         .input(input_under_test("impostor-commit/sha-is-tag.yml"))
-        .offline(false)
+        .offline(NetworkMode::AssertOnline)
         .run()?,
     @"No findings to report. Good job! (3 suppressed)"
     );

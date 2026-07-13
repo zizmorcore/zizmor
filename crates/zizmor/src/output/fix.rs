@@ -7,7 +7,7 @@ use camino::Utf8Path;
 use owo_colors::OwoColorize as _;
 
 use crate::{
-    FixMode,
+    cli::FixMode,
     finding::{Finding, Fix, FixDisposition},
     models::AsDocument as _,
     registry::{FindingRegistry, input::InputKey, input::InputRegistry},

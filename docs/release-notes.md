@@ -20,6 +20,8 @@ of `zizmor`.
 * zizmor's handling of paths is now more consistent, particularly
   when run on Windows (#2163)
 
+* zizmor now emits a helpful warning when being run in implicit offline mode (#2180)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [secrets-outside-env] audit would not honor
