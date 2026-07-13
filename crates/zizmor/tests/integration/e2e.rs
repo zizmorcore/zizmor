@@ -828,3 +828,30 @@ fn test_no_ignores() -> Result<()> {
 
     Ok(())
 }
+
+/// Regression test for #2182.
+///
+/// Ensures that `--collect=[MODE]` is respected for remote inputs.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_2182() -> Result<()> {
+    // Does not fail even though the repo contains an invalid `junk.yml` workflow,
+    // since only actions are collected.
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(NetworkMode::AssertOnline)
+            .output(OutputMode::Stderr)
+            .args(["--collect=actions"])
+            .input(
+                "woodruffw-experiments/zizmor-issue-2182@74a136e0e7d58127e47ad87fd5db72370634e2f9"
+            )
+            .run()?,
+        @"
+    INFO zizmor: 🌈 zizmor v@@VERSION@@
+    INFO collect_inputs: zizmor::registry::input: collected 1 inputs from woodruffw-experiments/zizmor-issue-2182
+    INFO audit: zizmor: 🌈 completed dummy/action.yml
+    "
+    );
+
+    Ok(())
+}
