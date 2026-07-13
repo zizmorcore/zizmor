@@ -76,7 +76,8 @@ pub(crate) struct Determinations {
 }
 
 /// Represents the "disposition" of a fix.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub(crate) enum FixDisposition {
     /// The fix is safe to apply automatically.
     #[allow(dead_code)]
@@ -101,7 +102,6 @@ impl fmt::Display for FixDisposition {
 /// and contains one or more [`Patch`] operations to apply to the input.
 pub(crate) struct Fix<'doc> {
     /// A short title describing the fix.
-    #[allow(dead_code)]
     pub(crate) title: String,
     /// The key back into the input registry that this fix applies to.
     pub(crate) key: &'doc InputKey,

@@ -11,3 +11,5 @@ mod config;
 /// "Big picture" end-to-end tests, i.e. tests that typically exercise
 /// more than one audit or complex CLI functionality.
 mod e2e;
+/// JSON output format tests.
+mod json;
