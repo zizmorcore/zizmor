@@ -183,6 +183,16 @@ struct AuditArgs {
     /// Don't honor ignore comments or ignore rules in configuration.
     #[arg(long)]
     no_ignores: bool,
+
+    /// Run only the selected audit rule(s).
+    ///
+    /// Can be repeated to select multiple rules. When set, only the
+    /// listed rules are evaluated; all other rules are skipped, regardless
+    /// of any ignore configuration.
+    ///
+    /// The argument is the audit rule's identifier, e.g. `template-injection`.
+    #[arg(long, value_name = "RULE", value_parser = NonEmptyStringValueParser::new())]
+    select: Vec<String>,
 }
 
 #[derive(Debug, Args)]
@@ -708,6 +718,10 @@ pub(crate) struct CollectionOptions {
     pub(crate) no_config: bool,
     /// Global configuration, if any.
     pub(crate) global_config: Option<Config>,
+    /// Audit rule identifiers that should be forced on, overriding any
+    /// `disable: true` in the loaded configuration. This is populated from
+    /// `--select`.
+    pub(crate) force_enabled_rules: HashSet<String>,
 }
 
 #[instrument(skip_all)]
@@ -954,23 +968,63 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         .map(|token| Client::new(&app.network.gh_hostname, token, &app.network.cache_dir))
         .transpose()?;
 
+    let state = AuditState::new(app.network.no_online_audits, gh_client);
+
+    let mut audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;
+
+    if !app.audit.select.is_empty() {
+        let loaded: HashSet<&str> = audit_registry.idents().collect();
+        let skipped: HashSet<&str> = audit_registry.skipped_idents().iter().copied().collect();
+
+        let unknown = app
+            .audit
+            .select
+            .iter()
+            .filter(|ident| !loaded.contains(ident.as_str()) && !skipped.contains(ident.as_str()))
+            .collect::<Vec<_>>();
+
+        if !unknown.is_empty() {
+            let mut cmd = App::command();
+            let unknown_list = unknown
+                .iter()
+                .map(|ident| format!("'{ident}'"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            cmd.error(
+                clap::error::ErrorKind::InvalidValue,
+                format!("--select: unknown audit rule(s): {unknown_list}"),
+            )
+            .exit();
+        }
+
+        let selected: HashSet<&str> = app.audit.select.iter().map(String::as_str).collect();
+
+        for ident in &selected {
+            if skipped.contains(ident) {
+                warn!(
+                    "selected audit '{ident}' was not loaded; \
+                     it may require a GitHub API token or online access"
+                );
+            }
+        }
+
+        audit_registry.retain_selected(&selected);
+    }
+
     let collection_options = CollectionOptions {
         mode_set: collection_mode_set,
         strict: app.input.strict_collection,
         no_config: app.args.no_config,
         global_config,
+        force_enabled_rules: app.audit.select.iter().cloned().collect(),
     };
 
     let registry = collect_inputs(
         app.input.inputs.as_slice(),
         &collection_options,
-        gh_client.as_ref(),
+        state.gh_client.as_ref(),
     )
     .await?;
-
-    let state = AuditState::new(app.network.no_online_audits, gh_client);
-
-    let audit_registry = AuditRegistry::default_audits(&state).map_err(Error::AuditLoad)?;
 
     let mut results = FindingRegistry::new(
         &registry,

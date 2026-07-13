@@ -671,6 +671,27 @@ to keep in mind:
   require online access (and a GitHub token) to fetch the latest commit
   SHA for pinning.
 
+## Selecting specific audit rules
+
+If you only want to run a subset of `zizmor`'s audit rules, you can use the
+`--select` flag, passing the identifier of an audit rule you want to run. The
+flag may be repeated to select multiple rules.
+
+```bash
+# only run the dependabot-cooldown audit
+zizmor --select=dependabot-cooldown .
+
+# run multiple selected audits
+zizmor --select=dependabot-cooldown --select=ref-version-mismatch .
+```
+
+When `--select` is given, only the listed audit rules are evaluated; all other
+rules are skipped. `--select` also overrides any `disable: true` setting from
+[the configuration file](./configuration.md) for the selected rules, so that
+the requested audits always run.
+
+Unknown rule identifiers cause `zizmor` to exit with an error.
+
 ## Filtering results
 
 There are two straightforward ways to filter `zizmor`'s results:
