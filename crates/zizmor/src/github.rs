@@ -922,7 +922,8 @@ impl Client {
                     .map_err(|e| CollectionError::InvalidPath(e, entry_path.clone().into_owned()))?
             };
 
-            if matches!(file_path.extension(), Some("yaml" | "yml"))
+            if options.mode_set.workflows()
+                && matches!(file_path.extension(), Some("yaml" | "yml"))
                 && file_path
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
@@ -931,15 +932,19 @@ impl Client {
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Workflow, contents, key, options.strict)?;
-            } else if matches!(file_path.file_name(), Some("action.yml" | "action.yaml")) {
+            } else if options.mode_set.actions()
+                && matches!(file_path.file_name(), Some("action.yml" | "action.yaml"))
+            {
                 let key = InputKey::remote(slug, file_path.to_string());
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Action, contents, key, options.strict)?;
-            } else if matches!(
-                file_path.file_name(),
-                Some("dependabot.yml" | "dependabot.yaml")
-            ) {
+            } else if options.mode_set.dependabot()
+                && matches!(
+                    file_path.file_name(),
+                    Some("dependabot.yml" | "dependabot.yaml")
+                )
+            {
                 let key = InputKey::remote(slug, file_path.to_string());
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
