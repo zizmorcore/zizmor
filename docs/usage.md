@@ -154,11 +154,11 @@ zizmor --strict-collection example/example
 `zizmor` attempts to select a default operating mode based on the user's
 environment:
 
-- If `ZIZMOR_OFFLINE` is set, then `zizmor` runs in offline mode.
-- If `GH_TOKEN`, `GITHUB_TOKEN` or `ZIZMOR_GITHUB_TOKEN` is set, then `zizmor` runs in online mode with audits.
-    - Additionally `ZIZMOR_NO_ONLINE_AUDITS` is set, then `zizmor` runs
+* If `ZIZMOR_OFFLINE` is set, then `zizmor` runs in offline mode.
+* If `GH_TOKEN`, `GITHUB_TOKEN` or `ZIZMOR_GITHUB_TOKEN` is set, then `zizmor` runs in online mode with audits.
+  * Additionally `ZIZMOR_NO_ONLINE_AUDITS` is set, then `zizmor` runs
       online sans audits.
-- If neither `ZIZMOR_OFFLINE` nor `GH_TOKEN`/`GITHUB_TOKEN`/`ZIZMOR_GITHUB_TOKEN` are set, then `zizmor` runs
+* If neither `ZIZMOR_OFFLINE` nor `GH_TOKEN`/`GITHUB_TOKEN`/`ZIZMOR_GITHUB_TOKEN` are set, then `zizmor` runs
   in offline mode.
 
 Or, as a flowchart:
@@ -213,13 +213,13 @@ from its GitHub API token: it uses the token *primarily* to provide
 authentication for rate-limited API requests.
 
 However, if you are auditing a private remote repository (e.g.
-`zizmor myorg/private-repo`) or auditing _any_ input that contains
+`zizmor myorg/private-repo`) or auditing *any* input that contains
 private references (e.g. `#!yaml uses: myorg/private-action`), then
 you may need to provision permissions for the token:
 
-- `#!yaml contents: read` for GitHub Actions
-- `repo` for OAuth tokens and "classic" PATs
-- An appropriate repository access scope for fine-grained PATs
+* `#!yaml contents: read` for GitHub Actions
+* `repo` for OAuth tokens and "classic" PATs
+* An appropriate repository access scope for fine-grained PATs
 
 In addition to these permissions, some integrations of `zizmor`
 (like GitHub Advanced Security) may require additional permissions
@@ -265,7 +265,7 @@ For example, in the output above, `template-injection` within
 the [template-injection](./audits#template-injection) audit documentation.
 
 In addition to these OSC 8 links, `zizmor` also includes the full URL
-as part of each finding _if_ it detects a non-terminal output _or_
+as part of each finding *if* it detects a non-terminal output *or*
 a CI environment (e.g. GitHub Actions).
 
 To make this behavior explicir, users can supply the `--show-audit-urls`
@@ -411,9 +411,41 @@ zizmor --format=json . | jq .[0]
           }
         }
       ],
-      "ignored": false
+      "ignored": false,
+      "fixes": []
     }
     ```
+
+Each finding includes a `fixes` array describing the auto-fixes available
+for that finding, if any. A finding with no available fix has an empty array.
+
+Each entry is a *symbolic* description of a fix: it does **not** contain
+concrete patch offsets or replacement text, since fixes are only ever
+applied via [`--fix`](#--fix). An entry has the following members:
+
+* `title`: a short, human-readable description of the fix.
+* `key`: the input the fix applies to, using the same representation as a
+  finding location's `key`.
+* `disposition`: either `safe` or `unsafe`. Safe fixes are applied by
+  `--fix=safe` (the default); unsafe fixes require `--fix=unsafe-only` or
+  `--fix=all`.
+
+For example, a finding with a single unsafe fix would have:
+
+```json
+"fixes": [
+  {
+    "title": "replace expression with environment variable",
+    "key": {
+      "Local": {
+        "prefix": ".",
+        "given_path": "./.github/workflows/ci.yml"
+      }
+    },
+    "disposition": "unsafe"
+  }
+]
+```
 
 ### SARIF
 
@@ -448,7 +480,6 @@ annotations.
 
     See orgs/community?26680 and orgs/community?68471 for additional
     information.
-
 
 ## Exit codes
 
@@ -512,7 +543,7 @@ change the exit code behavior:
 `zizmor` comes with three pre-defined "personas," which dictate how
 sensitive `zizmor`'s analyses are:
 
-* The _regular persona_: the user wants high-signal, low-noise, actionable
+* The *regular persona*: the user wants high-signal, low-noise, actionable
   security findings. This persona is best for ordinary local use as well as use
   in most CI/CD setups, which is why it's the default.
 
@@ -521,8 +552,7 @@ sensitive `zizmor`'s analyses are:
         This persona can be made explicit with `--persona=regular`,
         although this is not required.
 
-
-* The _pedantic persona_, enabled with `--persona=pedantic`: the user wants
+* The *pedantic persona*, enabled with `--persona=pedantic`: the user wants
   *code smells* in addition to regular, actionable security findings.
 
     This persona is ideal for finding things that are a good idea
@@ -560,7 +590,7 @@ sensitive `zizmor`'s analyses are:
         This persona can also be enabled with `--pedantic`, which is
         an alias for `--persona=pedantic`.
 
-* The _auditor persona_, enabled with `--persona=auditor`: the user wants
+* The *auditor persona*, enabled with `--persona=auditor`: the user wants
   *everything* flagged by `zizmor`, including findings that are likely
   to be false positives.
 
@@ -667,7 +697,7 @@ to keep in mind:
   some patches may not match the file's exact style.
 * **Online access**: some fixes may require online access, even if their
   parent audit doesn't. For example, [unpinned-uses](./audits.md#unpinned-uses)
-  doesn't require online access to _detect_ unpinned uses, but it does
+  doesn't require online access to *detect* unpinned uses, but it does
   require online access (and a GitHub token) to fetch the latest commit
   SHA for pinning.
 
@@ -896,9 +926,9 @@ However, like all tools, `zizmor` is **not a panacea**, and has
 fundamental limitations that must be kept in mind. This page
 documents some of those limitations.
 
-### `zizmor` is a _static_ analysis tool { #static-analysis }
+### `zizmor` is a *static* analysis tool { #static-analysis }
 
-`zizmor` is a _static_ analysis tool. It never executes any code, nor does it
+`zizmor` is a *static* analysis tool. It never executes any code, nor does it
 have access to any runtime state.
 
 In contrast, GitHub Actions workflow and action definitions are highly
@@ -940,9 +970,9 @@ the [template-injection](./audits.md#template-injection) audit will flag
 `${{ matrix.something }}` as a potential code injection risk, since it
 can't infer anything about what `matrix.something` might expand to.
 
-### `zizmor` audits workflow and action _definitions_ only { #definitions-only }
+### `zizmor` audits workflow and action *definitions* only { #definitions-only }
 
-`zizmor` audits workflow and action _definitions_ only. That means the
+`zizmor` audits workflow and action *definitions* only. That means the
 contents of `foo.yml` (for your workflow definitions) or `action.yml` (for your
 composite or Docker action definitions).
 
@@ -1024,7 +1054,7 @@ under which steps can be defined to make them run in parallel, rather than
 the default of serial execution.
 
 `zizmor` makes an effort to handle parallel steps in the same way that serial
-steps are handled. In other words: anything that _would_ be flagged in a serial
-step _should_ also be flagged if nested inside a `#!yaml parallel:` block.
+steps are handled. In other words: anything that *would* be flagged in a serial
+step *should* also be flagged if nested inside a `#!yaml parallel:` block.
 
 [supports parallel steps]: https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/
