@@ -1137,9 +1137,9 @@ impl Document {
     fn query_node(&self, route: &Route, mode: QueryMode) -> Result<Node<'_>, QueryError> {
         let mut focus_node = self.top_object()?;
         for component in &route.route {
-            match self.descend(&focus_node, component) {
-                Ok(next) => focus_node = next,
-                Err(e) => return Err(e),
+            {
+                let next = self.descend(&focus_node, component)?;
+                focus_node = next
             }
         }
 

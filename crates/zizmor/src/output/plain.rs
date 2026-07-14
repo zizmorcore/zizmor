@@ -222,10 +222,7 @@ fn render_finding(
         title = title.id_url(finding.url);
     }
 
-    let confidence = format!(
-        "audit confidence → {:?}",
-        &finding.determinations.confidence
-    );
+    let confidence = format!("audit confidence → {:?}", finding.determinations.confidence);
 
     let mut group = Group::with_title(title)
         .elements(finding_snippets(registry, finding, render_links_mode))

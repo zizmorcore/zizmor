@@ -265,7 +265,7 @@ impl KnownVulnerableActions {
                     step.location()
                         .primary()
                         .with_keys(["uses".into()])
-                        .with_url(format!("https://github.com/advisories/{id}", id = &id))
+                        .with_url(format!("https://github.com/advisories/{id}", id = id))
                         .annotated(id),
                 );
 

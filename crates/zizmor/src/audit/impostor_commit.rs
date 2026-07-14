@@ -167,7 +167,7 @@ impl ImpostorCommit {
             if self
                 .named_ref_contains_commit(
                     uses,
-                    &format!("refs/heads/{}", &branch.name),
+                    &format!("refs/heads/{}", branch.name),
                     candidate_sha,
                 )
                 .await?
@@ -178,7 +178,7 @@ impl ImpostorCommit {
 
         for tag in tags {
             if self
-                .named_ref_contains_commit(uses, &format!("refs/tags/{}", &tag.name), candidate_sha)
+                .named_ref_contains_commit(uses, &format!("refs/tags/{}", tag.name), candidate_sha)
                 .await?
             {
                 return Ok(IntermediateDetermination::NotImpostor);
