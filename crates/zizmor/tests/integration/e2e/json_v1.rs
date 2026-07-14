@@ -23,7 +23,9 @@ fn test_json_v1_fix_metadata() {
     // (title, key, disposition) in its `fixes` array.
     let output = zizmor()
         .args(["--format=json-v1"])
-        .input(input_under_test("dependabot-execution/basic/dependabot.yml"))
+        .input(input_under_test(
+            "dependabot-execution/basic/dependabot.yml",
+        ))
         .run()
         .expect("Failed to run zizmor with JSON v1 format");
 
