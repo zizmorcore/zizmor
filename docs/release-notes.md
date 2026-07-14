@@ -11,7 +11,7 @@ of `zizmor`.
 
 ## 1.27.0
 
-### New Feartures 🌈
+### New Features 🌈
 
 * zizmor now has **experimental** support for workflows that
   specify parallel steps. See [Usage - Parallel steps](./usage.md#parallel-steps)
