@@ -31,7 +31,7 @@ impl Audit for TimeoutMinutes {
         if job.steps().all(|step| step.timeout_minutes().is_none()) {
             return Ok(vec![
                 Self::finding()
-                    .severity(Severity::Medium)
+                    .severity(Severity::Low)
                     .confidence(Confidence::High)
                     .persona(Persona::Pedantic)
                     .add_location(
@@ -53,7 +53,7 @@ impl Audit for TimeoutMinutes {
 
             findings.push(
                 Self::finding()
-                    .severity(Severity::Medium)
+                    .severity(Severity::Low)
                     .confidence(Confidence::High)
                     .persona(Persona::Pedantic)
                     .add_location(
