@@ -21,6 +21,24 @@ struct V1Finding<'a> {
     determinations: finding::Determinations,
     locations: &'a [finding::location::Location<'a>],
     ignored: bool,
+    fixes: Vec<V1Fix<'a>>,
+}
+
+#[derive(serde::Serialize)]
+struct V1Fix<'a> {
+    title: &'a str,
+    key: &'a crate::InputKey,
+    disposition: finding::FixDisposition,
+}
+
+impl<'a> From<&'a finding::Fix<'a>> for V1Fix<'a> {
+    fn from(fix: &'a finding::Fix<'a>) -> Self {
+        Self {
+            title: fix.title.as_str(),
+            key: fix.key,
+            disposition: fix.disposition,
+        }
+    }
 }
 
 impl<'a> From<&'a finding::Finding<'a>> for V1Finding<'a> {
@@ -32,6 +50,7 @@ impl<'a> From<&'a finding::Finding<'a>> for V1Finding<'a> {
             determinations: finding.determinations,
             locations: &finding.locations,
             ignored: finding.ignored,
+            fixes: finding.fixes.iter().map(V1Fix::from).collect(),
         }
     }
 }
