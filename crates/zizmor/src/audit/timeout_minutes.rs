@@ -28,7 +28,7 @@ impl Audit for TimeoutMinutes {
             return Ok(vec![]);
         }
 
-        if job.steps().all(|step| step.timeout_minutes().is_none()) {
+        if job.steps().any(|step| step.timeout_minutes().is_none()) {
             return Ok(vec![
                 Self::finding()
                     .severity(Severity::Low)
@@ -44,29 +44,7 @@ impl Audit for TimeoutMinutes {
             ]);
         }
 
-        let mut findings = vec![];
-
-        for step in job.steps() {
-            if step.timeout_minutes().is_some() {
-                continue;
-            }
-
-            findings.push(
-                Self::finding()
-                    .severity(Severity::Low)
-                    .confidence(Confidence::High)
-                    .persona(Persona::Pedantic)
-                    .add_location(
-                        step.location()
-                            .primary()
-                            .annotated("step missing timeout-minutes"),
-                    )
-                    .fix(Self::create_add_timeout_fix_job(job, config))
-                    .build(job)?,
-            );
-        }
-
-        Ok(findings)
+        Ok(vec![])
     }
 }
 
