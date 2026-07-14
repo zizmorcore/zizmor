@@ -355,11 +355,11 @@ zizmor --format=json . | jq .[0]
 
     ```json
     {
-      "ident": "github-env",
-      "desc": "dangerous use of environment file",
-      "url": "https://docs.zizmor.sh/audits/#github-env",
+      "ident": "template-injection",
+      "desc": "code injection via template expansion",
+      "url": "https://docs.zizmor.sh/audits/#template-injection",
       "determinations": {
-        "confidence": "Low",
+        "confidence": "High",
         "severity": "High",
         "persona": "Regular"
       },
@@ -368,15 +368,63 @@ zizmor --format=json . | jq .[0]
           "symbolic": {
             "key": {
               "Local": {
-                "prefix": ".",
-                "given_path": "./tests/integration/test-data/github-env/action.yml"
+                "verbatim_path": "./.github/workflows/ci.yml"
               }
             },
-            "annotation": "write to GITHUB_ENV may allow code execution",
+            "annotation": "this step",
             "route": {
-              "components": [
+              "route": [
                 {
-                  "Key": "runs"
+                  "Key": "jobs"
+                },
+                {
+                  "Key": "greet"
+                },
+                {
+                  "Key": "steps"
+                },
+                {
+                  "Index": 0
+                }
+              ]
+            },
+            "feature_kind": "Normal",
+            "kind": "Hidden"
+          },
+          "concrete": {
+            "location": {
+              "start_point": {
+                "row": 6,
+                "column": 8
+              },
+              "end_point": {
+                "row": 7,
+                "column": 0
+              },
+              "offset_span": {
+                "start": 86,
+                "end": 136
+              }
+            },
+            "feature": "run: echo \"Hello ${{ github.event.issue.title }}\"\n",
+            "comments": []
+          }
+        },
+        {
+          "symbolic": {
+            "key": {
+              "Local": {
+                "verbatim_path": "./.github/workflows/ci.yml"
+              }
+            },
+            "annotation": "may expand into attacker-controllable code",
+            "route": {
+              "route": [
+                {
+                  "Key": "jobs"
+                },
+                {
+                  "Key": "greet"
                 },
                 {
                   "Key": "steps"
@@ -389,39 +437,99 @@ zizmor --format=json . | jq .[0]
                 }
               ]
             },
+            "feature_kind": {
+              "Subfeature": {
+                "after": 13,
+                "fragment": {
+                  "Raw": "github.event.issue.title"
+                }
+              }
+            },
             "kind": "Primary"
           },
           "concrete": {
             "location": {
               "start_point": {
-                "row": 9,
-                "column": 6
+                "row": 6,
+                "column": 29
               },
               "end_point": {
-                "row": 10,
-                "column": 40
+                "row": 6,
+                "column": 53
               },
               "offset_span": {
-                "start": 202,
-                "end": 249
+                "start": 107,
+                "end": 131
               }
             },
-            "feature": "      run: |\n        echo \"foo=$(bar)\" >> $GITHUB_ENV",
+            "feature": "echo \"Hello ${{ github.event.issue.title }}\"",
+            "comments": []
+          }
+        },
+        {
+          "symbolic": {
+            "key": {
+              "Local": {
+                "verbatim_path": "./.github/workflows/ci.yml"
+              }
+            },
+            "annotation": "this run block",
+            "route": {
+              "route": [
+                {
+                  "Key": "jobs"
+                },
+                {
+                  "Key": "greet"
+                },
+                {
+                  "Key": "steps"
+                },
+                {
+                  "Index": 0
+                },
+                {
+                  "Key": "run"
+                }
+              ]
+            },
+            "feature_kind": "KeyOnly",
+            "kind": "Related"
+          },
+          "concrete": {
+            "location": {
+              "start_point": {
+                "row": 6,
+                "column": 8
+              },
+              "end_point": {
+                "row": 6,
+                "column": 11
+              },
+              "offset_span": {
+                "start": 86,
+                "end": 89
+              }
+            },
+            "feature": "run",
             "comments": []
           }
         }
       ],
       "ignored": false,
-      "fixes": []
+      "fixes": [
+        {
+          "title": "replace expression with environment variable",
+          "key": {
+            "Local": {
+              "verbatim_path": "./.github/workflows/ci.yml"
+            }
+          },
+          "disposition": "unsafe"
+        }
+      ]
     }
     ```
-
-Each finding also includes a `fixes` array of the auto-fixes available for
-it, or an empty array if none are available. Each entry has a `title`, the
-`key` of the input it applies to, and a `disposition` of either `safe` or
-`unsafe` (corresponding to the `--fix` modes). These entries are symbolic:
-they describe an available fix but do not contain concrete patch data, which
-is only produced when a fix is applied via `--fix`.
 
 ### SARIF
 
