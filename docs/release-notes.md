@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* The JSON (v1) output format now includes metadata for each finding's fixes,
+  if the finding has fixes (#2186)
+
 ## 1.27.0
 
 ### New Features 🌈
