@@ -17,7 +17,7 @@ readme = "README.md"
 homepage = "https://docs.zizmor.sh"
 edition = "2024"
 license = "MIT"
-rust-version = "1.88.0"
+rust-version = "1.97.0"
 version = "1.27.0"
 
 [workspace.dependencies]
