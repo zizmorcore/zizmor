@@ -1839,6 +1839,61 @@ shell quoting/expansion rules.
             ISSUE_TITLE: ${{ github.event.issue.title }}
         ```
 
+## `timeout-minutes`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|----------------------| -------------|
+| Workflow | [timeout-minutes.yml]   | v1.28.0       | ✅             | ✅                   | ✅           |
+
+[timeout-minutes.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/timeout-minutes.yml
+
+Detects a missing `timeout-minutes:` property on a job.
+
+By default, GitHub sets this value to 360 minutes (6 hours). If a job gets stuck, it can accidentally consume all available GitHub Actions runner minutes.
+
+This audit checks whether a `timeout-minutes:` property is set for the job, or, failing that, if the property is set on all steps of the job. Otherwise, it raises a pedantic finding.
+
+!!! note
+
+    This is a `--pedantic` only audit, due to a lack of security impact.
+
+### Configuration
+
+#### `rules.timeout-minutes.config.minutes`
+
+Type: number
+
+The `rules.timeout-minutes.config.minutes` setting controls the value used for `timeout-minutes` when applying the auto-fix.
+
+The default value used by the auto-fix is `30`.
+
+### Remediation
+
+Add the `timeout-minutes:` property to the job, or add it to all steps in the job.
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="timeout-minutes.yml"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - run: echo "Hello!"
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="timeout-minutes.yml" hl_lines="4"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            timeout-minutes: 30
+            steps:
+              - run: echo "Hello!"
+        ```
+
 ## `typosquat-uses`
 
 | Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
