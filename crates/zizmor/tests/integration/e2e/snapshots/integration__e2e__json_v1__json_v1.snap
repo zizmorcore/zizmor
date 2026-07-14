@@ -224,7 +224,8 @@ expression: output
         }
       }
     ],
-    "ignored": false
+    "ignored": false,
+    "fixes": []
   },
   {
     "ident": "unpinned-uses",
@@ -293,7 +294,8 @@ expression: output
         }
       }
     ],
-    "ignored": false
+    "ignored": false,
+    "fixes": []
   },
   {
     "ident": "unpinned-uses",
@@ -362,7 +364,8 @@ expression: output
         }
       }
     ],
-    "ignored": false
+    "ignored": false,
+    "fixes": []
   },
   {
     "ident": "unpinned-uses",
@@ -431,7 +434,8 @@ expression: output
         }
       }
     ],
-    "ignored": false
+    "ignored": false,
+    "fixes": []
   },
   {
     "ident": "unsound-contains",
@@ -493,7 +497,8 @@ expression: output
         }
       }
     ],
-    "ignored": false
+    "ignored": false,
+    "fixes": []
   },
   {
     "ident": "unsound-contains",
@@ -555,7 +560,8 @@ expression: output
         }
       }
     ],
-    "ignored": false
+    "ignored": false,
+    "fixes": []
   },
   {
     "ident": "unsound-contains",
@@ -617,7 +623,8 @@ expression: output
         }
       }
     ],
-    "ignored": false
+    "ignored": false,
+    "fixes": []
   },
   {
     "ident": "unsound-contains",
@@ -679,7 +686,8 @@ expression: output
         }
       }
     ],
-    "ignored": false
+    "ignored": false,
+    "fixes": []
   },
   {
     "ident": "unsound-contains",
@@ -741,6 +749,7 @@ expression: output
         }
       }
     ],
-    "ignored": false
+    "ignored": false,
+    "fixes": []
   }
 ]
