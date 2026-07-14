@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.27.0
+
 ### New Feartures 🌈
 
 * zizmor now has **experimental** support for workflows that
