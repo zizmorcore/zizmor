@@ -66,7 +66,7 @@ fn test_if_false_skipped() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("unpinned-tools/if-false.yml"))
             .run()?,
-        @"No findings to report. Good job! (1 ignored, 2 suppressed)"
+        @"No findings to report. Good job! (1 ignored, 1 suppressed)"
     );
 
     Ok(())

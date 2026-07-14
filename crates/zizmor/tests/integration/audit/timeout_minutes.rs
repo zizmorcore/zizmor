@@ -33,12 +33,16 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
        = note: this finding has an auto-fix
 
     help[timeout-minutes]: missing timeout-minutes
-      --> @@INPUT@@:45:9
+      --> @@INPUT@@:38:3
        |
-    45 |         - name: 6-not-ok
-       |  _________^
+    38 | /   with-timeout-on-some-step:
+    39 | |     name: with-timeout-on-some-step
+    40 | |     runs-on: ubuntu-latest
+    41 | |     steps:
+    ...  |
+    45 | |       - name: 6-not-ok
     46 | |         run: echo not ok
-       | |_________________________^ step missing timeout-minutes
+       | |_________________________^ job missing timeout-minutes
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -73,12 +77,16 @@ fn test_auditor_persona() -> anyhow::Result<()> {
        = note: this finding has an auto-fix
 
     help[timeout-minutes]: missing timeout-minutes
-      --> @@INPUT@@:45:9
+      --> @@INPUT@@:38:3
        |
-    45 |         - name: 6-not-ok
-       |  _________^
+    38 | /   with-timeout-on-some-step:
+    39 | |     name: with-timeout-on-some-step
+    40 | |     runs-on: ubuntu-latest
+    41 | |     steps:
+    ...  |
+    45 | |       - name: 6-not-ok
     46 | |         run: echo not ok
-       | |_________________________^ step missing timeout-minutes
+       | |_________________________^ job missing timeout-minutes
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
