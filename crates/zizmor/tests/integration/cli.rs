@@ -115,7 +115,7 @@ updates:
      --> <stdin>:3:5
       |
     3 |   - package-ecosystem: github-actions
-      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ insufficient default-days configured (less than 7)
       |
       = note: audit confidence → High
       = note: this finding has an auto-fix

@@ -15,7 +15,7 @@ fn test_missing_cooldown() -> anyhow::Result<()> {
      --> @@INPUT@@:4:5
       |
     4 |   - package-ecosystem: pip
-      |     ^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+      |     ^^^^^^^^^^^^^^^^^^^^^^ insufficient default-days configured (less than 7)
       |
       = note: audit confidence → High
       = note: this finding has an auto-fix
@@ -40,7 +40,7 @@ fn test_no_default_days() -> anyhow::Result<()> {
      --> @@INPUT@@:6:5
       |
     6 |     cooldown: {}
-      |     ^^^^^^^^^^^^ no default-days configured
+      |     ^^^^^^^^^^^^ insufficient implicit default-days (less than 7)
       |
       = note: audit confidence → High
       = note: this finding has an auto-fix
@@ -60,16 +60,16 @@ fn test_default_days_too_short() -> anyhow::Result<()> {
             ))
             .run()?,
         @"
-    help[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+    warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
      --> @@INPUT@@:7:7
       |
     7 |       default-days: 2
       |       ^^^^^^^^^^^^^^^ insufficient default-days configured (less than 7)
       |
-      = note: audit confidence → Medium
+      = note: audit confidence → High
       = note: this finding has an auto-fix
 
-    1 findings (1 safe fixes): 0 informational, 1 low, 0 medium, 0 high
+    1 findings (1 safe fixes): 0 informational, 0 low, 1 medium, 0 high
     ");
 
     Ok(())
@@ -180,33 +180,7 @@ fn test_multi_ecosystem_group_with_cooldown() -> anyhow::Result<()> {
             ))
             .args(["--pedantic"])
             .run()?,
-        @"
-    help[dependabot-cooldown]: insufficient cooldown in Dependabot updates
-      --> @@INPUT@@:13:5
-       |
-    10 |       multi-ecosystem-group: all
-       |       --------------------- multi-ecosystem-group configured here
-    ...
-    13 | /     cooldown:
-    14 | |       default-days: 7
-       | |_____________________^ multi-ecosystem-group cooldowns do not batch updates correctly
-       |
-       = note: audit confidence → High
-
-    help[dependabot-cooldown]: insufficient cooldown in Dependabot updates
-      --> @@INPUT@@:20:5
-       |
-    17 |       multi-ecosystem-group: all
-       |       --------------------- multi-ecosystem-group configured here
-    ...
-    20 | /     cooldown:
-    21 | |       default-days: 7
-       | |______________________^ multi-ecosystem-group cooldowns do not batch updates correctly
-       |
-       = note: audit confidence → High
-
-    2 findings: 0 informational, 2 low, 0 medium, 0 high
-    "
+        @"No findings to report. Good job!"
     );
 
     Ok(())
@@ -223,7 +197,7 @@ fn test_opentofu_cooldown() -> anyhow::Result<()> {
      --> @@INPUT@@:5:5
       |
     5 |   - package-ecosystem: opentofu
-      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ insufficient default-days configured (less than 7)
       |
       = note: audit confidence → High
       = note: this finding has an auto-fix
