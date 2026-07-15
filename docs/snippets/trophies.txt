@@ -50,6 +50,7 @@ aquasecurity/trivy-action#502
 aquasecurity/trivy-operator#2910
 aquasecurity/vuln-list-update#411
 arc53/DocsGPT#2383
+argoproj/argo-cd#27304
 ariel-os/ariel-os#1738
 aristocratos/btop#1590
 Arize-ai/phoenix#13202
@@ -95,6 +96,8 @@ better-auth/better-auth#8879
 bevyengine/bevy#22294
 bevyengine/bevy#22817
 biomejs/biome#10428
+biomejs/biome-vscode#1101
+biomejs/biome-zed#207
 bitcoindevkit/bdk#1778
 bitcoindevkit/bdk#1813
 bitwarden/ios#2124
@@ -131,9 +134,11 @@ chainguard-images/images#3076
 changesets/action#617
 chatmail/core#7942
 cheeriojs/cheerio#5212
+Clipy/Clipy#666
 cloudflare/vinext#1577
 coder/coder#19459
 composer/packagist#1711
+composer/semver#176
 conda/conda-lock#814
 containerd/nerdctl#4909
 containers/podman#27642
@@ -213,6 +218,7 @@ fastapi/sqlmodel#1871
 fastapi/typer#1705
 fatiando/harmonica#550
 flatironinstitute/nemos#520
+flet-dev/flet#6602
 Flexget/Flexget#4299
 foyer-rs/foyer#859
 fpgmaas/deptry#1161
@@ -238,6 +244,7 @@ gitify-app/gitify#2763
 GitoxideLabs/gitoxide#2337
 gleam-lang/gleam#5559
 golangci/golangci-lint#6500
+google/grinder.dart#432
 google/osv-scanner#2591
 google/osv.dev#4969
 google/zerocop#2810
@@ -336,6 +343,7 @@ junit-team/junit-framework#4838
 junit-team/junit-framework#4840
 jupyterhub/jupyterhub#5049
 jupyterlab/jupyter-ai#1577
+jupytext/jupytext#1569
 kanidm/kanidm#3430
 kata-containers/kata-containers#11392
 kata-containers/kata-containers#11475
@@ -377,6 +385,7 @@ maxmind/MaxMind-DB-Reader-java#221
 maxmind/MaxMind-DB-Reader-python#178
 maxmind/mmdbinspect#82
 maxmind/mmdbwriter#104
+mbta/api#1048
 mccutchen/go-httpbin#252
 medic/cht-core#10559
 meltano/meltano#9972
@@ -411,6 +420,7 @@ mozilla/fxa#18628
 mozilla/neqo#2413
 mozilla/neqo#2721
 mvanhorn/last30days-skill#472
+mwouts/itables#580
 napari/napari#8811
 napari/napari#8885
 narwhals-dev/narwhals#1567
@@ -432,6 +442,7 @@ npmx-dev/npmx.dev#2632
 numpy/numpy#27931
 numpy/numpy.org#797
 nuxt/nuxt#35089
+NVIDIA-NeMo/Guardrails#2055
 octo-sts/app#1294
 octobox/octobox#4377
 onnx/onnx#6661
@@ -505,6 +516,7 @@ pylast/pylast#465
 pymc-devs/pymc#7624
 pymc-devs/pymc#7959
 pymc-devs/pytensor#1136
+pymc-devs/pytensor#2281
 PyO3/pyo3#4774
 pypa/cibuildwheel#2776
 pypa/packaging#1035
@@ -541,6 +553,7 @@ pyvista/pyvista#7006
 PyVRP/PyVRP#670
 quarkslab/quokka#46
 quay/quay#5887
+rails/rails-html-sanitizer#220
 ranaroussi/yfinance#2735
 rancher/fleet#5301
 rancher/rancher#54439
@@ -556,6 +569,7 @@ rocicorp/mono#6052
 rolldown/rolldown#3861
 roostorg/osprey#350
 rsyslog/rsyslog#6808
+rubocop/rubocop-rspec#2202
 ruby/ruby#16273
 rubygems/rubygems#8702
 rubygems/rubygems.org#5350
@@ -581,10 +595,13 @@ Saghen/blink.cmp#991
 sanity-io/sanity#12830
 SAP/ai-sdk-js#1822
 SAP/cloud-sdk-js#6564
+sass/dart-sass#2792
+savonrb/savon@1cb9ad4311e7ed1f59dbdb0b48ad677016a0a875
 scientific-python/repo-review#257
 scikit-build/scikit-build-core#983
 scikit-image/scikit-image#7662
 scroll-tech/go-ethereum#1146
+sebp/scikit-survival#617
 Setasign/FPDI#253
 sharkdp/fd#1828
 sigstore/cosign#3959
@@ -609,6 +626,7 @@ slackapi/python-slack-hooks#58
 slackapi/python-slack-sdk#1691
 slackapi/slack-cli#100
 sonos/tract#2262
+sparklemotion/nokogiri#3654
 sqlite/sqlite-wasm#166
 stanfordnlp/dspy#9743
 statamic/cms#14687
@@ -651,6 +669,7 @@ toml-rs/toml#1145
 torchbox/wagtailmedia#252
 tornadoweb/tornado#3438
 tornadoweb/tornado#3463
+toy/image_optim@9ccbbd0bc8e6a2d3258988e34de5dbe86408da80
 tradingview/lightweight-charts#2085
 trailofbits/fickling#144
 trailofbits/fickling#177
@@ -667,6 +686,7 @@ ubicloud/ubicloud#5472
 UKGovernmentBEIS/inspect_evals#1597
 UKGovernmentBEIS/inspect_evals#1599
 ultrajson/ultrajson#650
+unicode-org/icu#4052
 Unidata/MetPy#3710
 Uniswap/docs#1114
 Uniswap/sdks#516
@@ -688,6 +708,7 @@ VSCodium/vscodium#2795
 wagtail/wagtail#14285
 wagtail/wagtail-localize#843
 wasmCloud/wasmCloud#5129
+wasp-lang/wasp#4345
 wgsl-analyzer/wgsl-analyzer#844
 wireapp/wire-webapp#21362
 withastro/astro#16810
