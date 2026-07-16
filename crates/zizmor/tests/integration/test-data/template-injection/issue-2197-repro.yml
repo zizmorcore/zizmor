@@ -1,0 +1,20 @@
+# See: https://github.com/zizmorcore/zizmor/issues/2197
+#
+# `steps.*.outcome` context accesses should not be considered an injection risk.
+
+name: issue-2197-repro
+
+on: issue_comment
+
+permissions: {}
+
+concurrency:
+  group: issue-2197-repro
+  cancel-in-progress: true
+
+jobs:
+  repro:
+    name: Repro
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ steps.fake.outcome }}"

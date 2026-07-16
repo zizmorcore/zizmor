@@ -14,6 +14,12 @@ of `zizmor`.
 * The JSON (v1) output format now includes metadata for each finding's fixes,
   if the finding has fixes (#2186)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [template-injection] audit would incorrectly flag
+  `steps.*.outcome` and `steps.*.conclusion` as injection risks in the default persona
+  (#2199)
+
 ## 1.27.0
 
 ### New Features 🌈
