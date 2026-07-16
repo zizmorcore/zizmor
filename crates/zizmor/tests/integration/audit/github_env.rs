@@ -128,7 +128,7 @@ fn test_issue_2200() -> Result<()> {
     21 |         - run: |
        |  _________^
     22 | |           printf "BUNDLE_WITH=avo\nRAILS_GROUPS=avo\n" >> "$GITHUB_ENV"
-       | |________________________________________________________________________^ write to GITHUB_ENV may allow code execution
+       | |_______________________________________________________________________^ write to GITHUB_ENV may allow code execution
        |
        = note: audit confidence → Low
 
