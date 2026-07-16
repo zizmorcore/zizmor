@@ -711,20 +711,7 @@ fn test_issue_2197() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-2197-repro.yml"))
             .run()?,
-        @r#"
-    info[template-injection]: code injection via template expansion
-      --> @@INPUT@@:20:24
-       |
-    20 |       - run: echo "${{ steps.fake.outcome }}"
-       |         ---            ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-       |         |
-       |         this run block
-       |
-       = note: audit confidence → Low
-       = note: this finding has an auto-fix
-
-    1 findings (1 unsafe fixes): 1 informational, 0 low, 0 medium, 0 high
-    "#
+        @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())
