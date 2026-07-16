@@ -20,3 +20,4 @@ jobs:
     steps:
       - run: |
           printf "BUNDLE_WITH=avo\nRAILS_GROUPS=avo\n" >> "$GITHUB_ENV"
+        shell: bash
