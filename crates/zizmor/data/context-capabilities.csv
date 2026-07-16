@@ -4081,3 +4081,4 @@ runner.debug,fixed
 runner.os,fixed
 runner.temp,fixed
 runner.tool_cache,fixed
+steps.*.outcome,fixed
