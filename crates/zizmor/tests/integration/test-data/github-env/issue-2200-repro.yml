@@ -1,0 +1,22 @@
+# See: https://github.com/zizmorcore/zizmor/issues/2200
+#
+# Inserting literal values (with no variable interpolations) into `GITHUB_ENV`
+# should not be flagged.
+
+name: issue-2200
+
+on: pull_request_target # zizmor: ignore[dangerous-triggers]
+
+permissions: {}
+
+concurrency:
+  group: issue-2200
+  cancel-in-progress: true
+
+jobs:
+  repro:
+    name: Repro
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          printf "BUNDLE_WITH=avo\nRAILS_GROUPS=avo\n" >> "$GITHUB_ENV"

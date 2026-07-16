@@ -704,7 +704,7 @@ fn test_issue_1903() -> Result<()> {
 /// Repro case for #2197: `steps.*.outcome` contexts should not be considered injection
 /// risks in the default persona.
 ///
-/// See: <https://github.com/zizmorcore/zizmor/issues/1903>
+/// See: <https://github.com/zizmorcore/zizmor/issues/2197>
 #[test]
 fn test_issue_2197() -> Result<()> {
     insta::assert_snapshot!(
