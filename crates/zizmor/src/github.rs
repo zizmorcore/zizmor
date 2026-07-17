@@ -754,14 +754,6 @@ impl Client {
         slug: &RepoSlug,
         file: &str,
     ) -> Result<Option<String>, ClientError> {
-        self.fetch_single_file_async(slug, file).await
-    }
-
-    async fn fetch_single_file_async(
-        &self,
-        slug: &RepoSlug,
-        file: &str,
-    ) -> Result<Option<String>, ClientError> {
         tracing::debug!("fetching {file} from {slug}");
 
         let url = format!(
@@ -846,7 +838,7 @@ impl Client {
             .into_iter()
             .filter(|file| file.name.ends_with(".yml") || file.name.ends_with(".yaml"))
         {
-            let Some(contents) = self.fetch_single_file_async(slug, &file.path).await? else {
+            let Some(contents) = self.fetch_single_file(slug, &file.path).await? else {
                 // This can only happen if we have some kind of TOCTOU
                 // discrepancy with the listing call above, e.g. a file
                 // was deleted on a branch immediately after we listed it.
