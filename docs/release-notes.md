@@ -20,6 +20,9 @@ of `zizmor`.
   `steps.*.outcome` and `steps.*.conclusion` as injection risks in the default persona
   (#2199)
 
+* Fixed a bug where the [github-env] audit would incorrectly flag some `printf`
+  calls as exploitable (#2201)
+
 ## 1.27.0
 
 ### New Features 🌈

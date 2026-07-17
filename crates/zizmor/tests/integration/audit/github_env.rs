@@ -108,3 +108,21 @@ fn test_issue_1333() -> Result<()> {
 
     Ok(())
 }
+
+/// Reproducer for #2200. Insertions into `GITHUB_ENV` should not be flagged if they are
+/// entirely literal, i.e. have no variable expansions within them.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/2200>
+#[test]
+fn test_issue_2200() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Both)
+            .setenv("RUST_LOG", "warn")
+            .input(input_under_test("github-env/issue-2200-repro.yml"))
+            .run()?,
+        @"No findings to report. Good job! (1 ignored)"
+    );
+
+    Ok(())
+}

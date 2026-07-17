@@ -200,9 +200,10 @@ impl GitHubEnv {
 
             let args = mat.captures.iter().filter(|cap| cap.index == args);
 
-            // Filter matches down to those where the command isn't `echo`
+            // Filter matches down to those where the command isn't `echo` or `printf`
             // *or* at least one argument isn't a string literal.
-            if cmd != "echo" || !self.bash_echo_args_are_safe(args) {
+            // TODO: other echo-like commands to check here?
+            if (cmd != "echo" && cmd != "printf") || !self.bash_echo_args_are_safe(args) {
                 let span = mat
                     .captures
                     .iter()
