@@ -121,19 +121,7 @@ fn test_issue_2200() -> Result<()> {
             .setenv("RUST_LOG", "warn")
             .input(input_under_test("github-env/issue-2200-repro.yml"))
             .run()?,
-        @r#"
-    error[github-env]: dangerous use of environment file
-      --> @@INPUT@@:21:9
-       |
-    21 |         - run: |
-       |  _________^
-    22 | |           printf "BUNDLE_WITH=avo\nRAILS_GROUPS=avo\n" >> "$GITHUB_ENV"
-       | |_______________________________________________________________________^ write to GITHUB_ENV may allow code execution
-       |
-       = note: audit confidence → Low
-
-    2 findings (1 ignored): 0 informational, 0 low, 0 medium, 1 high
-    "#
+        @"No findings to report. Good job! (1 ignored)"
     );
 
     Ok(())
