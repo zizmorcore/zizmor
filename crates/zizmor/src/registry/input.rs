@@ -96,6 +96,16 @@ pub(crate) enum CollectionError {
     /// No inputs were collected.
     #[error("no inputs collected")]
     NoInputs,
+
+    /// The (remote) input has an ambiguous ref.
+    ///
+    /// For example, `foo/bar@v1` is ambiguous if `v1` is both a tag
+    /// and a branch.
+    #[error(
+        "remote input has an ambiguous Git reference ({0:?} is both a tag and a branch)",
+        .slug.git_ref.as_deref().unwrap_or("HEAD"))
+    ]
+    AmbiguousRemoteRef { slug: RepoSlug },
 }
 
 impl CollectionError {
@@ -139,7 +149,20 @@ pub(crate) struct RepoSlug {
     /// The name of the repository.
     pub(crate) repo: String,
     /// An optional Git reference, e.g. a branch or tag name.
-    pub(crate) git_ref: Option<String>,
+    ///
+    /// Note: intentionally not exposed, so that consumers get
+    /// a reasonable default through [`RepoSlug::git_ref()`] instead.
+    git_ref: Option<String>,
+}
+
+impl RepoSlug {
+    /// Returns a Git reference for this slug.
+    ///
+    /// This reference is the one provided by the slug if present,
+    /// or the default `HEAD` reference if not provided.
+    pub(crate) fn git_ref(&self) -> &str {
+        self.git_ref.as_deref().unwrap_or("HEAD")
+    }
 }
 
 impl std::str::FromStr for RepoSlug {

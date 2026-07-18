@@ -565,6 +565,31 @@ async fn main() -> ExitCode {
 
                         Some(report)
                     }
+                    CollectionError::AmbiguousRemoteRef { slug } => {
+                        let group = Group::with_title(Level::ERROR.primary_title(err.to_string()))
+                            .elements([
+                                Level::HELP.message(format!(
+                                    "disambiguate the Git ref by putting it in the right namespace"
+                                )),
+                                Level::HELP.message(format!(
+                                    "example: {owner}/{repo}@refs/heads/{branch}",
+                                    owner = &slug.owner,
+                                    repo = &slug.repo,
+                                    branch = slug.git_ref()
+                                )),
+                                Level::HELP.message(format!(
+                                    "example: {owner}/{repo}@refs/tags/{tag}",
+                                    owner = &slug.owner,
+                                    repo = &slug.repo,
+                                    tag = slug.git_ref()
+                                )),
+                            ]);
+
+                        let renderer = Renderer::styled();
+                        let report = renderer.render(&[group]);
+
+                        Some(report)
+                    }
                     _ => None,
                 },
                 _ => None,
