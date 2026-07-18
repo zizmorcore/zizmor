@@ -23,6 +23,9 @@ of `zizmor`.
 * Fixed a bug where the [github-env] audit would incorrectly flag some `printf`
   calls as exploitable (#2201)
 
+* Fixed a bug where `zizmor` would produce a misleading and confusing error
+  message when asked to audit an ambiguous remote input (#2205)
+
 ## 1.27.0
 
 ### New Features 🌈
