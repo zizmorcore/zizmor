@@ -615,7 +615,7 @@ fn issue_1300() -> Result<()> {
     Caused by:
         0: input @@INPUT@@ doesn't contain any workflows
         1: request error while accessing GitHub API
-        2: HTTP status client error (404 Not Found) for url (https://api.github.com/repos/@@INPUT@@/contents/.github/workflows)
+        2: HTTP status client error (404 Not Found) for url (https://api.github.com/repos/@@INPUT@@/contents/.github/workflows?ref=HEAD)
     "
     );
 
@@ -851,6 +851,40 @@ fn issue_2182() -> Result<()> {
     INFO collect_inputs: zizmor::registry::input: collected 1 inputs from woodruffw-experiments/zizmor-issue-2182
     INFO audit: zizmor: 🌈 completed dummy/action.yml
     "
+    );
+
+    Ok(())
+}
+
+/// Regression test for #2202.
+///
+/// Ensures that we produce a reasonable error message when the user
+/// asks us to audit an ambiguous remote input (one where the @<ref>
+/// is both a branch and a tag).
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn issue_2202() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(NetworkMode::AssertOnline)
+            .output(OutputMode::Stderr)
+            .expects_failure(1)
+            .input(
+                "woodruffw-experiments/zizmor-issue-2202@v1"
+            )
+            .run()?,
+        @r#"
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    error: remote input has an ambiguous Git reference ("v1" is both a tag and a branch)
+      |
+      = help: disambiguate the Git ref by putting it in the right namespace
+      = help: example: woodruffw-experiments/zizmor-issue-2202@refs/heads/v1
+      = help: example: woodruffw-experiments/zizmor-issue-2202@refs/tags/v1
+
+    Caused by:
+        remote input has an ambiguous Git reference ("v1" is both a tag and a branch)
+    "#
     );
 
     Ok(())
