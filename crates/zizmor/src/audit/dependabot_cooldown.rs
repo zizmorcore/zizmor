@@ -1,6 +1,7 @@
 use crate::{
     audit::{Audit, AuditError, audit_meta},
-    finding::{Confidence, Fix, FixDisposition, Persona, Severity, location::Locatable as _},
+    finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
+    models::dependabot,
 };
 use yamlpatch::{Op, Patch};
 
@@ -15,7 +16,8 @@ pub(crate) struct DependabotCooldown;
 impl DependabotCooldown {
     /// Creates a fix that adds default-days to an existing cooldown block
     fn create_add_default_days_fix<'doc>(
-        update: crate::models::dependabot::Update<'doc>,
+        update: dependabot::Update<'doc>,
+        minimum_days: u64,
     ) -> Fix<'doc> {
         Fix {
             title: "add default-days to cooldown".to_string(),
@@ -25,7 +27,7 @@ impl DependabotCooldown {
                 route: update.location().route.with_keys(["cooldown".into()]),
                 operation: Op::Add {
                     key: "default-days".to_string(),
-                    value: yaml_serde::Value::Number(7.into()),
+                    value: yaml_serde::Value::Number(minimum_days.into()),
                 },
             }],
         }
@@ -33,7 +35,7 @@ impl DependabotCooldown {
 
     /// Creates a fix that increases an insufficient default-days value
     fn create_increase_default_days_fix<'doc>(
-        update: crate::models::dependabot::Update<'doc>,
+        update: dependabot::Update<'doc>,
         minimum_days: u64,
     ) -> Fix<'doc> {
         Fix {
@@ -51,7 +53,10 @@ impl DependabotCooldown {
     }
 
     /// Creates a fix that adds a cooldown block with default-days
-    fn create_add_cooldown_fix<'doc>(update: crate::models::dependabot::Update<'doc>) -> Fix<'doc> {
+    fn create_add_cooldown_fix<'doc>(
+        update: dependabot::Update<'doc>,
+        minimum_days: u64,
+    ) -> Fix<'doc> {
         Fix {
             title: "add cooldown configuration".to_string(),
             key: update.location().key,
@@ -64,7 +69,7 @@ impl DependabotCooldown {
                         let mut map = yaml_serde::Mapping::new();
                         map.insert(
                             yaml_serde::Value::String("default-days".to_string()),
-                            yaml_serde::Value::Number(7.into()),
+                            yaml_serde::Value::Number(minimum_days.into()),
                         );
                         map
                     }),
@@ -85,7 +90,7 @@ impl Audit for DependabotCooldown {
 
     async fn audit_dependabot<'doc>(
         &self,
-        dependabot: &'doc crate::models::dependabot::Dependabot,
+        dependabot: &'doc dependabot::Dependabot,
         config: &crate::config::Config,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
@@ -93,100 +98,64 @@ impl Audit for DependabotCooldown {
         let minimum_days = config.dependabot_cooldown_config.days.get() as u64;
 
         for update in dependabot.updates() {
-            // Check for cooldown + multi-ecosystem-group interaction.
-            // When cooldown is applied to an update in a multi-ecosystem group,
-            // it produces only one ecosystem update every N days instead of
-            // batching all ecosystem updates together, which is rarely intended.
-            if update.multi_ecosystem_group.is_some()
-                && let Some(cooldown) = &update.cooldown
-            {
-                // Only flag if there's an effective cooldown (default_days > 0
-                // or any semver-specific days set).
-                let has_effective_cooldown = cooldown.default_days.is_some_and(|d| d > 0)
-                    || cooldown.semver_major_days.is_some()
-                    || cooldown.semver_minor_days.is_some()
-                    || cooldown.semver_patch_days.is_some();
+            // If not set, `cooldown.default-days` is 3.
+            // TODO: Should we have opinions about the other cooldown settings?
+            let default_days = update
+                .cooldown
+                .as_ref()
+                .map_or(3, |cooldown| cooldown.default_days.unwrap_or(3));
 
-                if has_effective_cooldown {
-                    findings.push(
-                        Self::finding()
-                            .add_location(
-                                update
-                                    .location()
-                                    .with_keys(["cooldown".into()])
-                                    .primary()
-                                    .annotated(
-                                        "multi-ecosystem-group cooldowns do not batch updates correctly",
-                                    ),
-                            )
-                            .add_location(
-                                update
-                                    .location()
-                                    .with_keys(["multi-ecosystem-group".into()])
-                                    .key_only()
-                                    .annotated("multi-ecosystem-group configured here"),
-                            )
-                            .confidence(Confidence::High)
-                            .severity(Severity::Low)
-                            .persona(Persona::Pedantic)
-                            .build(dependabot)?,
-                    );
-                }
+            // Nothing to do if the configured cooldown is at least our minimum.
+            if default_days >= minimum_days {
+                return Ok(findings);
             }
 
-            match &update.cooldown {
-                // TODO(ww): Should we have opinions about the other
-                // cooldown settings?
+            // Otherwise, we need to build the right location and fix.
+            let (location, fix) = match update.cooldown.as_ref() {
                 Some(cooldown) => match cooldown.default_days {
-                    // NOTE(ww): if not set, `default-days` is 0,
-                    // which is equivalent to no cooldown by default.
-                    // See: https://github.com/dependabot/dependabot-core/blob/01385be/updater/lib/dependabot/job.rb#L536-L547
-                    None => findings.push(
-                        Self::finding()
-                            .add_location(
-                                update
-                                    .location()
-                                    .with_keys(["cooldown".into()])
-                                    .primary()
-                                    .annotated("no default-days configured"),
-                            )
-                            .confidence(Confidence::High)
-                            .severity(Severity::Medium)
-                            .fix(Self::create_add_default_days_fix(update))
-                            .build(dependabot)?,
+                    // `cooldown.default-days` is present.
+                    // Our fix needs to rewrite just the `default-days` value.
+                    Some(_) => (
+                        update
+                            .location()
+                            .with_keys(["cooldown".into(), "default-days".into()])
+                            .primary()
+                            .annotated(format!(
+                                "insufficient default-days configured (less than {minimum_days})",
+                            )),
+                        Self::create_increase_default_days_fix(update, minimum_days),
                     ),
-                    Some(default_days) if default_days < minimum_days => findings.push(
-                        Self::finding()
-                            .add_location(
-                                update
-                                    .location()
-                                    .with_keys(["cooldown".into(), "default-days".into()])
-                                    .primary()
-                                    .annotated(format!(
-                                        "insufficient default-days configured (less than {minimum_days})",
-                                    )),
-                            )
-                            .confidence(Confidence::Medium)
-                            .severity(Severity::Low)
-                            .fix(Self::create_increase_default_days_fix(update, minimum_days))
-                            .build(dependabot)?,
+                    // `cooldown` is present, but `default-days` is not.
+                    // Our fix needs to insert just `default-days` into the existing object.
+                    None => (
+                        update
+                            .location()
+                            .with_keys(["cooldown".into()])
+                            .primary()
+                            .annotated(format!(
+                                "insufficient implicit default-days (less than {minimum_days})"
+                            )),
+                        Self::create_add_default_days_fix(update, minimum_days),
                     ),
-                    Some(_) => {}
                 },
-                None => findings.push(
-                    Self::finding()
-                        .add_location(
-                            update
-                                .location_with_grip()
-                                .primary()
-                                .annotated("missing cooldown configuration"),
-                        )
-                        .confidence(Confidence::High)
-                        .severity(Severity::Medium)
-                        .fix(Self::create_add_cooldown_fix(update))
-                        .build(dependabot)?,
+                // `cooldown` is not present.
+                // Our fix needs to insert the entire `cooldown` object, not just `default-days`.
+                None => (
+                    update.location_with_grip().primary().annotated(format!(
+                        "insufficient implicit default-days (less than {minimum_days})"
+                    )),
+                    Self::create_add_cooldown_fix(update, minimum_days),
                 ),
-            }
+            };
+
+            findings.push(
+                Self::finding()
+                    .add_location(location)
+                    .confidence(Confidence::High)
+                    .severity(Severity::Medium)
+                    .fix(fix)
+                    .build(dependabot)?,
+            );
         }
 
         Ok(findings)
@@ -398,72 +367,6 @@ updates:
                     schedule:
                       interval: weekly
                 ");
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn test_multi_ecosystem_group_with_cooldown() {
-        let dependabot_content = r#"
-version: 2
-multi-ecosystem-groups:
-  all:
-    schedule:
-      interval: weekly
-updates:
-  - package-ecosystem: github-actions
-    directory: "/"
-    multi-ecosystem-group: all
-    patterns:
-      - "*"
-    cooldown:
-      default-days: 7
-"#;
-
-        test_dependabot_audit!(
-            DependabotCooldown,
-            "test_multi_ecosystem_group_with_cooldown.yml",
-            dependabot_content,
-            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
-                // Should have one finding for cooldown + multi-ecosystem-group interaction
-                assert_eq!(
-                    findings.len(),
-                    1,
-                    "Expected 1 finding for multi-ecosystem-group + cooldown"
-                );
-                // No autofix for this case
-                assert!(findings[0].fixes.is_empty(), "Expected no fixes");
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn test_multi_ecosystem_group_without_cooldown() {
-        let dependabot_content = r#"
-version: 2
-multi-ecosystem-groups:
-  all:
-    schedule:
-      interval: weekly
-updates:
-  - package-ecosystem: github-actions
-    directory: "/"
-    multi-ecosystem-group: all
-    patterns:
-      - "*"
-"#;
-
-        test_dependabot_audit!(
-            DependabotCooldown,
-            "test_multi_ecosystem_group_without_cooldown.yml",
-            dependabot_content,
-            |_dependabot: &Dependabot, findings: Vec<crate::finding::Finding>| {
-                // Should have one finding for missing cooldown, but NOT for multi-ecosystem interaction
-                assert_eq!(findings.len(), 1, "Expected 1 finding for missing cooldown");
-                assert!(
-                    !findings[0].fixes.is_empty(),
-                    "Expected a fix for missing cooldown"
-                );
             }
         );
     }
