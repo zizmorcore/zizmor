@@ -113,6 +113,8 @@ impl Audit for DependabotCooldown {
             // Otherwise, we need to build the right location and fix.
             let (location, fix) = match update.cooldown.as_ref() {
                 Some(cooldown) => match cooldown.default_days {
+                    // `cooldown.default-days` is present.
+                    // Our fix needs to rewrite just the `default-days` value.
                     Some(_) => (
                         update
                             .location()
@@ -123,6 +125,8 @@ impl Audit for DependabotCooldown {
                             )),
                         Self::create_increase_default_days_fix(update, minimum_days),
                     ),
+                    // `cooldown` is present, but `default-days` is not.
+                    // Our fix needs to insert just `default-days` into the existing object.
                     None => (
                         update
                             .location()
@@ -134,6 +138,8 @@ impl Audit for DependabotCooldown {
                         Self::create_add_default_days_fix(update, minimum_days),
                     ),
                 },
+                // `cooldown` is not present.
+                // Our fix needs to insert the entire `cooldown` object, not just `default-days`.
                 None => (
                     update.location_with_grip().primary().annotated(format!(
                         "insufficient implicit default-days (less than {minimum_days})"
