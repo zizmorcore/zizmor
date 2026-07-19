@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e/crater.rs
-expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"pypi/warehouse@9ed30d191788fcfa9c5be56bcce9b743e758903e\").run()?"
+expression: "zizmor().offline(NetworkMode::AssertOnline).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"pypi/warehouse@9ed30d191788fcfa9c5be56bcce9b743e758903e\").run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO collect_inputs: zizmor::registry::input: collected 8 inputs from pypi/warehouse
@@ -16,7 +16,7 @@ warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
  --> .github/dependabot.yml:4:3
   |
 4 | - package-ecosystem: pip
-  |   ^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+  |   ^^^^^^^^^^^^^^^^^^^^^^ insufficient implicit default-days (less than 7)
   |
   = note: audit confidence → High
   = note: this finding has an auto-fix
@@ -25,7 +25,7 @@ warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
   --> .github/dependabot.yml:29:3
    |
 29 | - package-ecosystem: github-actions
-   |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ insufficient implicit default-days (less than 7)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -34,7 +34,7 @@ warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
   --> .github/dependabot.yml:33:3
    |
 33 | - package-ecosystem: docker
-   |   ^^^^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^ insufficient implicit default-days (less than 7)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -357,4 +357,3 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    = note: audit confidence → High
 
 34 findings (2 suppressed): 4 informational, 14 low, 8 medium, 6 high
-

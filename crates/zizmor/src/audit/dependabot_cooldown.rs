@@ -136,7 +136,7 @@ impl Audit for DependabotCooldown {
                 },
                 None => (
                     update.location_with_grip().primary().annotated(format!(
-                        "insufficient default-days configured (less than {minimum_days})"
+                        "insufficient implicit default-days (less than {minimum_days})"
                     )),
                     Self::create_add_cooldown_fix(update, minimum_days),
                 ),

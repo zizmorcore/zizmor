@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e/crater.rs
-expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"pyca/cryptography@43eb178ee3aae8d0060221118437b03c23570a41\").run()?"
+expression: "zizmor().offline(NetworkMode::AssertOnline).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"pyca/cryptography@43eb178ee3aae8d0060221118437b03c23570a41\").run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO collect_inputs: zizmor::registry::input: collected 15 inputs from pyca/cryptography
@@ -79,24 +79,6 @@ error[template-injection]: code injection via template expansion
    |
 65 |       run: .venv-pip-test/bin/pip install --require-hashes -r "${{ inputs.build-requirements-path }}"
    |       --- this run block                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-   |
-   = note: audit confidence → High
-   = note: this finding has an auto-fix
-
-warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
-  --> .github/dependabot.yml:17:5
-   |
-17 |   - package-ecosystem: cargo
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
-   |
-   = note: audit confidence → High
-   = note: this finding has an auto-fix
-
-warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
-  --> .github/dependabot.yml:28:5
-   |
-28 |   - package-ecosystem: uv
-   |     ^^^^^^^^^^^^^^^^^^^^^ missing cooldown configuration
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -789,4 +771,4 @@ info[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → Low
 
-80 findings (9 suppressed): 19 informational, 35 low, 7 medium, 10 high
+78 findings (9 suppressed): 19 informational, 35 low, 5 medium, 10 high

@@ -15,7 +15,7 @@ fn test_missing_cooldown() -> anyhow::Result<()> {
      --> @@INPUT@@:4:5
       |
     4 |   - package-ecosystem: pip
-      |     ^^^^^^^^^^^^^^^^^^^^^^ insufficient default-days configured (less than 7)
+      |     ^^^^^^^^^^^^^^^^^^^^^^ insufficient implicit default-days (less than 7)
       |
       = note: audit confidence → High
       = note: this finding has an auto-fix
@@ -197,7 +197,7 @@ fn test_opentofu_cooldown() -> anyhow::Result<()> {
      --> @@INPUT@@:5:5
       |
     5 |   - package-ecosystem: opentofu
-      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ insufficient default-days configured (less than 7)
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ insufficient implicit default-days (less than 7)
       |
       = note: audit confidence → High
       = note: this finding has an auto-fix
