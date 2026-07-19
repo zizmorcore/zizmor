@@ -14,6 +14,9 @@ of `zizmor`.
 * The JSON (v1) output format now includes metadata for each finding's fixes,
   if the finding has fixes (#2186)
 
+* The [dependabot-cooldown] audit is now aware of GitHub's new three-day default
+  cooldown (#2193)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [template-injection] audit would incorrectly flag
