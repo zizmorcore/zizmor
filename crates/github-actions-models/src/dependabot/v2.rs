@@ -410,6 +410,8 @@ pub enum PackageEcosystem {
     Pub,
     /// `rust-toolchain`
     RustToolchain,
+    /// `sbt`
+    Sbt,
     /// `swift`
     Swift,
     /// `terraform`

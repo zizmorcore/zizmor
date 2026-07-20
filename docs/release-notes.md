@@ -17,6 +17,8 @@ of `zizmor`.
 * The [dependabot-cooldown] audit is now aware of GitHub's new three-day default
   cooldown (#2193)
 
+* `sbt` is now recognized as a `package-ecosystem` in `dependabot.yml` (#2211)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [template-injection] audit would incorrectly flag
