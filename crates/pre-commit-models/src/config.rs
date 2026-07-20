@@ -49,30 +49,22 @@ pub struct Config {
 
 /// A repository, i.e. where to get one or more hooks from.
 #[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct Repo {
-    /// The repository URL to clone, or one of the special forms.
-    pub repo: RepoReference,
-    /// The Git revision to check out from.
-    pub rev: String,
-    /// One or more hooks to use.
-    pub hooks: Vec<Hook>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RepoReference {
-    /// The hooks' repository is the local one.
-    ///
-    /// See: <https://pre-commit.com/#repository-local-hooks>
-    Local,
-    /// The referenced hooks are "meta" hooks.
-    ///
-    /// See: <https://pre-commit.com/#meta-hooks>
-    Meta,
-    /// A URL to `git clone`.
+#[serde(
+    rename_all = "snake_case",
+    rename_all_fields = "snake_case",
+    tag = "repo"
+)]
+pub enum Repo {
+    // TODO: Fill this in.
+    Local {},
+    // TODO: Fill this in.
+    Meta {},
     #[serde(untagged)]
-    Remote(String),
+    Repo {
+        repo: String,
+        rev: String,
+        hooks: Vec<Hook>,
+    },
 }
 
 /// A single hook.

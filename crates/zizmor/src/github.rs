@@ -951,6 +951,24 @@ impl Client {
                 let mut contents = String::with_capacity(entry.size() as usize);
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Dependabot, contents, key, options.strict)?;
+            } else if options.mode_set.pre_commit() {
+                if matches!(
+                    file_path.file_name(),
+                    Some(".pre-commit-config.yml" | ".pre-commit-config.yaml")
+                ) {
+                    let key = InputKey::remote(slug, file_path.to_string());
+                    let mut contents = String::with_capacity(entry.size() as usize);
+                    entry.read_to_string(&mut contents)?;
+                    group.register(InputKind::PreCommitConfig, contents, key, options.strict)?;
+                } else if matches!(
+                    file_path.file_name(),
+                    Some(".pre-commit-hooks.yml" | ".pre-commit-hooks.yaml")
+                ) {
+                    let key = InputKey::remote(slug, file_path.to_string());
+                    let mut contents = String::with_capacity(entry.size() as usize);
+                    entry.read_to_string(&mut contents)?;
+                    group.register(InputKind::PreCommitHooks, contents, key, options.strict)?;
+                }
             }
         }
 

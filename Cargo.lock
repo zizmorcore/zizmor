@@ -2026,7 +2026,7 @@ dependencies = [
 
 [[package]]
 name = "pre-commit-models"
-version = "1.27.0"
+version = "0.0.1"
 dependencies = [
  "indexmap",
  "serde",
@@ -4317,6 +4317,7 @@ dependencies = [
  "jsonschema",
  "line-index",
  "owo-colors",
+ "pre-commit-models",
  "regex",
  "reqwest",
  "reqwest-middleware",

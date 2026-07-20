@@ -520,6 +520,9 @@ pub(crate) enum CliCollectionMode {
     Actions,
     /// Collect Dependabot configuration files (i.e. `dependabot.yml`).
     Dependabot,
+    /// Collect pre-commit configuration and hooks files,
+    /// i.e. `.pre-commit-config.yml` and `.pre-commit-hooks.yml`.
+    PreCommit,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -529,6 +532,7 @@ pub(crate) enum CollectionMode {
     Workflows,
     Actions,
     Dependabot,
+    PreCommit,
 }
 
 pub(crate) struct CollectionModeSet(HashSet<CollectionMode>);
@@ -573,6 +577,7 @@ impl From<&[CliCollectionMode]> for CollectionModeSet {
                     CliCollectionMode::Workflows => CollectionMode::Workflows,
                     CliCollectionMode::Actions => CollectionMode::Actions,
                     CliCollectionMode::Dependabot => CollectionMode::Dependabot,
+                    CliCollectionMode::PreCommit => CollectionMode::PreCommit,
                 })
                 .collect(),
         )
@@ -617,6 +622,16 @@ impl CollectionModeSet {
             matches!(
                 mode,
                 CollectionMode::All | CollectionMode::Default | CollectionMode::Dependabot
+            )
+        })
+    }
+
+    /// Shouldn we collect pre-commit files?
+    pub(crate) fn pre_commit(&self) -> bool {
+        self.0.iter().any(|mode| {
+            matches!(
+                mode,
+                CollectionMode::All | CollectionMode::Default | CollectionMode::PreCommit
             )
         })
     }

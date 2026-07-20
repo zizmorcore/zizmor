@@ -56,6 +56,7 @@ itertools.workspace = true
 jsonschema.workspace = true
 line-index.workspace = true
 owo-colors.workspace = true
+pre-commit-models.workspace = true
 regex.workspace = true
 reqwest = { workspace = true, features = ["json", "query", "rustls"] }
 reqwest-middleware = { workspace = true, features = ["query"] }
