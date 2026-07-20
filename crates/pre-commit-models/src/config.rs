@@ -11,6 +11,7 @@ use indexmap::IndexMap;
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     /// A list of repository mappings.
+    #[serde(deserialize_with = "common::non_empty_vec")]
     pub repos: Vec<Repo>,
     /// An optional list of `--hook-types`.
     ///
@@ -74,6 +75,7 @@ pub enum Repo {
     Repo {
         repo: String,
         rev: String,
+        #[serde(deserialize_with = "common::non_empty_vec")]
         hooks: Vec<Hook>,
     },
 }
