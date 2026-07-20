@@ -8,8 +8,8 @@
 
 Hello, and welcome to `zizmor`'s documentation.
 
-`zizmor` is a static analysis tool for GitHub Actions. It can find and fix
-many common security issues in typical GitHub Actions CI/CD setups.
+`zizmor` is a static analysis tool for your CI/CD. It can find and fix
+many common security issues in typical CI/CD setups.
 
 <div class="grid cards" markdown>
 -   :material-download:{.lg .middle} Install `zizmor`
