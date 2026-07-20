@@ -1,6 +1,6 @@
 //! Shared models and utilities.
 
-use serde::{Deserialize, Deserializer, de::Error};
+use serde::{Deserialize, Deserializer, de::Error as _};
 
 pub(crate) fn default_minimum_pre_commit_version() -> String {
     "0".into()
