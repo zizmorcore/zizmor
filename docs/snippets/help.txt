@@ -4,7 +4,7 @@ Usage: zizmor [OPTIONS] <INPUT>...
 
 Input Options:
   <INPUT>...               The inputs to audit
-      --collect <KIND>...  Control which kinds of inputs are collected for auditing [default: default] [possible values: all, default, workflows, actions, dependabot]
+      --collect <KIND>...  Control which kinds of inputs are collected for auditing [default: default] [possible values: all, default, workflows, actions, dependabot, pre-commit]
       --strict-collection  Fail instead of warning on syntax and schema errors in collected inputs
 
 Audit Options:
