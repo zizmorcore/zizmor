@@ -2026,7 +2026,7 @@ dependencies = [
 
 [[package]]
 name = "pre-commit-models"
-version = "0.0.1"
+version = "1.28.0"
 dependencies = [
  "indexmap",
  "serde",

@@ -4,13 +4,13 @@ description = "Unofficial, high-quality data models for pre-commit configuration
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/pre-commit-models"
 keywords = ["pre-commit", "ci"]
 categories = ["api-bindings"]
+readme = "README.md"
 authors.workspace = true
-readme.workspace = true
 homepage.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-version = "0.0.1"
+version.workspace = true
 
 [dependencies]
 indexmap.workspace = true
