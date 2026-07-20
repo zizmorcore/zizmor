@@ -1,0 +1,234 @@
+# source: https://github.com/pre-commit/pre-commit-hooks/blob/9377601095448be1e7141feaaaa835714b53f6a5/.pre-commit-hooks.yaml
+
+# Copyright (c) 2014 pre-commit dev team: Anthony Sottile, Ken Struys
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+-   id: check-added-large-files
+    name: check for added large files
+    description: prevents giant files from being committed.
+    entry: check-added-large-files
+    language: python
+    stages: [pre-commit, pre-push, manual]
+    minimum_pre_commit_version: 3.2.0
+-   id: check-ast
+    name: check python ast
+    description: simply checks whether the files parse as valid python.
+    entry: check-ast
+    language: python
+    types: [python]
+-   id: check-byte-order-marker
+    name: check-byte-order-marker (removed)
+    description: (removed) use fix-byte-order-marker instead.
+    entry: pre-commit-hooks-removed check-byte-order-marker fix-byte-order-marker https://github.com/pre-commit/pre-commit-hooks
+    language: python
+    types: [text]
+-   id: check-builtin-literals
+    name: check builtin type constructor use
+    description: requires literal syntax when initializing empty or zero python builtin types.
+    entry: check-builtin-literals
+    language: python
+    types: [python]
+-   id: check-case-conflict
+    name: check for case conflicts
+    description: checks for files that would conflict in case-insensitive filesystems.
+    entry: check-case-conflict
+    language: python
+-   id: check-docstring-first
+    name: check docstring is first (deprecated)
+    description: checks a common error of defining a docstring after code.
+    entry: check-docstring-first
+    language: python
+    types: [python]
+-   id: check-executables-have-shebangs
+    name: check that executables have shebangs
+    description: ensures that (non-binary) executables have a shebang.
+    entry: check-executables-have-shebangs
+    language: python
+    types: [text, executable]
+    stages: [pre-commit, pre-push, manual]
+    minimum_pre_commit_version: 3.2.0
+-   id: check-illegal-windows-names
+    name: check illegal windows names
+    entry: Illegal Windows filenames detected
+    language: fail
+    files: '(?i)((^|/)(CON|PRN|AUX|NUL|COM[\d¹²³]|LPT[\d¹²³])(\.|/|$)|[<>:\"\\|?*\x00-\x1F]|/[^/]*[\.\s]/|[^/]*[\.\s]$)'
+-   id: check-json
+    name: check json
+    description: checks json files for parseable syntax.
+    entry: check-json
+    language: python
+    types: [json]
+-   id: check-shebang-scripts-are-executable
+    name: check that scripts with shebangs are executable
+    description: ensures that (non-binary) files with a shebang are executable.
+    entry: check-shebang-scripts-are-executable
+    language: python
+    types: [text]
+    stages: [pre-commit, pre-push, manual]
+    minimum_pre_commit_version: 3.2.0
+-   id: pretty-format-json
+    name: pretty format json
+    description: sets a standard for formatting json files.
+    entry: pretty-format-json
+    language: python
+    types: [json]
+-   id: check-merge-conflict
+    name: check for merge conflicts
+    description: checks for files that contain merge conflict strings.
+    entry: check-merge-conflict
+    language: python
+    types: [text]
+-   id: check-symlinks
+    name: check for broken symlinks
+    description: checks for symlinks which do not point to anything.
+    entry: check-symlinks
+    language: python
+    types: [symlink]
+-   id: check-toml
+    name: check toml
+    description: checks toml files for parseable syntax.
+    entry: check-toml
+    language: python
+    types: [toml]
+-   id: check-vcs-permalinks
+    name: check vcs permalinks
+    description: ensures that links to vcs websites are permalinks.
+    entry: check-vcs-permalinks
+    language: python
+    types: [text]
+-   id: check-xml
+    name: check xml
+    description: checks xml files for parseable syntax.
+    entry: check-xml
+    language: python
+    types: [xml]
+-   id: check-yaml
+    name: check yaml
+    description: checks yaml files for parseable syntax.
+    entry: check-yaml
+    language: python
+    types: [yaml]
+-   id: debug-statements
+    name: debug statements (python)
+    description: checks for debugger imports and py37+ `breakpoint()` calls in python source.
+    entry: debug-statement-hook
+    language: python
+    types: [python]
+-   id: destroyed-symlinks
+    name: detect destroyed symlinks
+    description: detects symlinks which are changed to regular files with a content of a path which that symlink was pointing to.
+    entry: destroyed-symlinks
+    language: python
+    types: [file]
+    stages: [pre-commit, pre-push, manual]
+-   id: detect-aws-credentials
+    name: detect aws credentials
+    description: detects *your* aws credentials from the aws cli credentials file.
+    entry: detect-aws-credentials
+    language: python
+    types: [text]
+-   id: detect-private-key
+    name: detect private key
+    description: detects the presence of private keys.
+    entry: detect-private-key
+    language: python
+    types: [text]
+-   id: double-quote-string-fixer
+    name: fix double quoted strings
+    description: replaces double quoted strings with single quoted strings.
+    entry: double-quote-string-fixer
+    language: python
+    types: [python]
+-   id: end-of-file-fixer
+    name: fix end of files
+    description: ensures that a file is either empty, or ends with one newline.
+    entry: end-of-file-fixer
+    language: python
+    types: [text]
+    stages: [pre-commit, pre-push, manual]
+    minimum_pre_commit_version: 3.2.0
+-   id: file-contents-sorter
+    name: file contents sorter
+    description: sorts the lines in specified files (defaults to alphabetical). you must provide list of target files as input in your .pre-commit-config.yaml file.
+    entry: file-contents-sorter
+    language: python
+    files: '^$'
+-   id: fix-byte-order-marker
+    name: fix utf-8 byte order marker
+    description: removes utf-8 byte order marker.
+    entry: fix-byte-order-marker
+    language: python
+    types: [text]
+-   id: fix-encoding-pragma
+    name: fix python encoding pragma (removed)
+    description: (removed) use pyupgrade instead.
+    entry: pre-commit-hooks-removed fix-encoding-pragma pyupgrade https://github.com/asottile/pyupgrade
+    language: python
+    types: [python]
+-   id: forbid-new-submodules
+    name: forbid new submodules
+    description: prevents addition of new git submodules.
+    language: python
+    entry: forbid-new-submodules
+    types: [directory]
+-   id: forbid-submodules
+    name: forbid submodules
+    description: forbids any submodules in the repository
+    language: fail
+    entry: 'submodules are not allowed in this repository:'
+    types: [directory]
+-   id: mixed-line-ending
+    name: mixed line ending
+    description: replaces or checks mixed line ending.
+    entry: mixed-line-ending
+    language: python
+    types: [text]
+-   id: name-tests-test
+    name: python tests naming
+    description: verifies that test files are named correctly.
+    entry: name-tests-test
+    language: python
+    files: (^|/)tests/.+\.py$
+-   id: no-commit-to-branch
+    name: "don't commit to branch"
+    entry: no-commit-to-branch
+    language: python
+    pass_filenames: false
+    always_run: true
+-   id: requirements-txt-fixer
+    name: fix requirements.txt
+    description: sorts entries in requirements.txt.
+    entry: requirements-txt-fixer
+    language: python
+    files: (requirements|constraints).*\.txt$
+-   id: sort-simple-yaml
+    name: sort simple yaml files
+    description: sorts simple yaml files which consist only of top-level keys, preserving comments and blocks.
+    language: python
+    entry: sort-simple-yaml
+    files: '^$'
+-   id: trailing-whitespace
+    name: trim trailing whitespace
+    description: trims trailing whitespace.
+    entry: trailing-whitespace-fixer
+    language: python
+    types: [text]
+    stages: [pre-commit, pre-push, manual]
+    minimum_pre_commit_version: 3.2.0

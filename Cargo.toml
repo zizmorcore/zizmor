@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "crates/github-actions-expressions",
-    "crates/github-actions-models",
+    "crates/github-actions-models", "crates/pre-commit-models",
     "crates/subfeature",
     "crates/tree-sitter-iter",
     "crates/yamlpatch",
