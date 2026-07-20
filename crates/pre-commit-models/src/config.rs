@@ -48,6 +48,10 @@ pub struct Config {
 }
 
 /// A repository, i.e. where to get one or more hooks from.
+///
+/// This concept is slightly overloaded in pre-commit, as there are
+/// two special sentinel "repository" types, `local`, and `meta`, which
+/// have a different shape than a normal Git repository.
 #[derive(Debug, serde::Deserialize)]
 #[serde(
     rename_all = "snake_case",
@@ -55,9 +59,16 @@ pub struct Config {
     tag = "repo"
 )]
 pub enum Repo {
-    // TODO: Fill this in.
+    /// A special 'local' repository, for hooks defined within the current Git repository.
+    ///
+    /// See: <https://pre-commit.com/#repository-local-hooks>
+    // TODO: Fill this in. It's seemingly identical to a normal hook,
+    // except without `rev`.
     Local {},
-    // TODO: Fill this in.
+    /// A special 'meta' repository, for hooks defined by pre-commit itself.
+    ///
+    /// See: <https://pre-commit.com/#meta-hooks>
+    // TODO: Fill this in, it's a fixed set of IDs for hooks.
     Meta {},
     #[serde(untagged)]
     Repo {
