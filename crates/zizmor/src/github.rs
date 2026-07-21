@@ -97,7 +97,7 @@ impl FromStr for GitHubHost {
 }
 
 /// A sanitized GitHub access token.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct GitHubToken(String);
 
 impl GitHubToken {
@@ -110,7 +110,16 @@ impl GitHubToken {
     }
 
     fn to_header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
-        HeaderValue::from_str(&format!("Bearer {}", self.0))
+        let mut hv = HeaderValue::from_str(&format!("Bearer {}", self.0))?;
+        hv.set_sensitive(true);
+
+        Ok(hv)
+    }
+}
+
+impl std::fmt::Debug for GitHubToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("GitHubToken").field(&"***").finish()
     }
 }
 
@@ -1068,6 +1077,9 @@ mod tests {
         ] {
             assert_eq!(GitHubToken::new(token).unwrap().0, expected);
         }
+
+        // Ensure our Debug impl redacts.
+        insta::assert_compact_debug_snapshot!(&GitHubToken::new("hackme"), @r#"Ok(GitHubToken("***"))"#);
     }
 
     #[test]
