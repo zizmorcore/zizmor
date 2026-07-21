@@ -1079,7 +1079,16 @@ mod tests {
         }
 
         // Ensure our Debug impl redacts.
-        insta::assert_compact_debug_snapshot!(&GitHubToken::new("hackme"), @r#"Ok(GitHubToken("***"))"#);
+        insta::assert_compact_debug_snapshot!(
+            GitHubToken::new("hackme").unwrap(),
+            @r#"GitHubToken("***")"#
+        );
+
+        // Ensure the header value also redacts.
+        insta::assert_compact_debug_snapshot!(
+            GitHubToken::new("hackme").unwrap().to_header_value().unwrap(),
+            @"Sensitive"
+        );
     }
 
     #[test]
