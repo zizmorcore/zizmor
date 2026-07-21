@@ -246,8 +246,6 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     tracing::info!("🌈 zizmor v{version}", version = env!("CARGO_PKG_VERSION"));
 
-    tracing::debug!("app: {app:?}");
-
     // Validate stdin input constraints: `-` must be the only input,
     // and cannot be combined with `--fix`.
     if app.input.inputs.iter().any(|i| i == "-") {
