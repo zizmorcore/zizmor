@@ -9,6 +9,16 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.28.0
+
+### Security 🔒
+
+* `v1.27.0` contained a logging defect that would print any configured GitHub
+  credentials as part of zizmor's cleartext logging. No versions other than
+  `v1.27.0` were affected. See [GHSA-f42p-wjw5-97qh] for full information.
+
+    Many thanks to @shaanmajid for finding and reporting this vulnerability.
+
 ### Enhancements 🌱
 
 * The JSON (v1) output format now includes metadata for each finding's fixes,
@@ -1922,7 +1932,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 ### New Contributors
 * @hugovk made their first contribution in #61
 
-<!-- useful shortlinks -->
+<!-- audit shortlinks -->
 
 [artipacked]: ./audits.md#artipacked
 [excessive-permissions]: ./audits.md#excessive-permissions
@@ -1962,3 +1972,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [adhoc-packages]: ./audits.md#adhoc-packages
 
 [exit code]: ./usage.md#exit-codes
+
+<!-- advisories -->
+
+[GHSA-f42p-wjw5-97qh]: https://github.com/zizmorcore/zizmor/security/advisories/GHSA-f42p-wjw5-97qh
