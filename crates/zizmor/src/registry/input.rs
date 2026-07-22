@@ -18,7 +18,12 @@ use crate::{
     audit::AuditInput,
     config::{Config, ConfigError},
     github::{Client, ClientError},
-    models::{action::Action, dependabot::Dependabot, workflow::Workflow},
+    models::{
+        action::Action,
+        dependabot::Dependabot,
+        pre_commit::{PreCommitConfig, PreCommitHooks},
+        workflow::Workflow,
+    },
 };
 
 /// Errors that can occur while collecting inputs.
@@ -129,6 +134,10 @@ pub(crate) enum InputKind {
     Action,
     /// A Dependabot configuration file.
     Dependabot,
+    /// A `.pre-commit-config.yml` file.
+    PreCommitConfig,
+    /// A `.pre-commit-hooks.yml` file.
+    PreCommitHooks,
 }
 
 impl std::fmt::Display for InputKind {
@@ -137,6 +146,8 @@ impl std::fmt::Display for InputKind {
             InputKind::Workflow => write!(f, "workflow"),
             InputKind::Action => write!(f, "action"),
             InputKind::Dependabot => write!(f, "dependabot config"),
+            InputKind::PreCommitConfig => write!(f, "pre-commit config"),
+            InputKind::PreCommitHooks => write!(f, "pre-commit hooks definition"),
         }
     }
 }
@@ -550,10 +561,14 @@ impl InputGroup {
         tracing::debug!("registering {kind} input as with key {key}");
 
         let input: Result<AuditInput, CollectionError> = match kind {
-            InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(|wf| wf.into()),
-            InputKind::Action => Action::from_string(contents, key.clone()).map(|a| a.into()),
-            InputKind::Dependabot => {
-                Dependabot::from_string(contents, key.clone()).map(|d| d.into())
+            InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(Into::into),
+            InputKind::Action => Action::from_string(contents, key.clone()).map(Into::into),
+            InputKind::Dependabot => Dependabot::from_string(contents, key.clone()).map(Into::into),
+            InputKind::PreCommitConfig => {
+                PreCommitConfig::from_string(contents, key.clone()).map(Into::into)
+            }
+            InputKind::PreCommitHooks => {
+                PreCommitHooks::from_string(contents, key.clone()).map(Into::into)
             }
         };
 
@@ -592,6 +607,17 @@ impl InputGroup {
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
         let (key, kind) = match (path.file_stem(), path.extension()) {
+            // TODO: Do we need the `is_workflow_path` disambiguation here?
+            // The only way this could be wrong is if the user does something
+            // bizarre like `.github/workflows/.pre-commit-{config,hooks}.yml`.
+            (Some(".pre-commit-config"), Some("yml" | "yaml")) if !is_workflow_path => (
+                InputKey::local(Group(path.as_str().into()), path, None, root),
+                InputKind::PreCommitConfig,
+            ),
+            (Some(".pre-commit-hooks"), Some("yml" | "yaml")) if !is_workflow_path => (
+                InputKey::local(Group(path.as_str().into()), path, None, root),
+                InputKind::PreCommitHooks,
+            ),
             (Some("dependabot"), Some("yml" | "yaml")) if !is_workflow_path => (
                 InputKey::local(Group(path.as_str().into()), path, None, root),
                 InputKind::Dependabot,
@@ -651,10 +677,13 @@ impl InputGroup {
             let entry = entry?;
             let entry = <&Utf8Path>::try_from(entry.path())
                 .map_err(|e| CollectionError::InvalidPath(e, entry.path().into()))?;
+            // Pre-compute file status so we don't call `stat()` once per mode
+            // check below.
+            let entry_is_file = entry.is_file();
             let root = root.as_deref();
 
             if options.mode_set.workflows()
-                && entry.is_file()
+                && entry_is_file
                 && matches!(entry.extension(), Some("yml" | "yaml"))
                 && camino::absolute_utf8(entry)?
                     .parent()
@@ -672,7 +701,7 @@ impl InputGroup {
             }
 
             if options.mode_set.actions()
-                && entry.is_file()
+                && entry_is_file
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
                 let key = InputKey::local(Group(path.as_str().into()), entry, Some(path), root);
@@ -687,7 +716,7 @@ impl InputGroup {
             }
 
             if options.mode_set.dependabot()
-                && entry.is_file()
+                && entry_is_file
                 && matches!(
                     entry.file_name(),
                     Some("dependabot.yml" | "dependabot.yaml")
@@ -702,6 +731,36 @@ impl InputGroup {
                     )
                 })?;
                 group.register(InputKind::Dependabot, contents, key, options.strict)?;
+            }
+
+            if options.mode_set.pre_commit() && entry_is_file {
+                if matches!(
+                    entry.file_name(),
+                    Some(".pre-commit-config.yml" | ".pre-commit-config.yaml")
+                ) {
+                    let key = InputKey::local(Group(path.as_str().into()), entry, Some(path), root);
+                    let contents = std::fs::read_to_string(entry).map_err(|e| {
+                        CollectionError::Inner(
+                            CollectionError::Io(e).into(),
+                            key.to_string(),
+                            InputKind::PreCommitConfig,
+                        )
+                    })?;
+                    group.register(InputKind::PreCommitConfig, contents, key, options.strict)?;
+                } else if matches!(
+                    entry.file_name(),
+                    Some(".pre-commit-hooks.yml" | ".pre-commit-hooks.yaml")
+                ) {
+                    let key = InputKey::local(Group(path.as_str().into()), entry, Some(path), root);
+                    let contents = std::fs::read_to_string(entry).map_err(|e| {
+                        CollectionError::Inner(
+                            CollectionError::Io(e).into(),
+                            key.to_string(),
+                            InputKind::PreCommitHooks,
+                        )
+                    })?;
+                    group.register(InputKind::PreCommitHooks, contents, key, options.strict)?;
+                }
             }
         }
 
@@ -764,7 +823,20 @@ impl InputGroup {
             return Ok(group);
         }
 
-        if let Ok(()) = group.register(InputKind::Dependabot, contents, key, true) {
+        if let Ok(()) = group.register(InputKind::Dependabot, contents.clone(), key.clone(), true) {
+            return Ok(group);
+        }
+
+        if let Ok(()) = group.register(
+            InputKind::PreCommitConfig,
+            contents.clone(),
+            key.clone(),
+            true,
+        ) {
+            return Ok(group);
+        }
+
+        if let Ok(()) = group.register(InputKind::PreCommitHooks, contents, key, true) {
             return Ok(group);
         }
 

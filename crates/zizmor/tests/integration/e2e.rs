@@ -309,7 +309,7 @@ fn invalid_inputs() -> Result<()> {
     error: no inputs collected
       |
       = help: collection yielded no auditable inputs
-      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+      = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
@@ -359,7 +359,7 @@ fn test_issue_1394() -> Result<()> {
     error: no inputs collected
       |
       = help: collection yielded no auditable inputs
-      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+      = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected

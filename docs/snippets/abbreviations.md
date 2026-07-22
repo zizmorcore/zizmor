@@ -7,3 +7,4 @@
 *[PATs]: Personal Access Tokens
 *[SARIF]: Static Analysis Results Interchange Format
 *[YAML]: YAML Ain't Markup Language
+*[GHA]: GitHub Actions

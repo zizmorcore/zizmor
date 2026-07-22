@@ -369,6 +369,10 @@ where
             // See: https://github.com/dtolnay/serde-yaml/issues/170
             // See: https://github.com/dtolnay/serde-yaml/issues/395
 
+            // NOTE(ww): This is wrong for pre-commit hooks files, since they have a top
+            // level YAML list instead of a mapping. We either need to make this
+            // generic over a "skeleton" type (`yaml_serde::Mapping`/`yaml_serde::Sequence`)
+            // or loosen the check above.
             match yaml_serde::from_str::<yaml_serde::Mapping>(contents) {
                 // We know we have valid YAML, so one of two things happened here:
                 // 1. The input is semantically valid, but we have a bug in

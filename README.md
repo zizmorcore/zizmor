@@ -7,10 +7,10 @@
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/woodruffw?style=flat&logo=githubsponsors&labelColor=white&color=white)](https://github.com/sponsors/woodruffw)
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.com/invite/PGU3zGZuGG)
 
-`zizmor` is a static analysis tool for GitHub Actions.
+`zizmor` is a static analysis tool for CI/CD systems.
 
-It can find many common security issues in typical GitHub Actions CI/CD setups,
-including:
+It can find and fix security issues in common CI/CD setups, including GitHub Actions,
+Dependabot, and pre-commit. Some of the things `zizmor` finds:
 
 * Template injection vulnerabilities, leading to attacker-controlled code execution
 * Accidental credential persistence and leakage

@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* zizmor now has **experimental** support for auditing pre-commit inputs,
+  meaning both pre-commit configuration and hook definitions (#2209)
+
 ## 1.28.0
 
 ### Security 🔒

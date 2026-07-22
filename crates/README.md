@@ -13,6 +13,7 @@ See the table and each subdirectory for more details on each crate.
 | [`github-actions-expressions`][github-actions-expressions-dir] | [![Crates.io](https://img.shields.io/crates/v/github-actions-expressions)][github-actions-expressions-crates] | [![docs.rs](https://img.shields.io/docsrs/github-actions-expressions)][github-actions-expressions-docs] | Parser and library for GitHub Actions expressions. |
 | [`tree-sitter-iter`][tree-sitter-iter-dir] | [![Crates.io](https://img.shields.io/crates/v/tree-sitter-iter)][tree-sitter-iter-crates] | [![docs.rs](https://img.shields.io/docsrs/tree-sitter-iter)][tree-sitter-iter-docs] | A very simple pre-order iterator for tree-sitter CSTs. |
 | [`zizmor-sarif`][zizmor-sarif-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor-sarif)][zizmor-sarif-crates] | [![docs.rs](https://img.shields.io/docsrs/zizmor-sarif)][zizmor-sarif-docs] | Minimal SARIF 2.1.0 data models used by `zizmor`. |
+| [`pre-commit-models`][pre-commit-models-dir] | [![Crates.io](https://img.shields.io/crates/v/pre-commit-models)][pre-commit-models-crates] | [![docs.rs](https://img.shields.io/docsrs/pre-commit-models)][zizmor-sarif-docs] | Unofficial, high-quality data models for pre-commit. |
 
 [zizmor-dir]: ./zizmor
 [zizmor-crates]: https://crates.io/crates/zizmor
@@ -45,3 +46,7 @@ See the table and each subdirectory for more details on each crate.
 [zizmor-sarif-dir]: ./zizmor-sarif
 [zizmor-sarif-crates]: https://crates.io/crates/zizmor-sarif
 [zizmor-sarif-docs]: https://docs.rs/zizmor-sarif
+
+[pre-commit-models-dir]: ./pre-commit-models
+[pre-commit-models-crates]: https://crates.io/crates/pre-commit-models
+[pre-commit-models-docs]: https://docs.rs/pre-commit-models

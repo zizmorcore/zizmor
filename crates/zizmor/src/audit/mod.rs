@@ -14,10 +14,12 @@ use crate::{
         AsDocument,
         action::{Action, CompositeStep, DockerAction},
         dependabot::Dependabot,
+        pre_commit::{PreCommitConfig, PreCommitHooks},
         workflow::{Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
     },
     registry::input::InputKey,
     state::AuditState,
+    utils::once::warn_once,
 };
 
 pub(crate) mod adhoc_packages;
@@ -65,6 +67,8 @@ pub(crate) enum AuditInput {
     Workflow(Workflow),
     Action(Action),
     Dependabot(Dependabot),
+    PreCommitConfig(PreCommitConfig),
+    PreCommitHooks(PreCommitHooks),
 }
 
 impl AuditInput {
@@ -73,6 +77,8 @@ impl AuditInput {
             AuditInput::Workflow(workflow) => &workflow.key,
             AuditInput::Action(action) => &action.key,
             AuditInput::Dependabot(dependabot) => &dependabot.key,
+            AuditInput::PreCommitConfig(pre_commit_config) => &pre_commit_config.key,
+            AuditInput::PreCommitHooks(pre_commit_hooks) => &pre_commit_hooks.key,
         }
     }
 
@@ -81,6 +87,8 @@ impl AuditInput {
             AuditInput::Workflow(workflow) => workflow.link.as_deref(),
             AuditInput::Action(action) => action.link.as_deref(),
             AuditInput::Dependabot(dependabot) => dependabot.link.as_deref(),
+            AuditInput::PreCommitConfig(pre_commit_config) => pre_commit_config.link.as_deref(),
+            AuditInput::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.link.as_deref(),
         }
     }
 
@@ -89,6 +97,8 @@ impl AuditInput {
             AuditInput::Workflow(workflow) => workflow.location(),
             AuditInput::Action(action) => action.location(),
             AuditInput::Dependabot(dependabot) => dependabot.location(),
+            AuditInput::PreCommitConfig(pre_commit_config) => pre_commit_config.location(),
+            AuditInput::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.location(),
         }
     }
 }
@@ -99,6 +109,8 @@ impl<'a> AsDocument<'a, 'a> for AuditInput {
             AuditInput::Workflow(workflow) => workflow.as_document(),
             AuditInput::Action(action) => action.as_document(),
             AuditInput::Dependabot(dependabot) => dependabot.as_document(),
+            AuditInput::PreCommitConfig(pre_commit_config) => pre_commit_config.as_document(),
+            AuditInput::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.as_document(),
         }
     }
 }
@@ -109,6 +121,8 @@ impl<'a> Routable<'a, 'a> for AuditInput {
             AuditInput::Workflow(workflow) => workflow.location().route,
             AuditInput::Action(action) => action.location().route,
             AuditInput::Dependabot(dependabot) => dependabot.location().route,
+            AuditInput::PreCommitConfig(pre_commit_config) => pre_commit_config.location().route,
+            AuditInput::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.location().route,
         }
     }
 }
@@ -128,6 +142,18 @@ impl From<Action> for AuditInput {
 impl From<Dependabot> for AuditInput {
     fn from(value: Dependabot) -> Self {
         Self::Dependabot(value)
+    }
+}
+
+impl From<PreCommitConfig> for AuditInput {
+    fn from(value: PreCommitConfig) -> Self {
+        Self::PreCommitConfig(value)
+    }
+}
+
+impl From<PreCommitHooks> for AuditInput {
+    fn from(value: PreCommitHooks) -> Self {
+        Self::PreCommitHooks(value)
     }
 }
 
@@ -393,6 +419,10 @@ pub(crate) trait Audit: AuditCore {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow, config).await,
             AuditInput::Action(action) => self.audit_action(action, config).await,
             AuditInput::Dependabot(dependabot) => self.audit_dependabot(dependabot, config).await,
+            AuditInput::PreCommitConfig(_) | AuditInput::PreCommitHooks(_) => {
+                warn_once!("pre-commit auditing not implemented yet");
+                Ok(vec![])
+            }
         }?;
 
         results.extend(self.audit_raw(input, config).await?);

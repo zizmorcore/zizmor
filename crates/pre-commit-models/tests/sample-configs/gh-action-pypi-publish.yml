@@ -1,0 +1,233 @@
+# source: https://github.com/pypa/gh-action-pypi-publish/blob/ba38be9e461d3875417946c167d0b5f3d385a247/.pre-commit-config.yaml
+
+# Copyright © 2019, Sviatoslav Sydorenko (<wk+gh~pypa/gh-action-pypi-publish@sydorenko.org.ua>) and contributors (<https://github.com/pypa/gh-action-pypi-publish/graphs/contributors>)
+# All rights reserved.
+# * * *
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+# * Neither the name of gh-action-pypi-publish nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+---
+ci:
+  autoupdate_schedule: quarterly
+  default_language_version: python3.11
+
+repos:
+- repo: https://github.com/asottile/add-trailing-comma.git
+  rev: v3.1.0
+  hooks:
+  - id: add-trailing-comma
+
+- repo: https://github.com/PyCQA/isort.git
+  rev: 6.0.0
+  hooks:
+  - id: isort
+    args:
+    - --honor-noqa
+
+- repo: https://github.com/Lucas-C/pre-commit-hooks.git
+  rev: v1.5.5
+  hooks:
+  - id: remove-tabs
+
+- repo: https://github.com/python-jsonschema/check-jsonschema.git
+  rev: 0.31.1
+  hooks:
+  - id: check-github-actions
+  - id: check-github-workflows
+  - id: check-jsonschema
+    name: Check GitHub Workflows set timeout-minutes
+    args:
+    - --builtin-schema
+    - github-workflows-require-timeout
+    files: ^\.github/workflows/[^/]+$
+    types:
+    - yaml
+  - id: check-readthedocs
+
+- repo: https://github.com/pre-commit/pre-commit-hooks.git
+  rev: v5.0.0
+  hooks:
+  # Side-effects:
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+  - id: mixed-line-ending
+  # Non-modifying checks:
+  - id: name-tests-test
+    files: >-
+      ^tests/[^_].*\.py$
+  - id: check-added-large-files
+  - id: check-byte-order-marker
+  - id: check-case-conflict
+  - id: check-executables-have-shebangs
+  - id: check-merge-conflict
+  - id: check-json
+  - id: check-symlinks
+  - id: check-yaml
+  - id: detect-private-key
+  # Heavy checks:
+  - id: check-ast
+  - id: debug-statements
+    language_version: python3
+
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.4.1
+  hooks:
+  - id: codespell
+
+- repo: https://github.com/adrienverge/yamllint.git
+  rev: v1.35.1
+  hooks:
+  - id: yamllint
+    files: \.(yaml|yml)$
+    types:
+    - file
+    - yaml
+    args:
+    - --strict
+
+- repo: https://github.com/PyCQA/flake8.git
+  rev: 7.1.1
+  hooks:
+  - id: flake8
+    args:
+    - --ignore
+    # NOTE: WPS326: Found implicit string concatenation
+    # NOTE: WPS332: Found walrus operator
+    - >-
+      D100,
+      D101,
+      D103,
+      D107,
+      E402,
+      E501,
+      WPS102,
+      WPS110,
+      WPS111,
+      WPS305,
+      WPS318,
+      WPS326,
+      WPS332,
+      WPS347,
+      WPS360,
+      WPS421,
+      WPS422,
+      WPS432,
+      WPS433,
+      WPS437,
+      WPS440,
+      WPS441,
+      WPS453,
+    - --per-file-ignores=attestations.py:WPS202 oidc-exchange.py:WPS202
+    additional_dependencies:
+    - flake8-2020 ~= 1.8.1
+    - flake8-pytest-style ~= 2.1.0
+    - wemake-python-styleguide ~= 1.0.0
+
+- repo: https://github.com/pre-commit/mirrors-mypy.git
+  rev: v1.16.1
+  hooks:
+  - id: mypy
+    alias: mypy-py313
+    name: MyPy, for Python 3.13
+    additional_dependencies:
+    - id  # used by `oidc-exchange.py`
+    - lxml  # dep of `--txt-report`, `--cobertura-xml-report` & `--html-report`
+    - packaging  # used by `print-pkg-names.py`
+    - pypi-attestations  # used by `attestations.py`
+    - sigstore  # used by `attestations.py`
+    - types-requests  # used by `oidc-exchange.py`
+    args:
+    - --python-version=3.13
+    - --any-exprs-report=.tox/.tmp/.test-results/mypy--py-3.13
+    - --cobertura-xml-report=.tox/.tmp/.test-results/mypy--py-3.13
+    - --html-report=.tox/.tmp/.test-results/mypy--py-3.13
+    - --linecount-report=.tox/.tmp/.test-results/mypy--py-3.13
+    - --linecoverage-report=.tox/.tmp/.test-results/mypy--py-3.13
+    - --lineprecision-report=.tox/.tmp/.test-results/mypy--py-3.13
+    - --txt-report=.tox/.tmp/.test-results/mypy--py-3.13
+    pass_filenames: false
+  - id: mypy
+    alias: mypy-py312
+    name: MyPy, for Python 3.12
+    additional_dependencies:
+    - id  # used by `oidc-exchange.py`
+    - lxml  # dep of `--txt-report`, `--cobertura-xml-report` & `--html-report`
+    - packaging  # used by `print-pkg-names.py`
+    - pypi-attestations  # used by `attestations.py`
+    - sigstore  # used by `attestations.py`
+    - types-requests  # used by `oidc-exchange.py`
+    args:
+    - --python-version=3.12
+    - --any-exprs-report=.tox/.tmp/.test-results/mypy--py-3.12
+    - --cobertura-xml-report=.tox/.tmp/.test-results/mypy--py-3.12
+    - --html-report=.tox/.tmp/.test-results/mypy--py-3.12
+    - --linecount-report=.tox/.tmp/.test-results/mypy--py-3.12
+    - --linecoverage-report=.tox/.tmp/.test-results/mypy--py-3.12
+    - --lineprecision-report=.tox/.tmp/.test-results/mypy--py-3.12
+    - --txt-report=.tox/.tmp/.test-results/mypy--py-3.12
+    pass_filenames: false
+  - id: mypy
+    alias: mypy-py311
+    name: MyPy, for Python 3.11
+    additional_dependencies:
+    - id  # used by `oidc-exchange.py`
+    - lxml  # dep of `--txt-report`, `--cobertura-xml-report` & `--html-report`
+    - packaging  # used by `print-pkg-names.py`
+    - pypi-attestations  # used by `attestations.py`
+    - sigstore  # used by `attestations.py`
+    - types-requests  # used by `oidc-exchange.py`
+    args:
+    - --python-version=3.11
+    - --any-exprs-report=.tox/.tmp/.test-results/mypy--py-3.11
+    - --cobertura-xml-report=.tox/.tmp/.test-results/mypy--py-3.11
+    - --html-report=.tox/.tmp/.test-results/mypy--py-3.11
+    - --linecount-report=.tox/.tmp/.test-results/mypy--py-3.11
+    - --linecoverage-report=.tox/.tmp/.test-results/mypy--py-3.11
+    - --lineprecision-report=.tox/.tmp/.test-results/mypy--py-3.11
+    - --txt-report=.tox/.tmp/.test-results/mypy--py-3.11
+    pass_filenames: false
+
+- repo: https://github.com/PyCQA/pylint.git
+  rev: v3.3.4
+  hooks:
+  - id: pylint
+    args:
+    - --disable
+    - >-
+      import-error,
+      invalid-name,
+      line-too-long,
+      missing-class-docstring,
+      missing-function-docstring,
+      missing-module-docstring,
+      protected-access,
+      super-init-not-called,
+      unused-argument,
+      wrong-import-position,
+    - --output-format
+    - colorized
+
+- repo: https://github.com/rhysd/actionlint.git
+  rev: v1.7.8
+  hooks:
+  - id: actionlint
+
+...

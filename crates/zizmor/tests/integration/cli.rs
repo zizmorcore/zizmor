@@ -238,7 +238,7 @@ fn test_stdin_empty() -> anyhow::Result<()> {
     error: no inputs collected
       |
       = help: collection yielded no auditable inputs
-      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+      = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
@@ -796,7 +796,7 @@ fn test_stdin_valid_yaml_unknown_schema() -> anyhow::Result<()> {
     error: no inputs collected
       |
       = help: collection yielded no auditable inputs
-      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+      = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
@@ -824,7 +824,7 @@ fn test_stdin_valid_yaml_unknown_schema_strict() -> anyhow::Result<()> {
     error: no inputs collected
       |
       = help: collection yielded no auditable inputs
-      = help: inputs must contain at least one valid workflow, action, or Dependabot config
+      = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
