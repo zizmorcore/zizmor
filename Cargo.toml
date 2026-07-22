@@ -28,7 +28,7 @@ tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.28.0" }
 yamlpath = { path = "crates/yamlpath", version = "1.28.0" }
 yamlpatch = { path = "crates/yamlpatch", version = "1.28.0" }
 zizmor-sarif = { path = "crates/zizmor-sarif", version = "1.28.0" }
-pre-commit-models = { path = "crates/pre-commit-models", version = "1.27.0" }
+pre-commit-models = { path = "crates/pre-commit-models", version = "1.28.0" }
 
 anyhow = "1.0.102"
 itertools = "0.15.0"
