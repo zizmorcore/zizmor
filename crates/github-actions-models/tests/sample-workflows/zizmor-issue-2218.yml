@@ -1,0 +1,28 @@
+# https://github.com/zizmorcore/zizmor/issues/2218
+#
+# minimized from https://github.com/AOMediaCodec/avm/blob/636fcda8/.github/workflows/nightly.yaml
+
+name: Nightly
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"  # 4am UTC / 8pm PST
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vars:
+    name: Set common variables
+    runs-on: ubuntu-latest
+    outputs:
+      timeout-minutes: 660
+    steps:
+      - name: Do nothing
+        run: |
+          echo noop

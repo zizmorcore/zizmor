@@ -14,6 +14,11 @@ of `zizmor`.
 * zizmor now has **experimental** support for auditing pre-commit inputs,
   meaning both pre-commit configuration and hook definitions (#2209)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would reject a valid workflow definition for
+  containing a literal `jobs.<job>.outputs.<name>` value for being a non-string (#2220)
+
 ## 1.28.0
 
 ### Security 🔒
