@@ -24,7 +24,7 @@ pub struct NormalJob {
     pub environment: Option<DeploymentEnvironment>,
     pub concurrency: Option<Concurrency>,
     #[serde(default)]
-    pub outputs: IndexMap<String, String>,
+    pub outputs: Env,
     #[serde(default)]
     pub env: LoE<Env>,
     pub defaults: Option<Defaults>,
