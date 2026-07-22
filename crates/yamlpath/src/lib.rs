@@ -199,8 +199,8 @@ pub enum QueryError {
     #[error("malformed or unsupported tree-sitter grammar")]
     InvalidLanguage(#[from] tree_sitter::LanguageError),
     /// The user's input YAML is malformed.
-    #[error("input is not valid YAML")]
-    InvalidInput,
+    #[error("input is not valid YAML: error at line {0}, column {1}")]
+    InvalidInput(usize, usize),
     /// The route expects a key at a given point, but the input isn't a mapping.
     #[error("expected mapping containing key `{0}`")]
     ExpectedMapping(String),
@@ -578,8 +578,21 @@ impl Document {
             .parse(&source, None)
             .expect("impossible: tree-sitter parsing should never fail");
 
-        if tree.root_node().has_error() {
-            return Err(QueryError::InvalidInput);
+        // NOTE: In principle we could collapse the `has_error` check and `find()` walk, but
+        // I suspect `has_error` is computed/cheap while `find()` is a linear tree walk. As-is
+        // we only pay the tree walk cost in an error path, so it's probably fine.
+        if tree.root_node().has_error()
+            && let Some(err_node) = TreeIter::new(&tree).find(|n| n.is_error() || n.is_missing())
+        {
+            let (row, column) = {
+                let pos = err_node.start_position();
+                // Make these 1-based to avoid confusing users.
+                (pos.row + 1, pos.column + 1)
+            };
+
+            // TODO: We could consider extracting the offending span here as well.
+
+            return Err(QueryError::InvalidInput(row, column));
         }
 
         let line_index = LineIndex::new(&source);
