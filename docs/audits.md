@@ -525,8 +525,8 @@ files.
 
 !!! tip
 
-    By default, Dependabot performs a three (3) day "cooldown" on dependency updates.
-    `zizmor`, however, recommends a cooldown of seven (7) days by default.
+    By default, Dependabot performs a three day "cooldown" on dependency updates.
+    `zizmor`, however, recommends a cooldown of seven days by default.
 
 Performing updates without an appropriate cooldown presents both stability
 and supply-chain security risks:
