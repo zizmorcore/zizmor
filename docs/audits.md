@@ -523,14 +523,13 @@ Some general pointers:
 Detects missing or insufficient `cooldown` settings in Dependabot configuration
 files.
 
-!!! note
-    Some package ecosystems do not support cooldown configuration in Dependabot.
-    This audit will not produce findings for those ecosystems.
+!!! tip
 
-By default, Dependabot does not perform any "cooldown" on dependency updates.
-In other words, a regularly scheduled Dependabot run may perform an update on a
-dependency that was just released moments before the run began. This presents
-both stability and supply-chain security risks:
+    By default, Dependabot performs a three day "cooldown" on dependency updates.
+    `zizmor`, however, recommends a cooldown of seven days by default.
+
+Performing updates without an appropriate cooldown presents both stability
+and supply-chain security risks:
 
 * **Stability**: updating to the newest version of a dependency immediately after its
   release increases the risk of breakage, since new releases may contain
@@ -540,19 +539,6 @@ both stability and supply-chain security risks:
   down by the packaging ecosystem relatively quickly. Updating immediately to
   a newly released version increases the risk of automatically pulling in
   a compromised version before it can be taken down.
-
-To mitigate these risks, Dependabot supports per-updater `cooldown` settings.
-However, these settings are not enabled by default; users **must** explicitly
-enable them.
-
-!!! tip
-
-    Dependabot's `multi-ecosystem-groups` feature does not interact well
-    with `cooldown`: if you use the two together, Dependabot will only create
-    an update for _one_ ecosystem for each cooldown period, even if multiple
-    ecosystems have new versions available. See #1501 for context.
-
-    zizmor will flag these cases with a pedantic finding.
 
 Other resources:
 
