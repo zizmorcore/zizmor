@@ -1,42 +1,15 @@
 //! Helper routines.
 
-use anyhow::{Error, anyhow};
 use camino::Utf8Path;
 use github_actions_expressions::context::{Context, ContextPattern};
 use github_actions_models::common::{Env, expr::LoE};
-use jsonschema::ErrorEntry;
-use jsonschema::{Validator, validator_for};
 use std::ops::{Deref, Range};
-use std::{fmt::Write as _, sync::LazyLock};
+use std::sync::LazyLock;
 
 use crate::finding::location::Routable;
-use crate::{models::AsDocument, registry::input::CollectionError};
+use crate::models::AsDocument;
 
 pub(crate) static ZIZMOR_AGENT: &str = concat!("zizmor/", env!("CARGO_PKG_VERSION"));
-
-pub(crate) static WORKFLOW_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
-    validator_for(
-        &serde_json::from_str(include_str!("./data/github-workflow.json"))
-            .expect("internal error: compiled asset not JSON?"),
-    )
-    .expect("internal error: failed to load workflow schema")
-});
-
-pub(crate) static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
-    validator_for(
-        &serde_json::from_str(include_str!("./data/github-action.json"))
-            .expect("internal error: compiled asset not JSON?"),
-    )
-    .expect("internal error: failed to load action schema")
-});
-
-pub(crate) static DEPENDABOT_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
-    validator_for(
-        &serde_json::from_str(include_str!("./data/dependabot-2.0.json"))
-            .expect("internal error: compiled asset not JSON?"),
-    )
-    .expect("internal error: failed to load dependabot schema")
-});
 
 pub(crate) static BASH: LazyLock<tree_sitter::Language> =
     LazyLock::new(|| tree_sitter_bash::LANGUAGE.into());
@@ -303,102 +276,6 @@ pub(crate) static DEFAULT_ENVIRONMENT_VARIABLES: &[(
         true,
     ),
 ];
-
-fn parse_validation_errors(errors: Vec<ErrorEntry<'_>>) -> Error {
-    let mut message = String::new();
-
-    for error in errors {
-        let description = error.error.to_string();
-        // HACK: error descriptions are sometimes a long rats' nest
-        // of JSON objects. We should render this in a palatable way
-        // but doing so is nontrivial, so we just skip them for now.
-        // NOTE: Experimentally, this seems to mostly happen when
-        // the error for an unmatched "oneOf", so these errors are
-        // typically less useful anyways.
-        if !description.starts_with("{") {
-            let location = error.instance_location.as_str();
-            if location.is_empty() {
-                writeln!(message, "{description}").expect("I/O on a String failed");
-            } else {
-                // Convert paths like `/foo/bar/baz` to `foo.bar.baz`,
-                // removing the leading separator.
-                let dotted_location = &location[1..].replace("/", ".");
-
-                writeln!(message, "{dotted_location}: {description}")
-                    .expect("I/O on a String failed");
-            }
-        }
-    }
-
-    anyhow!(message)
-}
-
-/// Like `yaml_serde::from_str`, but with a JSON schema validator
-/// and an error type that distinguishes between syntax and semantic
-/// errors.
-pub(crate) fn from_str_with_validation<'de, T>(
-    contents: &'de str,
-    validator: &'static Validator,
-) -> Result<T, CollectionError>
-where
-    T: serde::Deserialize<'de>,
-{
-    match yaml_serde::from_str::<T>(contents) {
-        Ok(value) => Ok(value),
-        Err(e) => {
-            // Something a little wonky happens here: we want
-            // to distinguish between syntax and semantic errors,
-            // but serde-yaml doesn't give us an API to do that.
-            // To approximate it, we re-parse the input as a
-            // `yaml_serde::Mapping`, then convert that `yaml_serde::Mapping`
-            // into a `serde_json::Value` and use it as an oracle -- a successful
-            // re-parse indicates that the input is valid YAML and
-            // that our error is semantic, while a failed re-parse
-            // indicates a syntax error.
-            //
-            // We need to round-trip through a `yaml_serde::Mapping` to ensure that
-            // all of YAML's validity rules are preserved -- directly deserializing
-            // into a `serde_json::Value` would miss some YAML-specific checks,
-            // like duplicate keys within mappings. See #1395 for an example of this.
-            //
-            // We do this in a nested fashion to avoid re-parsing
-            // the input twice if we can help it, and because the
-            // more obvious trick (`yaml_serde::from_value`) doesn't
-            // work due to a lack of referential transparency.
-            //
-            // See: https://github.com/dtolnay/serde-yaml/issues/170
-            // See: https://github.com/dtolnay/serde-yaml/issues/395
-
-            // NOTE(ww): This is wrong for pre-commit hooks files, since they have a top
-            // level YAML list instead of a mapping. We either need to make this
-            // generic over a "skeleton" type (`yaml_serde::Mapping`/`yaml_serde::Sequence`)
-            // or loosen the check above.
-            match yaml_serde::from_str::<yaml_serde::Mapping>(contents) {
-                // We know we have valid YAML, so one of two things happened here:
-                // 1. The input is semantically valid, but we have a bug in
-                //    `github-actions-models`.
-                // 2. The input is semantically invalid, and the user
-                //    needs to fix it.
-                // We the JSON schema `validator` to separate these.
-                Ok(raw_value) => {
-                    let evaluation = validator.evaluate(
-                        &serde_json::to_value(&raw_value)
-                            .map_err(|e| CollectionError::Syntax(e.into()))?,
-                    );
-
-                    if evaluation.flag().valid {
-                        Err(e.into())
-                    } else {
-                        let errors = evaluation.iter_errors().collect::<Vec<_>>();
-                        Err(CollectionError::Schema(parse_validation_errors(errors)))
-                    }
-                }
-                // Syntax error.
-                Err(e) => Err(CollectionError::Syntax(e.into())),
-            }
-        }
-    }
-}
 
 /// Splits the given `patterns` string into one or more patterns, using
 /// approximately the same rules as GitHub's `@actions/glob` package.

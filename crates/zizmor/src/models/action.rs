@@ -3,24 +3,35 @@
 //! These models enrich the models under [`github_actions_models::action`],
 //! providing higher-level APIs for zizmor to use.
 
+use std::sync::LazyLock;
+
 use github_actions_expressions::context;
 use github_actions_models::{
     action,
     common::{self, expr::LoE},
 };
+use jsonschema::Validator;
 use terminal_link::Link;
 
 use crate::{
     InputKey,
     finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
     models::{
-        AsDocument, StepBodyCommon, StepCommon,
+        AsDocument, StepBodyCommon, StepCommon, Validatable,
         inputs::{Capability, HasInputs},
         workflow::matrix::Matrix,
     },
     registry::input::CollectionError,
-    utils::{self, ACTION_VALIDATOR, from_str_with_validation},
+    utils,
 };
+
+static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
+    jsonschema::validator_for(
+        &serde_json::from_str(include_str!("../data/github-action.json"))
+            .expect("internal error: compiled asset not JSON?"),
+    )
+    .expect("internal error: failed to load action schema")
+});
 
 /// Represents an entire (composite) action.
 ///
@@ -32,6 +43,16 @@ pub(crate) struct Action {
     pub(crate) link: Option<String>,
     document: yamlpath::Document,
     inner: action::Action,
+}
+
+impl<'de> Validatable<'de> for Action {
+    type Target = action::Action;
+
+    type Skeleton = yaml_serde::Mapping;
+
+    fn validator() -> &'static jsonschema::Validator {
+        &ACTION_VALIDATOR
+    }
 }
 
 impl<'a> AsDocument<'a, 'a> for Action {
@@ -64,7 +85,7 @@ impl HasInputs for Action {
 impl Action {
     /// Load an action from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
-        let inner = from_str_with_validation(&contents, &ACTION_VALIDATOR)?;
+        let inner = Self::validate(&contents)?;
 
         let document = yamlpath::Document::new(&contents)?;
 

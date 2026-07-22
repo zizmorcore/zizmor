@@ -3,6 +3,8 @@
 //! These models enrich the models under [`github_actions_models::workflow`],
 //! providing higher-level APIs for zizmor to use.
 
+use std::sync::LazyLock;
+
 use github_actions_expressions::context::{self};
 use github_actions_models::{
     common::{self, expr::LoE},
@@ -20,13 +22,21 @@ use crate::{
     InputKey,
     finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
     models::{
-        AsDocument, StepBodyCommon, StepCommon,
+        AsDocument, StepBodyCommon, StepCommon, Validatable,
         inputs::{Capability, HasInputs},
         workflow::matrix::Matrix,
     },
     registry::input::CollectionError,
-    utils::{self, WORKFLOW_VALIDATOR, from_str_with_validation, once::warn_once},
+    utils::{self, once::warn_once},
 };
+
+static WORKFLOW_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
+    jsonschema::validator_for(
+        &serde_json::from_str(include_str!("../data/github-workflow.json"))
+            .expect("internal error: compiled asset not JSON?"),
+    )
+    .expect("internal error: failed to load workflow schema")
+});
 
 /// Represents an entire GitHub Actions workflow.
 ///
@@ -39,6 +49,16 @@ pub(crate) struct Workflow {
     pub(crate) link: Option<String>,
     document: yamlpath::Document,
     inner: workflow::Workflow,
+}
+
+impl<'de> Validatable<'de> for Workflow {
+    type Target = workflow::Workflow;
+
+    type Skeleton = yaml_serde::Mapping;
+
+    fn validator() -> &'static jsonschema::Validator {
+        &WORKFLOW_VALIDATOR
+    }
 }
 
 impl<'a> AsDocument<'a, 'a> for Workflow {
@@ -120,7 +140,7 @@ impl HasInputs for Workflow {
 impl Workflow {
     /// Load a workflow from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
-        let inner = from_str_with_validation(&contents, &WORKFLOW_VALIDATOR)?;
+        let inner = Self::validate(&contents)?;
 
         let document = yamlpath::Document::new(&contents)?;
 
