@@ -10,7 +10,6 @@ use github_actions_models::{
     action,
     common::{self, expr::LoE},
 };
-use jsonschema::Validator;
 use terminal_link::Link;
 
 use crate::{
@@ -25,7 +24,7 @@ use crate::{
     utils,
 };
 
-static ACTION_VALIDATOR: LazyLock<Validator> = LazyLock::new(|| {
+static ACTION_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
     jsonschema::validator_for(
         &serde_json::from_str(include_str!("../data/github-action.json"))
             .expect("internal error: compiled asset not JSON?"),

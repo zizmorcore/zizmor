@@ -28,9 +28,7 @@ docs/snippets/sponsors.html: docs/snippets/sponsors.json docs/snippets/render-sp
 
 .PHONY: refresh-schemas
 refresh-schemas:
-	curl https://www.schemastore.org/github-workflow.json > crates/zizmor/src/data/github-workflow.json
-	curl https://www.schemastore.org/github-action.json > crates/zizmor/src/data/github-action.json
-	curl https://www.schemastore.org/dependabot-2.0.json > crates/zizmor/src/data/dependabot-2.0.json
+	support/fetch-schemas.py
 
 .PHONY: webhooks-to-contexts
 webhooks-to-contexts:
