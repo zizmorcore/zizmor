@@ -17,23 +17,23 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    warning[unpinned-uses]: unpinned action reference
+    error[unpinned-images]: unpinned image references
       --> @@INPUT@@:21:24
        |
     21 |       - uses: docker://ubuntu
-       |                        ^^^^^^ image is not pinned to a tag, branch, or hash ref
+       |                        ^^^^^^ container image is unpinned
        |
        = note: audit confidence → High
 
-    warning[unpinned-uses]: unpinned action reference
+    error[unpinned-images]: unpinned image references
       --> @@INPUT@@:27:24
        |
     27 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
-       |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ image is not pinned to a tag, branch, or hash ref
+       |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
        |
        = note: audit confidence → High
 
-    3 findings: 0 informational, 0 low, 2 medium, 1 high
+    3 findings: 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -55,23 +55,23 @@ fn test_unpinned_uses_default() -> Result<()> {
        |
        = note: audit confidence → High
 
-    warning[unpinned-uses]: unpinned action reference
+    error[unpinned-images]: unpinned image references
       --> @@INPUT@@:21:24
        |
     21 |       - uses: docker://ubuntu
-       |                        ^^^^^^ image is not pinned to a tag, branch, or hash ref
+       |                        ^^^^^^ container image is unpinned
        |
        = note: audit confidence → High
 
-    warning[unpinned-uses]: unpinned action reference
+    error[unpinned-images]: unpinned image references
       --> @@INPUT@@:27:24
        |
     27 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
-       |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ image is not pinned to a tag, branch, or hash ref
+       |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
        |
        = note: audit confidence → High
 
-    3 findings: 0 informational, 0 low, 2 medium, 1 high
+    3 findings: 0 informational, 0 low, 0 medium, 3 high
     "
     );
 

@@ -298,12 +298,12 @@ expression: output
     "fixes": []
   },
   {
-    "ident": "unpinned-uses",
-    "desc": "unpinned action reference",
-    "url": "https://docs.zizmor.sh/audits/#unpinned-uses",
+    "ident": "unpinned-images",
+    "desc": "unpinned image references",
+    "url": "https://docs.zizmor.sh/audits/#unpinned-images",
     "determinations": {
       "confidence": "High",
-      "severity": "Medium",
+      "severity": "High",
       "persona": "Regular"
     },
     "locations": [
@@ -314,7 +314,7 @@ expression: output
               "verbatim_path": "@@INPUT@@"
             }
           },
-          "annotation": "image is not pinned to a tag, branch, or hash ref",
+          "annotation": "container image is unpinned",
           "route": {
             "route": [
               {
@@ -368,12 +368,12 @@ expression: output
     "fixes": []
   },
   {
-    "ident": "unpinned-uses",
-    "desc": "unpinned action reference",
-    "url": "https://docs.zizmor.sh/audits/#unpinned-uses",
+    "ident": "unpinned-images",
+    "desc": "unpinned image references",
+    "url": "https://docs.zizmor.sh/audits/#unpinned-images",
     "determinations": {
       "confidence": "High",
-      "severity": "Medium",
+      "severity": "High",
       "persona": "Regular"
     },
     "locations": [
@@ -384,7 +384,7 @@ expression: output
               "verbatim_path": "@@INPUT@@"
             }
           },
-          "annotation": "image is not pinned to a tag, branch, or hash ref",
+          "annotation": "container image is unpinned",
           "route": {
             "route": [
               {
