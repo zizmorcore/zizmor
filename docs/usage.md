@@ -10,10 +10,10 @@ Before auditing, `zizmor` performs an input collection phase.
 
 There are four input sources that `zizmor` knows about:
 
-1. Individual workflow and action files, e.g. `foo.yml` and
-   `my-action/action.yml`;
-2. "Local" GitHub repositories in the form of a directory, e.g. `my-repo/`;
-3. "Remote" GitHub repositories in the form of a "slug", e.g.
+1. Individual input files, e.g. `foo.yml`, `my-action/action.yml`,
+   and `.pre-commit-config.yaml`;
+2. "Local" repositories in the form of a directory, e.g. `my-repo/`;
+3. "Remote" (GitHub) repositories in the form of a "slug", e.g.
    `pypa/sampleproject`;
 
     !!! tip
@@ -63,7 +63,7 @@ There are four input sources that `zizmor` knows about:
     ```
 
     When reading from stdin, `zizmor` automatically infers the input type
-    (workflow, action, or Dependabot config).
+    (workflow, action, Dependabot config, or pre-commit config/hook definition).
 
     !!! note
 
@@ -1008,8 +1008,8 @@ GH_HOST=custom.ghe.com zizmor ...
 
 ## Limitations
 
-`zizmor` can help you write more secure GitHub workflow and action definitions,
-as well as help you find exploitable bugs in existing definitions.
+`zizmor` can help you secure your CI/CD setup by finding common,
+well-understood flaws.
 
 However, like all tools, `zizmor` is **not a panacea**, and has
 fundamental limitations that must be kept in mind. This page
@@ -1020,9 +1020,8 @@ documents some of those limitations.
 `zizmor` is a _static_ analysis tool. It never executes any code, nor does it
 have access to any runtime state.
 
-In contrast, GitHub Actions workflow and action definitions are highly
-dynamic, and can be influenced by inputs that can only be inspected at
-runtime.
+In contrast, many CI/CD systems (like GitHub Actions) are extremely dynamic,
+and can be influenced by inputs that can only be inspected at runtime.
 
 For example, here is a workflow where a job's matrix is generated
 at runtime by a previous job, making the matrix impossible to
@@ -1104,10 +1103,9 @@ outside of any repository-tracked state.
 results.
 
 To do this, `zizmor` needs to know a lot of about the inner workings
-of the YAML serialization format that GitHub Actions workflows, action
-definitions, and Dependabot files are expressed in.
+of the YAML serialization format that its inputs are expressed in.
 
-YAML is a complicated serialization format, but GitHub *mostly* uses
+YAML is a complicated serialization format, but typical inputs *mostly* use
 a tractable subset of it. One conspicuous exception to this is
 [YAML anchors](https://yaml.org/spec/1.2.2/#3222-anchors-and-aliases),
 which GitHub has
@@ -1133,8 +1131,8 @@ If you're having issues with inputs containing anchors, see
 !!! warning "Experimental"
 
     `zizmor`'s support for parallel steps is currently **experimental**.
-    You will probably encounter bugs if you run `zizmor` on a workflow
-    that uses parallel steps; please
+    You will probably encounter bugs if you run `zizmor` on a GitHub Actions
+    workflow that uses parallel steps; please
     [report any issues you have](https://github.com/zizmorcore/zizmor/issues/new)!
 
 As of June 2026, GitHub Actions [supports parallel steps]. This support adds

@@ -16,10 +16,9 @@ You should see something like this:
 
 Here are some different ways you can run `zizmor` locally:
 
-=== "On one or more workflows"
+=== "On one or more individual files"
 
-    You can run `zizmor` on one or more workflows or composite actions as
-    explicit inputs:
+    You can run `zizmor` on one or more individual files:
 
     ```bash
     zizmor ci.yml tests.yml lint.yml action.yml
@@ -35,19 +34,11 @@ Here are some different ways you can run `zizmor` locally:
 
     !!! tip
 
-        Composite action support was added in v1.0.0.
-
-    !!! tip
-
         Pass `--collect=workflows` to avoid collecting anything except
         workflow definitions.
 
     When given one or more local directories, `zizmor` will treat each as a
-    GitHub repository and attempt to discover workflows defined under the
-    `.github/workflows` subdirectory for each. `zizmor` will also walk each
-    directory to find composite action definitions (`action.yml` in any
-    subdirectory) and Dependabot configuration files
-    (`.github/dependabot.yml`).
+    repository and attempt to workflows and other auditable inputs within it.
 
     ```bash
     # repo-a/ contains .github/workflows/{ci,tests}.yml
@@ -57,7 +48,7 @@ Here are some different ways you can run `zizmor` locally:
     # or with multiple directories
     zizmor repo-a/ ../../repo-b/
 
-    # collect only workflows, not composite actions or Dependabot configs
+    # collect only workflows
     zizmor --collect=workflows repo-a/
     ```
 
@@ -86,6 +77,13 @@ Here are some different ways you can run `zizmor` locally:
 
     ```bash
     zizmor --gh-token=$(gh auth token) zizmorcore/zizmor zizmorcore/gha-hazmat
+    ```
+
+    As will the `@<ref>` syntax for auditing a specific tag, branch,
+    or commit:
+
+    ```bash
+    zizmor --gh-token=$(gh auth token) actions/checkout@v7
     ```
 
 See [Usage](./usage.md) for more examples, including examples of configuration.
