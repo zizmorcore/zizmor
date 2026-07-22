@@ -9,7 +9,8 @@
 
 `zizmor` is a static analysis tool for CI/CD systems.
 
-It can find many common security issues in typical CI/CD setups, including:
+It can find and fix security issues in common CI/CD setups, including GitHub Actions,
+Dependabot, and pre-commit. Some of the things `zizmor` finds:
 
 * Template injection vulnerabilities, leading to attacker-controlled code execution
 * Accidental credential persistence and leakage
