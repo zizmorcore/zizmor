@@ -3,21 +3,40 @@
 //! These models enrich the models under [`github_actions_models::dependabot`],
 //! providing higher-level APIs for zizmor to use.
 
+use std::sync::LazyLock;
+
 use github_actions_models::dependabot;
 use terminal_link::Link;
 
 use crate::{
     finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
-    models::AsDocument,
+    models::{AsDocument, Validatable},
     registry::input::{CollectionError, InputKey},
-    utils::{DEPENDABOT_VALIDATOR, from_str_with_validation},
 };
+
+static DEPENDABOT_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
+    jsonschema::validator_for(
+        &serde_json::from_str(include_str!("../data/dependabot-2.0.json"))
+            .expect("internal error: compiled asset not JSON?"),
+    )
+    .expect("internal error: failed to load dependabot schema")
+});
 
 pub(crate) struct Dependabot {
     pub(crate) key: InputKey,
     pub(crate) link: Option<String>,
     document: yamlpath::Document,
     inner: dependabot::v2::Dependabot,
+}
+
+impl<'de> Validatable<'de> for Dependabot {
+    type Target = dependabot::v2::Dependabot;
+
+    type Skeleton = yaml_serde::Mapping;
+
+    fn validator() -> &'static jsonschema::Validator {
+        &DEPENDABOT_VALIDATOR
+    }
 }
 
 impl<'a> AsDocument<'a, 'a> for Dependabot {
@@ -42,7 +61,7 @@ impl std::fmt::Debug for Dependabot {
 
 impl Dependabot {
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
-        let inner = from_str_with_validation(&contents, &DEPENDABOT_VALIDATOR)?;
+        let inner = Self::validate(&contents)?;
 
         let document = yamlpath::Document::new(&contents)?;
 

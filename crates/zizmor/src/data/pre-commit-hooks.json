@@ -1,0 +1,445 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://json.schemastore.org/pre-commit-hooks.json",
+  "definitions": {
+    "language": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "conda",
+            "coursier",
+            "dart",
+            "docker",
+            "docker_image",
+            "dotnet",
+            "fail",
+            "golang",
+            "lua",
+            "node",
+            "perl",
+            "python",
+            "python_venv",
+            "r",
+            "ruby",
+            "rust",
+            "swift",
+            "pygrep",
+            "script",
+            "system",
+            "unsupported",
+            "unsupported_script"
+          ]
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "file_type": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "adobe-illustrator",
+            "alpm",
+            "apinotes",
+            "asar",
+            "asciidoc",
+            "ash",
+            "asm",
+            "aspectj",
+            "audio",
+            "avif",
+            "awk",
+            "babelrc",
+            "bash",
+            "batch",
+            "bats",
+            "bazel",
+            "bazelrc",
+            "bib",
+            "binary",
+            "bitmap",
+            "bowerrc",
+            "browserslistrc",
+            "bzip2",
+            "c",
+            "c#",
+            "c++",
+            "c2hs",
+            "cbsd",
+            "clojure",
+            "clojurescript",
+            "cmake",
+            "codespellrc",
+            "coffee",
+            "coveragerc",
+            "crystal",
+            "csh",
+            "cson",
+            "csproj",
+            "css",
+            "csslintrc",
+            "csv",
+            "cuda",
+            "cython",
+            "dart",
+            "dash",
+            "def",
+            "diff",
+            "directory",
+            "dockerfile",
+            "dockerignore",
+            "dotenv",
+            "dtd",
+            "editorconfig",
+            "edn",
+            "ejs",
+            "eot",
+            "eps",
+            "erb",
+            "executable",
+            "expect",
+            "file",
+            "fish",
+            "flake8",
+            "gdscript",
+            "geojson",
+            "gherkin",
+            "gif",
+            "gitattributes",
+            "gitconfig",
+            "gitignore",
+            "gitlint",
+            "gitmodules",
+            "go",
+            "go-mod",
+            "go-sum",
+            "gotmpl",
+            "gpx",
+            "graphql",
+            "groovy",
+            "gyb",
+            "gyp",
+            "gzip",
+            "handlebars",
+            "haskell",
+            "hcl",
+            "header",
+            "hgrc",
+            "html",
+            "icalendar",
+            "icns",
+            "icon",
+            "idl",
+            "idris",
+            "image",
+            "inc",
+            "ini",
+            "inl",
+            "ino",
+            "inx",
+            "jade",
+            "jar",
+            "java",
+            "java-properties",
+            "javascript",
+            "jenkins",
+            "jinja",
+            "jpeg",
+            "jshintrc",
+            "json",
+            "json5",
+            "jsonnet",
+            "jsx",
+            "jupyter",
+            "kml",
+            "kotlin",
+            "ksh",
+            "lean",
+            "lektor",
+            "lektorproject",
+            "less",
+            "liquid",
+            "literate-haskell",
+            "lua",
+            "mailmap",
+            "makefile",
+            "manifest",
+            "map",
+            "markdown",
+            "mdx",
+            "mention-bot",
+            "meson",
+            "mib",
+            "modulemap",
+            "musescore",
+            "myst",
+            "ngdoc",
+            "nim",
+            "nimble",
+            "nix",
+            "non-executable",
+            "npmignore",
+            "nunjucks",
+            "objective-c",
+            "objective-c++",
+            "ocaml",
+            "otf",
+            "p12",
+            "pdbrc",
+            "pdf",
+            "pem",
+            "perl",
+            "php",
+            "pkgbuild",
+            "plain-text",
+            "plantuml",
+            "plist",
+            "png",
+            "pofile",
+            "powershell",
+            "prettierignore",
+            "prisma",
+            "proto",
+            "puppet",
+            "purescript",
+            "pyi",
+            "pylintrc",
+            "pypirc",
+            "pyproj",
+            "python",
+            "python2",
+            "python3",
+            "pyz",
+            "qml",
+            "r",
+            "relax-ng",
+            "rst",
+            "ruby",
+            "rust",
+            "salt",
+            "sass",
+            "sbt",
+            "scala",
+            "scheme",
+            "scss",
+            "sh",
+            "shell",
+            "sln",
+            "socket",
+            "solidity",
+            "spec",
+            "sql",
+            "stylus",
+            "svelte",
+            "svg",
+            "swf",
+            "swift",
+            "swiftdeps",
+            "symlink",
+            "system-verilog",
+            "tar",
+            "tcsh",
+            "terraform",
+            "tex",
+            "text",
+            "thrift",
+            "tiff",
+            "toml",
+            "ts",
+            "tsv",
+            "tsx",
+            "ttf",
+            "twig",
+            "twisted",
+            "txsprofile",
+            "urdf",
+            "vb",
+            "vbproj",
+            "vcxproj",
+            "vdx",
+            "verilog",
+            "vhdl",
+            "vim",
+            "vtl",
+            "vue",
+            "wav",
+            "webp",
+            "wheel",
+            "wkt",
+            "woff",
+            "woff2",
+            "wsgi",
+            "xhtml",
+            "xml",
+            "xquery",
+            "xsd",
+            "xsl",
+            "yaml",
+            "yamllint",
+            "yang",
+            "yin",
+            "zcml",
+            "zig",
+            "zip",
+            "zpt",
+            "zsh"
+          ]
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "file_types": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/file_type"
+      }
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "commit",
+        "merge-commit",
+        "push",
+        "prepare-commit-msg",
+        "commit-msg",
+        "post-checkout",
+        "post-commit",
+        "post-merge",
+        "post-rewrite",
+        "pre-commit",
+        "pre-merge-commit",
+        "pre-push",
+        "pre-rebase",
+        "manual"
+      ]
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/stage"
+      }
+    }
+  },
+  "items": {
+    "type": "object",
+    "required": ["id", "name", "entry", "language"],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "description": "id of the hook - used in pre-commit-config.yaml.",
+        "type": "string"
+      },
+      "name": {
+        "description": "name of the hook - shown during hook execution.",
+        "type": "string"
+      },
+      "entry": {
+        "description": "entry point - the executable to run. Can also contain arguments that will not be overridden such as `entry: autopep8 -i`.",
+        "type": "string"
+      },
+      "language": {
+        "$ref": "#/definitions/language",
+        "description": "language of the hook - tells pre-commit how to install the hook."
+      },
+      "alias": {
+        "description": "(optional) allows the hook to be referenced using an additional id.",
+        "type": "string"
+      },
+      "files": {
+        "description": "(optional) the pattern of files to run on.",
+        "type": "string",
+        "default": ""
+      },
+      "exclude": {
+        "description": "(optional) exclude files that were matched by files.",
+        "type": "string",
+        "default": "^$"
+      },
+      "types": {
+        "$ref": "#/definitions/file_types",
+        "description": "(optional) list of file types to run on (AND).",
+        "default": ["file"]
+      },
+      "types_or": {
+        "$ref": "#/definitions/file_types",
+        "description": "(optional) list of file types to run on (OR).",
+        "default": []
+      },
+      "exclude_types": {
+        "$ref": "#/definitions/file_types",
+        "description": "(optional) pattern of files to exclude.",
+        "default": []
+      },
+      "additional_dependencies": {
+        "description": "(optional) a list of dependencies that will be installed in the environment where this hook gets run. One useful application is to install plugins for hooks such as eslint.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "always_run": {
+        "description": "(optional) if true this hook will run even if there are no matching files.",
+        "type": "boolean",
+        "default": false
+      },
+      "fail_fast": {
+        "description": "(optional) if true this hook will run even if there are no matching files.",
+        "type": "boolean",
+        "default": false
+      },
+      "verbose": {
+        "description": "(optional) if true, forces the output of the hook to be printed even when the hook passes.",
+        "type": "boolean",
+        "default": false
+      },
+      "pass_filenames": {
+        "description": "(optional) if false no filenames will be passed to the hook.",
+        "type": "boolean",
+        "default": true
+      },
+      "require_serial": {
+        "description": "(optional) if true this hook will execute using a single process instead of in parallel.",
+        "type": "boolean",
+        "default": false
+      },
+      "description": {
+        "description": "(optional) description of the hook. Used for metadata purposes only.",
+        "type": "string",
+        "default": ""
+      },
+      "language_version": {
+        "description": "(optional) see Overriding language version at https://pre-commit.com/#overriding-language-version",
+        "type": "string",
+        "default": "default"
+      },
+      "log_file": {
+        "description": "(optional) if present, the hook output will additionally be written to a file.",
+        "type": "string"
+      },
+      "minimum_pre_commit_version": {
+        "description": "(optional) allows one to indicate a minimum compatible pre-commit version.",
+        "type": "string",
+        "default": "0"
+      },
+      "args": {
+        "description": "(optional) list of additional parameters to pass to the hook.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "default": []
+      },
+      "stages": {
+        "$ref": "#/definitions/stages",
+        "description": "(optional) confines the hook to the commit, merge-commit, push, prepare-commit-msg, commit-msg, post-checkout, post-commit, post-merge, post-rewrite, or manual stage. See Confining hooks to run at certain stages in https://pre-commit.com/#confining-hooks-to-run-at-certain-stages"
+      }
+    }
+  },
+  "minItems": 1,
+  "type": "array"
+}

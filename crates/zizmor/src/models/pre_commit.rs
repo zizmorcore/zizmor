@@ -3,19 +3,47 @@
 //! These models enrich the models under [`pre_commit_models`],
 //! providing higher-level APIs for zizmor to use.
 
+use std::sync::LazyLock;
+
 use terminal_link::Link;
 
 use crate::{
     finding::location::{SymbolicFeature, SymbolicLocation},
-    models::AsDocument,
+    models::{AsDocument, Validatable},
     registry::input::{CollectionError, InputKey},
 };
+
+static PRE_COMMIT_CONFIG_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
+    jsonschema::validator_for(
+        &serde_json::from_str(include_str!("../data/pre-commit-config.json"))
+            .expect("internal error: compiled asset not JSON?"),
+    )
+    .expect("internal error: failed to load pre-commit config schema")
+});
+
+static PRE_COMMIT_HOOKS_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
+    jsonschema::validator_for(
+        &serde_json::from_str(include_str!("../data/pre-commit-hooks.json"))
+            .expect("internal error: compiled asset not JSON?"),
+    )
+    .expect("internal error: failed to load pre-commit hooks schema")
+});
 
 pub(crate) struct PreCommitConfig {
     pub(crate) key: InputKey,
     pub(crate) link: Option<String>,
     document: yamlpath::Document,
     inner: pre_commit_models::config::Config,
+}
+
+impl<'de> Validatable<'de> for PreCommitConfig {
+    type Target = pre_commit_models::config::Config;
+
+    type Skeleton = yaml_serde::Mapping;
+
+    fn validator() -> &'static jsonschema::Validator {
+        &PRE_COMMIT_CONFIG_VALIDATOR
+    }
 }
 
 impl<'a> AsDocument<'a, 'a> for PreCommitConfig {
@@ -40,8 +68,7 @@ impl std::fmt::Debug for PreCommitConfig {
 
 impl PreCommitConfig {
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
-        // TODO: `from_str_with_validation` here.
-        let inner = yaml_serde::from_str(&contents)?;
+        let inner = Self::validate(&contents)?;
 
         let document = yamlpath::Document::new(&contents)?;
 
@@ -84,6 +111,16 @@ pub(crate) struct PreCommitHooks {
     inner: pre_commit_models::hooks::Hooks,
 }
 
+impl<'de> Validatable<'de> for PreCommitHooks {
+    type Target = pre_commit_models::hooks::Hooks;
+
+    type Skeleton = yaml_serde::Sequence;
+
+    fn validator() -> &'static jsonschema::Validator {
+        &PRE_COMMIT_HOOKS_VALIDATOR
+    }
+}
+
 impl<'a> AsDocument<'a, 'a> for PreCommitHooks {
     fn as_document(&'a self) -> &'a yamlpath::Document {
         &self.document
@@ -106,8 +143,7 @@ impl std::fmt::Debug for PreCommitHooks {
 
 impl PreCommitHooks {
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
-        // TODO: `from_str_with_validation` here.
-        let inner = yaml_serde::from_str(&contents)?;
+        let inner = Self::validate(&contents)?;
 
         let document = yamlpath::Document::new(&contents)?;
 
