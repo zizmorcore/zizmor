@@ -46,6 +46,10 @@ crates/zizmor/data/codeql-injection-sinks.json: support/codeql-injection-sinks.p
 sync-expression-tests:
 	support/sync-expression-tests.py
 
+.PHONY: sync-github-runners
+sync-github-runners:
+	support/github-runners.py
+
 .PHONY: archived-repos
 archived-repos:
 	support/archived-repos.py

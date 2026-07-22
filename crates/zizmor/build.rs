@@ -55,10 +55,12 @@ fn do_codeql_injection_sinks() {
     fs::copy(source, target).unwrap();
 }
 
-fn do_archived_action_repos() {
+/// Construct a "plain" FST, i.e. a set from a plaintext input,
+/// one entry per line.
+fn do_plain_fst(input: &str, output: &str) {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let source = Path::new(&manifest_dir).join("data/archived-repos.txt");
-    let target = Path::new(&env::var("OUT_DIR").unwrap()).join("archived-repos.fst");
+    let source = Path::new(&manifest_dir).join("data").join(input);
+    let target = Path::new(&env::var("OUT_DIR").unwrap()).join(output);
 
     println!(
         "cargo::rerun-if-changed={source}",
@@ -79,5 +81,6 @@ fn do_archived_action_repos() {
 fn main() {
     do_context_capabilities();
     do_codeql_injection_sinks();
-    do_archived_action_repos();
+    do_plain_fst("archived-repos.txt", "archived-repos.fst");
+    do_plain_fst("github-runners.txt", "github-runners.fst");
 }
