@@ -2,7 +2,7 @@ use crate::common::{input_under_test, zizmor};
 
 #[test]
 fn test_regular_persona() -> anyhow::Result<()> {
-    insta::assert_snapshot!(zizmor().input(input_under_test("unpinned-tools.yml")).run()?, @"
+    insta::assert_snapshot!(zizmor().input(input_under_test("unpinned-tools.yml")).run()?, @r"
     warning[unpinned-tools]: action installs an unpinned external tool
       --> @@INPUT@@:16:15
        |
@@ -52,7 +52,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    5 findings: 0 informational, 0 low, 5 medium, 0 high
+    6 findings (1 suppressed): 0 informational, 0 low, 5 medium, 0 high
     ");
 
     Ok(())

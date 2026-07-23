@@ -230,7 +230,7 @@ fn test_adhoc_packages() -> anyhow::Result<()> {
         |
         = note: audit confidence → High
 
-    22 findings: 0 informational, 22 low, 0 medium, 0 high
+    26 findings (4 suppressed): 0 informational, 22 low, 0 medium, 0 high
     "#
     );
 

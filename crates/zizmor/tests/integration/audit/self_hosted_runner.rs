@@ -92,16 +92,16 @@ fn test_self_hosted_matrix_dimension() -> Result<()> {
             ))
             .args(["--persona=auditor"])
             .run()?,
-        @"
+        @r"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:15:5
        |
     15 |       runs-on: ${{ matrix.os }}
        |       ^^^^^^^^^^^^^^^^^^^^^^^^^ expression may expand into a self-hosted runner
-    16 |
-    17 | /     strategy:
-    18 | |       matrix:
-    19 | |         os: [self-hosted, ubuntu-latest]
+    ...
+    18 | /     strategy:
+    19 | |       matrix:
+    20 | |         os: [self-hosted, ubuntu-latest]
        | |________________________________________- matrix declares self-hosted runner
        |
        = note: audit confidence → High
@@ -122,18 +122,18 @@ fn test_self_hosted_matrix_inclusion() -> Result<()> {
             ))
             .args(["--persona=auditor"])
             .run()?,
-        @"
+        @r"
     warning[self-hosted-runner]: runs on a self-hosted runner
       --> @@INPUT@@:15:5
        |
     15 |       runs-on: ${{ matrix.os }}
        |       ^^^^^^^^^^^^^^^^^^^^^^^^^ expression may expand into a self-hosted runner
-    16 |
-    17 | /     strategy:
-    18 | |       matrix:
-    19 | |         os: [macOS-latest, ubuntu-latest]
-    20 | |         include:
-    21 | |           - os: self-hosted
+    ...
+    18 | /     strategy:
+    19 | |       matrix:
+    20 | |         os: [macOS-latest, ubuntu-latest]
+    21 | |         include:
+    22 | |           - os: self-hosted
        | |___________________________- matrix declares self-hosted runner
        |
        = note: audit confidence → High

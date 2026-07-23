@@ -8,21 +8,21 @@ fn test_insecure_commands_auditor() -> Result<()> {
             .input(input_under_test("insecure-commands.yml"))
             .args(["--persona=auditor"])
             .run()?,
-        @"
+        @r"
     error[insecure-commands]: execution of insecure workflow commands is enabled
-      --> @@INPUT@@:15:5
+      --> @@INPUT@@:16:5
        |
-    15 | /     env:
-    16 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+    16 | /     env:
+    17 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
        | |___________________________________________^ insecure commands enabled here
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
     error[insecure-commands]: execution of insecure workflow commands is enabled
-      --> @@INPUT@@:30:9
+      --> @@INPUT@@:32:9
        |
-    30 |         env: ${{ matrix.env }}
+    32 |         env: ${{ matrix.env }}
        |         ^^^^^^^^^^^^^^^^^^^^^^ non-static environment may contain ACTIONS_ALLOW_UNSECURE_COMMANDS
        |
        = note: audit confidence → Low
@@ -40,12 +40,12 @@ fn test_insecure_commands_default() -> Result<()> {
         zizmor()
             .input(input_under_test("insecure-commands.yml"))
             .run()?,
-        @"
+        @r"
     error[insecure-commands]: execution of insecure workflow commands is enabled
-      --> @@INPUT@@:15:5
+      --> @@INPUT@@:16:5
        |
-    15 | /     env:
-    16 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+    16 | /     env:
+    17 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
        | |___________________________________________^ insecure commands enabled here
        |
        = note: audit confidence → High
@@ -110,19 +110,19 @@ fn test_issue_839_repro() -> Result<()> {
             .run()?,
         @r#"
     error[insecure-commands]: execution of insecure workflow commands is enabled
-      --> @@INPUT@@:15:5
+      --> @@INPUT@@:16:5
        |
-    15 | /     env:
-    16 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+    16 | /     env:
+    17 | |       ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
        | |_____________________________________________^ insecure commands enabled here
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
     error[insecure-commands]: execution of insecure workflow commands is enabled
-      --> @@INPUT@@:30:9
+      --> @@INPUT@@:32:9
        |
-    30 |         env: ${{ matrix.env }}
+    32 |         env: ${{ matrix.env }}
        |         ^^^^^^^^^^^^^^^^^^^^^^ non-static environment may contain ACTIONS_ALLOW_UNSECURE_COMMANDS
        |
        = note: audit confidence → Low

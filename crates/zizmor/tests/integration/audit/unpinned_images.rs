@@ -7,75 +7,75 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
             .input(input_under_test("unpinned-images.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:23:7
+      --> @@INPUT@@:24:7
        |
-    23 |       image: fake.example.com/example
+    24 |       image: fake.example.com/example
        |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
        |
        = note: audit confidence → High
 
     error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:32:9
+      --> @@INPUT@@:34:9
        |
-    32 |         image: fake.example.com/redis
+    34 |         image: fake.example.com/redis
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
        |
        = note: audit confidence → High
 
     error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:40:7
+      --> @@INPUT@@:43:7
        |
-    40 |       image: fake.example.com/example:latest
+    43 |       image: fake.example.com/example:latest
        |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
        |
        = note: audit confidence → High
 
     error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:49:9
+      --> @@INPUT@@:53:9
        |
-    49 |         image: fake.example.com/redis:latest
+    53 |         image: fake.example.com/redis:latest
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
        |
        = note: audit confidence → High
 
     error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:57:7
+      --> @@INPUT@@:62:7
        |
-    57 |       image: fake.example.com/example:0.0.348
+    62 |       image: fake.example.com/example:0.0.348
        |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
        |
        = note: audit confidence → High
 
     error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:66:9
+      --> @@INPUT@@:72:9
        |
-    66 |         image: fake.example.com/redis:7.4.3
+    72 |         image: fake.example.com/redis:7.4.3
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
        |
        = note: audit confidence → High
 
     error[unpinned-images]: unpinned image references
-       --> @@INPUT@@:101:50
+       --> @@INPUT@@:111:50
         |
-    101 |         image: ${{ inputs.use-redis == 'true' && 'redis:7' || '' }}
+    111 |         image: ${{ inputs.use-redis == 'true' && 'redis:7' || '' }}
         |                                                  ^^^^^^^^^ container image is not pinned to a SHA256 hash
         |
         = note: audit confidence → High
 
     error[unpinned-images]: unpinned image references
-       --> @@INPUT@@:118:18
+       --> @@INPUT@@:130:18
         |
-    118 |       image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
+    130 |       image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
         |                  ^^^^^^^^^^^^ container image may be unpinned
         |
         = note: audit confidence → Low
 
     error[unpinned-images]: unpinned image references
-       --> @@INPUT@@:118:34
+       --> @@INPUT@@:130:34
         |
-    118 |       image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
+    130 |       image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
         |                                  ^^^^^^^^^^^^^^^^^^ container image may be unpinned
         |
         = note: audit confidence → Low
@@ -239,11 +239,11 @@ fn test_issue_1942_repro() -> anyhow::Result<()> {
             .input(input_under_test("unpinned-images/issue-1942-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:13:5
+      --> @@INPUT@@:14:5
        |
-    13 |     container: node:18
+    14 |     container: node:18
        |     ^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
        |
        = note: audit confidence → High
@@ -288,7 +288,7 @@ fn test_issue_2097_repro() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("unpinned-images/issue-2097-repro.yml"))
             .run()?,
-        @"No findings to report. Good job!"
+        @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())

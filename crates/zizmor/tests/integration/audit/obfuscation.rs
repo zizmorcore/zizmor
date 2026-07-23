@@ -7,7 +7,7 @@ fn test_obfuscation() -> Result<()> {
         zizmor()
             .input(input_under_test("obfuscation.yml"))
             .run()?,
-        @"
+        @r"
     help[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:13:9
        |
@@ -195,7 +195,7 @@ fn test_obfuscation() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    37 findings (1 ignored, 16 suppressed, 19 safe fixes): 0 informational, 20 low, 0 medium, 0 high
+    39 findings (1 ignored, 18 suppressed, 19 safe fixes): 0 informational, 20 low, 0 medium, 0 high
     "
     );
 
@@ -209,11 +209,11 @@ fn test_computed_indices_pedantic() -> Result<()> {
             .input(input_under_test("obfuscation/computed-indices.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     help[obfuscation]: obfuscated usage of GitHub Actions features
-      --> @@INPUT@@:18:23
+      --> @@INPUT@@:19:23
        |
-    18 |       - if: ${{ inputs[inputs.foo] }}
+    19 |       - if: ${{ inputs[inputs.foo] }}
        |                       ^^^^^^^^^^^^ index expression is computed
        |
        = note: audit confidence → High
@@ -243,7 +243,7 @@ fn test_issue_1769() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
         .input(input_under_test("obfuscation/issue-1769-repro.yml")).run()?,
-        @"
+        @r"
     info[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:19:9
        |
@@ -254,7 +254,7 @@ fn test_issue_1769() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings (1 suppressed): 1 informational, 0 low, 0 medium, 0 high
+    3 findings (2 suppressed): 1 informational, 0 low, 0 medium, 0 high
     "
     );
 

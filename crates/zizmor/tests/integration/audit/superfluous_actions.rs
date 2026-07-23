@@ -7,23 +7,23 @@ fn test_superfluous_actions() -> anyhow::Result<()> {
             .input(input_under_test("superfluous-actions.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     info[superfluous-actions]: action functionality is already included by the runner
-      --> @@INPUT@@:16:15
+      --> @@INPUT@@:17:15
        |
-    15 |       - name: setup rust
+    16 |       - name: setup rust
        |         ---------------- this step
-    16 |         uses: dtolnay/rust-toolchain@086dfa4efe372cfb6b375460a56e26a62a873d2e # 1.93.1
+    17 |         uses: dtolnay/rust-toolchain@086dfa4efe372cfb6b375460a56e26a62a873d2e # 1.93.1
        |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `rustup` and/or `cargo` in a script step
        |
        = note: audit confidence → Medium
 
     info[superfluous-actions]: action functionality is already included by the runner
-      --> @@INPUT@@:19:15
+      --> @@INPUT@@:20:15
        |
-    18 |       - name: update comment
+    19 |       - name: update comment
        |         -------------------- this step
-    19 |         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
+    20 |         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
        |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use `gh pr comment` or `gh issue comment` in a script step
        |
        = note: audit confidence → Low

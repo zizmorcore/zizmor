@@ -9,7 +9,7 @@ fn test_undocumented_permissions_pedantic() -> Result<()> {
             .input(input_under_test("undocumented-permissions.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     help[undocumented-permissions]: permissions without explanatory comments
      --> @@INPUT@@:8:3
       |
@@ -19,33 +19,33 @@ fn test_undocumented_permissions_pedantic() -> Result<()> {
       = note: audit confidence → High
 
     help[undocumented-permissions]: permissions without explanatory comments
-      --> @@INPUT@@:33:7
+      --> @@INPUT@@:35:7
        |
-    33 |       contents: write
+    35 |       contents: write
        |       ^^^^^^^^^^^^^^^ needs an explanatory comment
-    34 |       packages: write
+    36 |       packages: write
        |       ^^^^^^^^^^^^^^^ needs an explanatory comment
-    35 |       actions: write
+    37 |       actions: write
        |       ^^^^^^^^^^^^^^ needs an explanatory comment
        |
        = note: audit confidence → High
 
     help[undocumented-permissions]: permissions without explanatory comments
-      --> @@INPUT@@:48:7
+      --> @@INPUT@@:51:7
        |
-    48 |       packages: write #
+    51 |       packages: write #
        |       ^^^^^^^^^^^^^^^ needs an explanatory comment
-    49 |       actions: write #
+    52 |       actions: write #
        |       ^^^^^^^^^^^^^^ needs an explanatory comment
        |
        = note: audit confidence → High
 
     help[undocumented-permissions]: permissions without explanatory comments
-      --> @@INPUT@@:60:7
+      --> @@INPUT@@:64:7
        |
-    60 |       metadata: read
+    64 |       metadata: read
        |       ^^^^^^^^^^^^^^ needs an explanatory comment
-    61 |       packages: write #
+    65 |       packages: write #
        |       ^^^^^^^^^^^^^^^ needs an explanatory comment
        |
        = note: audit confidence → High
@@ -78,27 +78,27 @@ fn test_documented_permissions_pedantic() -> Result<()> {
             .input(input_under_test("undocumented-permissions/documented.yml"))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:23:15
+      --> @@INPUT@@:24:15
        |
-    23 |       - uses: actions/checkout@v4
+    24 |       - uses: actions/checkout@v4
        |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:37:15
+      --> @@INPUT@@:39:15
        |
-    37 |       - uses: actions/checkout@v4
+    39 |       - uses: actions/checkout@v4
        |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:50:15
+      --> @@INPUT@@:53:15
        |
-    50 |       - uses: actions/checkout@v4
+    53 |       - uses: actions/checkout@v4
        |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
@@ -120,11 +120,11 @@ fn test_contents_read_only_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:21:15
+      --> @@INPUT@@:22:15
        |
-    21 |       - uses: actions/checkout@v4
+    22 |       - uses: actions/checkout@v4
        |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
@@ -146,11 +146,11 @@ fn test_empty_permissions_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:19:15
+      --> @@INPUT@@:20:15
        |
-    19 |       - uses: actions/checkout@v4
+    20 |       - uses: actions/checkout@v4
        |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
@@ -172,7 +172,7 @@ fn test_contents_read_with_other_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     error[excessive-permissions]: overly broad permissions
      --> @@INPUT@@:8:3
       |
@@ -182,9 +182,9 @@ fn test_contents_read_with_other_pedantic() -> Result<()> {
       = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:19:15
+      --> @@INPUT@@:20:15
        |
-    19 |       - uses: actions/checkout@v4
+    20 |       - uses: actions/checkout@v4
        |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
@@ -214,19 +214,19 @@ fn test_partially_documented_pedantic() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:25:15
+      --> @@INPUT@@:26:15
        |
-    25 |       - uses: actions/checkout@v4
+    26 |       - uses: actions/checkout@v4
        |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:38:15
+      --> @@INPUT@@:40:15
        |
-    38 |       - uses: actions/checkout@v4
+    40 |       - uses: actions/checkout@v4
        |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
@@ -240,19 +240,19 @@ fn test_partially_documented_pedantic() -> Result<()> {
       = note: audit confidence → High
 
     help[undocumented-permissions]: permissions without explanatory comments
-      --> @@INPUT@@:22:7
+      --> @@INPUT@@:23:7
        |
-    22 |       actions: write
+    23 |       actions: write
        |       ^^^^^^^^^^^^^^ needs an explanatory comment
        |
        = note: audit confidence → High
 
     help[undocumented-permissions]: permissions without explanatory comments
-      --> @@INPUT@@:35:7
+      --> @@INPUT@@:37:7
        |
-    35 |       contents: write
+    37 |       contents: write
        |       ^^^^^^^^^^^^^^^ needs an explanatory comment
-    36 |       issues: read
+    38 |       issues: read
        |       ^^^^^^^^^^^^ needs an explanatory comment
        |
        = note: audit confidence → High

@@ -12,6 +12,7 @@ jobs:
   some-dangerous-job:
     name: some-dangerous-job
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     env:
       ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
     steps:
@@ -20,6 +21,7 @@ jobs:
   env-via-matrix:
     name: env-via-matrix
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     strategy:
       matrix:
         env:
@@ -32,6 +34,7 @@ jobs:
   this-is-ok-1:
     name: this-is-ok-1
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - run: echo "this is ok"
         env:
@@ -40,6 +43,7 @@ jobs:
   this-is-ok-2:
     name: this-is-ok-2
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - run: echo "this is ok"
         env:
@@ -48,6 +52,7 @@ jobs:
   this-is-ok-3:
     name: this-is-ok-3
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - run: echo "this is ok"
         env:

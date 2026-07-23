@@ -277,16 +277,16 @@ expression: output
         "concrete": {
           "location": {
             "start_point": {
-              "row": 15,
+              "row": 16,
               "column": 14
             },
             "end_point": {
-              "row": 15,
+              "row": 16,
               "column": 33
             },
             "offset_span": {
-              "start": 301,
-              "end": 320
+              "start": 324,
+              "end": 343
             }
           },
           "feature": "actions/checkout@v3",
@@ -347,16 +347,16 @@ expression: output
         "concrete": {
           "location": {
             "start_point": {
-              "row": 20,
+              "row": 21,
               "column": 23
             },
             "end_point": {
-              "row": 20,
+              "row": 21,
               "column": 29
             },
             "offset_span": {
-              "start": 421,
-              "end": 427
+              "start": 444,
+              "end": 450
             }
           },
           "feature": "docker://ubuntu",
@@ -417,16 +417,16 @@ expression: output
         "concrete": {
           "location": {
             "start_point": {
-              "row": 26,
+              "row": 27,
               "column": 23
             },
             "end_point": {
-              "row": 26,
+              "row": 27,
               "column": 58
             },
             "offset_span": {
-              "start": 546,
-              "end": 581
+              "start": 569,
+              "end": 604
             }
           },
           "feature": "docker://ghcr.io/pypa/gh-action-pypi-publish",

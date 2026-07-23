@@ -1,0 +1,4 @@
+rules:
+  timeout-minutes:
+    config:
+      minutes: -1

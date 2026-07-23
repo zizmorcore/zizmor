@@ -23,7 +23,8 @@ use crate::{
     audit::{
         AuditCore as _, dependabot_cooldown::DependabotCooldown, forbidden_uses::ForbiddenUses,
         known_vulnerable_actions::KnownVulnerableActions,
-        secrets_outside_env::SecretsOutsideEnvironment, unpinned_uses::UnpinnedUses,
+        secrets_outside_env::SecretsOutsideEnvironment, timeout_minutes::TimeoutMinutes,
+        unpinned_uses::UnpinnedUses,
     },
     finding::{Finding, Severity},
     github::{Client, ClientError},
@@ -477,6 +478,24 @@ pub(crate) struct KnownVulnerableActionsConfig {
     pub(crate) allow: HashSet<String>,
 }
 
+/// Configuration for the `timeout-minutes` audit.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+#[serde(default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub(crate) struct TimeoutMinutesConfig {
+    /// The default timeout value in minutes used when adding the `timeout-minutes` property to a job.
+    pub(crate) minutes: NonZeroUsize,
+}
+
+impl Default for TimeoutMinutesConfig {
+    fn default() -> Self {
+        Self {
+            minutes: NonZeroUsize::new(30).expect("impossible"),
+        }
+    }
+}
+
 /// zizmor's configuration.
 ///
 /// This is a wrapper around [`RawConfig`] that pre-computes various
@@ -492,6 +511,7 @@ pub(crate) struct Config {
     pub(crate) secrets_outside_env_policy: SecretsOutsideEnvPolicy,
     pub(crate) unpinned_uses_policies: UnpinnedUsesPolicies,
     pub(crate) known_vulnerable_actions_config: KnownVulnerableActionsConfig,
+    pub(crate) timeout_minutes_config: TimeoutMinutesConfig,
 }
 
 impl Config {
@@ -525,6 +545,10 @@ impl Config {
             .rule_config::<KnownVulnerableActionsConfig>(KnownVulnerableActions::ident())?
             .unwrap_or_default();
 
+        let timeout_minutes_config = raw
+            .rule_config::<TimeoutMinutesConfig>(TimeoutMinutes::ident())?
+            .unwrap_or_default();
+
         Ok(Self {
             raw,
             dependabot_cooldown_config,
@@ -532,6 +556,7 @@ impl Config {
             secrets_outside_env_policy,
             unpinned_uses_policies,
             known_vulnerable_actions_config,
+            timeout_minutes_config,
         })
     }
 
