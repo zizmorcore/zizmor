@@ -1843,7 +1843,7 @@ shell quoting/expansion rules.
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|----------------------| -------------|
-| Workflow | [timeout-minutes.yml]   | v1.28.0       | ✅             | ✅                   | ✅           |
+| Workflow | [timeout-minutes.yml]   | v1.29.0       | ✅             | ✅                   | ✅           |
 
 [timeout-minutes.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/timeout-minutes.yml
 
