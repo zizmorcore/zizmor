@@ -387,6 +387,14 @@
         - blakeblackshear/frigate#15490
 
 
+-   ![](https://github.com/bleachbit.png?size=40){ width="40" loading=lazy align=left } bleachbit
+
+    ---
+
+    ??? example "Examples"
+        - bleachbit/bleachbit#2216
+
+
 -   ![](https://github.com/bloomberg.png?size=40){ width="40" loading=lazy align=left } bloomberg
 
     ---
@@ -2214,6 +2222,14 @@
         - open-policy-agent/opa#8356
 
 
+-   ![](https://github.com/open-quantum-safe.png?size=40){ width="40" loading=lazy align=left } open-quantum-safe
+
+    ---
+
+    ??? example "Examples"
+        - open-quantum-safe/oqs-provider#786
+
+
 -   ![](https://github.com/open-telemetry.png?size=40){ width="40" loading=lazy align=left } open-telemetry
 
     ---
@@ -3625,6 +3641,14 @@
 
     ??? example "Examples"
         - ZcashFoundation/zebra#9110
+
+
+-   ![](https://github.com/zed-industries.png?size=40){ width="40" loading=lazy align=left } zed-industries
+
+    ---
+
+    ??? example "Examples"
+        - zed-industries/zed#61401
 
 
 -   ![](https://github.com/zkonduit.png?size=40){ width="40" loading=lazy align=left } zkonduit
