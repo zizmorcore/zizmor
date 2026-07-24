@@ -14,6 +14,10 @@ of `zizmor`.
 * zizmor now has **experimental** support for auditing pre-commit inputs,
   meaning both pre-commit configuration and hook definitions (#2209)
 
+* **New audit**: [insecure-origin] detects usages of insecure (i.e. plaintext)
+  protocols when making network requests. The initial version of this audit
+  is limited to pre-commit inputs only (#2228)
+
 ### Changes ⚠️
 
 * The [unpinned-uses] and [unpinned-images] audits have been separated more cleanly:

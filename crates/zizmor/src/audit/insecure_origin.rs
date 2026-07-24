@@ -5,7 +5,7 @@ use subfeature::Subfeature;
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
     config::Config,
-    finding::{Confidence, Finding, Severity, location::Locatable},
+    finding::{Confidence, Finding, Severity, location::Locatable as _},
     models::pre_commit,
     state::AuditState,
 };

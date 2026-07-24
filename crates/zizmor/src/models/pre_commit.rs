@@ -129,7 +129,7 @@ impl<'doc> Iterator for Repos<'doc> {
     fn next(&mut self) -> Option<Self::Item> {
         let (idx, inner) = self.inner.next()?;
 
-        Some(Repo::new(idx, inner, &self.parent))
+        Some(Repo::new(idx, inner, self.parent))
     }
 }
 
@@ -164,7 +164,7 @@ impl<'doc> Repo<'doc> {
 
 impl<'a, 'doc> AsDocument<'a, 'doc> for Repo<'doc> {
     fn as_document(&'a self) -> &'doc yamlpath::Document {
-        &self.parent.as_document()
+        self.parent.as_document()
     }
 }
 
