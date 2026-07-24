@@ -19,6 +19,10 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would reject a valid workflow definition for
   containing a literal `jobs.<job>.outputs.<name>` value for being a non-string (#2220)
 
+* Fixed a bug where the [github-app] audit would incorrectly flag some usages
+  as needing a `#!yaml repositories:` key, despite requesting organization-level-only
+  permissions (#2227)
+
 ## 1.28.0
 
 ### Security 🔒

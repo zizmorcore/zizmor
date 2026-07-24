@@ -1,0 +1,31 @@
+# Reproduction case for #2219.
+#
+# See: https://github.com/zizmorcore/zizmor/issues/2219
+
+name: ISSUE-2219-REPRO
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  github-app:
+    name: github-app
+    runs-on: ubuntu-latest
+    environment:
+      name: test
+    steps:
+      - name: github-app-skips-token-revoke
+        # We should NOT flag this with the `github-app` rule despite lacking a `repositories`
+        # key, since it only requests org-level permissions and therefore has no reasonable
+        # repository scope.
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-members: read

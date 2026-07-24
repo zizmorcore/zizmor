@@ -1,3 +1,5 @@
+use std::{collections::HashSet, sync::LazyLock};
+
 use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
 use indexmap::IndexMap;
 use subfeature::Subfeature;
@@ -14,6 +16,41 @@ use crate::{
     utils::ExtractedExpr,
 };
 
+/// Permissions that only affect organization access, not access within repositories.
+///
+/// When these (and only these) are present, we skip our presence requirement for
+/// the `repositories` key, since it's superfluous when the app only works on
+/// org-level resources.
+///
+/// See #2219 for more context.
+static ORG_ONLY_PERMISSIONS: LazyLock<HashSet<&str>> = LazyLock::new(|| {
+    // See: https://github.com/actions/create-github-app-token/blob/main/action.yml
+    // TODO: More permissions to add here?
+    [
+        "permission-custom-properties-for-organizations",
+        "permission-enterprise-custom-properties-for-organizations",
+        "permission-members",
+        "permission-organization-administration",
+        "permission-organization-announcement-banners",
+        "permission-organization-copilot-seat-management",
+        "permission-organization-custom-org-roles",
+        "permission-organization-custom-properties",
+        "permission-organization-custom-roles",
+        "permission-organization-events",
+        "permission-organization-hooks",
+        "permission-organization-packages",
+        "permission-organization-personal-access-token-requests",
+        "permission-organization-personal-access-tokens",
+        "permission-organization-plan",
+        "permission-organization-projects",
+        "permission-organization-secrets",
+        "permission-organization-self-hosted-runners",
+        "permission-organization-user-blocking",
+    ]
+    .into_iter()
+    .collect()
+});
+
 pub(crate) struct GitHubApp;
 
 audit_meta!(
@@ -23,6 +60,17 @@ audit_meta!(
 );
 
 impl GitHubApp {
+    /// Test whether the given `permissions` are a subset of [`ORG_ONLY_PERMISSIONS`].
+    fn permissions_are_org_only(permissions: &HashSet<&str>) -> bool {
+        // No explicit permissions means the app's default permissions, which
+        // we have to assume are broader than org-only.
+        if permissions.is_empty() {
+            return false;
+        }
+
+        permissions.is_subset(&ORG_ONLY_PERMISSIONS)
+    }
+
     fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
@@ -117,10 +165,25 @@ impl GitHubApp {
             }
         }
 
+        let permissions: HashSet<&str> = with
+            .keys()
+            .map(|k| k.as_str())
+            .filter(|k| k.starts_with("permission-"))
+            .collect();
+
+        tracing::trace!("permissions: {permissions:?}");
+
         // `owner: ...` without `repositories: ...` grants the app token access to all
         // repositories in the owner's account, which is likely more access than the
         // user intended.
-        if with.contains_key("owner") && !with.contains_key("repositories") {
+        //
+        // We only flag this if the user doesn't specify permissions explicitly or does
+        // specify them explicitly to include permissions outside of managing organiztion
+        // resources.
+        if with.contains_key("owner")
+            && !with.contains_key("repositories")
+            && !Self::permissions_are_org_only(&permissions)
+        {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::High)
