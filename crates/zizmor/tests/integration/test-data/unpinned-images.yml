@@ -118,3 +118,11 @@ jobs:
       image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
     steps:
       - run: echo 'vulnerable!'
+
+  unpinned-docker-uses:
+    name: unpinned-docker-uses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker://ubuntu
+      - uses: docker://ubuntu:latest
+      - uses: docker://ghcr.io/pypa/gh-action-pypi-publish

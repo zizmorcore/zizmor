@@ -79,7 +79,10 @@ impl<'doc> ImageCandidate<'doc> {
         let (annotation, persona) = match (image.tag(), image.hash()) {
             // Pinned by hash: nothing to report.
             (_, Some(_)) => return None,
-            (Some("latest"), None) => ("container image is pinned to latest", Persona::Regular),
+            (Some("latest"), None) => (
+                "container image uses the floating 'latest' tag",
+                Persona::Regular,
+            ),
             (Some(_), None) => (
                 "container image is not pinned to a SHA256 hash",
                 Persona::Pedantic,

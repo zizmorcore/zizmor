@@ -17,23 +17,7 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:21:24
-       |
-    21 |       - uses: docker://ubuntu
-       |                        ^^^^^^ container image is unpinned
-       |
-       = note: audit confidence → High
-
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:27:24
-       |
-    27 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
-       |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
-       |
-       = note: audit confidence → High
-
-    3 findings: 0 informational, 0 low, 0 medium, 3 high
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -55,23 +39,7 @@ fn test_unpinned_uses_default() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:21:24
-       |
-    21 |       - uses: docker://ubuntu
-       |                        ^^^^^^ container image is unpinned
-       |
-       = note: audit confidence → High
-
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:27:24
-       |
-    27 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
-       |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
-       |
-       = note: audit confidence → High
-
-    3 findings: 0 informational, 0 low, 0 medium, 3 high
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
