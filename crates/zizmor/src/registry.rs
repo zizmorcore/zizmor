@@ -54,7 +54,7 @@ impl AuditRegistry {
         register_audit!(audit::ref_confusion::RefConfusion);
         register_audit!(audit::use_trusted_publishing::UseTrustedPublishing);
         register_audit!(audit::template_injection::TemplateInjection);
-        register_audit!(audit::hardcoded_container_credentials::HardcodedContainerCredentials);
+        register_audit!(audit::hardcoded_credentials::HardcodedCredentials);
         register_audit!(audit::self_hosted_runner::SelfHostedRunner);
         register_audit!(audit::known_vulnerable_actions::KnownVulnerableActions);
         register_audit!(audit::unpinned_uses::UnpinnedUses);
