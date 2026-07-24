@@ -264,6 +264,10 @@ impl Audit for Obfuscation {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
+        if !input.supports_gha_template_syntax() {
+            return Ok(findings);
+        }
+
         for (expr, expr_span) in parse_fenced_expressions_from_routable(input) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());

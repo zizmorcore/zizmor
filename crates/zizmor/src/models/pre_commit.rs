@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 use terminal_link::Link;
 
 use crate::{
-    finding::location::{SymbolicFeature, SymbolicLocation},
+    finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
     models::{AsDocument, Validatable},
     registry::input::{CollectionError, InputKey},
 };
@@ -101,6 +101,68 @@ impl PreCommitConfig {
             feature_kind: SymbolicFeature::Normal,
             kind: Default::default(),
         }
+    }
+
+    pub(crate) fn repos(&self) -> Repos<'_> {
+        Repos::new(self)
+    }
+}
+
+/// An iterable container for repositories within a [`PreCommitConfig`].
+pub(crate) struct Repos<'doc> {
+    parent: &'doc PreCommitConfig,
+    inner: std::iter::Enumerate<std::slice::Iter<'doc, pre_commit_models::config::Repo>>,
+}
+
+impl<'doc> Repos<'doc> {
+    pub(crate) fn new(config: &'doc PreCommitConfig) -> Self {
+        Self {
+            parent: config,
+            inner: config.repos.iter().enumerate(),
+        }
+    }
+}
+
+impl<'doc> Iterator for Repos<'doc> {
+    type Item = Repo<'doc>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (idx, inner) = self.inner.next()?;
+
+        Some(Repo::new(idx, inner, &self.parent))
+    }
+}
+
+pub(crate) struct Repo<'doc> {
+    index: usize,
+    inner: &'doc pre_commit_models::config::Repo,
+    parent: &'doc PreCommitConfig,
+}
+
+impl<'doc> Repo<'doc> {
+    fn new(
+        index: usize,
+        inner: &'doc pre_commit_models::config::Repo,
+        parent: &'doc PreCommitConfig,
+    ) -> Self {
+        Self {
+            index,
+            inner,
+            parent,
+        }
+    }
+}
+
+impl<'doc> Locatable<'doc> for Repo<'doc> {
+    fn location(&self) -> SymbolicLocation<'doc> {
+        self.parent
+            .location()
+            .with_keys(["repos".into(), self.index.into()])
+            .annotated("this repo")
+    }
+
+    fn location_with_grip(&self) -> SymbolicLocation<'doc> {
+        self.location().with_keys(["repo".into()])
     }
 }
 
