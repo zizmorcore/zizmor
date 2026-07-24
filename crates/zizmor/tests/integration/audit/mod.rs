@@ -17,7 +17,7 @@ mod github_env;
 // mod hardcoded_container_credentials; // TODO
 mod impostor_commit;
 mod insecure_commands;
-mod insecure_origin;
+mod insecure_url_scheme;
 mod known_vulnerable_actions;
 mod misfeature;
 mod obfuscation;

@@ -294,7 +294,7 @@
         "insecure-commands": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
-        "insecure-origin": {
+        "insecure-url-scheme": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
         "known-vulnerable-actions": {

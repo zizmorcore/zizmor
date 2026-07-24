@@ -22,16 +22,16 @@ static INSECURE_SCHEMES: LazyLock<HashSet<&str>> = LazyLock::new(|| {
     .collect()
 });
 
-pub(crate) struct InsecureOrigin;
+pub(crate) struct InsecureURLScheme;
 
 audit_meta!(
-    InsecureOrigin,
-    "insecure-origin",
-    "use of an insecure scheme with a remote origin"
+    InsecureURLScheme,
+    "insecure-url-scheme",
+    "use of an insecure scheme within a URL"
 );
 
 #[async_trait::async_trait]
-impl Audit for InsecureOrigin {
+impl Audit for InsecureURLScheme {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
@@ -52,6 +52,8 @@ impl Audit for InsecureOrigin {
         };
 
         let Ok(parsed) = url::Url::parse(url) else {
+            // TODO: Is this warning too aggressive? Maybe it's common to put
+            // file paths (without `file://`) in `repo:`?
             tracing::warn!("couldn't parse URL in pre-commit `repo:` clause: {url:?}");
             return Ok(findings);
         };

@@ -39,7 +39,7 @@ pub(crate) mod github_env;
 pub(crate) mod hardcoded_container_credentials;
 pub(crate) mod impostor_commit;
 pub(crate) mod insecure_commands;
-pub(crate) mod insecure_origin;
+pub(crate) mod insecure_url_scheme;
 pub(crate) mod known_vulnerable_actions;
 pub(crate) mod misfeature;
 pub(crate) mod obfuscation;
