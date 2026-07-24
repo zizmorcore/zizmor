@@ -56,3 +56,40 @@ fn secrets_inherit() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn secrets_inherit_callee() -> anyhow::Result<()> {
+    // A reusable workflow that declares `on.workflow_call.secrets: inherit`
+    // is flagged, since it forces every caller to over-scope.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("secrets-inherit-callee.yml"))
+            .run()?,
+        @"
+    warning[secrets-inherit]: secrets unconditionally inherited by called workflow
+     --> @@INPUT@@:4:5
+      |
+    4 |     secrets: inherit
+      |     ^^^^^^^^^^^^^^^^ this reusable workflow inherits all caller secrets
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn secrets_inherit_callee_ok() -> anyhow::Result<()> {
+    // A reusable workflow that explicitly declares its secrets is not flagged.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("secrets-inherit-callee-ok.yml"))
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}

@@ -8,10 +8,10 @@
 //! [JSON Schema definition for workflows]: https://json.schemastore.org/github-workflow.json
 
 use indexmap::IndexMap;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::common::{
-    Env, Permissions,
+    Env, EnvValue, Permissions,
     expr::{BoE, LoE},
 };
 
@@ -90,6 +90,21 @@ pub enum Concurrency {
         #[serde(default)]
         cancel_in_progress: BoE,
     },
+}
+
+/// The `secrets` of a reusable workflow call, shared between the caller
+/// side (`jobs.<id>.secrets`, where explicit secrets map to env-style
+/// values) and the callee side (`on.workflow_call.secrets`, where explicit
+/// secrets map to declarations).
+///
+/// In both positions, the bare string `inherit` forwards all of the calling
+/// workflow's secrets instead of an explicit mapping.
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum Secrets<V = EnvValue> {
+    Inherit,
+    #[serde(untagged)]
+    Env(IndexMap<String, V>),
 }
 
 #[derive(Deserialize, Debug)]

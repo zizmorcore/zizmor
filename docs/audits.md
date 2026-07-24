@@ -1459,16 +1459,26 @@ should almost never be used, as it makes it violates the
 [Principle of Least Authority] and makes it impossible to determine which exact
 secrets a reusable workflow was executed with.
 
+This blanket inheritance can be requested from two sides, both of which are
+flagged by this audit:
+
+* The **caller** side, where a job sets `#!yaml secrets: inherit` on its
+  `#!yaml uses:` of a reusable workflow.
+* The **callee** side, where a reusable workflow declares
+  `#!yaml on.workflow_call.secrets: inherit`, forcing *every* caller to hand
+  over all of their secrets.
+
 ### Remediation
 
 In general, `#!yaml secrets: inherit` should be replaced with a `#!yaml secrets:` block
-that explicitly forwards each secret actually needed by the reusable workflow.
+that explicitly forwards (caller side) or declares (callee side) each secret
+actually needed by the reusable workflow.
 
-!!! example
+!!! example "Caller side"
 
     === "Before :warning:"
 
-        ```yaml title="reusable.yml" hl_lines="4"
+        ```yaml title="caller.yml" hl_lines="4"
         jobs:
           pass-secrets-to-workflow:
             uses: ./.github/workflows/called-workflow.yml
@@ -1477,13 +1487,35 @@ that explicitly forwards each secret actually needed by the reusable workflow.
 
     === "After :white_check_mark:"
 
-        ```yaml title="reusable.yml" hl_lines="4-6"
+        ```yaml title="caller.yml" hl_lines="4-6"
         jobs:
           pass-secrets-to-workflow:
             uses: ./.github/workflows/called-workflow.yml
             secrets:
               forward-me: ${{ secrets.forward-me }}
               me-too: ${{ secrets.me-too }}
+        ```
+
+!!! example "Callee side"
+
+    === "Before :warning:"
+
+        ```yaml title="reusable.yml" hl_lines="3"
+        on:
+          workflow_call:
+            secrets: inherit
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="reusable.yml" hl_lines="3-6"
+        on:
+          workflow_call:
+            secrets:
+              forward-me:
+                required: true
+              me-too:
+                required: false
         ```
 
 ## `secrets-outside-env`
