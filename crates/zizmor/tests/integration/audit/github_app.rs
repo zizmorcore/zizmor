@@ -66,3 +66,19 @@ fn test_regular_persona() -> anyhow::Result<()> {
     ");
     Ok(())
 }
+
+/// Repro case for #2219.
+///
+/// We should produce no `github-app` findings here despite the lack of a `repositories`
+/// key, since the app's token request is scoped to just org-level permissions.
+#[test]
+fn test_issue_2219() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+    zizmor()
+        .input(input_under_test("github-app/issue-2219-repro.yml"))
+        .run()?,
+    @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
