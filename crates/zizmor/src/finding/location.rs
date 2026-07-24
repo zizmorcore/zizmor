@@ -70,6 +70,7 @@ pub(crate) struct SymbolicLocation<'doc> {
 }
 
 impl<'doc> SymbolicLocation<'doc> {
+    #[must_use]
     pub(crate) fn with_keys(
         &self,
         keys: impl IntoIterator<Item = yamlpath::Component<'doc>>,

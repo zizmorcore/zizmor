@@ -82,6 +82,7 @@ tree-sitter-powershell = "=0.26.4"
 tree-sitter-yaml = "0.7.2"
 tikv-jemallocator = "0.7"
 typomania = { version = "0.2.0", default-features = false }
+url = "2.5.8"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

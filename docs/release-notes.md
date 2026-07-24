@@ -14,6 +14,10 @@ of `zizmor`.
 * zizmor now has **experimental** support for auditing pre-commit inputs,
   meaning both pre-commit configuration and hook definitions (#2209)
 
+* **New audit**: [insecure-url-scheme] detects usages of insecure (i.e. plaintext)
+  protocols when making network requests. The initial version of this audit
+  is limited to pre-commit inputs only (#2228)
+
 ### Changes ⚠️
 
 * The [unpinned-uses] and [unpinned-images] audits have been separated more cleanly:
@@ -1991,6 +1995,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [typosquat-uses]: ./audits.md#typosquat-uses
 [unsound-ternary]: ./audits.md#unsound-ternary
 [adhoc-packages]: ./audits.md#adhoc-packages
+[insecure-url-scheme]: ./audits.md#insecure-url-scheme
 
 [exit code]: ./usage.md#exit-codes
 

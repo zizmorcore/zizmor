@@ -1087,6 +1087,48 @@ In general, users should use [GitHub Actions environment files]
             echo "$HOME/.local/my-bin" >> "$GITHUB_PATH"
         ```
 
+## `insecure-url-scheme`
+
+| Type             | Examples                       | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|------------------|--------------------------------|---------------|----------------|--------------------| ---------------|
+| pre-commit | [insecure-url-scheme/.pre-commit-config.yml] | v1.29.0        | ✅             |  ❌                | ❌  |
+
+[insecure-url-scheme/.pre-commit-config.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/insecure-url-scheme/.pre-commit-config.yml
+
+!!! important
+
+    At the moment, this audit is limited to just the `#!yaml repo:` fields within
+    pre-commit configuration files.
+
+    It may be extended in the future.
+
+!!! important
+
+    At the moment, this audit only flags a subset of known-insecure schemes.
+
+    Other schemes may be flagged in the future.
+
+Detects uses of insecure schemes in URLs.
+
+A URL's "scheme" is its protocol component. For example, `https://github.com` has
+a scheme of `https`, indicating the HTTPS protocol.
+
+A scheme is considered "insecure" by this audit if it acts as a plaintext transport,
+or is known to be fundamentally insecure. For example, HTTP (_not_ HTTPS) is considered
+insecure because it sends requests and responses without transport-layer integrity
+and encryption.
+
+### Remediation
+
+A URL that uses an insecure scheme can often be rewritten to use a secure one.
+
+The following table shows insecure schemes and their recommended alternatives:
+
+| Insecure | Secure |
+| -------- | ------ |
+| HTTP (`http://`) | HTTPS (`https://`) |
+| git (`git://`) | SSH (`ssh://`) or HTTPS (`https://`) |
+
 ## `known-vulnerable-actions`
 
 | Type             | Examples                       | Introduced in | Works offline  | Auto-fixes available | Configurable |

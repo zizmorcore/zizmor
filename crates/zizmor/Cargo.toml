@@ -77,6 +77,7 @@ tree-sitter.workspace = true
 tree-sitter-bash.workspace = true
 tree-sitter-powershell.workspace = true
 typomania.workspace = true
+url.workspace = true
 yamlpath.workspace = true
 yamlpatch.workspace = true
 zizmor-sarif.workspace = true
