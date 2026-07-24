@@ -28,7 +28,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
       --> @@INPUT@@:40:7
        |
     40 |       image: fake.example.com/example:latest
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image uses the floating 'latest' tag
        |
        = note: audit confidence → High
 
@@ -36,7 +36,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
       --> @@INPUT@@:49:9
        |
     49 |         image: fake.example.com/redis:latest
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image uses the floating 'latest' tag
        |
        = note: audit confidence → High
 
@@ -80,7 +80,31 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
         |
         = note: audit confidence → Low
 
-    9 findings: 0 informational, 0 low, 0 medium, 9 high
+    error[unpinned-images]: unpinned image references
+       --> @@INPUT@@:126:24
+        |
+    126 |       - uses: docker://ubuntu
+        |                        ^^^^^^ container image is unpinned
+        |
+        = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+       --> @@INPUT@@:127:24
+        |
+    127 |       - uses: docker://ubuntu:latest
+        |                        ^^^^^^^^^^^^^ container image uses the floating 'latest' tag
+        |
+        = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+       --> @@INPUT@@:128:24
+        |
+    128 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
+        |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+        |
+        = note: audit confidence → High
+
+    12 findings: 0 informational, 0 low, 0 medium, 12 high
     "
     );
 
@@ -142,7 +166,7 @@ fn test_matrix_in_image_pedantic() -> anyhow::Result<()> {
       --> @@INPUT@@:20:7
        |
     20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image uses the floating 'latest' tag
     ...
     23 |       matrix:
        |       ------ this matrix
@@ -185,7 +209,7 @@ fn test_matrix_in_image_regular() -> anyhow::Result<()> {
       --> @@INPUT@@:20:7
        |
     20 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image uses the floating 'latest' tag
     ...
     23 |       matrix:
        |       ------ this matrix

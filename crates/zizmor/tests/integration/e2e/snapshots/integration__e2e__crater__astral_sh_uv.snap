@@ -1102,7 +1102,7 @@ error[unpinned-images]: unpinned image references
   --> .github/workflows/test-smoke.yml:78:5
    |
 78 |     container: alpine:latest
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^ container image uses the floating 'latest' tag
    |
    = note: audit confidence → High
 
@@ -1151,7 +1151,7 @@ error[unpinned-images]: unpinned image references
    --> .github/workflows/test-system.yml:275:5
     |
 275 |     container: alpine:latest
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^ container image uses the floating 'latest' tag
     |
     = note: audit confidence → High
 

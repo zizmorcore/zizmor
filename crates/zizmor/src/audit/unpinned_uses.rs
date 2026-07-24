@@ -124,31 +124,8 @@ impl UnpinnedUses {
             // are fully controlled by the repository anyways.
             // TODO: auditor-level findings instead, perhaps?
             Uses::Local(_) => None,
-            // We don't have detailed policies for `uses: docker://` yet,
-            // in part because evaluating the risk of a tagged versus hash-pinned
-            // Docker image depends on the image and its registry).
-            //
-            // Instead, we produce a blanket finding for unpinned images,
-            // and a pedantic-only finding for unhashed images.
-            Uses::Docker(_) => {
-                if uses.unpinned() {
-                    Some((
-                        "image is not pinned to a tag, branch, or hash ref".into(),
-                        Severity::Medium,
-                        Persona::default(),
-                        None,
-                    ))
-                } else if uses.unhashed() {
-                    Some((
-                        "action is not pinned to a hash".into(),
-                        Severity::Low,
-                        Persona::Pedantic,
-                        None,
-                    ))
-                } else {
-                    None
-                }
-            }
+            // This is handled by the `unpinned-images` audit.
+            Uses::Docker(_) => None,
             Uses::Repository(repo_uses) => {
                 let (pattern, policy) = config.unpinned_uses_policies.get_policy(repo_uses);
 

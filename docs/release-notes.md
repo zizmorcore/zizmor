@@ -14,6 +14,13 @@ of `zizmor`.
 * zizmor now has **experimental** support for auditing pre-commit inputs,
   meaning both pre-commit configuration and hook definitions (#2209)
 
+### Changes ⚠️
+
+* The [unpinned-uses] and [unpinned-images] audits have been separated more cleanly:
+  [unpinned-uses] is now principally responsible for Git-style `#!yaml uses:` clauses,
+  whereas [unpinned-images] is now responsible for `docker://`-style `#!yaml uses:` clauses
+  (in addition to already checking other image references) (#2222)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a valid workflow definition for

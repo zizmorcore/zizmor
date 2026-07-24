@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
-expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61\").run()?"
+expression: "zizmor().offline(NetworkMode::AssertOnline).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61\").run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO collect_inputs: zizmor::registry::input: collected 22 inputs from woodruffw/gha-hazmat
@@ -980,7 +980,7 @@ error[unpinned-images]: unpinned image references
   --> .github/workflows/unpinned-images.yml:38:7
    |
 38 |       image: fake.example.com/example:latest
-   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image uses the floating 'latest' tag
    |
    = note: audit confidence → High
 
@@ -988,7 +988,7 @@ error[unpinned-images]: unpinned image references
   --> .github/workflows/unpinned-images.yml:46:9
    |
 46 |         image: fake.example.com/redis:latest
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is pinned to latest
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image uses the floating 'latest' tag
    |
    = note: audit confidence → High
 
@@ -1009,19 +1009,19 @@ warning[excessive-permissions]: overly broad permissions
    |
    = note: audit confidence → Medium
 
-warning[unpinned-uses]: unpinned action reference
+error[unpinned-images]: unpinned image references
   --> .github/workflows/unpinned.yml:20:24
    |
 20 |       - uses: docker://ubuntu
-   |                        ^^^^^^ image is not pinned to a tag, branch, or hash ref
+   |                        ^^^^^^ container image is unpinned
    |
    = note: audit confidence → High
 
-warning[unpinned-uses]: unpinned action reference
+error[unpinned-images]: unpinned image references
   --> .github/workflows/unpinned.yml:26:24
    |
 26 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
-   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ image is not pinned to a tag, branch, or hash ref
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
    |
    = note: audit confidence → High
 
@@ -1109,4 +1109,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-202 findings (103 suppressed): 7 informational, 0 low, 29 medium, 63 high
+202 findings (103 suppressed): 7 informational, 0 low, 27 medium, 65 high

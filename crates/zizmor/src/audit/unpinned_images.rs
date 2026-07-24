@@ -4,21 +4,53 @@ use crate::{
         Confidence, Finding, Persona, Severity,
         location::{Locatable as _, SymbolicLocation},
     },
-    models::{AsDocument, action::DockerAction, workflow::matrix::Matrix},
+    models::{
+        AsDocument,
+        action::DockerAction,
+        workflow::{StepInner, matrix::Matrix},
+    },
     state::AuditState,
 };
 
 use github_actions_expressions::{Expr, SpannedExpr, literal::Literal};
-use github_actions_models::workflow::job::Container;
 use github_actions_models::{
     action::DockerActionUses,
-    common::{DockerUses, expr::LoE},
+    common::{
+        DockerUses,
+        expr::{ExplicitExpr, LoE},
+    },
+};
+use github_actions_models::{
+    common::Uses,
+    workflow::job::{Container, UsesStep},
 };
 use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, audit_meta};
 
 pub(crate) struct UnpinnedImages;
+
+/// Represents some image reference, whether direct (i.e. literal) or
+/// indirect (i.e. an expression).
+enum Image<'doc> {
+    Literal(&'doc DockerUses),
+    Expr(&'doc ExplicitExpr),
+}
+
+impl<'doc> From<&'doc LoE<DockerUses>> for Image<'doc> {
+    fn from(value: &'doc LoE<DockerUses>) -> Self {
+        match value {
+            LoE::Expr(expr) => Image::Expr(expr),
+            LoE::Literal(lit) => Image::Literal(lit),
+        }
+    }
+}
+
+impl<'doc> From<&'doc DockerUses> for Image<'doc> {
+    fn from(value: &'doc DockerUses) -> Self {
+        Image::Literal(value)
+    }
+}
 
 /// A single candidate image reference, collected from a job or action and
 /// expanded through matrix references where possible.
@@ -47,7 +79,10 @@ impl<'doc> ImageCandidate<'doc> {
         let (annotation, persona) = match (image.tag(), image.hash()) {
             // Pinned by hash: nothing to report.
             (_, Some(_)) => return None,
-            (Some("latest"), None) => ("container image is pinned to latest", Persona::Regular),
+            (Some("latest"), None) => (
+                "container image uses the floating 'latest' tag",
+                Persona::Regular,
+            ),
             (Some(_), None) => (
                 "container image is not pinned to a SHA256 hash",
                 Persona::Pedantic,
@@ -81,18 +116,18 @@ impl<'doc> ImageCandidate<'doc> {
 /// Collect all candidate image references from a single image expression,
 /// expanding through the matrix where possible.
 fn collect_candidates<'doc>(
-    image: &'doc LoE<DockerUses>,
+    image: Image<'doc>,
     location: &SymbolicLocation<'doc>,
     matrix: Option<&Matrix<'doc>>,
 ) -> Vec<ImageCandidate<'doc>> {
     match image {
         // A literal image reference, e.g. `image: foo:1.2.3`.
-        LoE::Literal(image) => ImageCandidate::concrete(image, location.clone(), vec![])
+        Image::Literal(image) => ImageCandidate::concrete(image, location.clone(), vec![])
             .into_iter()
             .collect(),
         // An expression, e.g. `image: ${{ matrix.image }}`. We expand it into
         // its possible leaf values and analyze each.
-        LoE::Expr(expr) => {
+        Image::Expr(expr) => {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 // We can't even parse the expression, so we can't say anything
                 // precise about it.
@@ -193,7 +228,7 @@ impl UnpinnedImages {
     /// findings for any that are unpinned.
     fn classify_images<'a, 'doc>(
         &self,
-        image_refs: Vec<(&'doc LoE<DockerUses>, SymbolicLocation<'doc>)>,
+        image_refs: Vec<(Image<'doc>, SymbolicLocation<'doc>)>,
         matrix: Option<Matrix<'doc>>,
         document: &'a impl AsDocument<'a, 'doc>,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
@@ -243,7 +278,7 @@ impl Audit for UnpinnedImages {
         };
 
         self.classify_images(
-            vec![(image, docker.location().with_keys(["image".into()]))],
+            vec![(image.into(), docker.location().with_keys(["image".into()]))],
             None,
             docker,
         )
@@ -254,18 +289,18 @@ impl Audit for UnpinnedImages {
         job: &super::NormalJob<'doc>,
         _config: &crate::config::Config,
     ) -> anyhow::Result<Vec<Finding<'doc>>, AuditError> {
-        let mut image_refs: Vec<(&'doc LoE<DockerUses>, SymbolicLocation<'doc>)> = vec![];
+        let mut image_refs: Vec<(Image<'doc>, SymbolicLocation<'doc>)> = vec![];
 
         match &job.container {
             Some(Container::Name(image)) => {
                 image_refs.push((
-                    image,
+                    image.into(),
                     job.location().primary().with_keys(["container".into()]),
                 ));
             }
             Some(Container::Container { image, .. }) => {
                 image_refs.push((
-                    image,
+                    image.into(),
                     job.location()
                         .primary()
                         .with_keys(["container".into(), "image".into()]),
@@ -277,12 +312,28 @@ impl Audit for UnpinnedImages {
         for (service, config) in job.services.iter() {
             if let Container::Container { image, .. } = &config {
                 image_refs.push((
-                    image,
+                    image.into(),
                     job.location().primary().with_keys([
                         "services".into(),
                         service.as_str().into(),
                         "image".into(),
                     ]),
+                ));
+            }
+        }
+
+        for step in job.steps() {
+            if let StepInner::Uses(UsesStep {
+                uses: Uses::Docker(uses),
+                ..
+            }) = &*step
+            {
+                image_refs.push((
+                    uses.into(),
+                    step.location()
+                        .primary()
+                        .with_keys(["uses".into()])
+                        .subfeature(Subfeature::new(0, uses.raw())),
                 ));
             }
         }
