@@ -42,6 +42,7 @@ pub(crate) fn if_is_statically_false(cond: &common::If) -> bool {
 pub(crate) mod action;
 pub(crate) mod coordinate;
 pub(crate) mod dependabot;
+pub(crate) mod docker;
 pub(crate) mod inputs;
 pub(crate) mod pre_commit;
 pub(crate) mod uses;
