@@ -21,7 +21,7 @@ pub mod schema;
 use crate::{
     App, CollectionOptions,
     audit::{
-        AuditCore as _, dependabot_cooldown::DependabotCooldown, forbidden_uses::ForbiddenUses,
+        AuditCore, dependabot_cooldown::DependabotCooldown, forbidden_uses::ForbiddenUses,
         known_vulnerable_actions::KnownVulnerableActions,
         secrets_outside_env::SecretsOutsideEnvironment, unpinned_uses::UnpinnedUses,
     },
@@ -202,16 +202,21 @@ impl RawConfig {
         yaml_serde::from_str(contents).map_err(ConfigErrorInner::Syntax)
     }
 
-    fn rule_config<T>(&self, ident: &'static str) -> Result<Option<T>, ConfigErrorInner>
+    fn rule_config<A: AuditCore, T>(&self) -> Result<Option<T>, ConfigErrorInner>
     where
         T: DeserializeOwned,
     {
-        self.rules
-            .get(ident)
+        // Try the rule's primary identifier first, then each alias in order of appearance.
+        let mut candidates = std::iter::once(A::ident()).chain(A::aliases().iter().map(|a| *a));
+
+        // TODO: Should we be more aggressive here and require exclusivity, i.e. reject
+        // a config that has rule objects that match more than one candidate?
+        candidates
+            .find_map(|ident| self.rules.get(ident))
             .and_then(|rule_config| rule_config.config.as_ref())
             .map(|policy| yaml_serde::from_value::<T>(yaml_serde::Value::Mapping(policy.clone())))
             .transpose()
-            .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))
+            .map_err(|e| ConfigErrorInner::AuditSyntax(e, A::ident()))
     }
 }
 
@@ -500,20 +505,20 @@ impl Config {
         let raw = RawConfig::load(contents)?;
 
         let dependabot_cooldown_config = raw
-            .rule_config(DependabotCooldown::ident())?
+            .rule_config::<DependabotCooldown, DependabotCooldownConfig>()?
             .unwrap_or_default();
 
-        let forbidden_uses_config = raw.rule_config(ForbiddenUses::ident())?;
+        let forbidden_uses_config = raw.rule_config::<ForbiddenUses, ForbiddenUsesConfig>()?;
 
         let secrets_outside_env_config =
-            raw.rule_config::<SecretsOutsideEnvConfig>(SecretsOutsideEnvironment::ident())?;
+            raw.rule_config::<SecretsOutsideEnvironment, SecretsOutsideEnvConfig>()?;
         let secrets_outside_env_policy = secrets_outside_env_config
             .map(Into::into)
             .unwrap_or_default();
 
         let unpinned_uses_policies = {
             if let Some(unpinned_uses_config) =
-                raw.rule_config::<UnpinnedUsesConfig>(UnpinnedUses::ident())?
+                raw.rule_config::<UnpinnedUses, UnpinnedUsesConfig>()?
             {
                 UnpinnedUsesPolicies::try_from(unpinned_uses_config)?
             } else {
@@ -522,7 +527,7 @@ impl Config {
         };
 
         let known_vulnerable_actions_config = raw
-            .rule_config::<KnownVulnerableActionsConfig>(KnownVulnerableActions::ident())?
+            .rule_config::<KnownVulnerableActions, KnownVulnerableActionsConfig>()?
             .unwrap_or_default();
 
         Ok(Self {

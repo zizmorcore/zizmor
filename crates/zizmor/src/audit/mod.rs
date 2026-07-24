@@ -35,7 +35,7 @@ pub(crate) mod excessive_permissions;
 pub(crate) mod forbidden_uses;
 pub(crate) mod github_app;
 pub(crate) mod github_env;
-pub(crate) mod hardcoded_container_credentials;
+pub(crate) mod hardcoded_credentials;
 pub(crate) mod impostor_commit;
 pub(crate) mod insecure_commands;
 pub(crate) mod insecure_url_scheme;
@@ -179,6 +179,13 @@ pub(crate) trait AuditCore {
     where
         Self: Sized;
 
+    fn aliases() -> &'static [&'static str]
+    where
+        Self: Sized,
+    {
+        &[]
+    }
+
     fn desc() -> &'static str
     where
         Self: Sized;
@@ -215,13 +222,19 @@ pub(crate) trait AuditCore {
 /// audit_meta!(SomeAudit, "some-audit", "brief description");
 /// ```
 macro_rules! audit_meta {
-    ($t:ty, $id:literal, $desc:expr_2021) => {
+    ($t:ty, $id:literal, $desc:expr_2021 $(, $aliases:expr_2021)?) => {
         use crate::audit::AuditCore;
 
         impl AuditCore for $t {
             fn ident() -> &'static str {
                 $id
             }
+
+            $(
+                fn aliases() -> &'static [&'static str] {
+                    $aliases
+                }
+            )?
 
             fn desc() -> &'static str
             where
