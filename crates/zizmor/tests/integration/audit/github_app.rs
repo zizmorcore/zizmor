@@ -62,7 +62,19 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → High
        = tip: specify at least one `permission-<name>` input to limit the token's permissions
 
-    5 findings: 0 informational, 0 low, 0 medium, 5 high
+    error[github-app]: dangerous use of GitHub App tokens
+      --> @@INPUT@@:83:11
+       |
+    81 |         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+       |               ------------------------------------------------------------------------ app token requested here
+    82 |         with:
+    83 |           owner: github
+       |           ^^^^^^^^^^^^^ token granted access to all repositories for this owner's app installation
+       |
+       = note: audit confidence → High
+       = tip: use `repositories: 'repo1,repo2'` to scope the token to specific repositories
+
+    6 findings: 0 informational, 0 low, 0 medium, 6 high
     ");
     Ok(())
 }
