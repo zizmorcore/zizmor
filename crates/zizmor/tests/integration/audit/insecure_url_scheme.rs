@@ -4,10 +4,10 @@ use crate::common::{input_under_test, zizmor};
 fn test_insecure_origin_pre_commit_config() -> anyhow::Result<()> {
     insta::assert_snapshot!(
     zizmor()
-        .input(input_under_test("insecure-origin/"))
+        .input(input_under_test("insecure-url-scheme/"))
         .run()?,
     @r#"
-    error[insecure-origin]: use of an insecure scheme with a remote origin
+    error[insecure-url-scheme]: use of an insecure scheme within a URL
      --> @@INPUT@@.pre-commit-config.yml:2:11
       |
     2 | -   repo: http://github.com/pre-commit/pre-commit-hooks
@@ -15,7 +15,7 @@ fn test_insecure_origin_pre_commit_config() -> anyhow::Result<()> {
       |
       = note: audit confidence → High
 
-    error[insecure-origin]: use of an insecure scheme with a remote origin
+    error[insecure-url-scheme]: use of an insecure scheme within a URL
      --> @@INPUT@@.pre-commit-config.yml:6:11
       |
     6 | -   repo: git://github.com/pre-commit/pre-commit-hooks
