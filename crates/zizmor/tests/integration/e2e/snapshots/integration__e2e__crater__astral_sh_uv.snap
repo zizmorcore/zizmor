@@ -29,7 +29,6 @@ expression: "zizmor().offline(NetworkMode::AssertOnline).output(OutputMode::Both
  INFO audit: zizmor: 🌈 completed .github/workflows/test-system.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/test-windows-trampolines.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/test.yml
- WARN audit:audit{input=PreCommitConfig(https://github.com/astral-sh/uv/blob/8ed803e507f41937d55865ae88c8c806573b3b9e/.pre-commit-config.yaml)}: zizmor::audit: pre-commit auditing not implemented yet
  INFO audit: zizmor: 🌈 completed .pre-commit-config.yaml
 help[anonymous-definition]: workflow or action definition without a name
    --> .github/workflows/bench.yml:1:1
