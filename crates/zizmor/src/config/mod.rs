@@ -194,12 +194,21 @@ pub(crate) struct AuditRuleConfig {
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawConfig {
+    #[serde(default)]
     rules: HashMap<String, AuditRuleConfig>,
 }
 
 impl RawConfig {
     fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
-        yaml_serde::from_str(contents).map_err(ConfigErrorInner::Syntax)
+        // An empty or comment-only config file produces a YAML null document,
+        // which deserializes to `None`. Treat that the same as an empty mapping
+        // (no rule overrides). Deserializing into `Option<RawConfig>` (rather
+        // than going through `yaml_serde::Value` + `from_value`) keeps the parse
+        // a single pass over the source text, so syntax errors in a non-empty
+        // config retain their line/column context.
+        let config: Option<Self> =
+            yaml_serde::from_str(contents).map_err(ConfigErrorInner::Syntax)?;
+        Ok(config.unwrap_or_default())
     }
 
     fn rule_config<T>(&self, ident: &'static str) -> Result<Option<T>, ConfigErrorInner>
@@ -795,7 +804,43 @@ impl Config {
 mod tests {
     use std::str::FromStr;
 
-    use super::WorkflowRule;
+    use super::{ConfigErrorInner, RawConfig, WorkflowRule};
+
+    #[test]
+    fn test_load_empty_or_no_rules() {
+        // All of these should parse as a default config with no rule overrides.
+        for (label, contents) in [
+            ("empty file", ""),
+            (
+                "comment-only file",
+                "# All rules are now enabled.\n# rules:\n",
+            ),
+            ("empty mapping", "{}"),
+        ] {
+            let config = RawConfig::load(contents)
+                .unwrap_or_else(|e| panic!("{label}: expected valid config, got {e}"));
+            assert!(config.rules.is_empty(), "{label}: expected no rules");
+        }
+    }
+
+    #[test]
+    fn test_load_malformed_config_retains_line_context() {
+        // A non-empty but invalid config must still surface line/column context
+        // in its error. Parsing via `Option<RawConfig>` keeps this; routing
+        // through `yaml_serde::Value` + `from_value` would discard it.
+        let err = RawConfig::load("rules: not-a-mapping\n")
+            .expect_err("expected a syntax error for a malformed config");
+        // The line/column lives in the inner `yaml_serde::Error`, not the
+        // top-level variant's message.
+        let ConfigErrorInner::Syntax(inner) = err else {
+            panic!("expected a Syntax error, got: {err}");
+        };
+        let rendered = inner.to_string();
+        assert!(
+            rendered.contains("line"),
+            "expected line context in error, got: {rendered}"
+        );
+    }
 
     #[test]
     fn test_parse_workflow_rule() -> anyhow::Result<()> {
