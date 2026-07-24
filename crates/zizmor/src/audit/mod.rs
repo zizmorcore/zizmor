@@ -19,7 +19,6 @@ use crate::{
     },
     registry::input::InputKey,
     state::AuditState,
-    utils::once::warn_once,
 };
 
 pub(crate) mod adhoc_packages;
@@ -290,6 +289,7 @@ impl AuditError {
 /// For pre-commit inputs:
 ///
 /// 1. [`Audit::audit_pre_commit_config`]: runs at the top of the pre-commit configuration (most general)
+/// 1. [`Audit::audit_pre_commit_hooks`]: runs at the top of the pre-commit hooks definition (most general)
 /// 1. [`Audit::audit_pre_commit_config_repo`]: runs on each `repo` definition within the pre-commit
 ///    configuration
 ///
@@ -422,6 +422,14 @@ pub(crate) trait Audit: AuditCore {
         Ok(results)
     }
 
+    async fn audit_pre_commit_hooks<'doc>(
+        &self,
+        _hooks: &'doc PreCommitHooks,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        Ok(vec![])
+    }
+
     async fn audit_raw<'doc>(
         &self,
         _input: &'doc AuditInput,
@@ -464,10 +472,7 @@ pub(crate) trait Audit: AuditCore {
             AuditInput::PreCommitConfig(pre_commit) => {
                 self.audit_pre_commit_config(pre_commit, config).await
             }
-            AuditInput::PreCommitHooks(_) => {
-                warn_once!("pre-commit hooks auditing not implemented yet");
-                Ok(vec![])
-            }
+            AuditInput::PreCommitHooks(hooks) => self.audit_pre_commit_hooks(hooks, config).await,
         }?;
 
         results.extend(self.audit_raw(input, config).await?);
