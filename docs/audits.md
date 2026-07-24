@@ -42,8 +42,8 @@ This audit currently detects ad-hoc installation patterns for the following ecos
 
 | Ecosystem | Tools |
 |-----------|-------|
-| JavaScript | `npm` |
-| Ruby | `gem` |
+| JavaScript | `npm`, `yarn`, `pnpm` |
+| Ruby | `gem`, `bundle` |
 
 ### Remediation
 

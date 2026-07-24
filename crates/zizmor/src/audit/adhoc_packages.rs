@@ -44,7 +44,7 @@ impl AdhocPackages {
     fn is_adhoc_install_command<'a>(cmd: &'a str, args: impl Iterator<Item = &'a str>) -> bool {
         let mut args = args;
         match cmd {
-            // TODO: Add support for `pip install pkg`, `yarn install pkg`, etc. later.
+            // TODO: Add support for `pip install pkg`, etc. later.
             "gem" => {
                 // Require at least one non-flag argument after `install` so we
                 // don't flag malformed invocations like `gem install`.
@@ -53,6 +53,10 @@ impl AdhocPackages {
                 // `gem i` is a documented alias for `gem install`.
                 args.any(|arg| arg == "install" || arg == "i")
                     && args.any(|arg| !arg.starts_with('-'))
+            }
+            "bundle" => {
+                // Disallow `bundle add` in CI, as it modifies the lockfile contents.
+                args.any(|arg| arg == "add") && args.any(|arg| !arg.starts_with('-'))
             }
             "npm" => {
                 // Looking for `npm install <pkg>` where
@@ -68,6 +72,16 @@ impl AdhocPackages {
                     ) => args.any(|arg| !arg.starts_with('-')),
                     _ => false,
                 }
+            }
+            "yarn" => {
+                // Require at least one non-flag argument after `add` so we
+                // don't flag malformed invocations like `yarn add`.
+                args.any(|arg| arg == "add") && args.any(|arg| !arg.starts_with('-'))
+            }
+            "pnpm" => {
+                // Require at least one non-flag argument after `add` so we
+                // don't flag malformed invocations like `pnpm add`.
+                args.any(|arg| arg == "add") && args.any(|arg| !arg.starts_with('-'))
             }
             _ => false,
         }
@@ -258,6 +272,10 @@ mod tests {
             (&["gem", "env"][..], false),
             // `bundle install` is lockfile-aware, so it should stay false.
             (&["bundle", "install"][..], false),
+            // `bundle add` is disallowed, as it modifies the lockfile contents.
+            (&["bundle", "add", "rails"][..], true),
+            (&["bundle", "add", "rails:8.1.0"][..], true),
+            (&["bundle", "add", "rails", "--skip-install"][..], true),
             // `npm install pkg` is also disallowed.
             (&["npm", "install", "lodash"][..], true),
             (&["npm", "install", "oxlint@1.55.0"][..], true),
@@ -283,6 +301,20 @@ mod tests {
             (&["npx", "foobar@1.2.3"][..], false),
             // TODO: flip to `true` once `pip install` is covered.
             (&["pip", "install", "requests"][..], false),
+            // "yarn add" is banned.
+            (&["yarn", "add", "lodash"][..], true),
+            (&["yarn", "add", "--dev", "oxlint@1.55.0"][..], true),
+            (&["yarn", "add", "oxlint@^1.55.0"][..], true),
+            // "yarn install" is fine.
+            (&["yarn", "install"][..], false),
+            (&["yarn", "install", "--frozen-lockfile"][..], false),
+            // "pnpm add" is banned.
+            (&["pnpm", "add", "lodash"][..], true),
+            (&["pnpm", "add", "--no-fund", "oxlint@1.55.0"][..], true),
+            (&["pnpm", "add", "oxlint@^1.55.0"][..], true),
+            // "pnpm install" is fine.
+            (&["pnpm", "install"][..], false),
+            (&["pnpm", "install", "--frozen-lockfile"][..], false),
             // In the future we should consider catching wrapped commands, those using `sudo` and so on.
             // (&["sudo", "gem", "install", "rails"][..], true),
             // (&["bundle", "exec", "gem", "install", "rails"][..], true),
