@@ -56,7 +56,6 @@ impl InsecureCommands {
                 ),
             )
             .build(doc)
-            .map_err(Self::err)
     }
 
     fn insecure_commands_allowed<'s, 'doc>(
@@ -77,7 +76,6 @@ impl InsecureCommands {
             )
             .fix(fix)
             .build(doc)
-            .map_err(Self::err)
     }
 
     fn has_insecure_commands_enabled(&self, env: &Env) -> bool {

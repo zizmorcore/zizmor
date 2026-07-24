@@ -294,6 +294,9 @@
         "insecure-commands": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
+        "insecure-origin": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "known-vulnerable-actions": {
           "$ref": "#/definitions/KnownVulnerableActionsRuleConfig"
         },

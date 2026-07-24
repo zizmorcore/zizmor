@@ -151,6 +151,21 @@ impl<'doc> Repo<'doc> {
             parent,
         }
     }
+
+    /// Returns the `repo: ...` field of this [`Repo`], if it's a "real"
+    /// repo (i.e. not `meta` or `local`).
+    pub(crate) fn repo(&self) -> Option<&'doc str> {
+        match self.inner {
+            pre_commit_models::config::Repo::Repo { repo, .. } => Some(repo.as_ref()),
+            _ => None,
+        }
+    }
+}
+
+impl<'a, 'doc> AsDocument<'a, 'doc> for Repo<'doc> {
+    fn as_document(&'a self) -> &'doc yamlpath::Document {
+        &self.parent.as_document()
+    }
 }
 
 impl<'doc> Locatable<'doc> for Repo<'doc> {
