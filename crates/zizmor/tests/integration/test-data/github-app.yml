@@ -55,3 +55,33 @@ jobs:
           client-id: ${{ vars.GHES_APP_CLIENT_ID }}
           private-key: ${{ secrets.GHES_APP_PRIVATE_KEY }}
           permission-issues: write
+
+      # OK: repositories is not explicitly provided, but the permissions
+      # are limited to non-repository resources.
+      - name: github-app-owner-with-repositories
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          owner: github
+          client-id: ${{ vars.GHES_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GHES_APP_PRIVATE_KEY }}
+          permission-members: write
+
+      # OK: repositories is not explicitly provided, but the permissions
+      # are limited to non-repository resources.
+      - name: github-app-owner-with-repositories
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          owner: github
+          client-id: ${{ vars.GHES_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GHES_APP_PRIVATE_KEY }}
+          permission-members: write
+
+      # NOT OK: permissions are a superset of org permissions but no explicit repositories
+      - name: github-app-owner-with-repositories
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          owner: github
+          client-id: ${{ vars.GHES_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GHES_APP_PRIVATE_KEY }}
+          permission-members: write
+          permission-issues: write
