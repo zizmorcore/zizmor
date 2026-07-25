@@ -568,20 +568,29 @@ impl Config {
         }
     }
 
-    /// Discover a [`Config`] in the given directory.
+    /// Discover a [`Config`] appropriate for the given directory (as `path`).
     ///
     /// This uses the following discovery procedure:
-    /// 1. If the given directory is `blahblah/.github/workflows/`,
+    /// 1. If we have a root directory (i.e. a respository root discovered
+    ///    by [`crate::registry::input::InputGroup::discover_root`]),
+    ///    then we try `{root}/.github/zizmor.ya?ml` and `{root}/zizmor.ya?ml`
+    ///    in that order. If none is found, config search ends here.
+    /// 2. If we don't have a root directory, we search relative to
+    ///    the given directory.
+    /// 3. If the given directory is `blahblah/.github/workflows/`,
     ///    start at the parent (i.e. `blahblah/.github/`). Otherwise, start
     ///    at the given directory. This first directory is the
     ///    first candidate path.
-    /// 2. Look for `.github/zizmor.yml` or `zizmor.yml` in the
+    /// 4. Look for `.github/zizmor.yml` or `zizmor.yml` in the
     ///    candidate path. If found, load and return it.
-    /// 3. Otherwise, continue the search in the candidate path's
+    /// 5. Otherwise, continue the search in the candidate path's
     ///    parent directory, repeating step 2, terminating when
     ///    we reach the filesystem root or the first .git directory.
-    fn discover_in_dir(path: &Utf8Path) -> Result<Option<Self>, ConfigErrorInner> {
-        tracing::debug!("attempting config discovery in `{path}`");
+    fn discover_in_dir(
+        path: &Utf8Path,
+        root: Option<&Utf8Path>,
+    ) -> Result<Option<Self>, ConfigErrorInner> {
+        tracing::debug!("attempting config discovery for `{path}` (root: `{root:?}`)");
 
         let canonical = path.canonicalize_utf8()?;
 
@@ -627,11 +636,14 @@ impl Config {
     ///
     /// For directories, this attempts to find a `.github/zizmor.yml` or
     /// `zizmor.yml` in the directory itself.
-    pub(crate) async fn discover_local(path: &Utf8Path) -> Result<Option<Self>, ConfigError> {
-        tracing::debug!("discovering config for local input `{path}`");
+    pub(crate) async fn discover_local(
+        path: &Utf8Path,
+        root: Option<&Utf8Path>,
+    ) -> Result<Option<Self>, ConfigError> {
+        tracing::debug!("discovering config for local input `{path}` (root: `{root:?}`)");
 
         if path.is_dir() {
-            Self::discover_in_dir(path).map_err(|err| ConfigError {
+            Self::discover_in_dir(path, root).map_err(|err| ConfigError {
                 path: path.to_string(),
                 source: err,
             })
@@ -649,7 +661,7 @@ impl Config {
                 }
             };
 
-            Self::discover_in_dir(parent).map_err(|err| ConfigError {
+            Self::discover_in_dir(parent, root).map_err(|err| ConfigError {
                 path: path.to_string(),
                 source: err,
             })

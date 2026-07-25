@@ -291,7 +291,8 @@ impl Backend {
             let workspace_dirs = self.workspace_dirs.read().await;
 
             for dir in workspace_dirs.as_slice() {
-                match Config::discover_local(dir.as_path()).await {
+                // Note: no root passed, as each workspace directort candidate serves as a root.
+                match Config::discover_local(dir.as_path(), None).await {
                     Ok(Some(cfg)) => {
                         config = cfg;
                         break;
