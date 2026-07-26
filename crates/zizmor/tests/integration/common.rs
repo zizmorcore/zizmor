@@ -397,8 +397,9 @@ impl Zizmor {
         // consecutive ones like `@@WORKING_DIR@@\@@TEST_PREFIX@@\...`, whose `\`
         // came from the joined absolute path rather than from a redacted needle.
         if cfg!(windows) {
-            let placeholder_path_regex =
-                Regex::new(r"(@@INPUT@@|@@WORKING_DIR@@|@@TEST_PREFIX@@|@@CONFIG@@)[\\/\w.-]*")?;
+            let placeholder_path_regex = Regex::new(
+                r"(@@INPUT@@|@@REPO_ROOT@@|@@WORKING_DIR@@|@@TEST_PREFIX@@|@@CONFIG@@)[\\/\w.-]*",
+            )?;
             raw = placeholder_path_regex
                 .replace_all(&raw, |captures: &Captures| {
                     captures.get(0).unwrap().as_str().replace('\\', "/")
