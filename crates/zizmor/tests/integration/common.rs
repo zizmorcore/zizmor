@@ -313,10 +313,6 @@ impl Zizmor {
                 }
                 _ => {}
             }
-
-            // if is_failure != self.expects_failure {
-            //     anyhow::bail!("zizmor exited with unexpected code {exit_code}: {raw}");
-            // }
         }
 
         // On Windows, canonicalized paths surface with a `\\?\` verbatim prefix
