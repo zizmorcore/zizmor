@@ -347,6 +347,22 @@ impl Zizmor {
                     redact(&mut raw, relative, input_placeholder);
                 }
             }
+
+            // Finally, some debug logging emits the repo root itself,
+            // so we need to discover that for each input and redact it as well.
+            let mut parent = if input.is_dir() {
+                Some(input.as_path())
+            } else {
+                input.parent()
+            };
+
+            while let Some(candidate) = parent {
+                if candidate.join(".git").is_dir() {
+                    redact(&mut raw, &candidate, "@@REPO_ROOT@@");
+                }
+
+                parent = candidate.parent();
+            }
         }
 
         let working_dir_placeholder = "@@WORKING_DIR@@";
@@ -476,6 +492,22 @@ impl Workspace {
 
         let destination = self.path().join(name);
         fs::write(destination, contents).expect("failed to write contents to {destination}");
+    }
+
+    /// Copy the contents of `source` into `dest`.
+    ///
+    /// `source` can be a directory, in which case it's copied recursively.
+    ///
+    /// `dest` will be joined to the workspace's root.
+    pub fn copy<'a>(&self, source: impl Into<&'a Utf8Path>, dest: impl Into<&'a Utf8Path>) {
+        let source = source.into();
+        let dest = self.path().join(dest.into());
+
+        if source.is_file() {
+            fs::copy(source, &dest).unwrap();
+        } else {
+            dircpy::copy_dir(source, &dest).unwrap();
+        }
     }
 }
 
