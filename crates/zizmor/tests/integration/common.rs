@@ -492,6 +492,7 @@ pub fn zizmor() -> Zizmor {
 pub struct Workspace {
     path: Utf8PathBuf,
     /// Solely to retain ownership of the tempdir/prevent cleanup until drop.
+    #[allow(dead_code)]
     tempdir: TempDir,
 }
 
