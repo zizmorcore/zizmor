@@ -324,6 +324,8 @@ impl Zizmor {
         // config-discovery candidates). Strip it up front so the paths below
         // redact cleanly and match the Unix snapshots.
         if cfg!(windows) {
+            // Debug form.
+            raw = raw.replace(r"\\\\?\\", "");
             raw = raw.replace(r"\\?\", "");
         }
 
@@ -458,7 +460,15 @@ fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str) {
     ];
 
     if let Some(canonical) = canonical {
-        forms.push(canonical.into());
+        // The `\\?\` verbatim prefix has already been stripped from the
+        // haystack, so strip it here too or this form can never match.
+        let canonical = canonical.as_str();
+        forms.push(
+            canonical
+                .strip_prefix(r"\\?\")
+                .unwrap_or(canonical)
+                .to_owned(),
+        );
     }
 
     forms.sort_unstable();
