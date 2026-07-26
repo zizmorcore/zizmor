@@ -527,7 +527,20 @@ impl Workspace {
         if source.is_file() {
             fs::copy(source, &dest).unwrap();
         } else {
-            dircpy::copy_dir(source, &dest).unwrap();
+            for entry in walkdir::WalkDir::new(source) {
+                let entry = entry.unwrap();
+                let path = Utf8Path::from_path(entry.path()).unwrap();
+
+                // Strip the source prefix to find the relative path inside the tree
+                let relative_path = path.strip_prefix(&source).unwrap();
+                let dest_path = dest.join(relative_path);
+
+                if entry.file_type().is_dir() {
+                    fs::create_dir_all(&dest_path).unwrap();
+                } else {
+                    fs::copy(path, &dest_path).unwrap();
+                }
+            }
         }
     }
 }
