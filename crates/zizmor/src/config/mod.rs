@@ -592,6 +592,23 @@ impl Config {
     ) -> Result<Option<Self>, ConfigErrorInner> {
         tracing::debug!("attempting config discovery for `{path}` (root: `{root:?}`)");
 
+        // If we have a known repository root, attempt to discover from there.
+        if let Some(root) = root {
+            for candidate in CONFIG_CANDIDATES {
+                let candidate_path = root.join(candidate);
+
+                if candidate_path.is_file() {
+                    tracing::debug!("found config candidate at `{candidate_path}`");
+                    return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
+                }
+            }
+
+            // We don't fall back to non-root discovery if we have a root,
+            // even if our candidates failed to yield a config.
+            tracing::debug!("no config candidates discovered relative to repository root");
+            return Ok(None);
+        }
+
         let canonical = path.canonicalize_utf8()?;
 
         let mut candidate_path = if canonical.file_name() == Some("workflows") {

@@ -1,6 +1,6 @@
 //! Configuration discovery and functionality tests.
 
-use crate::common::{OutputMode, input_under_test, zizmor};
+use crate::common::{OutputMode, WorkspaceBuilder, input_under_test, zizmor};
 
 /// Ensures we correctly discover a configuration file at the root
 /// of a given input directory, i.e. `config-in-root/zizmor.yml` in
@@ -195,6 +195,44 @@ fn test_discovers_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
     DEBUG zizmor::config: found config candidate at `@@WORKING_DIR@@/@@TEST_PREFIX@@/config-scenarios/config-in-dotgithub/.github/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "
+    );
+
+    Ok(())
+}
+
+/// Ensures that we correctly discover a configuration file when the
+/// target repository itself is named 'workflows'.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/2229>
+#[test]
+fn test_discovers_config_when_repo_is_named_workflows() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::new()
+        .is_git_repo(true)
+        .root_name("workflows")
+        .build()?;
+
+    workspace.add_file("zizmor.yml", "rules: {}");
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(workspace.path())
+            .expects_failure(3) // expected to fail, we're checking the logs here
+            .setenv("RUST_LOG", "zizmor::config=debug")
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r#"
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@INPUT@@")`)
+    DEBUG zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
+    DEBUG zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
+    fatal: no audit was performed
+    error: no inputs collected
+      |
+      = help: collection yielded no auditable inputs
+      = help: at least one valid, auditable input must be given
+
+    Caused by:
+        no inputs collected
+    "#,
     );
 
     Ok(())

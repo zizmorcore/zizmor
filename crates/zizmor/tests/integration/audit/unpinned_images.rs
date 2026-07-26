@@ -290,7 +290,7 @@ fn test_docker_action() -> anyhow::Result<()> {
             .run()?,
         @r#"
     error[unpinned-images]: unpinned image references
-     --> @@INPUT@@action.yml:7:3
+     --> @@INPUT@@/action.yml:7:3
       |
     7 |   image: "docker://ghcr.io/super-linter/super-linter:slim-v8.5.0" # x-release-please-version
       |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash

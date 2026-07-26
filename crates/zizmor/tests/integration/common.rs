@@ -1,7 +1,8 @@
 use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use regex::{Captures, Regex};
-use std::{env::current_dir, io::ErrorKind, sync::LazyLock};
+use std::{env::current_dir, fs, io::ErrorKind, sync::LazyLock};
+use tempfile::TempDir;
 
 use assert_cmd::{Command, cargo};
 
@@ -406,6 +407,10 @@ fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str) {
         return;
     }
 
+    // `input_under_test` produces an absolute/canonical path, but other inputs
+    // might not be canonical/absolute. Do that opportunistically.
+    let canonical = needle.canonicalize_utf8().ok();
+
     // The host-native spelling, matching `InputKey::native_path`. `components()`
     // drops a trailing separator, so restore it when `verbatim` had one: an
     // input passed as `foo/bar/` should still consume the separator in
@@ -421,6 +426,11 @@ fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str) {
         verbatim.replace('\\', "/"),
         native.replace('\\', "/"),
     ];
+
+    if let Some(canonical) = canonical {
+        forms.push(canonical.into());
+    }
+
     forms.sort_unstable();
     forms.dedup();
 
@@ -436,4 +446,78 @@ fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str) {
 
 pub fn zizmor() -> Zizmor {
     Zizmor::new()
+}
+
+/// Represents a runtime-constructured workspace, i.e. a testcase for zizmor.
+///
+/// Workspaces are built using [`WorkspaceBuilder`] and are used for tests
+/// that have nontrivial path/layout conditions, such as needing to imitate
+/// Git or other state.
+pub struct Workspace {
+    path: Utf8PathBuf,
+    /// Solely to retain ownership of the tempdir/prevent cleanup until drop.
+    tempdir: TempDir,
+}
+
+impl Workspace {
+    pub fn path(&self) -> &Utf8Path {
+        self.path.as_path()
+    }
+
+    /// Add a file named `name` to the workspace with contents `contents`.
+    ///
+    /// Any intermediate directories in `name` are created if they don't already exist.
+    pub fn add_file<'a>(&self, name: impl Into<&'a Utf8Path>, contents: &str) {
+        let name = name.into();
+
+        if let Some(parent) = name.parent() {
+            fs::create_dir_all(&parent).expect("failed to create parent directories: {parent}");
+        }
+
+        let destination = self.path().join(name);
+        fs::write(destination, contents).expect("failed to write contents to {destination}");
+    }
+}
+
+pub struct WorkspaceBuilder {
+    root_name: Option<String>,
+    git_repo: bool,
+}
+
+impl WorkspaceBuilder {
+    pub fn new() -> Self {
+        Self {
+            root_name: None,
+            git_repo: false,
+        }
+    }
+
+    pub fn root_name(mut self, name: impl Into<String>) -> Self {
+        self.root_name = Some(name.into());
+        self
+    }
+
+    pub fn is_git_repo(mut self, is_git_repo: bool) -> Self {
+        self.git_repo = is_git_repo;
+        self
+    }
+
+    pub fn build(self) -> anyhow::Result<Workspace> {
+        let tempdir = tempfile::tempdir()?;
+        let mut root = tempdir.path().to_path_buf();
+
+        if let Some(root_name) = self.root_name.as_deref() {
+            root = root.join(root_name);
+            fs::create_dir(&root)?;
+        }
+
+        if self.git_repo {
+            fs::create_dir(root.join(".git/"))?;
+        }
+
+        Ok(Workspace {
+            path: Utf8PathBuf::try_from(root)?,
+            tempdir,
+        })
+    }
 }
