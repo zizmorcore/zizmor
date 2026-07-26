@@ -241,7 +241,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "verbatim_path": "@@REPO_ROOT@@/@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "action is not pinned to a hash (required by blanket policy)",
@@ -311,7 +311,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "verbatim_path": "@@REPO_ROOT@@/@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "contains(..) condition can be bypassed if attacker can control 'github.ref'",
@@ -374,7 +374,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "verbatim_path": "@@REPO_ROOT@@/@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "contains(..) condition can be bypassed if attacker can control 'env.GITHUB_REF_NAME'",
@@ -437,7 +437,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "verbatim_path": "@@REPO_ROOT@@/@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "contains(..) condition can be bypassed if attacker can control 'github.ref_name'",
@@ -500,7 +500,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "verbatim_path": "@@REPO_ROOT@@/@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "contains(..) condition can be bypassed if attacker can control 'github.actor'",
@@ -563,7 +563,7 @@ expression: output
         "symbolic": {
           "key": {
             "Local": {
-              "verbatim_path": "@@REPO_ROOT@@/@@INPUT@@"
+              "verbatim_path": "@@INPUT@@"
             }
           },
           "annotation": "contains(..) condition can be bypassed if attacker can control 'runner.name'",

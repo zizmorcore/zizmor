@@ -347,9 +347,22 @@ impl Zizmor {
                     redact(&mut raw, relative, input_placeholder);
                 }
             }
+        }
 
-            // Finally, some debug logging emits the repo root itself,
-            // so we need to discover that for each input and redact it as well.
+        // Replace any references to the discovered repository (i.e. Git)
+        // root that remain after input redaction.
+        //
+        // This is done as a separate pass over the inputs to prevent
+        // mixed redaction, e.g. if the user supplies mulitple inputs
+        // with a common (repo root) prefix. In other words,
+        // we always want to redact `@@INPUT@@` as a single token,
+        // never `@@REPO_ROOT@@/@@INPUT@@`.
+        //
+        // TODO: This currently does the lazy thing and looks for
+        // `.git` in each parent. We should probably dedupe this with
+        // `InputGroup::discover_root` at some point.
+        let repo_root_placeholder = "@@REPO_ROOT@@";
+        for input in &self.inputs {
             let mut parent = if input.is_dir() {
                 Some(input.as_path())
             } else {
@@ -358,7 +371,7 @@ impl Zizmor {
 
             while let Some(candidate) = parent {
                 if candidate.join(".git").is_dir() {
-                    redact(&mut raw, &candidate, "@@REPO_ROOT@@");
+                    redact(&mut raw, &candidate, repo_root_placeholder);
                 }
 
                 parent = candidate.parent();
