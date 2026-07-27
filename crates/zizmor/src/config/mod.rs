@@ -616,24 +616,11 @@ impl Config {
         // into some non-repository tree, and we need to find our config
         // *somewhere* above us.
         // TODO: Potentially remove this path entirely.
-
         let _span = tracing::span!(tracing::Level::DEBUG, "sad path").entered();
 
         tracing::debug!("config discovery: no root, falling back to search");
-        let canonical = path.canonicalize_utf8()?;
-
-        let mut candidate_path = if canonical.file_name() == Some("workflows")
-            && canonical.parent().and_then(|p| p.file_name()) == Some(".github")
-        {
-            let Some(parent) = canonical.parent() else {
-                tracing::debug!("no parent for `{canonical}`, cannot discover config");
-                return Ok(None);
-            };
-
-            parent
-        } else {
-            canonical.as_path()
-        };
+        let candidate_path = path.canonicalize_utf8()?;
+        let mut candidate_path = candidate_path.as_path();
 
         loop {
             for candidate in CONFIG_CANDIDATES {
