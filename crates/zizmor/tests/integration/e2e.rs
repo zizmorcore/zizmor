@@ -677,12 +677,13 @@ fn issue_1745() -> Result<()> {
         zizmor()
             .no_config(true)
             .working_dir(workspace.path())
-            .input(".github")
-            .args(["--format=github"])
+            // Observe that we pass the input as a raw argument here and below,
+            // to avoid redaction. This makes snapshots clearer.
+            .args([".github", "--format=github"])
             .run()?,
         @"
-    ::warning file=@@INPUT@@/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=@@INPUT@@/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
     "
     );
 
