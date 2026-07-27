@@ -34,6 +34,10 @@ of `zizmor`.
   as needing a `#!yaml repositories:` key, despite requesting organization-level-only
   permissions (#2227)
 
+* Fixed a class of bugs where `zizmor` would discover the user's configuration in
+  unintuitive ways. When auditing from a Git repository, `zizmor` now uses the repository
+  root to discover configuration consistently (#2234)
+
 ## 1.28.0
 
 ### Security 🔒
