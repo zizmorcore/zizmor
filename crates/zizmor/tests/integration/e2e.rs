@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 
-use crate::common::{NetworkMode, OutputMode, input_under_test, zizmor};
+use crate::common::{NetworkMode, OutputMode, WorkspaceBuilder, input_under_test, zizmor};
 
 mod anchors;
 mod collect;
@@ -666,28 +666,35 @@ fn issue_1356_lsp_mode_starts() -> Result<()> {
 /// Ensures that the `.github` prefix is not stripped from the path.
 #[test]
 fn issue_1745() -> Result<()> {
+    let workspace = WorkspaceBuilder::new()
+        .is_git_repo(true)
+        .root_name("issue-1745-repro")
+        .build()?;
+
+    workspace.copy(&*input_under_test("issue-1745-repro/"), ".");
+
     insta::assert_snapshot!(
         zizmor()
             .no_config(true)
-            .working_dir(input_under_test("issue-1745-repro"))
+            .working_dir(workspace.path())
             .input(".github")
             .args(["--format=github"])
             .run()?,
         @"
-    ::warning file=@@WORKING_DIR@@/@@INPUT@@/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=@@WORKING_DIR@@/@@INPUT@@/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::warning file=@@INPUT@@/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=@@INPUT@@/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
     "
     );
 
     insta::assert_snapshot!(
         zizmor()
             .no_config(true)
-            .working_dir(input_under_test("issue-1745-repro"))
+            .working_dir(workspace.path())
             .args([".", "--format=github"])
             .run()?,
         @"
-    ::warning file=@@WORKING_DIR@@/.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=@@WORKING_DIR@@/.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
     "
     );
 
