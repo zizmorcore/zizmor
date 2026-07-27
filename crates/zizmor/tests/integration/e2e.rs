@@ -673,13 +673,12 @@ fn issue_1745() -> Result<()> {
 
     workspace.copy(&*input_under_test("issue-1745-repro/"), ".");
 
+    // Trivial case: auditing from the root produes root-relative paths in the output.
     insta::assert_snapshot!(
         zizmor()
             .no_config(true)
             .working_dir(workspace.path())
-            // Observe that we pass the input as a raw argument here and below,
-            // to avoid redaction. This makes snapshots clearer.
-            .args([".github", "--format=github"])
+            .args([".", "--format=github"])
             .run()?,
         @"
     ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
@@ -687,11 +686,28 @@ fn issue_1745() -> Result<()> {
     "
     );
 
+    // Auditing with `./.github` as the working directory still produces root-relative paths.
+    insta::assert_snapshot!(
+        zizmor()
+            .no_config(true)
+            .working_dir(workspace.path().join(".github"))
+            // Observe that we pass the input as a raw argument here and below,
+            // to avoid redaction. This makes snapshots clearer.
+            .args([".", "--format=github"])
+            .run()?,
+        @"
+    ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    "
+    );
+
+    // Auditing with the root as the working directory and `.github` as the input
+    // still produces root-relative paths.
     insta::assert_snapshot!(
         zizmor()
             .no_config(true)
             .working_dir(workspace.path())
-            .args([".", "--format=github"])
+            .args([".github", "--format=github"])
             .run()?,
         @"
     ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
