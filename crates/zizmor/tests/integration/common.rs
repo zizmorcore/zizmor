@@ -77,6 +77,7 @@ pub struct Zizmor {
     output: OutputMode,
     expects_failure: Option<i32>,
     show_audit_urls: bool,
+    filters: Vec<(String, String)>,
 }
 
 /// Environment variables that influence zizmor's behavior or output, scrubbed
@@ -132,6 +133,7 @@ impl Zizmor {
             output: OutputMode::Stdout,
             expects_failure: None,
             show_audit_urls: false,
+            filters: vec![],
         }
     }
 
@@ -198,6 +200,12 @@ impl Zizmor {
 
     pub fn working_dir(mut self, dir: impl Into<String>) -> Self {
         self.cmd.current_dir(dir.into());
+        self
+    }
+
+    pub fn add_filter(mut self, needle: impl Into<String>, replacement: impl Into<String>) -> Self {
+        let replacement = format!("@@{replacement}@@", replacement = replacement.into());
+        self.filters.push((needle.into(), replacement));
         self
     }
 
@@ -413,9 +421,21 @@ impl Zizmor {
             )?;
             raw = placeholder_path_regex
                 .replace_all(&raw, |captures: &Captures| {
-                    captures.get(0).unwrap().as_str().replace('\\', "/")
+                    // Collapse Debug-escaped separators (`\\` meaning one `\`)
+                    // first, then any remaining lone separators.
+                    captures
+                        .get(0)
+                        .unwrap()
+                        .as_str()
+                        .replace(r"\\", "/")
+                        .replace('\\', "/")
                 })
                 .into_owned();
+        }
+
+        // Finally, apply any configured filters.
+        for (needle, replacement) in &self.filters {
+            redact(&mut raw, Utf8Path::new(needle), replacement.as_str());
         }
 
         Ok(raw)
@@ -525,6 +545,10 @@ impl Workspace {
         let dest = self.path().join(dest.into());
 
         if source.is_file() {
+            if let Some(parent) = dest.parent() {
+                fs::create_dir_all(parent).unwrap();
+            }
+
             fs::copy(source, &dest).unwrap();
         } else {
             for entry in walkdir::WalkDir::new(source) {

@@ -619,8 +619,24 @@ impl Config {
         let _span = tracing::span!(tracing::Level::DEBUG, "sad path").entered();
 
         tracing::debug!("config discovery: no root, falling back to search");
-        let candidate_path = path.canonicalize_utf8()?;
-        let mut candidate_path = candidate_path.as_path();
+        let canonical = path.canonicalize_utf8()?;
+
+        // Sad hack case: if the user passed `.github/workflows` directly, we
+        // need to start two directories up to avoid confusing `zizmor.yml`
+        // (a GitHub Actions workflow) with `zizmor.yml` (the config).
+        let mut candidate_path = if canonical.file_name() == Some("workflows")
+            && let Some(parent) = canonical.parent()
+            && parent.file_name() == Some(".github")
+        {
+            let Some(parent) = parent.parent() else {
+                tracing::debug!("no parent for `{canonical}`, cannot discover config");
+                return Ok(None);
+            };
+
+            parent
+        } else {
+            canonical.as_path()
+        };
 
         loop {
             for candidate in CONFIG_CANDIDATES {

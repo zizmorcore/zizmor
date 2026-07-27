@@ -473,3 +473,41 @@ fn test_severity_remap_is_negated_by_no_config() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Ensures that we don't try to parse a workflow named `zizmor.yml`
+/// as a zizmor configuration file, even if we're in the sad path (no Git root)
+/// and the user has explicitly pointed us at `.github/workflows` instead of
+/// the base of their source tree.
+#[test]
+fn test_config_ignores_workflow_named_zizmor() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::new().is_git_repo(false).build()?;
+
+    // The actual config file.
+    workspace.add_file("zizmor.yml", "rules: {}");
+
+    // A workflow that happens to share the same name as zizmor's config.
+    workspace.copy(
+        &*input_under_test("neutral.yml"),
+        "./.github/workflows/zizmor.yml",
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .add_filter(workspace.path().as_str(), "WORKSPACE_PATH")
+            .input(workspace.path().join(".github/workflows"))
+            .setenv("RUST_LOG", "zizmor::config=trace")
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r#"
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `None`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=None}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `None`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: config discovery: no root, falling back to search
+    TRACE discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: trying config candidate path: `@@WORKSPACE_PATH@@/.github/zizmor.yml`
+    TRACE discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: trying config candidate path: `@@WORKSPACE_PATH@@/.github/zizmor.yaml`
+    TRACE discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: trying config candidate path: `@@WORKSPACE_PATH@@/zizmor.yml`
+    DEBUG discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: found config candidate at `@@WORKSPACE_PATH@@/zizmor.yml`
+    "#
+    );
+
+    Ok(())
+}

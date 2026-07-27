@@ -889,3 +889,22 @@ fn issue_2202() -> Result<()> {
 
     Ok(())
 }
+
+/// Primarily a backstop test: `neutral.yml` is what we use whenever we need
+/// a valid but completely fine workflow, so it should never have any findings in it.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_neutral_no_findings() -> anyhow::Result<()> {
+    let findings = serde_json::from_str::<Vec<serde_json::Value>>(
+        zizmor()
+            .offline(NetworkMode::AssertOnline)
+            .args(["--format=json-v1"])
+            .input(input_under_test("neutral.yml"))
+            .run()?
+            .as_str(),
+    )?;
+
+    assert!(findings.is_empty());
+
+    Ok(())
+}
