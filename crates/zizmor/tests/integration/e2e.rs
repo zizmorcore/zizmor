@@ -674,8 +674,8 @@ fn issue_1745() -> Result<()> {
             .args(["--format=github"])
             .run()?,
         @"
-    ::warning file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/@@INPUT@@/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/@@INPUT@@/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::warning file=@@WORKING_DIR@@/@@INPUT@@/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=@@WORKING_DIR@@/@@INPUT@@/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
     "
     );
 
@@ -686,8 +686,8 @@ fn issue_1745() -> Result<()> {
             .args([".", "--format=github"])
             .run()?,
         @"
-    ::warning file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::warning file=@@WORKING_DIR@@/.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=@@WORKING_DIR@@/.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
     "
     );
 
