@@ -590,7 +590,9 @@ impl InputGroup {
         path: &Utf8Path,
         options: &CollectionOptions,
     ) -> Result<Self, CollectionError> {
-        let config = Config::discover(options, || Config::discover_local(path)).await?;
+        let root = Self::discover_root(path);
+        let config =
+            Config::discover(options, || Config::discover_local(path, root.as_deref())).await?;
 
         // Workflows can be named anything, including `dependabot.yml`
         // (overlapping with Dependabot configs) and `action.yml` (overlapping
@@ -601,7 +603,7 @@ impl InputGroup {
             .parent()
             .is_some_and(|parent| parent.ends_with(".github/workflows"));
 
-        let mut group = Self::new(config, Self::discover_root(path));
+        let mut group = Self::new(config, root);
         let root = group.root.as_deref();
 
         // When collecting individual files, we don't know which part
@@ -645,9 +647,11 @@ impl InputGroup {
         path: &Utf8Path,
         options: &CollectionOptions,
     ) -> Result<Self, CollectionError> {
-        let config = Config::discover(options, || Config::discover_local(path)).await?;
+        let root = Self::discover_root(path);
+        let config =
+            Config::discover(options, || Config::discover_local(path, root.as_deref())).await?;
 
-        let mut group = Self::new(config, Self::discover_root(path));
+        let mut group = Self::new(config, root);
 
         // Start with all filters disabled, i.e. walk everything.
         let mut walker = ignore::WalkBuilder::new(path);
@@ -806,6 +810,7 @@ impl InputGroup {
             .read_to_string(&mut contents)
             .map_err(CollectionError::Io)?;
 
+        // TODO: This should probably honor the global config, if passed by the user?
         let mut group = Self::new(Config::default(), None);
         let key = InputKey::stdin();
 

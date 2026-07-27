@@ -50,7 +50,7 @@ fn test_composite_action() -> anyhow::Result<()> {
             .run()?,
         @"
     warning[archived-uses]: action or reusable workflow from archived repository
-     --> @@INPUT@@action.yml:9:13
+     --> @@INPUT@@/action.yml:9:13
       |
     8 |     - name: setup ruby
       |       ---------------- this step

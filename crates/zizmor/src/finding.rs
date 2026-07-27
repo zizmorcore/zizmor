@@ -80,7 +80,6 @@ pub(crate) struct Determinations {
 #[serde(rename_all = "lowercase")]
 pub(crate) enum FixDisposition {
     /// The fix is safe to apply automatically.
-    #[allow(dead_code)]
     Safe,
     /// The fix should be applied with manual oversight.
     #[default]

@@ -1,7 +1,8 @@
 use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use regex::{Captures, Regex};
-use std::{env::current_dir, io::ErrorKind, sync::LazyLock};
+use std::{env::current_dir, fs, io::ErrorKind, sync::LazyLock};
+use tempfile::TempDir;
 
 use assert_cmd::{Command, cargo};
 
@@ -33,6 +34,19 @@ static TEST_PREFIX: LazyLock<Utf8PathBuf> = LazyLock::new(|| {
 
     Utf8PathBuf::try_from(file_path).expect("Cannot create UTF-8 path from test data directory")
 });
+
+const CONFIG_PLACEHOLDER: &str = "@@CONFIG@@";
+const INPUT_PLACEHOLDER: &str = "@@INPUT@@";
+const REPO_ROOT_PLACEHOLDER: &str = "@@REPO_ROOT@@";
+const WORKING_DIR_PLACEHOLDER: &str = "@@WORKING_DIR@@";
+const TEST_PREFIX_PLACEHOLDER: &str = "@@TEST_PREFIX@@";
+const VERSION_PLACEHOLDER: &str = "@@VERSION@@";
+
+/// Matches any `@@PLACEHOLDER@@` — including the custom ones introduced by
+/// [`Zizmor::add_filter`] — and any path-like suffix trailing it.
+/// Used for Windows separator normalization; see [`Zizmor::scrub`].
+static PLACEHOLDER_PATH_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"@@\w+@@[\\/\w.-]*").unwrap());
 
 pub fn input_under_test(name: &str) -> Utf8PathBuf {
     let file_path = TEST_PREFIX.join(name);
@@ -76,6 +90,7 @@ pub struct Zizmor {
     output: OutputMode,
     expects_failure: Option<i32>,
     show_audit_urls: bool,
+    filters: Vec<(String, String)>,
 }
 
 /// Environment variables that influence zizmor's behavior or output, scrubbed
@@ -131,6 +146,7 @@ impl Zizmor {
             output: OutputMode::Stdout,
             expects_failure: None,
             show_audit_urls: false,
+            filters: vec![],
         }
     }
 
@@ -195,8 +211,15 @@ impl Zizmor {
         self
     }
 
-    pub fn working_dir(mut self, dir: impl Into<String>) -> Self {
-        self.cmd.current_dir(dir.into());
+    pub fn working_dir(mut self, dir: impl Into<Utf8PathBuf>) -> Self {
+        self.working_dir = dir.into();
+        self.cmd.current_dir(&self.working_dir);
+        self
+    }
+
+    pub fn add_filter(mut self, needle: impl Into<String>, replacement: impl Into<String>) -> Self {
+        let replacement = format!("@@{replacement}@@", replacement = replacement.into());
+        self.filters.push((needle.into(), replacement));
         self
     }
 
@@ -286,7 +309,7 @@ impl Zizmor {
             self.cmd.output()?
         };
 
-        let mut raw = String::from_utf8(match self.output {
+        let raw = String::from_utf8(match self.output {
             OutputMode::Stdout => output.stdout,
             OutputMode::Stderr => output.stderr,
             OutputMode::Both => [output.stderr, output.stdout].concat(),
@@ -312,128 +335,295 @@ impl Zizmor {
                 }
                 _ => {}
             }
-
-            // if is_failure != self.expects_failure {
-            //     anyhow::bail!("zizmor exited with unexpected code {exit_code}: {raw}");
-            // }
         }
 
+        Ok(self.scrub(raw))
+    }
+
+    /// Scrubs `raw` into its snapshot-stable form: every host-specific path
+    /// is redacted down to a `@@PLACEHOLDER@@`, and (on Windows) native
+    /// separators are normalized to `/`.
+    ///
+    /// Pass order matters: each pass only sees what previous passes left
+    /// behind. In particular, inputs are redacted before the repository root
+    /// so that an input always redacts as a single `@@INPUT@@` token,
+    /// never as `@@REPO_ROOT@@/@@INPUT@@`.
+    fn scrub(&self, mut raw: String) -> String {
         // On Windows, canonicalized paths surface with a `\\?\` verbatim prefix
         // that has no cross-platform analogue (e.g. zizmor logs canonicalized
-        // config-discovery candidates). Strip it up front so the paths below
-        // redact cleanly and match the Unix snapshots.
+        // config-discovery candidates). Strip it (in both its plain and
+        // Debug-escaped spellings) up front so the paths below redact cleanly
+        // and match the Unix snapshots.
         if cfg!(windows) {
+            raw = raw.replace(r"\\\\?\\", "");
             raw = raw.replace(r"\\?\", "");
         }
 
         if let Some(config) = &self.config {
             // The config is often an `input_under_test(..)` path, so it needs
             // the same multi-spelling treatment as the inputs below.
-            redact(&mut raw, Utf8Path::new(config), "@@CONFIG@@");
+            redact(&mut raw, Utf8Path::new(config), CONFIG_PLACEHOLDER, &[]);
         }
 
-        let input_placeholder = "@@INPUT@@";
+        // Some output formats (GitHub, SARIF) emit repo-root-relative
+        // identifiers, so redact each input's repo-root-relative spellings too.
         for input in &self.inputs {
-            redact(&mut raw, input, input_placeholder);
+            redact(&mut raw, input, INPUT_PLACEHOLDER, &[REPO_ROOT.as_path()]);
+        }
 
-            // Some output formats (GitHub, SARIF) emit repo-root-relative
-            // identifiers; redact those too. Canonicalization yields a `\\?\`
-            // prefix on Windows, so strip it before comparing against the
-            // (non-verbatim) repo root.
-            if let Ok(abs) = input.canonicalize_utf8() {
-                let abs = abs.as_str().strip_prefix(r"\\?\").unwrap_or(abs.as_str());
-                if let Ok(relative) = Utf8Path::new(abs).strip_prefix(&*REPO_ROOT) {
-                    redact(&mut raw, relative, input_placeholder);
+        // Replace any references to the discovered repository (i.e. Git)
+        // root that remain after input redaction.
+        //
+        // TODO: This currently does the lazy thing and looks for
+        // `.git` in each parent. We should probably dedupe this with
+        // `InputGroup::discover_root` at some point.
+        for input in &self.inputs {
+            let mut parent = if input.is_dir() {
+                Some(input.as_path())
+            } else {
+                input.parent()
+            };
+
+            while let Some(candidate) = parent {
+                if candidate.join(".git").is_dir() {
+                    redact(&mut raw, candidate, REPO_ROOT_PLACEHOLDER, &[]);
                 }
+
+                parent = candidate.parent();
             }
         }
 
-        let working_dir_placeholder = "@@WORKING_DIR@@";
-        // Replace any absolute references to the working directory.
-        redact(&mut raw, &self.working_dir, working_dir_placeholder);
-
-        // Replace any relative references to the working directory.
-        if let Ok(relative) = self.working_dir.strip_prefix(&*REPO_ROOT) {
-            redact(&mut raw, relative, working_dir_placeholder);
-        }
+        redact(
+            &mut raw,
+            &self.working_dir,
+            WORKING_DIR_PLACEHOLDER,
+            &[REPO_ROOT.as_path()],
+        );
 
         // Fallback: replace any lingering test prefix paths.
-        // TODO: Maybe just use this everywhere instead of the special
-        // replacements above?
-        let test_prefix_placeholder = "@@TEST_PREFIX@@";
-        redact(&mut raw, &*TEST_PREFIX, test_prefix_placeholder);
+        redact(
+            &mut raw,
+            &TEST_PREFIX,
+            TEST_PREFIX_PLACEHOLDER,
+            &[REPO_ROOT.as_path(), ZIZMOR_ROOT.as_path()],
+        );
 
-        if let Ok(relative) = TEST_PREFIX.strip_prefix(&*REPO_ROOT) {
-            redact(&mut raw, relative, test_prefix_placeholder);
+        raw = raw.replace(env!("CARGO_PKG_VERSION"), VERSION_PLACEHOLDER);
+
+        // Apply any configured filters. This happens before separator
+        // normalization below so that path suffixes trailing a filter's
+        // placeholder (e.g. `@@WORKSPACE_PATH@@\zizmor.yml`) get
+        // normalized as well.
+        for (needle, replacement) in &self.filters {
+            redact(&mut raw, Utf8Path::new(needle), replacement, &[]);
         }
-
-        if let Ok(relative) = TEST_PREFIX.strip_prefix(&*ZIZMOR_ROOT) {
-            redact(&mut raw, relative, test_prefix_placeholder);
-        }
-
-        let version_placeholder = "@@VERSION@@";
-        raw = raw.replace(env!("CARGO_PKG_VERSION"), version_placeholder);
 
         // On Windows, zizmor emits host-native `\` separators where the Unix
         // snapshots have `/`. Now that every path is redacted to a placeholder,
-        // normalize the separators that follow any path placeholder — including
+        // normalize the separators that follow any placeholder — including
         // consecutive ones like `@@WORKING_DIR@@\@@TEST_PREFIX@@\...`, whose `\`
         // came from the joined absolute path rather than from a redacted needle.
         if cfg!(windows) {
-            let placeholder_path_regex =
-                Regex::new(r"(@@INPUT@@|@@WORKING_DIR@@|@@TEST_PREFIX@@|@@CONFIG@@)[\\/\w.-]*")?;
-            raw = placeholder_path_regex
+            raw = PLACEHOLDER_PATH_REGEX
                 .replace_all(&raw, |captures: &Captures| {
-                    captures.get(0).unwrap().as_str().replace('\\', "/")
+                    // Collapse Debug-escaped separators (`\\` meaning one `\`)
+                    // first, then any remaining lone separators.
+                    captures
+                        .get(0)
+                        .unwrap()
+                        .as_str()
+                        .replace(r"\\", "/")
+                        .replace('\\', "/")
                 })
                 .into_owned();
         }
 
-        Ok(raw)
+        raw
     }
 }
 
-/// Redacts every on-disk spelling of `needle` in `haystack`, replacing each
-/// occurrence with `placeholder`.
+/// Redacts every plausible on-disk spelling of `needle` in `haystack`,
+/// replacing each occurrence with `placeholder`.
 ///
-/// A single logical path can surface in zizmor's output under several different
-/// spellings, especially on Windows. This attempts to handle all of them.
-fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str) {
-    let verbatim = needle.as_str();
-    if verbatim.is_empty() {
-        // Guard against `str::replace("", ..)`, which would splice the
-        // placeholder in between every character.
-        return;
+/// Spellings of `needle` relative to each root in `roots` are redacted
+/// as well.
+fn redact(haystack: &mut String, needle: &Utf8Path, placeholder: &str, roots: &[&Utf8Path]) {
+    // `input_under_test` produces an absolute/canonical path, but other
+    // needles might not be canonical/absolute. Do that opportunistically.
+    // Canonicalization yields a `\\?\` verbatim prefix on Windows; that
+    // prefix has already been stripped from the haystack, so strip it here
+    // too or this spelling can never match.
+    let canonical = needle.canonicalize_utf8().ok().map(|canonical| {
+        Utf8PathBuf::from(
+            canonical
+                .as_str()
+                .strip_prefix(r"\\?\")
+                .unwrap_or(canonical.as_str()),
+        )
+    });
+
+    let mut spellings = vec![];
+    for base in std::iter::once(needle).chain(canonical.as_deref()) {
+        spellings.extend(spellings_of(base));
+
+        for root in roots {
+            if let Ok(relative) = base.strip_prefix(root) {
+                spellings.extend(spellings_of(relative));
+            }
+        }
     }
 
-    // The host-native spelling, matching `InputKey::native_path`. `components()`
-    // drops a trailing separator, so restore it when `verbatim` had one: an
-    // input passed as `foo/bar/` should still consume the separator in
-    // `foo/bar/baz.yml` -> `@@INPUT@@baz.yml`, exactly as it does on Unix.
-    let mut native = needle.components().collect::<Utf8PathBuf>().into_string();
-    if verbatim.ends_with(['/', '\\']) && !native.is_empty() {
-        native.push(std::path::MAIN_SEPARATOR);
-    }
+    // Guard against empty spellings (e.g. an empty `needle`, or a `needle`
+    // equal to one of `roots`): `str::replace("", ..)` would splice the
+    // placeholder in between every character.
+    spellings.retain(|spelling| !spelling.is_empty());
+    spellings.sort_unstable();
+    spellings.dedup();
 
-    let mut forms = vec![
-        verbatim.to_owned(),
-        native.clone(),
-        verbatim.replace('\\', "/"),
-        native.replace('\\', "/"),
-    ];
-    forms.sort_unstable();
-    forms.dedup();
-
-    for form in &forms {
-        *haystack = haystack.replace(form.as_str(), placeholder);
-        // serde_json escapes '\' as '\\'; redact that spelling too.
-        if form.contains('\\') {
-            let escaped = form.replace('\\', r"\\");
+    for spelling in &spellings {
+        *haystack = haystack.replace(spelling.as_str(), placeholder);
+        // serde_json and tracing escape '\' as '\\'; redact that spelling too.
+        if spelling.contains('\\') {
+            let escaped = spelling.replace('\\', r"\\");
             *haystack = haystack.replace(escaped.as_str(), placeholder);
         }
     }
 }
 
+/// Returns the plausible spellings of `path` as it might appear in zizmor's
+/// output.
+///
+/// A single logical path can surface under several different spellings,
+/// especially on Windows. This attempts to cover all of them: verbatim,
+/// host-native separators, and forward-slash separators.
+fn spellings_of(path: &Utf8Path) -> Vec<String> {
+    let verbatim = path.as_str();
+
+    // The host-native spelling, matching `InputKey::native_path`. `components()`
+    // drops a trailing separator, so restore it when `verbatim` had one: an
+    // input passed as `foo/bar/` should still consume the separator in
+    // `foo/bar/baz.yml` -> `@@INPUT@@baz.yml`, exactly as it does on Unix.
+    let mut native = path.components().collect::<Utf8PathBuf>().into_string();
+    if verbatim.ends_with(['/', '\\']) && !native.is_empty() {
+        native.push(std::path::MAIN_SEPARATOR);
+    }
+
+    vec![
+        verbatim.to_owned(),
+        verbatim.replace('\\', "/"),
+        native.replace('\\', "/"),
+        native,
+    ]
+}
+
 pub fn zizmor() -> Zizmor {
     Zizmor::new()
+}
+
+/// Represents a runtime-constructured workspace, i.e. a testcase for zizmor.
+///
+/// Workspaces are built using [`WorkspaceBuilder`] and are used for tests
+/// that have nontrivial path/layout conditions, such as needing to imitate
+/// Git or other state.
+pub struct Workspace {
+    path: Utf8PathBuf,
+    /// Solely to retain ownership of the tempdir/prevent cleanup until drop.
+    #[allow(dead_code)]
+    tempdir: TempDir,
+}
+
+impl Workspace {
+    pub fn path(&self) -> &Utf8Path {
+        self.path.as_path()
+    }
+
+    /// Add a file named `name` to the workspace with contents `contents`.
+    ///
+    /// Any intermediate directories in `name` are created if they don't already exist.
+    pub fn add_file<'a>(&self, name: impl Into<&'a Utf8Path>, contents: &str) {
+        let name = name.into();
+
+        if let Some(parent) = name.parent() {
+            fs::create_dir_all(&parent).expect("failed to create parent directories: {parent}");
+        }
+
+        let destination = self.path().join(name);
+        fs::write(destination, contents).expect("failed to write contents to {destination}");
+    }
+
+    /// Copy the contents of `source` into `dest`.
+    ///
+    /// `source` can be a directory, in which case it's copied recursively.
+    ///
+    /// `dest` will be joined to the workspace's root.
+    pub fn copy<'a>(&self, source: impl Into<&'a Utf8Path>, dest: impl Into<&'a Utf8Path>) {
+        let source = source.into();
+        let dest = self.path().join(dest.into());
+
+        if source.is_file() {
+            if let Some(parent) = dest.parent() {
+                fs::create_dir_all(parent).unwrap();
+            }
+
+            fs::copy(source, &dest).unwrap();
+        } else {
+            for entry in walkdir::WalkDir::new(source) {
+                let entry = entry.unwrap();
+                let path = Utf8Path::from_path(entry.path()).unwrap();
+
+                // Strip the source prefix to find the relative path inside the tree
+                let relative_path = path.strip_prefix(&source).unwrap();
+                let dest_path = dest.join(relative_path);
+
+                if entry.file_type().is_dir() {
+                    fs::create_dir_all(&dest_path).unwrap();
+                } else {
+                    fs::copy(path, &dest_path).unwrap();
+                }
+            }
+        }
+    }
+}
+
+pub struct WorkspaceBuilder {
+    root_name: Option<String>,
+    git_repo: bool,
+}
+
+impl WorkspaceBuilder {
+    pub fn new() -> Self {
+        Self {
+            root_name: None,
+            git_repo: false,
+        }
+    }
+
+    pub fn root_name(mut self, name: impl Into<String>) -> Self {
+        self.root_name = Some(name.into());
+        self
+    }
+
+    pub fn is_git_repo(mut self, is_git_repo: bool) -> Self {
+        self.git_repo = is_git_repo;
+        self
+    }
+
+    pub fn build(self) -> anyhow::Result<Workspace> {
+        let tempdir = tempfile::tempdir()?;
+        let mut root = tempdir.path().to_path_buf();
+
+        if let Some(root_name) = self.root_name.as_deref() {
+            root = root.join(root_name);
+            fs::create_dir(&root)?;
+        }
+
+        if self.git_repo {
+            fs::create_dir(root.join(".git/"))?;
+        }
+
+        Ok(Workspace {
+            path: Utf8PathBuf::try_from(root)?,
+            tempdir,
+        })
+    }
 }

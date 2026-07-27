@@ -4341,6 +4341,7 @@ dependencies = [
  "tree-sitter-powershell",
  "typomania",
  "url",
+ "walkdir",
  "yaml_serde",
  "yamlpatch",
  "yamlpath",

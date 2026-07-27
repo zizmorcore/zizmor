@@ -674,8 +674,8 @@ fn issue_1745() -> Result<()> {
             .args(["--format=github"])
             .run()?,
         @"
-    ::warning file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/@@INPUT@@/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/@@INPUT@@/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::warning file=@@WORKING_DIR@@/@@INPUT@@/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=@@WORKING_DIR@@/@@INPUT@@/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
     "
     );
 
@@ -686,8 +686,8 @@ fn issue_1745() -> Result<()> {
             .args([".", "--format=github"])
             .run()?,
         @"
-    ::warning file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=@@WORKING_DIR@@/@@TEST_PREFIX@@/issue-1745-repro/.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::warning file=@@WORKING_DIR@@/.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
+    ::error file=@@WORKING_DIR@@/.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
     "
     );
 
@@ -886,6 +886,25 @@ fn issue_2202() -> Result<()> {
         remote input has an ambiguous Git reference ("v1" is both a tag and a branch)
     "#
     );
+
+    Ok(())
+}
+
+/// Primarily a backstop test: `neutral.yml` is what we use whenever we need
+/// a valid but completely fine workflow, so it should never have any findings in it.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_neutral_no_findings() -> anyhow::Result<()> {
+    let findings = serde_json::from_str::<Vec<serde_json::Value>>(
+        zizmor()
+            .offline(NetworkMode::AssertOnline)
+            .args(["--format=json-v1"])
+            .input(input_under_test("neutral.yml"))
+            .run()?
+            .as_str(),
+    )?;
+
+    assert!(findings.is_empty());
 
     Ok(())
 }
