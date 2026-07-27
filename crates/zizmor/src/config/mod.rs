@@ -586,14 +586,17 @@ impl Config {
     /// 5. Otherwise, continue the search in the candidate path's
     ///    parent directory, repeating step 2, terminating when
     ///    we reach the filesystem root or the first .git directory.
+    #[tracing::instrument]
     fn discover_in_dir(
         path: &Utf8Path,
         root: Option<&Utf8Path>,
     ) -> Result<Option<Self>, ConfigErrorInner> {
         tracing::debug!("attempting config discovery for `{path}` (root: `{root:?}`)");
 
-        // If we have a known repository root, attempt to discover from there.
+        // Happy path: if we have a known repository root, attempt to discover from there.
         if let Some(root) = root {
+            let _span = tracing::span!(tracing::Level::DEBUG, "happy path").entered();
+
             for candidate in CONFIG_CANDIDATES {
                 let candidate_path = root.join(candidate);
 
@@ -609,9 +612,19 @@ impl Config {
             return Ok(None);
         }
 
+        // Sad path: the user gave us some (potentially arbitrarily deep) path
+        // into some non-repository tree, and we need to find our config
+        // *somewhere* above us.
+        // TODO: Potentially remove this path entirely.
+
+        let _span = tracing::span!(tracing::Level::DEBUG, "sad path").entered();
+
+        tracing::debug!("config discovery: no root, falling back to search");
         let canonical = path.canonicalize_utf8()?;
 
-        let mut candidate_path = if canonical.file_name() == Some("workflows") {
+        let mut candidate_path = if canonical.file_name() == Some("workflows")
+            && canonical.parent().and_then(|p| p.file_name()) == Some(".github")
+        {
             let Some(parent) = canonical.parent() else {
                 tracing::debug!("no parent for `{canonical}`, cannot discover config");
                 return Ok(None);
@@ -625,15 +638,11 @@ impl Config {
         loop {
             for candidate in CONFIG_CANDIDATES {
                 let candidate_path = candidate_path.join(candidate);
+                tracing::trace!("trying config candidate path: `{candidate_path}`");
                 if candidate_path.is_file() {
                     tracing::debug!("found config candidate at `{candidate_path}`");
                     return Ok(Some(Self::load(&fs::read_to_string(&candidate_path)?)?));
                 }
-            }
-
-            if candidate_path.join(".git").is_dir() {
-                tracing::debug!("found `{candidate_path}/.git`, stopping search");
-                return Ok(None);
             }
 
             let Some(parent) = candidate_path.parent() else {

@@ -18,8 +18,8 @@ fn test_discovers_config_in_root() -> anyhow::Result<()> {
             .run()?,
         @r#"
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@INPUT@@")`)
-    DEBUG zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
-    DEBUG zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}:happy path: zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "#
     );
@@ -44,8 +44,8 @@ fn test_discovers_config_in_root_from_file_input() -> anyhow::Result<()> {
             .run()?,
         @r#"
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@REPO_ROOT@@")`)
-    DEBUG zizmor::config: attempting config discovery for `@@REPO_ROOT@@/.github/workflows` (root: `Some("@@REPO_ROOT@@")`)
-    DEBUG zizmor::config: found config candidate at `@@REPO_ROOT@@/zizmor.yml`
+    DEBUG discover_in_dir{path="@@REPO_ROOT@@/.github/workflows" root=Some("@@REPO_ROOT@@")}: zizmor::config: attempting config discovery for `@@REPO_ROOT@@/.github/workflows` (root: `Some("@@REPO_ROOT@@")`)
+    DEBUG discover_in_dir{path="@@REPO_ROOT@@/.github/workflows" root=Some("@@REPO_ROOT@@")}:happy path: zizmor::config: found config candidate at `@@REPO_ROOT@@/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "#
     );
@@ -70,8 +70,8 @@ fn test_discovers_config_in_root_from_child_dir() -> anyhow::Result<()> {
             .run()?,
         @r#"
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@REPO_ROOT@@")`)
-    DEBUG zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@REPO_ROOT@@")`)
-    DEBUG zizmor::config: found config candidate at `@@REPO_ROOT@@/zizmor.yml`
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@REPO_ROOT@@")}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@REPO_ROOT@@")`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@REPO_ROOT@@")}:happy path: zizmor::config: found config candidate at `@@REPO_ROOT@@/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "#
     );
@@ -158,8 +158,8 @@ fn test_discovers_config_in_dotgithub() -> anyhow::Result<()> {
             .run()?,
         @r#"
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@INPUT@@")`)
-    DEBUG zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
-    DEBUG zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yml`
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}:happy path: zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "#,
     );
@@ -188,8 +188,8 @@ fn test_discovers_dotyaml_config_in_dotgithub() -> anyhow::Result<()> {
             .run()?,
         @r#"
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@INPUT@@")`)
-    DEBUG zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
-    DEBUG zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yaml`
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}:happy path: zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yaml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "#,
     );
@@ -217,8 +217,8 @@ fn test_discovers_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
             .run()?,
         @r#"
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@REPO_ROOT@@")`)
-    DEBUG zizmor::config: attempting config discovery for `@@REPO_ROOT@@/.github/workflows` (root: `Some("@@REPO_ROOT@@")`)
-    DEBUG zizmor::config: found config candidate at `@@REPO_ROOT@@/.github/zizmor.yml`
+    DEBUG discover_in_dir{path="@@REPO_ROOT@@/.github/workflows" root=Some("@@REPO_ROOT@@")}: zizmor::config: attempting config discovery for `@@REPO_ROOT@@/.github/workflows` (root: `Some("@@REPO_ROOT@@")`)
+    DEBUG discover_in_dir{path="@@REPO_ROOT@@/.github/workflows" root=Some("@@REPO_ROOT@@")}:happy path: zizmor::config: found config candidate at `@@REPO_ROOT@@/.github/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "#
     );
@@ -243,13 +243,47 @@ fn test_discovers_config_when_repo_is_named_workflows() -> anyhow::Result<()> {
         zizmor()
             .input(workspace.path())
             .expects_failure(3) // expected to fail, we're checking the logs here
-            .setenv("RUST_LOG", "zizmor::config=debug")
+            .setenv("RUST_LOG", "zizmor::config=trace")
             .output(OutputMode::Stderr)
             .run()?,
         @r#"
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@INPUT@@")`)
-    DEBUG zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
-    DEBUG zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}:happy path: zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
+    fatal: no audit was performed
+    error: no inputs collected
+      |
+      = help: collection yielded no auditable inputs
+      = help: at least one valid, auditable input must be given
+
+    Caused by:
+        no inputs collected
+    "#,
+    );
+
+    // Test the sad path as well (without a repo marker).
+    let workspace = WorkspaceBuilder::new()
+        .is_git_repo(false)
+        .root_name("workflows")
+        .build()?;
+
+    workspace.add_file("zizmor.yml", "rules: {}");
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(workspace.path())
+            .expects_failure(3) // expected to fail, we're checking the logs here
+            .setenv("RUST_LOG", "zizmor::config=trace")
+            .output(OutputMode::Stderr)
+            .run()?,
+        @r#"
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `None`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=None}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `None`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: config discovery: no root, falling back to search
+    TRACE discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: trying config candidate path: `@@INPUT@@/.github/zizmor.yml`
+    TRACE discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: trying config candidate path: `@@INPUT@@/.github/zizmor.yaml`
+    TRACE discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: trying config candidate path: `@@INPUT@@/zizmor.yml`
+    DEBUG discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
     fatal: no audit was performed
     error: no inputs collected
       |

@@ -232,6 +232,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         .with(
             tracing_subscriber::fmt::layer()
                 .without_time()
+                // .compact()
                 // NOTE: We don't need `with_ansi` here since our writer is
                 // an `anstream::AutoStream` that handles color output for us.
                 .with_writer(writer),
