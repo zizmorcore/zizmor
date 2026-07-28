@@ -123,6 +123,18 @@ impl<'doc> RepoRef<'doc> {
         }
     }
 
+    /// Returns the subpath to the action within this repository, if it has one.
+    ///
+    /// Only a `uses:` clause can carry a subpath, as in
+    /// `owner/repo/subpath@ref`. A Git URL reference has no notion of one,
+    /// since the URL names the repository and nothing within it.
+    pub(crate) fn subpath(&self) -> Option<&'doc str> {
+        match self {
+            RepoRef::Uses(uses) => uses.subpath(),
+            RepoRef::Url { .. } => None,
+        }
+    }
+
     /// Return this repository reference's Git reference, if it has one.
     pub(crate) fn git_ref(&self) -> &'doc str {
         match self {

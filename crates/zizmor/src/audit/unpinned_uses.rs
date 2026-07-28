@@ -72,7 +72,10 @@ impl UnpinnedUses {
         // Resolve the commit back to its longest tag; pinning to the full
         // version avoids any later `ref-version-mismatch` findings when the
         // major tag is mutated by the upstream.
-        let longest_tag = match client.longest_tag_for_commit(&uses.into(), &commit).await {
+        let longest_tag = match client
+            .longest_tag_for_commit(&uses.into(), uses.subpath(), &commit)
+            .await
+        {
             Ok(Some(tag)) => Cow::Owned(tag.name),
             // Our original tag -> commit lookup succeeded, but this reverse lookup
             // failed, which makes no sense. Just fall back to what we know.
