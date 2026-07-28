@@ -112,7 +112,7 @@ Disables the audit entirely if `true`.
     Before disabling an audit entirely, consider one of the following
     alternatives:
 
-    1. Ignoring specific findings via [`rules.<id>.ignore`](#rulesidignore).
+    1. Ignoring specific findings via [`rules.<id>.ignore`](#rules-id-ignore).
     1. Changing your [persona](./usage.md#using-personas) to a less sensitive
        one. For example, consider removing `--persona=pedantic`
        or `--persona=auditor` if you're using one of those.
