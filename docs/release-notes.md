@@ -1018,7 +1018,7 @@ To complement this new functionality, this release comes with two new audits:
     detailed explanation of the new behavior.
 
 * Audit rules can now be disabled entirely in `zizmor`'s configuration.
-  See [`rules.<id>.disable`](./configuration.md#rulesiddisable)
+  See [`rules.<id>.disable`](./configuration.md#rules-id-disable)
   for details (#1132)
 
 * The [obfuscation] audit now supports auto-fixes for many findings (#1088)
@@ -1361,7 +1361,7 @@ from remote repositories.
 
 ### Upcoming Changes 🚧
 
-* The official [PyPI builds](./installation.md#pypi) for `zizmor`
+* The official [PyPI builds](./installation.md#pypi-pypi) for `zizmor`
   will support fewer architectures in the next release, due to
   cross-compilation and testing difficulties. This should have
   **no effect** on the overwhelming majority of users.
