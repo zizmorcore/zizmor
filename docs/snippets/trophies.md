@@ -541,6 +541,14 @@
         - changesets/action#617
 
 
+-   ![](https://github.com/chapel-lang.png?size=40){ width="40" loading=lazy align=left } chapel-lang
+
+    ---
+
+    ??? example "Examples"
+        - chapel-lang/chapel#29160
+
+
 -   ![](https://github.com/chatmail.png?size=40){ width="40" loading=lazy align=left } chatmail
 
     ---
@@ -1423,6 +1431,14 @@
         - icsharpcode/ILSpy#3365
 
 
+-   ![](https://github.com/iliaal.png?size=40){ width="40" loading=lazy align=left } iliaal
+
+    ---
+
+    ??? example "Examples"
+        - iliaal/php_excel@010f6e257e9809a4cad60eef85689420c3e7e30f
+
+
 -   ![](https://github.com/immich-app.png?size=40){ width="40" loading=lazy align=left } immich-app
 
     ---
@@ -1707,6 +1723,14 @@
         - langfuse/langfuse-python#1623
 
 
+-   ![](https://github.com/lemon24.png?size=40){ width="40" loading=lazy align=left } lemon24
+
+    ---
+
+    ??? example "Examples"
+        - lemon24/reader@01bbe67e5722e373c62a108c3685c443042ee901
+
+
 -   ![](https://github.com/libssh2.png?size=40){ width="40" loading=lazy align=left } libssh2
 
     ---
@@ -1867,6 +1891,7 @@
     ---
 
     ??? example "Examples"
+        - metabrainz/listenbrainz-server#3778
         - metabrainz/musicbrainz-server#3777
 
 
@@ -2016,6 +2041,14 @@
         - mozilla/fxa#18628
         - mozilla/neqo#2413
         - mozilla/neqo#2721
+
+
+-   ![](https://github.com/mpi4py.png?size=40){ width="40" loading=lazy align=left } mpi4py
+
+    ---
+
+    ??? example "Examples"
+        - mpi4py/mpi4py#760
 
 
 -   ![](https://github.com/mvanhorn.png?size=40){ width="40" loading=lazy align=left } mvanhorn
@@ -2721,6 +2754,14 @@
         - rails/rails-html-sanitizer#220
 
 
+-   ![](https://github.com/raineorshine.png?size=40){ width="40" loading=lazy align=left } raineorshine
+
+    ---
+
+    ??? example "Examples"
+        - raineorshine/npm-check-updates#1946
+
+
 -   ![](https://github.com/ranaroussi.png?size=40){ width="40" loading=lazy align=left } ranaroussi
 
     ---
@@ -2803,6 +2844,14 @@
 
     ??? example "Examples"
         - roostorg/osprey#350
+
+
+-   ![](https://github.com/rootless-containers.png?size=40){ width="40" loading=lazy align=left } rootless-containers
+
+    ---
+
+    ??? example "Examples"
+        - rootless-containers/usernetes#392
 
 
 -   ![](https://github.com/rsyslog.png?size=40){ width="40" loading=lazy align=left } rsyslog
@@ -3160,6 +3209,8 @@
     ---
 
     ??? example "Examples"
+        - symfony/symfony#64325
+        - symfony/symfony#64772
         - symfony/ux#3579
 
 

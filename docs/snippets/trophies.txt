@@ -133,6 +133,7 @@ chainguard-dev/malcontent#1451
 chainguard-dev/melange#2463
 chainguard-images/images#3076
 changesets/action#617
+chapel-lang/chapel#29160
 chatmail/core#7942
 cheeriojs/cheerio#5212
 Clipy/Clipy#666
@@ -315,6 +316,7 @@ hynek/structlog#663
 hynek/svcs#111
 hynek/svcs#161
 icsharpcode/ILSpy#3365
+iliaal/php_excel@010f6e257e9809a4cad60eef85689420c3e7e30f
 immich-app/immich#17651
 indico/indico#7533
 indygreg/apple-platform-rs@5bded60cbfc2b81e1bedd745ab41417e5c3a76ea
@@ -361,6 +363,7 @@ labd/nextjs-basic-auth-middleware#44
 langfuse/langfuse#13048
 langfuse/langfuse-js#783
 langfuse/langfuse-python#1623
+lemon24/reader@01bbe67e5722e373c62a108c3685c443042ee901
 libssh2/libssh2#1609
 lissy93/dashy#2140
 llvm/llvm-project#187905
@@ -390,6 +393,7 @@ mbta/api#1048
 mccutchen/go-httpbin#252
 medic/cht-core#10559
 meltano/meltano#9972
+metabrainz/listenbrainz-server#3778
 metabrainz/musicbrainz-server#3777
 MeteorDevelopment/meteor-client#5091
 mfussenegger/nvim-lint#710
@@ -420,6 +424,7 @@ mozilla/fx-private-relay#6364
 mozilla/fxa#18628
 mozilla/neqo#2413
 mozilla/neqo#2721
+mpi4py/mpi4py#760
 mvanhorn/last30days-skill#472
 mwouts/itables#580
 napari/napari#8811
@@ -556,6 +561,7 @@ PyVRP/PyVRP#670
 quarkslab/quokka#46
 quay/quay#5887
 rails/rails-html-sanitizer#220
+raineorshine/npm-check-updates#1946
 ranaroussi/yfinance#2735
 rancher/fleet#5301
 rancher/rancher#54439
@@ -570,6 +576,7 @@ rkyv/rkyv#611
 rocicorp/mono#6052
 rolldown/rolldown#3861
 roostorg/osprey#350
+rootless-containers/usernetes#392
 rsyslog/rsyslog#6808
 rubocop/rubocop-rspec#2202
 ruby/ruby#16273
@@ -640,6 +647,8 @@ strawberry-graphql/strawberry#4097
 stx-labs/clarinet#2281
 super-linter/super-linter#7241
 Swatinem/rust-cache#262
+symfony/symfony#64325
+symfony/symfony#64772
 symfony/ux#3579
 sympy/sympy#29641
 TanStack/cli#450
