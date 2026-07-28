@@ -65,7 +65,7 @@ impl KnownVulnerableActions {
 
                 match self
                     .client
-                    .longest_tag_for_commit(uses.owner(), uses.repo(), &commit_ref)
+                    .longest_tag_for_commit(uses.owner(), uses.repo(), uses.subpath(), &commit_ref)
                     .await
                     .map_err(Self::err)?
                 {
@@ -84,7 +84,7 @@ impl KnownVulnerableActions {
             commit_ref => {
                 match self
                     .client
-                    .longest_tag_for_commit(uses.owner(), uses.repo(), commit_ref)
+                    .longest_tag_for_commit(uses.owner(), uses.repo(), uses.subpath(), commit_ref)
                     .await
                     .map_err(Self::err)?
                 {

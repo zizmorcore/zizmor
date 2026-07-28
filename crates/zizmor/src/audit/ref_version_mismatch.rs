@@ -131,7 +131,7 @@ impl RefVersionMismatch {
                 // SHA-pinned action without a recognized version comment.
                 let Some(tag) = self
                     .client
-                    .longest_tag_for_commit(uses.owner(), uses.repo(), commit_sha)
+                    .longest_tag_for_commit(uses.owner(), uses.repo(), uses.subpath(), commit_sha)
                     .await
                     .map_err(Self::err)?
                 else {
@@ -208,7 +208,7 @@ impl RefVersionMismatch {
 
         if let Some(suggestion) = self
             .client
-            .longest_tag_for_commit(uses.owner(), uses.repo(), commit_sha)
+            .longest_tag_for_commit(uses.owner(), uses.repo(), uses.subpath(), commit_sha)
             .await
             .map_err(Self::err)?
         {
