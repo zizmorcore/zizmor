@@ -664,6 +664,7 @@ impl Client {
     pub(crate) async fn longest_tag_for_commit(
         &self,
         slug: &Slug<'_>,
+        subpath: Option<&str>,
         commit: &str,
     ) -> Result<Option<Tag>, ClientError> {
         // Annoying: GitHub doesn't provide a rev-parse or similar API to
@@ -673,13 +674,7 @@ impl Client {
         // is not pulling every tag eagerly before scanning them.
         let tags = self.list_tags(slug).await?;
 
-        // Heuristic: there can be multiple tags for a commit, so we pick
-        // the longest one. This isn't super sound, but it gets us from
-        // `sha -> v1.2.3` instead of `sha -> v1`.
-        Ok(tags
-            .into_iter()
-            .filter(|t| t.commit.sha == commit)
-            .max_by_key(|t| t.name.len()))
+        Ok(best_tag_for_commit(tags, subpath, commit))
     }
 
     #[instrument(skip(self))]
@@ -1011,6 +1006,40 @@ pub(crate) struct Tag {
     pub(crate) commit: Commit,
 }
 
+/// Pick the tag that best describes `commit` for the action at `subpath`.
+///
+/// Repositories that publish several actions from subdirectories tag each one under its own
+/// prefix, so a single commit can carry `save/v1.0.0`, `restore/v1.0.0` and
+/// `allowlist-check/v1.0.0` at once. Picking purely by length would hand every action in such a
+/// repository whichever sibling has the longest name, so tags naming the action being used are
+/// preferred, and tags naming *some other* action are only used when nothing better exists.
+fn best_tag_for_commit(tags: Vec<Tag>, subpath: Option<&str>, commit: &str) -> Option<Tag> {
+    let candidates = tags.into_iter().filter(|t| t.commit.sha == commit);
+
+    // Heuristic: there can be multiple tags for a commit, so we pick
+    // the longest one. This isn't super sound, but it gets us from
+    // `sha -> v1.2.3` instead of `sha -> v1`.
+    let longest = |tags: Vec<Tag>| tags.into_iter().max_by_key(|t| t.name.len());
+
+    let (preferred, rest): (Vec<_>, Vec<_>) = match subpath {
+        // `owner/repo/stash/save` is released as `save/vX.Y.Z` or `stash/save/vX.Y.Z`.
+        Some(subpath) => {
+            let prefixes = [
+                format!("{subpath}/"),
+                format!(
+                    "{leaf}/",
+                    leaf = subpath.rsplit('/').next().unwrap_or(subpath)
+                ),
+            ];
+            candidates.partition(|t| prefixes.iter().any(|p| t.name.starts_with(p.as_str())))
+        }
+        // An action at the repository root is described by an unprefixed tag.
+        None => candidates.partition(|t| !t.name.contains('/')),
+    };
+
+    longest(preferred).or_else(|| longest(rest))
+}
+
 /// A single commit, as returned by GitHub's commits endpoints.
 ///
 /// This model is intentionally incomplete.
@@ -1085,9 +1114,82 @@ pub(crate) struct File {
 #[cfg(test)]
 mod tests {
     use crate::{
-        github::{Client, GitHubHost, GitHubToken},
+        github::{Client, Commit, GitHubHost, GitHubToken, Tag, best_tag_for_commit},
         models::repo_ref::Slug,
     };
+
+    fn tags(names: &[(&str, &str)]) -> Vec<Tag> {
+        names
+            .iter()
+            .map(|(name, sha)| Tag {
+                name: (*name).into(),
+                commit: Commit { sha: (*sha).into() },
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_best_tag_for_commit() {
+        // A monorepo of actions, where every action is tagged under its own prefix
+        // and all of them happen to share a commit.
+        let monorepo = [
+            ("allowlist-check/v1", "abcd"),
+            ("allowlist-check/v1.0.0", "abcd"),
+            ("restore/v1", "abcd"),
+            ("restore/v1.0.0", "abcd"),
+            ("save/v1", "abcd"),
+            ("save/v1.0.0", "abcd"),
+        ];
+
+        for (subpath, expected) in [
+            // The action's own tag wins over a longer-named sibling's.
+            (Some("stash/save"), "save/v1.0.0"),
+            (Some("stash/restore"), "restore/v1.0.0"),
+            (Some("allowlist-check"), "allowlist-check/v1.0.0"),
+        ] {
+            assert_eq!(
+                best_tag_for_commit(tags(&monorepo), subpath, "abcd")
+                    .unwrap()
+                    .name,
+                expected
+            );
+        }
+
+        // Nothing names this action, so a sibling is better than no suggestion at all.
+        assert_eq!(
+            best_tag_for_commit(tags(&monorepo), Some("pelican"), "abcd")
+                .unwrap()
+                .name,
+            "allowlist-check/v1.0.0"
+        );
+
+        // Ordinary repositories are unaffected: longest tag at the commit still wins.
+        let plain = [("v1", "abcd"), ("v1.2.3", "abcd"), ("v2.0.0", "beef")];
+        assert_eq!(
+            best_tag_for_commit(tags(&plain), None, "abcd")
+                .unwrap()
+                .name,
+            "v1.2.3"
+        );
+        assert_eq!(
+            best_tag_for_commit(tags(&plain), Some("sub"), "abcd")
+                .unwrap()
+                .name,
+            "v1.2.3"
+        );
+
+        // A root action prefers an unprefixed tag over a subdirectory action's.
+        let mixed = [("v1.0.0", "abcd"), ("some-action/v1.0.0", "abcd")];
+        assert_eq!(
+            best_tag_for_commit(tags(&mixed), None, "abcd")
+                .unwrap()
+                .name,
+            "v1.0.0"
+        );
+
+        // Tags on other commits are never considered.
+        assert!(best_tag_for_commit(tags(&plain), None, "dead").is_none());
+    }
 
     #[test]
     fn test_github_host() {
