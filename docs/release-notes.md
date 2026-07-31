@@ -18,6 +18,10 @@ of `zizmor`.
   protocols when making network requests. The initial version of this audit
   is limited to pre-commit inputs only (#2228)
 
+* zizmor now supports GitHub's "self-repository" reference syntax for local
+  actions, e.g. `#!yaml uses: $/foo/bar` instead of a manual checkout and
+  `#!yaml uses: ./foo/bar` (#2248)
+
 ### Changes ⚠️
 
 * The [unpinned-uses] and [unpinned-images] audits have been separated more cleanly:
