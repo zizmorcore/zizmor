@@ -108,6 +108,7 @@ blakeblackshear/frigate#15490
 bleachbit/bleachbit#2216
 bloomberg/memray#922
 bloomberg/pystack#292
+bloomberg/pytest-memray#179
 bluesky-social/social-app#10779
 boto/boto3#4755
 boto/botocore#3665
@@ -148,6 +149,7 @@ CopilotKit/CopilotKit#4820
 cortex/ripasso#411
 CosmoCreeper/Sine#487
 crate-ci/cargo-release#956
+crossterm-rs/crossterm#1076
 csandman/chakra-react-select#411
 cucumber/cucumber-jvm#3172
 cucumber/cucumber-jvm-starter-maven-java@1c6575ba15d09110d5face60d4fe2e022c148581
@@ -159,6 +161,7 @@ curl/curl@17a669426f36b467dfd945b4b35f6211598b7977
 curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
 curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
 curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
+cvat-ai/cvat#10938
 CycloneDX/cyclonedx-python#1054
 CycloneDX/specification#925
 dani-garcia/vaultwarden#5537
@@ -204,11 +207,13 @@ elixir-lang/elixir#15114
 emberjs/ember.js#21185
 endevco/aube#631
 endevco/pitchfork#434
+endoflife-date/release-data#610
 endojs/endo#3252
 EpicWink/proxpi@5e04d5e24bb8abfc6ad65721aea1c1781628ac9b
 ergebnis/composer-normalize#1622
 erlang/otp#11000
 erlang/rebar3#3001
+erlef/oidcc#533
 esl/MongooseIM#4435
 ethereum/hevm#615
 external-secrets/external-secrets#5368
@@ -296,6 +301,7 @@ Homebrew/homebrew-command-not-found#203
 Homebrew/homebrew-core#195961
 Homebrew/homebrew-core#201306
 Homebrew/homebrew-portable-ruby#255
+hplush/slowreader@811da1f98bea76d6bfcd5768c134dc9e5cbcb754
 huggingface/lerobot#732
 huggingface/peft#2288
 hugovk/em-keyboard#148
@@ -552,6 +558,7 @@ python-social-auth/social-core#1098
 python-telegram-bot/python-telegram-bot#4606
 python-telegram-bot/python-telegram-bot#4668
 python-trio/trio#3154
+python-trio/trio#3482
 python/bedevere#652
 python/cpython#127749
 python/miss-islington#705
@@ -568,6 +575,8 @@ rancher/rancher#54439
 ratatui/ratatui#1961
 ratatui/tui-widgets#249
 raydak-labs/configarr#457
+RediSearch/RediSearch#10654
+redux-saga/redux-saga#2771
 renovatebot/github-action#1025
 renovatebot/renovate#42346
 reubeno/brush#534
@@ -610,6 +619,7 @@ scientific-python/repo-review#257
 scikit-build/scikit-build-core#983
 scikit-image/scikit-image#7662
 scroll-tech/go-ethereum#1146
+seantis/suitable#58
 sebp/scikit-survival#617
 Setasign/FPDI#253
 sharkdp/fd#1828
@@ -739,6 +749,8 @@ zcash/halo2#857
 zcash/librustzcash#1679
 ZcashFoundation/zebra#9110
 zed-industries/zed#61401
+zenn-dev/zenn-editor#691
 zkonduit/ezkl#906
 zkonduit/ezkl#907
 zulip/docker-zulip#568
+zulip/zulip#39841
