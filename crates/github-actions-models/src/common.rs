@@ -289,7 +289,7 @@ impl Uses {
         let uses = uses.into();
         let uses = uses.trim();
 
-        if uses.starts_with("./") || uses.starts_with('$') {
+        if uses.starts_with("./") || uses.starts_with("$/") {
             Ok(Self::Local(LocalUses::new(uses)))
         } else if let Some(image) = uses.strip_prefix("docker://") {
             Ok(Self::Docker(DockerUses::parse(image)))
