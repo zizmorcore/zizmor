@@ -289,7 +289,7 @@ impl Uses {
         let uses = uses.into();
         let uses = uses.trim();
 
-        if uses.starts_with("./") {
+        if uses.starts_with("./") || uses.starts_with("$/") {
             Ok(Self::Local(LocalUses::new(uses)))
         } else if let Some(image) = uses.strip_prefix("docker://") {
             Ok(Self::Docker(DockerUses::parse(image)))
@@ -318,6 +318,14 @@ pub struct LocalUses {
 impl LocalUses {
     fn new(path: impl Into<String>) -> Self {
         LocalUses { path: path.into() }
+    }
+
+    /// Whether this [`LocalUses`] is a "self-referencing" action,
+    /// i.e. references the repository it's being used from.
+    ///
+    /// See: <https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/>
+    pub fn is_self_repository(&self) -> bool {
+        self.path.starts_with('$')
     }
 }
 
@@ -953,6 +961,18 @@ mod tests {
         Local(
             LocalUses {
                 path: "./.github/actions/hello-world-action",
+            },
+        )
+        "#
+        );
+
+        // Valid: new $-style local uses.
+        insta::assert_debug_snapshot!(
+            Uses::parse("$/.github/actions/hello-world-action").unwrap(),
+            @r#"
+        Local(
+            LocalUses {
+                path: "$/.github/actions/hello-world-action",
             },
         )
         "#
