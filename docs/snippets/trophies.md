@@ -402,6 +402,7 @@
     ??? example "Examples"
         - bloomberg/memray#922
         - bloomberg/pystack#292
+        - bloomberg/pytest-memray#179
 
 
 -   ![](https://github.com/bluesky-social.png?size=40){ width="40" loading=lazy align=left } bluesky-social
@@ -654,6 +655,14 @@
         - crate-ci/cargo-release#956
 
 
+-   ![](https://github.com/crossterm-rs.png?size=40){ width="40" loading=lazy align=left } crossterm-rs
+
+    ---
+
+    ??? example "Examples"
+        - crossterm-rs/crossterm#1076
+
+
 -   ![](https://github.com/csandman.png?size=40){ width="40" loading=lazy align=left } csandman
 
     ---
@@ -691,6 +700,14 @@
         - curl/curl@283ad5c4320fa1d733e60a0dbe216ee36e3924fb
         - curl/curl@ba9fe58d4331402a24495618668b2cc8afe9794e
         - curl/curl@e522f47986bb72f194636e155191d7dccdc2d4fc
+
+
+-   ![](https://github.com/cvat-ai.png?size=40){ width="40" loading=lazy align=left } cvat-ai
+
+    ---
+
+    ??? example "Examples"
+        - cvat-ai/cvat#10938
 
 
 -   ![](https://github.com/CycloneDX.png?size=40){ width="40" loading=lazy align=left } CycloneDX
@@ -955,6 +972,14 @@
         - endevco/pitchfork#434
 
 
+-   ![](https://github.com/endoflife-date.png?size=40){ width="40" loading=lazy align=left } endoflife-date
+
+    ---
+
+    ??? example "Examples"
+        - endoflife-date/release-data#610
+
+
 -   ![](https://github.com/endojs.png?size=40){ width="40" loading=lazy align=left } endojs
 
     ---
@@ -986,6 +1011,14 @@
     ??? example "Examples"
         - erlang/otp#11000
         - erlang/rebar3#3001
+
+
+-   ![](https://github.com/erlef.png?size=40){ width="40" loading=lazy align=left } erlef
+
+    ---
+
+    ??? example "Examples"
+        - erlef/oidcc#533
 
 
 -   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl
@@ -1381,6 +1414,14 @@
         - Homebrew/homebrew-core#195961
         - Homebrew/homebrew-core#201306
         - Homebrew/homebrew-portable-ruby#255
+
+
+-   ![](https://github.com/hplush.png?size=40){ width="40" loading=lazy align=left } hplush
+
+    ---
+
+    ??? example "Examples"
+        - hplush/slowreader@811da1f98bea76d6bfcd5768c134dc9e5cbcb754
 
 
 -   ![](https://github.com/huggingface.png?size=40){ width="40" loading=lazy align=left } huggingface
@@ -2712,6 +2753,7 @@
 
     ??? example "Examples"
         - python-trio/trio#3154
+        - python-trio/trio#3482
 
 
 -   ![](https://github.com/pyvista.png?size=40){ width="40" loading=lazy align=left } pyvista
@@ -2794,6 +2836,22 @@
 
     ??? example "Examples"
         - raydak-labs/configarr#457
+
+
+-   ![](https://github.com/RediSearch.png?size=40){ width="40" loading=lazy align=left } RediSearch
+
+    ---
+
+    ??? example "Examples"
+        - RediSearch/RediSearch#10654
+
+
+-   ![](https://github.com/redux-saga.png?size=40){ width="40" loading=lazy align=left } redux-saga
+
+    ---
+
+    ??? example "Examples"
+        - redux-saga/redux-saga#2771
 
 
 -   ![](https://github.com/renovatebot.png?size=40){ width="40" loading=lazy align=left } renovatebot
@@ -3025,6 +3083,14 @@
 
     ??? example "Examples"
         - scroll-tech/go-ethereum#1146
+
+
+-   ![](https://github.com/seantis.png?size=40){ width="40" loading=lazy align=left } seantis
+
+    ---
+
+    ??? example "Examples"
+        - seantis/suitable#58
 
 
 -   ![](https://github.com/sebp.png?size=40){ width="40" loading=lazy align=left } sebp
@@ -3702,6 +3768,14 @@
         - zed-industries/zed#61401
 
 
+-   ![](https://github.com/zenn-dev.png?size=40){ width="40" loading=lazy align=left } zenn-dev
+
+    ---
+
+    ??? example "Examples"
+        - zenn-dev/zenn-editor#691
+
+
 -   ![](https://github.com/zkonduit.png?size=40){ width="40" loading=lazy align=left } zkonduit
 
     ---
@@ -3717,4 +3791,5 @@
 
     ??? example "Examples"
         - zulip/docker-zulip#568
+        - zulip/zulip#39841
 
