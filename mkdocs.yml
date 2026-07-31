@@ -13,11 +13,11 @@ nav:
   - "installation.md"
   - "quickstart.md"
   - "usage.md"
+  - "audits.md"
+  - "configuration.md"
   - "integrations.md"
   - "troubleshooting.md"
   - "release-notes.md"
-  - "configuration.md"
-  - "audits.md"
   - "development.md"
   - "trophy-case.md"
 

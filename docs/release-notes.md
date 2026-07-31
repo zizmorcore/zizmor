@@ -29,6 +29,12 @@ of `zizmor`.
   whereas [unpinned-images] is now responsible for `docker://`-style `#!yaml uses:` clauses
   (in addition to already checking other image references) (#2222)
 
+### Removals 🌅
+
+* `--collect=workflows-only` and `--collect=actions-only` have been fully removed.
+  Use `--collect=workflows` and `--collect=actions` for the replacement behavior
+  (#2242)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a valid workflow definition for
