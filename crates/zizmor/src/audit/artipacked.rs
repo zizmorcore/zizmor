@@ -51,7 +51,12 @@ impl Artipacked {
             match self.client {
                 Some(ref client) => {
                     let tag = client
-                        .longest_tag_for_commit(uses.owner(), uses.repo(), uses.git_ref())
+                        .longest_tag_for_commit(
+                            uses.owner(),
+                            uses.repo(),
+                            uses.subpath(),
+                            uses.git_ref(),
+                        )
                         .await?;
 
                     match tag {
