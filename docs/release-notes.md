@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.29.0
+
 ### New Features 🌈
 
 * zizmor now has **experimental** support for auditing pre-commit inputs,
