@@ -1003,11 +1003,11 @@ Use [encrypted secrets] instead of hardcoded credentials.
 
 | Type     | Examples              | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-----------------------|---------------|----------------|--------------------|---------------|
-| Workflow, Action  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 | ❌  |
+| Workflow, Action, pre-commit  | [impostor-commit.yml] | v0.1.0        | ❌             | ✅                 | ❌  |
 
 [impostor-commit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/impostor-commit.yml
 
-Detects commits within a repository action's network that are not present on
+Detects commits within a repository Git's network that are not present on
 the repository itself, also known as "impostor" commits.
 
 GitHub represents a repository and its forks as a "network" of commits.
@@ -1016,8 +1016,8 @@ that exists only in a fork can be referenced via its parent's
 `owner/repo` slug, and vice versa.
 
 GitHub's network-of-forks design can be used to obscure a commit's true origin
-in a fully-pinned `#!yaml uses:` workflow reference. This can be used by an attacker
-to surreptitiously introduce a backdoored action into a victim's workflows(s).
+in a fully-pinned repository reference. This can be used by an attacker
+to surreptitiously introduce malicious code into a victim's workflows(s).
 
 A notable historical example of this is github/dmca@565ece486c7c1652754d7b6d2b5ed9cb4097f9d5,
 which appears to be on @github/dmca is but really on a fork (with an impersonated

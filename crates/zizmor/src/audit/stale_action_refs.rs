@@ -27,7 +27,7 @@ audit_meta!(
 
 impl StaleActionRefs {
     async fn is_stale_action_ref(&self, uses: &RepositoryUses) -> Result<bool, AuditError> {
-        let tag = match &uses.commit_ref() {
+        let tag = match uses.commit_ref() {
             Some(commit_ref) => self
                 .client
                 .longest_tag_for_commit(uses.owner(), uses.repo(), commit_ref)

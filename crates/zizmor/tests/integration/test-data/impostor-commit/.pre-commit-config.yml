@@ -1,0 +1,6 @@
+repos:
+  # not a real hook, but doesn't matter for our purposes
+  - repo: https://github.com/actions/checkout
+    rev: c7d749a2d57b4b375d1ebcd17cfbfb60c676f18e
+    hooks:
+    - id: fake

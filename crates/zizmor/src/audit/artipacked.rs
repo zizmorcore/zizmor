@@ -1,7 +1,7 @@
 use std::sync::LazyLock;
 
 use github_actions_models::common::{
-    EnvValue, Uses,
+    EnvValue, RepositoryUses, Uses,
     expr::{ExplicitExpr, LoE},
 };
 use itertools::Itertools as _;
@@ -43,7 +43,7 @@ impl Artipacked {
     /// we return `None`.
     async fn is_checkout_v6_or_higher(
         &self,
-        uses: &github_actions_models::common::RepositoryUses,
+        uses: &RepositoryUses,
     ) -> Result<Option<bool>, ClientError> {
         let version = if !uses.ref_is_commit() {
             uses.git_ref().to_string()

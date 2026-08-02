@@ -9,6 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* The [impostor-commit] audit now supports pre-commit config inputs (#2256)
+
 ## 1.29.0
 
 ### New Features 🌈

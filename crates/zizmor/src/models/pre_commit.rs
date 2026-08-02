@@ -5,6 +5,7 @@
 
 use std::sync::LazyLock;
 
+use pre_commit_models::config::RemoteRepo;
 use terminal_link::Link;
 
 use crate::{
@@ -152,11 +153,10 @@ impl<'doc> Repo<'doc> {
         }
     }
 
-    /// Returns the `repo: ...` field of this [`Repo`], if it's a "real"
-    /// repo (i.e. not `meta` or `local`).
-    pub(crate) fn repo(&self) -> Option<&'doc str> {
+    /// Returns the inner [`RemoteRepo`], if not a `local` or `meta` repo definition.
+    pub(crate) fn repo(&self) -> Option<&'doc RemoteRepo> {
         match self.inner {
-            pre_commit_models::config::Repo::Repo { repo, .. } => Some(repo.as_ref()),
+            pre_commit_models::config::Repo::Remote(remote) => Some(remote),
             _ => None,
         }
     }

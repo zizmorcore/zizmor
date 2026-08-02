@@ -15,6 +15,7 @@ version.workspace = true
 [dependencies]
 indexmap.workspace = true
 serde.workspace = true
+url.workspace = true
 
 [dev-dependencies]
 yaml_serde.workspace = true
