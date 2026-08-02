@@ -189,10 +189,7 @@ impl Audit for InsecureCommands {
 mod tests {
     use super::*;
     use crate::{
-        config::Config,
-        models::{AsDocument as _, workflow::Workflow},
-        registry::input::InputKey,
-        state::AuditState,
+        config::Config, models::workflow::Workflow, registry::input::InputKey, state::AuditState,
     };
 
     /// Macro for testing workflow audits with common boilerplate

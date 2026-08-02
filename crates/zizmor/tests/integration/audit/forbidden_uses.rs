@@ -1,4 +1,4 @@
-use crate::common::{OutputMode, input_under_test, zizmor};
+use crate::common::{OutputMode, WorkspaceBuilder, input_under_test, zizmor};
 use anyhow::Result;
 
 #[test]
@@ -26,7 +26,7 @@ fn test_deny_all() -> Result<()> {
             ))
             .run()?,
         @"
-    error[forbidden-uses]: forbidden action used
+    error[forbidden-uses]: forbidden action or repository used
       --> @@INPUT@@:13:15
        |
     13 |       - uses: actions/setup-python@v4
@@ -34,7 +34,7 @@ fn test_deny_all() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[forbidden-uses]: forbidden action used
+    error[forbidden-uses]: forbidden action or repository used
       --> @@INPUT@@:14:15
        |
     14 |       - uses: pypa/gh-action-pypi-publish@release/v1
@@ -42,7 +42,7 @@ fn test_deny_all() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[forbidden-uses]: forbidden action used
+    error[forbidden-uses]: forbidden action or repository used
       --> @@INPUT@@:15:15
        |
     15 |       - uses: actions/checkout@v4
@@ -67,7 +67,7 @@ fn test_allow_some() -> Result<()> {
             ))
             .run()?,
         @"
-    error[forbidden-uses]: forbidden action used
+    error[forbidden-uses]: forbidden action or repository used
       --> @@INPUT@@:13:15
        |
     13 |       - uses: actions/setup-python@v4
@@ -92,7 +92,7 @@ fn test_deny_some() -> Result<()> {
             ))
             .run()?,
         @"
-    error[forbidden-uses]: forbidden action used
+    error[forbidden-uses]: forbidden action or repository used
       --> @@INPUT@@:14:15
        |
     14 |       - uses: pypa/gh-action-pypi-publish@release/v1
@@ -100,7 +100,7 @@ fn test_deny_some() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[forbidden-uses]: forbidden action used
+    error[forbidden-uses]: forbidden action or repository used
       --> @@INPUT@@:15:15
        |
     15 |       - uses: actions/checkout@v4
@@ -125,7 +125,7 @@ fn test_deny_some_refs() -> Result<()> {
             ))
             .run()?,
         @"
-    error[forbidden-uses]: forbidden action used
+    error[forbidden-uses]: forbidden action or repository used
       --> @@INPUT@@:13:15
        |
     13 |       - uses: actions/setup-python@v4
@@ -133,7 +133,7 @@ fn test_deny_some_refs() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[forbidden-uses]: forbidden action used
+    error[forbidden-uses]: forbidden action or repository used
       --> @@INPUT@@:14:15
        |
     14 |       - uses: pypa/gh-action-pypi-publish@release/v1
@@ -158,7 +158,7 @@ fn test_allow_some_refs() -> Result<()> {
             ))
             .run()?,
         @"
-    error[forbidden-uses]: forbidden action used
+    error[forbidden-uses]: forbidden action or repository used
       --> @@INPUT@@:15:15
        |
     15 |       - uses: actions/checkout@v4
@@ -225,6 +225,44 @@ fn test_config_invalid_variant() -> Result<()> {
         0: configuration error in @@CONFIG@@
         1: invalid syntax for audit `forbidden-uses`
         2: unknown variant `mystery-variant`, expected `allow` or `deny`
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_pre_commit() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.copy(
+        &*input_under_test("forbidden-uses/pre-commit/basic.yml"),
+        ".pre-commit-config.yml",
+    );
+    workspace.add_file(
+        "zizmor.yml",
+        r#"
+rules:
+  forbidden-uses:
+    config:
+      deny:
+        - "zizmorcore/zizmor-pre-commit"
+"#,
+    );
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(workspace.path())
+            .run()?,
+        @"
+    error[forbidden-uses]: forbidden action or repository used
+     --> @@INPUT@@/.pre-commit-config.yml:2:11
+      |
+    2 |   - repo: https://github.com/zizmorcore/zizmor-pre-commit
+      |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this repository is forbidden
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
     "
     );
 

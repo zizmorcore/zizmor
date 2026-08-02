@@ -346,7 +346,6 @@ impl Audit for Obfuscation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::audit::Audit as _;
     use crate::models::{AsDocument as _, workflow::Workflow};
     use crate::registry::input::InputKey;
     use crate::state::AuditState;
