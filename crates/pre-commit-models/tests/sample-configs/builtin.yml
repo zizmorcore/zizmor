@@ -1,0 +1,12 @@
+---
+fail_fast: false
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+repos:
+  - repo: builtin
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^dist/
+      - id: check-yaml
+        args: [--allow-multiple-documents]

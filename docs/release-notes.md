@@ -13,6 +13,11 @@ of `zizmor`.
 
 * The [impostor-commit] audit now supports pre-commit config inputs (#2256)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
+  input containing a `prek`-specific `builtin` section (#2259)
+
 ## 1.29.0
 
 ### New Features 🌈

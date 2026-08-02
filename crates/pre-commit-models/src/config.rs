@@ -71,6 +71,12 @@ pub enum Repo {
     /// See: <https://pre-commit.com/#meta-hooks>
     // TODO: Fill this in, it's a fixed set of IDs for hooks.
     Meta {},
+    /// A special 'builtin` repository, for hooks defined by prek itself.
+    ///
+    /// This is a prek-specific extension.
+    ///
+    /// See: <https://prek.j178.dev/builtin/#2-explicit-builtin-repository>
+    Builtin {},
     #[serde(untagged)]
     Remote(RemoteRepo),
 }
