@@ -1110,14 +1110,13 @@ mod tests {
         )
         .unwrap();
 
-        let uses = RepositoryUses::parse("woodruffw-experiments/zizmor-recursive-tags").unwrap();
-        let slug = Slug::from(&uses);
+        let uses = &RepositoryUses::parse("woodruffw-experiments/zizmor-recursive-tags").unwrap();
 
         // No hop: 3fdd4fca8fc76b254cefefca92381c41b28d1f0d is already a
         // commit SHA, so we get `Ok(None)`.
         assert_eq!(
             client
-                .tag_sha_to_commit_sha(&slug, "3fdd4fca8fc76b254cefefca92381c41b28d1f0d")
+                .tag_sha_to_commit_sha(&uses.into(), "3fdd4fca8fc76b254cefefca92381c41b28d1f0d")
                 .await
                 .unwrap(),
             None
@@ -1127,7 +1126,7 @@ mod tests {
         // at commit 3fdd4fca8fc76b254cefefca92381c41b28d1f0d.
         assert_eq!(
             client
-                .tag_sha_to_commit_sha(&slug, "06f9d47abf340b709b412900a7b3ce33557d32b5")
+                .tag_sha_to_commit_sha(&uses.into(), "06f9d47abf340b709b412900a7b3ce33557d32b5")
                 .await
                 .unwrap(),
             Some("3fdd4fca8fc76b254cefefca92381c41b28d1f0d".into())
@@ -1138,7 +1137,7 @@ mod tests {
         // 3fdd4fca8fc76b254cefefca92381.
         assert_eq!(
             client
-                .tag_sha_to_commit_sha(&slug, "bcb36f3d551340e11b88c376e74e8ae77fc6cf0b")
+                .tag_sha_to_commit_sha(&uses.into(), "bcb36f3d551340e11b88c376e74e8ae77fc6cf0b")
                 .await
                 .unwrap(),
             Some("3fdd4fca8fc76b254cefefca92381c41b28d1f0d".into())
@@ -1150,7 +1149,7 @@ mod tests {
         // 3fdd4fca8fc76b254cefefca92381c41b.
         assert_eq!(
             client
-                .tag_sha_to_commit_sha(&slug, "1accca34bff60347d96faaf713d328ca1250d37b")
+                .tag_sha_to_commit_sha(&uses.into(), "1accca34bff60347d96faaf713d328ca1250d37b")
                 .await
                 .unwrap(),
             Some("3fdd4fca8fc76b254cefefca92381c41b28d1f0d".into())
