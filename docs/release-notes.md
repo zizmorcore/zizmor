@@ -15,6 +15,11 @@ of `zizmor`.
 
 * The [forbidden-uses] audit now supports pre-commit config inputs (#2263)
 
+* The [adhoc-packages] audit now detects more ad-hoc package management patterns,
+  including `bundle add` and `yarn add`
+
+    Many thanks to @connorshea for proposing and implementing this enhancement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
