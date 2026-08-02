@@ -154,8 +154,6 @@ impl std::fmt::Display for InputKind {
 }
 
 /// A GitHub repository slug used as an input to `zizmor`, i.e. `owner/repo[@ref]`.
-///
-/// TODO(ww): Does it make sense to dedupe this with [`crate::models::repo_ref::Slug`]?
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub(crate) struct InputSlug {
     /// The owner of the repository.
