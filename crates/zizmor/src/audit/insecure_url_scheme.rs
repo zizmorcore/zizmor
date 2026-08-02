@@ -47,18 +47,11 @@ impl Audit for InsecureURLScheme {
         let mut findings = vec![];
 
         // `meta` and `local` "repos" don't have a useful `repo:` URL field.
-        let Some(url) = repo.repo() else {
+        let Some(remote) = repo.repo() else {
             return Ok(findings);
         };
 
-        let Ok(parsed) = url::Url::parse(url) else {
-            // TODO: Is this warning too aggressive? Maybe it's common to put
-            // file paths (without `file://`) in `repo:`?
-            tracing::warn!("couldn't parse URL in pre-commit `repo:` clause: {url:?}");
-            return Ok(findings);
-        };
-
-        if !INSECURE_SCHEMES.contains(parsed.scheme()) {
+        if !INSECURE_SCHEMES.contains(&remote.repo.scheme()) {
             return Ok(findings);
         }
 
@@ -76,9 +69,9 @@ impl Audit for InsecureURLScheme {
                         .with_keys(["repo".into()])
                         .annotated(format!(
                             "repository URL uses an insecure scheme: {scheme:?}",
-                            scheme = parsed.scheme()
+                            scheme = remote.repo.scheme()
                         ))
-                        .subfeature(Subfeature::new(0, url)),
+                        .subfeature(Subfeature::new(0, remote.repo.as_str())),
                 )
                 .build(repo)?,
         );

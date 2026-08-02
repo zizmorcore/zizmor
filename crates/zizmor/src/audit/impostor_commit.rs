@@ -19,6 +19,7 @@ use crate::{
     github::{self, ComparisonStatus},
     models::{
         StepCommon as _,
+        pre_commit::PreCommitConfig,
         repo_ref::{RepoRef, Slug},
         workflow::Workflow,
     },
@@ -380,6 +381,38 @@ impl Audit for ImpostorCommit {
                 );
 
             findings.push(finding_builder.build(step).map_err(Self::err)?);
+        }
+
+        Ok(findings)
+    }
+
+    async fn audit_pre_commit_config<'doc>(
+        &self,
+        pre_commit: &'doc PreCommitConfig,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let mut findings = vec![];
+
+        for repo in pre_commit.repos() {
+            let Some(remote) = repo.repo() else {
+                continue;
+            };
+
+            if self.impostor(remote).await? {
+                findings.push(
+                    Self::finding()
+                        .severity(Severity::High)
+                        .confidence(Confidence::High)
+                        .add_location(repo.location_with_grip())
+                        .add_location(
+                            repo.location()
+                                .with_keys(["rev".into()])
+                                .annotated(IMPOSTOR_ANNOTATION)
+                                .primary(),
+                        )
+                        .build(pre_commit)?,
+                );
+            }
         }
 
         Ok(findings)
