@@ -335,7 +335,7 @@ mod tests {
             ("foo['bar']['baz']", None),  // too many parts
             ("fromJSON('{}').bar", None), // head is a call, not an identifier
         ] {
-            let ctx = Context::parse(*case).unwrap();
+            let ctx = Context::parse(case).unwrap();
             assert_eq!(ctx.single_tail(), *expected);
         }
     }
@@ -392,7 +392,7 @@ mod tests {
                 None,
             ),
         ] {
-            let ctx = Context::parse(*case).unwrap();
+            let ctx = Context::parse(case).unwrap();
             assert_eq!(ctx.as_pattern().as_deref(), *expected);
         }
     }
@@ -456,7 +456,7 @@ mod tests {
             ),
         ] {
             let pattern = ContextPattern::try_new(pattern).unwrap();
-            let ctx = Context::parse(*ctx).unwrap();
+            let ctx = Context::parse(ctx).unwrap();
             assert_eq!(pattern.parent_of(&ctx), *expected);
         }
     }
@@ -507,7 +507,7 @@ mod tests {
         ] {
             let pattern = ContextPattern::try_new(pattern)
                 .unwrap_or_else(|| panic!("invalid pattern: {pattern}"));
-            let ctx = Context::parse(*ctx).unwrap();
+            let ctx = Context::parse(ctx).unwrap();
             assert_eq!(pattern.matches(&ctx), *expected);
         }
     }

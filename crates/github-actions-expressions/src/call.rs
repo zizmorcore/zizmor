@@ -605,10 +605,10 @@ mod tests {
             let parsed = from_expr.consteval().unwrap();
 
             // Convert back with toJSON (using a dummy toJSON call structure)
-            let to_result = Call::consteval_tojson(&[parsed.clone()]).unwrap();
+            let to_result = Call::consteval_tojson(std::slice::from_ref(&parsed)).unwrap();
 
             // Parse the result again to compare structure
-            let reparsed_expr_str = format!("fromJSON('{}')", to_result.sema().to_string());
+            let reparsed_expr_str = format!("fromJSON('{}')", to_result.sema());
             let reparsed_expr = Expr::parse(&reparsed_expr_str)?;
             let reparsed = reparsed_expr.consteval().unwrap();
 

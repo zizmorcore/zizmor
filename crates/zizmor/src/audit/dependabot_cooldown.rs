@@ -167,7 +167,7 @@ mod tests {
     use super::*;
     use crate::{
         config::Config,
-        models::{AsDocument, dependabot::Dependabot},
+        models::{AsDocument as _, dependabot::Dependabot},
         registry::input::InputKey,
         state::AuditState,
     };

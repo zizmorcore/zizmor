@@ -413,7 +413,7 @@ mod tests {
     use crate::{
         config::Config,
         finding::Finding,
-        models::{AsDocument, workflow::Workflow},
+        models::{AsDocument as _, workflow::Workflow},
         registry::input::InputKey,
         state::AuditState,
     };
@@ -529,10 +529,10 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("replace spoofable actor context") {
-                            if let Ok(new_content) = fix.apply(&document) {
-                                document = new_content;
-                            }
+                        if fix.title.contains("replace spoofable actor context")
+                            && let Ok(new_content) = fix.apply(&document)
+                        {
+                            document = new_content;
                         }
                     }
                 }
@@ -633,10 +633,10 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("replace spoofable actor context") {
-                            if let Ok(new_document) = fix.apply(&document) {
-                                document = new_document;
-                            }
+                        if fix.title.contains("replace spoofable actor context")
+                            && let Ok(new_document) = fix.apply(&document)
+                        {
+                            document = new_document;
                         }
                     }
                 }
@@ -683,10 +683,10 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("replace spoofable actor context") {
-                            if let Ok(new_document) = fix.apply(&document) {
-                                document = new_document;
-                            }
+                        if fix.title.contains("replace spoofable actor context")
+                            && let Ok(new_document) = fix.apply(&document)
+                        {
+                            document = new_document;
                         }
                     }
                 }
@@ -733,10 +733,10 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("replace spoofable actor context") {
-                            if let Ok(new_document) = fix.apply(&document) {
-                                document = new_document;
-                            }
+                        if fix.title.contains("replace spoofable actor context")
+                            && let Ok(new_document) = fix.apply(&document)
+                        {
+                            document = new_document;
                         }
                     }
                 }
@@ -783,10 +783,10 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("replace spoofable actor context") {
-                            if let Ok(new_document) = fix.apply(&document) {
-                                document = new_document;
-                            }
+                        if fix.title.contains("replace spoofable actor context")
+                            && let Ok(new_document) = fix.apply(&document)
+                        {
+                            document = new_document;
                         }
                     }
                 }
@@ -833,10 +833,10 @@ jobs:
                 let mut document = workflow.as_document().clone();
                 for finding in &findings {
                     for fix in &finding.fixes {
-                        if fix.title.contains("replace spoofable actor context") {
-                            if let Ok(new_document) = fix.apply(&document) {
-                                document = new_document;
-                            }
+                        if fix.title.contains("replace spoofable actor context")
+                            && let Ok(new_document) = fix.apply(&document)
+                        {
+                            document = new_document;
                         }
                     }
                 }

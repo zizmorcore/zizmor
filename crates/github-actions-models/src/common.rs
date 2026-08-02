@@ -1154,10 +1154,10 @@ mod tests {
             x: bool,
         }
 
-        assert_eq!(yaml_serde::from_str::<Dummy>("x:").unwrap().x, true);
+        assert!(yaml_serde::from_str::<Dummy>("x:").unwrap().x);
         // TODO: Not sure if this is an overcorrection.
-        assert_eq!(yaml_serde::from_str::<Dummy>("x: null").unwrap().x, true);
-        assert_eq!(yaml_serde::from_str::<Dummy>("x: true").unwrap().x, true);
-        assert_eq!(yaml_serde::from_str::<Dummy>("x: false").unwrap().x, false)
+        assert!(yaml_serde::from_str::<Dummy>("x: null").unwrap().x);
+        assert!(yaml_serde::from_str::<Dummy>("x: true").unwrap().x);
+        assert!(!yaml_serde::from_str::<Dummy>("x: false").unwrap().x)
     }
 }

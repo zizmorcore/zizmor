@@ -401,7 +401,7 @@ pub(crate) enum Usage {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use github_actions_models::common::EnvValue;
     use indexmap::IndexMap;

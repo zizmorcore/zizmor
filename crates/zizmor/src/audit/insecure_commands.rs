@@ -190,7 +190,7 @@ mod tests {
     use super::*;
     use crate::{
         config::Config,
-        models::{AsDocument, workflow::Workflow},
+        models::{AsDocument as _, workflow::Workflow},
         registry::input::InputKey,
         state::AuditState,
     };

@@ -544,7 +544,7 @@ impl Workspace {
         let name = name.into();
 
         if let Some(parent) = name.parent() {
-            fs::create_dir_all(&parent).expect("failed to create parent directories: {parent}");
+            fs::create_dir_all(parent).expect("failed to create parent directories: {parent}");
         }
 
         let destination = self.path().join(name);
@@ -572,7 +572,7 @@ impl Workspace {
                 let path = Utf8Path::from_path(entry.path()).unwrap();
 
                 // Strip the source prefix to find the relative path inside the tree
-                let relative_path = path.strip_prefix(&source).unwrap();
+                let relative_path = path.strip_prefix(source).unwrap();
                 let dest_path = dest.join(relative_path);
 
                 if entry.file_type().is_dir() {

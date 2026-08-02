@@ -284,7 +284,7 @@ mod tests {
 
     use crate::{
         models::{
-            AsDocument,
+            AsDocument as _,
             workflow::{NormalJob, Workflow, matrix::Matrix},
         },
         registry::input::InputKey,

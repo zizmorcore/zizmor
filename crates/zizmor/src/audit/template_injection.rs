@@ -643,10 +643,10 @@ impl Audit for TemplateInjection {
 mod tests {
     use github_actions_expressions::Expr;
 
-    use crate::audit::Audit;
+    use crate::audit::Audit as _;
     use crate::audit::template_injection::{Capability, TemplateInjection};
     use crate::config::Config;
-    use crate::models::AsDocument;
+    use crate::models::AsDocument as _;
     use crate::models::workflow::Workflow;
     use crate::registry::input::InputKey;
     use crate::state::AuditState;
@@ -927,10 +927,9 @@ jobs:
                         .fixes
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
+                        && let Ok(new_document) = fix.apply(&current_document)
                     {
-                        if let Ok(new_document) = fix.apply(&current_document) {
-                            current_document = new_document;
-                        }
+                        current_document = new_document;
                     }
                 }
 
@@ -994,10 +993,9 @@ jobs:
                         .fixes
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
+                        && let Ok(new_document) = fix.apply(&current_document)
                     {
-                        if let Ok(new_document) = fix.apply(&current_document) {
-                            current_document = new_document;
-                        }
+                        current_document = new_document;
                     }
                 }
 
@@ -1055,10 +1053,9 @@ jobs:
                         .fixes
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
+                        && let Ok(new_document) = fix.apply(&current_document)
                     {
-                        if let Ok(new_document) = fix.apply(&current_document) {
-                            current_document = new_document;
-                        }
+                        current_document = new_document;
                     }
                 }
 
@@ -1119,10 +1116,9 @@ jobs:
                         .fixes
                         .iter()
                         .find(|f| f.title == "replace expression with environment variable")
+                        && let Ok(new_document) = fix.apply(&current_document)
                     {
-                        if let Ok(new_document) = fix.apply(&current_document) {
-                            current_document = new_document;
-                        }
+                        current_document = new_document;
                     }
                 }
 

@@ -2316,18 +2316,18 @@ fn test_debug_indentation_issue() {
     assert!(is_list_item, "Path should indicate this is a list item");
 
     // Test indentation calculation for key-value pairs
-    if let Some(first_line) = feature_with_ws.lines().next() {
-        if let Some(_colon_pos) = first_line.find(':') {
-            let key_indent = &first_line[..first_line.len() - first_line.trim_start().len()];
-            let final_indent = format!("{key_indent}  ");
+    if let Some(first_line) = feature_with_ws.lines().next()
+        && let Some(_colon_pos) = first_line.find(':')
+    {
+        let key_indent = &first_line[..first_line.len() - first_line.trim_start().len()];
+        let final_indent = format!("{key_indent}  ");
 
-            // Assert that indentation calculation works correctly
-            assert!(!final_indent.is_empty(), "Final indent should not be empty");
-            assert!(
-                final_indent.len() >= 2,
-                "Final indent should have at least 2 spaces"
-            );
-        }
+        // Assert that indentation calculation works correctly
+        assert!(!final_indent.is_empty(), "Final indent should not be empty");
+        assert!(
+            final_indent.len() >= 2,
+            "Final indent should have at least 2 spaces"
+        );
     }
 
     // Test leading whitespace extraction function
@@ -2410,10 +2410,10 @@ jobs:
                             // Verify that we can iterate over the env mapping
                             let mut found_identity = false;
                             for (k, _v) in env_mapping {
-                                if let yaml_serde::Value::String(key_str) = k {
-                                    if key_str == "IDENTITY" {
-                                        found_identity = true;
-                                    }
+                                if let yaml_serde::Value::String(key_str) = k
+                                    && key_str == "IDENTITY"
+                                {
+                                    found_identity = true;
                                 }
                             }
                             assert!(found_identity, "Should find IDENTITY key in env mapping");

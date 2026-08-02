@@ -834,7 +834,7 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use super::WorkflowRule;
 
