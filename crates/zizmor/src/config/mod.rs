@@ -377,7 +377,7 @@ impl UnpinnedUsesPolicies {
                 // Policies are ordered by specificity, so we can
                 // iterate and return eagerly.
                 for (uses_pattern, policy) in policies {
-                    if uses_pattern.matches(uses) {
+                    if uses_pattern.matches(&uses.into()) {
                         return (Some(uses_pattern), *policy);
                     }
                 }
@@ -834,7 +834,7 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use super::WorkflowRule;
 

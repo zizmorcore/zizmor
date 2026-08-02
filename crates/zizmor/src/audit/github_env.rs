@@ -475,7 +475,7 @@ impl Audit for GitHubEnv {
 
 #[cfg(test)]
 mod tests {
-    use crate::audit::Audit;
+    use crate::audit::Audit as _;
     use crate::audit::github_env::{GITHUB_ENV_WRITE_CMD, GitHubEnv};
     use crate::state::AuditState;
 

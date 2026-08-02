@@ -4,33 +4,35 @@ use subfeature::Subfeature;
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
 use crate::config::{Config, ForbiddenUsesConfigInner};
+use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Persona, Severity};
+use crate::models::pre_commit::PreCommitConfig;
+use crate::models::repo_ref::RepoRef;
 use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
 
 pub(crate) struct ForbiddenUses;
 
-audit_meta!(ForbiddenUses, "forbidden-uses", "forbidden action used");
+audit_meta!(
+    ForbiddenUses,
+    "forbidden-uses",
+    "forbidden action or repository used"
+);
 
 impl ForbiddenUses {
-    fn use_denied(&self, uses: &Uses, config: &ForbiddenUsesConfigInner) -> bool {
-        match uses {
-            // Local uses are never denied.
-            Uses::Local(_) => false,
-            // TODO: Support Docker uses here?
-            // We'd need some equivalent to RepositoryUsesPattern
-            // but for Docker uses, which will be slightly annoying.
-            Uses::Docker(_) => {
-                tracing::warn!("can't evaluate direct Docker uses");
-                false
+    fn use_denied<'doc>(
+        &self,
+        repo: impl Into<RepoRef<'doc>>,
+        config: &ForbiddenUsesConfigInner,
+    ) -> bool {
+        let repo = repo.into();
+
+        match config {
+            ForbiddenUsesConfigInner::Allow(allow) => {
+                !allow.iter().any(|pattern| pattern.matches(&repo))
             }
-            Uses::Repository(uses) => match config {
-                ForbiddenUsesConfigInner::Allow(allow) => {
-                    !allow.iter().any(|pattern| pattern.matches(uses))
-                }
-                ForbiddenUsesConfigInner::Deny(deny) => {
-                    deny.iter().any(|pattern| pattern.matches(uses))
-                }
-            },
+            ForbiddenUsesConfigInner::Deny(deny) => {
+                deny.iter().any(|pattern| pattern.matches(&repo))
+            }
         }
     }
 
@@ -46,7 +48,7 @@ impl ForbiddenUses {
             return Ok(findings);
         };
 
-        let Some(uses) = step.uses() else {
+        let Some(Uses::Repository(uses)) = step.uses() else {
             return Ok(findings);
         };
 
@@ -88,11 +90,49 @@ impl Audit for ForbiddenUses {
         self.process_step(step, config)
     }
 
-    async fn audit_composite_step<'a>(
+    async fn audit_composite_step<'doc>(
         &self,
-        step: &CompositeStep<'a>,
+        step: &CompositeStep<'doc>,
         config: &Config,
-    ) -> Result<Vec<Finding<'a>>, AuditError> {
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step, config)
+    }
+
+    async fn audit_pre_commit_config<'doc>(
+        &self,
+        pre_commit: &'doc PreCommitConfig,
+        config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let mut findings = vec![];
+
+        let Some(config) = config.forbidden_uses_config.as_ref() else {
+            tracing::trace!("no forbidden-uses config for this input; skipping");
+            return Ok(findings);
+        };
+
+        for repo in pre_commit.repos() {
+            let Some(remote) = repo.repo() else {
+                continue;
+            };
+
+            if self.use_denied(remote, config) {
+                findings.push(
+                    Self::finding()
+                        .confidence(Confidence::High)
+                        .severity(Severity::High)
+                        .persona(Persona::Regular)
+                        .add_location(
+                            repo.location()
+                                .with_keys(["repo".into()])
+                                .subfeature(Subfeature::new(0, remote.repo.as_str()))
+                                .annotated("use of this repository is forbidden")
+                                .primary(),
+                        )
+                        .build(pre_commit)?,
+                );
+            }
+        }
+
+        Ok(findings)
     }
 }

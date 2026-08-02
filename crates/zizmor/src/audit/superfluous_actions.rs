@@ -162,7 +162,7 @@ impl SuperfluousActions {
 
         let mut findings = vec![];
         for (pattern, recommendation, persona, confidence) in SUPERFLUOUS_ACTIONS.iter() {
-            if pattern.matches(uses) {
+            if pattern.matches(&uses.into()) {
                 findings.push(
                     Self::finding()
                         .confidence(*confidence)

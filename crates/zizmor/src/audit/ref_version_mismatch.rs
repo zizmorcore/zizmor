@@ -263,8 +263,8 @@ impl Audit for RefVersionMismatch {
 mod tests {
     use super::*;
     use crate::{
-        finding::location::Locatable,
-        models::{AsDocument, action::Action},
+        finding::location::Locatable as _,
+        models::{AsDocument as _, action::Action},
         registry::input::InputKey,
     };
 

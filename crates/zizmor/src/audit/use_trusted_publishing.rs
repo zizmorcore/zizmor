@@ -562,7 +562,7 @@ mod tests {
             (&["dotnet", "build"][..], false),
         ] {
             let cmd = args[0];
-            let args_iter = args[1..].iter().map(|s| *s);
+            let args_iter = args[1..].iter().copied();
             assert_eq!(
                 super::UseTrustedPublishing::is_publish_command(cmd, args_iter),
                 *is_publish_command,

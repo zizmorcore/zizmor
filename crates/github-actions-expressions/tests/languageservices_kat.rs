@@ -143,13 +143,13 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
                     }
                     // Evaluation errors
                     ErrorKind::Evaluation => {
-                        if let Ok(parsed) = Expr::parse(&case.expr) {
-                            if parsed.consteval().is_some() {
-                                failures.push(format!(
-                                    "{label}: expected eval error {:?} but got a result",
-                                    err.value
-                                ));
-                            }
+                        if let Ok(parsed) = Expr::parse(&case.expr)
+                            && parsed.consteval().is_some()
+                        {
+                            failures.push(format!(
+                                "{label}: expected eval error {:?} but got a result",
+                                err.value
+                            ));
                         }
                     }
                 }

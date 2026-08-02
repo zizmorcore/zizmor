@@ -5,7 +5,7 @@ use github_actions_models::common::RepositoryUses;
 use pre_commit_models::config::RemoteRepo;
 use url::Url;
 
-use crate::utils::once::warn_once;
+use crate::{models::uses::RepositoryUsesPattern, utils::once::warn_once};
 
 /// A GitHub `owner/repo` slug.
 #[derive(Copy, Clone, Debug)]
@@ -152,6 +152,18 @@ impl<'doc> RepoRef<'doc> {
             git_ref if !self.ref_is_commit() => Some(*git_ref),
             _ => None,
         }
+    }
+
+    /// Returns whether this repository reference matches the given pattern.
+    ///
+    /// This uses [`RepositoryUsesPattern`] under the hood, and follows the
+    /// same matching rules.
+    pub(crate) fn matches(&self, template: &str) -> bool {
+        let Ok(pat) = template.parse::<RepositoryUsesPattern>() else {
+            return false;
+        };
+
+        pat.matches(self)
     }
 }
 

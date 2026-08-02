@@ -13,6 +13,8 @@ of `zizmor`.
 
 * The [impostor-commit] audit now supports pre-commit config inputs (#2256)
 
+* The [forbidden-uses] audit now supports pre-commit config inputs (#2263)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`

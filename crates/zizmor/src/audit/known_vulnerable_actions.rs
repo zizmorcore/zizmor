@@ -344,7 +344,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        models::{AsDocument, workflow::Workflow},
+        models::{AsDocument as _, workflow::Workflow},
         registry::input::InputKey,
     };
 

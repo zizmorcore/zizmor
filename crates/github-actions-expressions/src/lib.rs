@@ -2642,7 +2642,7 @@ mod tests {
         let leaves = expr.leaf_expressions();
         assert_eq!(leaves.len(), 2);
         assert!(matches!(&leaves[0].inner, Expr::Literal(Literal::String(s)) if s == "redis:7"));
-        assert!(matches!(&leaves[1].inner, Expr::Literal(Literal::String(s)) if s == ""));
+        assert!(matches!(&leaves[1].inner, Expr::Literal(Literal::String(s)) if s.is_empty()));
 
         // Comparison operators are leaves themselves (they produce booleans).
         let expr = Expr::parse("foo.bar == 'abc'")?;

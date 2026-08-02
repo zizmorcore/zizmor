@@ -1,0 +1,5 @@
+repos:
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: 451b56af716f9f0d0c2b816503a3fd0cf8b036fa
+    hooks:
+    - id: zizmor
