@@ -354,14 +354,11 @@ shells. It supports all of the shells supported by
 [`clap_complete`](https://crates.io/crates/clap_complete),
 which includes popular shells like `bash`, `zsh`, and `fish`.
 
-To enable tab completion, you can use the `--completions=<shell>` flag
-to emit a completion script for the specified shell.
-
 !!! tip
 
     You can run `echo $SHELL` to help you determine your shell.
 
-Run one of the following:
+To enable shell autocompletion for zizmor, run one of the following:
 
 === "Bash"
 
