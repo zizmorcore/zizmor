@@ -163,16 +163,7 @@ impl<'doc> RepoRef<'doc> {
             return false;
         };
 
-        match self {
-            RepoRef::Uses(uses) => pat.matches_uses(uses),
-            RepoRef::Url {
-                _url,
-                slug: Some(slug),
-                git_ref,
-            } => pat.matches_slug(slug, git_ref),
-            // Our URL doesn't have a slug, so we can't meaningfully match it (yet).
-            _ => false,
-        }
+        pat.matches(self)
     }
 }
 

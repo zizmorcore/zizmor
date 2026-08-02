@@ -77,7 +77,20 @@ pub(crate) enum RepositoryUsesPattern {
 }
 
 impl RepositoryUsesPattern {
-    pub(crate) fn matches_slug(&self, slug: &Slug<'_>, slug_git_ref: &str) -> bool {
+    pub(crate) fn matches<'doc>(&self, repo: &RepoRef<'doc>) -> bool {
+        match repo {
+            RepoRef::Uses(uses) => self.matches_uses(uses),
+            RepoRef::Url {
+                _url,
+                slug: Some(slug),
+                git_ref,
+            } => self.matches_slug(&slug, git_ref),
+            // Our URL doesn't have a slug, so we can't meaningfully match it (yet).
+            _ => false,
+        }
+    }
+
+    fn matches_slug(&self, slug: &Slug<'_>, slug_git_ref: &str) -> bool {
         match self {
             RepositoryUsesPattern::ExactWithRef {
                 owner,
@@ -105,7 +118,7 @@ impl RepositoryUsesPattern {
         }
     }
 
-    pub(crate) fn matches_uses(&self, uses: &RepositoryUses) -> bool {
+    fn matches_uses(&self, uses: &RepositoryUses) -> bool {
         match self {
             RepositoryUsesPattern::ExactWithRef {
                 owner,
@@ -442,7 +455,7 @@ mod tests {
     }
 
     #[test]
-    fn test_repositoryusespattern_matches() -> anyhow::Result<()> {
+    fn test_repositoryusespattern_matches_uses() -> anyhow::Result<()> {
         for (uses, pattern, matches) in [
             // OK: case-insensitive, except subpath and tag
             ("actions/checkout@v3", "Actions/Checkout@v3", true),

@@ -25,10 +25,10 @@ impl ForbiddenUses {
             }
             Uses::Repository(uses) => match config {
                 ForbiddenUsesConfigInner::Allow(allow) => {
-                    !allow.iter().any(|pattern| pattern.matches_uses(uses))
+                    !allow.iter().any(|pattern| pattern.matches(&uses.into()))
                 }
                 ForbiddenUsesConfigInner::Deny(deny) => {
-                    deny.iter().any(|pattern| pattern.matches_uses(uses))
+                    deny.iter().any(|pattern| pattern.matches(&uses.into()))
                 }
             },
         }
