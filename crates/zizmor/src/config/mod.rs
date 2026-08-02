@@ -28,7 +28,7 @@ use crate::{
     finding::{Finding, Severity},
     github::{Client, ClientError},
     models::uses::RepositoryUsesPattern,
-    registry::input::RepoSlug,
+    registry::input::InputSlug,
 };
 
 const CONFIG_CANDIDATES: &[&str] = &[
@@ -703,7 +703,7 @@ impl Config {
     /// in the repository's root directory.
     pub(crate) async fn discover_remote(
         client: &Client,
-        slug: &RepoSlug,
+        slug: &InputSlug,
     ) -> Result<Option<Self>, ConfigError> {
         for candidate in CONFIG_CANDIDATES {
             match client.fetch_single_file(slug, candidate).await {

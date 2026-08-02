@@ -22,6 +22,7 @@ use crate::{
         action::Action,
         dependabot::Dependabot,
         pre_commit::{PreCommitConfig, PreCommitHooks},
+        repo_ref::Slug,
         workflow::Workflow,
     },
 };
@@ -66,7 +67,7 @@ pub(crate) enum CollectionError {
     /// functional GitHub client (maybe because we're offline, or
     /// because no token was provided).
     #[error("can't fetch remote repository: {0}")]
-    NoGitHubClient(RepoSlug),
+    NoGitHubClient(InputSlug),
 
     /// An error occurred while processing ignore rules.
     #[error("error while processing ignore rules")]
@@ -110,7 +111,7 @@ pub(crate) enum CollectionError {
         "remote input has an ambiguous Git reference ({0:?} is both a tag and a branch)",
         .slug.git_ref.as_deref().unwrap_or("HEAD"))
     ]
-    AmbiguousRemoteRef { slug: RepoSlug },
+    AmbiguousRemoteRef { slug: InputSlug },
 }
 
 impl CollectionError {
@@ -152,9 +153,9 @@ impl std::fmt::Display for InputKind {
     }
 }
 
-/// A GitHub repository slug, i.e. `owner/repo[@ref]`.
+/// A GitHub repository slug used as an input to `zizmor`, i.e. `owner/repo[@ref]`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub(crate) struct RepoSlug {
+pub(crate) struct InputSlug {
     /// The owner of the repository.
     pub(crate) owner: String,
     /// The name of the repository.
@@ -166,7 +167,7 @@ pub(crate) struct RepoSlug {
     git_ref: Option<String>,
 }
 
-impl RepoSlug {
+impl InputSlug {
     /// Returns a Git reference for this slug.
     ///
     /// This reference is the one provided by the slug if present,
@@ -176,7 +177,7 @@ impl RepoSlug {
     }
 }
 
-impl std::str::FromStr for RepoSlug {
+impl std::str::FromStr for InputSlug {
     type Err = CollectionError;
 
     /// NOTE: This is almost exactly the same as
@@ -188,21 +189,19 @@ impl std::str::FromStr for RepoSlug {
             None => (s, None),
         };
 
-        let components = path.split('/').collect::<Vec<_>>();
+        let Some(slug) = Slug::parse(path) else {
+            return Err(CollectionError::InvalidInput(s.into()));
+        };
 
-        match components.len() {
-            2 => Ok(Self {
-                owner: components[0].into(),
-                repo: components[1].into(),
-                git_ref: git_ref.map(|s| s.into()),
-            }),
-            x if x < 2 => Err(CollectionError::InvalidInput(s.into())),
-            _ => Err(CollectionError::InvalidInput(s.into())),
-        }
+        Ok(Self {
+            owner: slug.owner().into(),
+            repo: slug.repo().into(),
+            git_ref: git_ref.map(|s| s.into()),
+        })
     }
 }
 
-impl std::fmt::Display for RepoSlug {
+impl std::fmt::Display for InputSlug {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(ref git_ref) = self.git_ref {
             write!(f, "{}/{}@{}", self.owner, self.repo, git_ref)
@@ -298,7 +297,7 @@ pub(crate) struct RemoteKey {
     /// The group this input belongs to.
     #[serde(skip)]
     group: Group,
-    slug: RepoSlug,
+    slug: InputSlug,
     /// The path to the input file within the repository.
     path: Utf8PathBuf,
 }
@@ -381,7 +380,7 @@ impl InputKey {
         })
     }
 
-    pub(crate) fn remote(slug: &RepoSlug, path: String) -> Self {
+    pub(crate) fn remote(slug: &InputSlug, path: String) -> Self {
         Self::Remote(RemoteKey {
             group: slug.into(),
             slug: slug.clone(),
@@ -463,8 +462,8 @@ impl From<&str> for Group {
     }
 }
 
-impl From<&RepoSlug> for Group {
-    fn from(value: &RepoSlug) -> Self {
+impl From<&InputSlug> for Group {
+    fn from(value: &InputSlug) -> Self {
         Self(value.to_string())
     }
 }
@@ -772,7 +771,7 @@ impl InputGroup {
     }
 
     async fn collect_from_repo_slug(
-        slug: RepoSlug,
+        slug: InputSlug,
         options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
@@ -868,7 +867,7 @@ impl InputGroup {
         } else if path.is_dir() {
             Self::collect_from_dir(path, options).await
         } else {
-            let slug = RepoSlug::from_str(request)?;
+            let slug = InputSlug::from_str(request)?;
             Self::collect_from_repo_slug(slug, options, gh_client).await
         }
     }
@@ -979,7 +978,7 @@ mod tests {
 
     use crate::registry::input::InputGroup;
 
-    use super::{InputKey, RepoSlug};
+    use super::{InputKey, InputSlug};
 
     #[test]
     fn test_input_key_display() {
@@ -987,7 +986,7 @@ mod tests {
         assert_eq!(local.to_string(), "file:///foo/bar/baz.yml");
 
         // No ref
-        let slug = RepoSlug::from_str("foo/bar").unwrap();
+        let slug = InputSlug::from_str("foo/bar").unwrap();
         let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into());
         assert_eq!(
             remote.to_string(),
@@ -995,7 +994,7 @@ mod tests {
         );
 
         // With a git ref
-        let slug = RepoSlug::from_str("foo/bar@v1").unwrap();
+        let slug = InputSlug::from_str("foo/bar@v1").unwrap();
         let remote = InputKey::remote(&slug, ".github/workflows/baz.yml".into());
         assert_eq!(
             remote.to_string(),

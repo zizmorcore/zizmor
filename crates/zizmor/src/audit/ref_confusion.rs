@@ -49,12 +49,12 @@ impl RefConfusion {
         // TODO: use a tokio JoinSet here?
         let branches_match = self
             .client
-            .has_branch(slug.owner(), slug.repo(), sym_ref)
+            .has_branch(&slug, sym_ref)
             .await
             .map_err(Self::err)?;
         let tags_match = self
             .client
-            .has_tag(slug.owner(), slug.repo(), sym_ref)
+            .has_tag(&slug, sym_ref)
             .await
             .map_err(Self::err)?;
 
