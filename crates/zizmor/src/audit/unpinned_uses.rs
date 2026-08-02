@@ -10,7 +10,8 @@ use crate::config::{Config, UsesPolicy};
 use crate::finding::location::{Locatable, Routable as _};
 use crate::finding::{Confidence, Finding, Fix, Persona, Severity};
 use crate::github;
-use crate::models::uses::{RepositoryUsesExt as _, RepositoryUsesPattern};
+use crate::models::repo_ref::RepoRef;
+use crate::models::uses::RepositoryUsesPattern;
 use crate::models::version::Version;
 use crate::models::workflow::ReusableWorkflowCallJob;
 use crate::models::{
@@ -38,7 +39,7 @@ impl UnpinnedUses {
         };
 
         // There's nothing to fix if the ref is already a commit SHA.
-        if uses.ref_is_commit() {
+        if RepoRef::from(uses).ref_is_commit() {
             return None;
         }
 

@@ -156,7 +156,7 @@ impl<'doc> Repo<'doc> {
     /// repo (i.e. not `meta` or `local`).
     pub(crate) fn repo(&self) -> Option<&'doc str> {
         match self.inner {
-            pre_commit_models::config::Repo::Repo { repo, .. } => Some(repo.as_ref()),
+            pre_commit_models::config::Repo::Remote(remote) => Some(remote.repo.as_ref()),
             _ => None,
         }
     }

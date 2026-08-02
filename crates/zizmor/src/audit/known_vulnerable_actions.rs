@@ -14,7 +14,7 @@ use crate::{
     config::Config,
     finding::{Confidence, Finding, Fix, Severity, location::Routable as _},
     github,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
+    models::{StepCommon, action::CompositeStep, repo_ref::RepoRef, workflow::Step},
     state::AuditState,
 };
 use yamlpatch::{Op, Patch};
@@ -32,8 +32,13 @@ audit_meta!(
 impl KnownVulnerableActions {
     async fn action_known_vulnerabilities(
         &self,
-        uses: &RepositoryUses,
+        uses: impl Into<RepoRef<'_>>,
     ) -> Result<Vec<(Severity, String, Option<String>)>, AuditError> {
+        let uses = uses.into();
+        let Some(slug) = uses.slug() else {
+            return Ok(vec![]);
+        };
+
         let version = match &uses.git_ref() {
             // If `uses` is pinned to a symbolic ref, we need to perform
             // feats of heroism to figure out what's going on.
@@ -54,7 +59,7 @@ impl KnownVulnerableActions {
             version if !uses.ref_is_commit() => {
                 let Some(commit_ref) = self
                     .client
-                    .commit_for_ref(uses.owner(), uses.repo(), version)
+                    .commit_for_ref(slug.owner(), slug.repo(), version)
                     .await
                     .map_err(Self::err)?
                 else {
@@ -65,7 +70,7 @@ impl KnownVulnerableActions {
 
                 match self
                     .client
-                    .longest_tag_for_commit(uses.owner(), uses.repo(), &commit_ref)
+                    .longest_tag_for_commit(slug.owner(), slug.repo(), &commit_ref)
                     .await
                     .map_err(Self::err)?
                 {
@@ -84,7 +89,7 @@ impl KnownVulnerableActions {
             commit_ref => {
                 match self
                     .client
-                    .longest_tag_for_commit(uses.owner(), uses.repo(), commit_ref)
+                    .longest_tag_for_commit(slug.owner(), slug.repo(), commit_ref)
                     .await
                     .map_err(Self::err)?
                 {
@@ -100,7 +105,7 @@ impl KnownVulnerableActions {
 
         let advisories = self
             .client
-            .gha_advisories(uses.owner(), uses.repo(), &version)
+            .gha_advisories(slug.owner(), slug.repo(), &version)
             .await
             .map_err(Self::err)?;
 
@@ -130,7 +135,7 @@ impl KnownVulnerableActions {
                     // TODO(ww): it'd be nice to have a well-typed comparison
                     // for repo slugs, rather than just case-insensitive string equality here.
                     v.package.ecosystem == "actions"
-                        && v.package.name.eq_ignore_ascii_case(uses.slug())
+                        && v.package.name.eq_ignore_ascii_case(slug.slug())
                 })
                 .and_then(|v| v.first_patched_version.clone());
 
@@ -160,7 +165,7 @@ impl KnownVulnerableActions {
             (target_version, prefixed)
         };
 
-        match uses.ref_is_commit() {
+        match RepoRef::from(uses).ref_is_commit() {
             // If `uses` is pinned to a commit, then we need two patches:
             // one to change the `uses` clause to the new version,
             // and another to replace any existing version comment.

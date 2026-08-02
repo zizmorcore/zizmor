@@ -72,12 +72,20 @@ pub enum Repo {
     // TODO: Fill this in, it's a fixed set of IDs for hooks.
     Meta {},
     #[serde(untagged)]
-    Repo {
-        repo: String,
-        rev: String,
-        #[serde(deserialize_with = "common::non_empty_vec")]
-        hooks: Vec<Hook>,
-    },
+    Remote(RemoteRepo),
+}
+
+/// A remote repository reference, i.e. the home of one or more pre-commit hooks.
+///
+/// This reference is only "remote" in the sense that it's sourced via a URL.
+/// However, that URL could be `file://` or anything else.
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct RemoteRepo {
+    pub repo: url::Url,
+    pub rev: String,
+    #[serde(deserialize_with = "common::non_empty_vec")]
+    pub hooks: Vec<Hook>,
 }
 
 /// A single hook.

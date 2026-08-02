@@ -2060,6 +2060,7 @@ version = "1.29.0"
 dependencies = [
  "indexmap",
  "serde",
+ "url",
  "yaml_serde",
 ]
 

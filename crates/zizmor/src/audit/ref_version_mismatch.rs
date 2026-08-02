@@ -11,7 +11,7 @@ use crate::{
         location::{Comment, Feature, Location, Routable as _},
     },
     github,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
+    models::{StepCommon, action::CompositeStep, repo_ref::RepoRef, workflow::Step},
     utils::once::static_regex,
 };
 
@@ -113,7 +113,7 @@ impl RefVersionMismatch {
         };
 
         // Only check steps that have commit refs (not symbolic refs like v1.0.0)
-        let Some(commit_sha) = uses.commit_ref() else {
+        let Some(commit_sha) = RepoRef::from(uses).commit_ref() else {
             return Ok(findings);
         };
 

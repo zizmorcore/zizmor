@@ -11,7 +11,7 @@ use crate::{
     config::Config,
     finding::{Confidence, Finding, Severity},
     github,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
+    models::{StepCommon, action::CompositeStep, repo_ref::RepoRef, workflow::Step},
     state::AuditState,
 };
 
@@ -27,7 +27,7 @@ audit_meta!(
 
 impl StaleActionRefs {
     async fn is_stale_action_ref(&self, uses: &RepositoryUses) -> Result<bool, AuditError> {
-        let tag = match &uses.commit_ref() {
+        let tag = match RepoRef::from(uses).commit_ref() {
             Some(commit_ref) => self
                 .client
                 .longest_tag_for_commit(uses.owner(), uses.repo(), commit_ref)

@@ -1,10 +1,16 @@
 //! Extension traits for the `Uses` APIs.
+//!
+//! This is for GitHub Actions style `uses:` clauses;
+//! more general "reference to repository" handling
+//! lives in [`super::repo_ref`].
 
 use std::{str::FromStr, sync::LazyLock};
 
 use github_actions_models::common::{RepositoryUses, Uses};
 use regex::Regex;
 use serde::Deserialize;
+
+use crate::models::repo_ref::RepoRef;
 
 /// Matches all variants of [`RepositoryUsesPattern`] except `*`.
 ///
@@ -199,21 +205,6 @@ pub(crate) trait RepositoryUsesExt {
     /// This uses [`RepositoryUsesPattern`] under the hood, and follows the
     /// same matching rules.
     fn matches(&self, pattern: &str) -> bool;
-
-    /// Returns whether this `uses:` clause has a `git` ref and, if so,
-    /// whether that ref is a commit ref.
-    ///
-    /// For example, `foo/bar@baz` returns false while `foo/bar@1234...`
-    /// returns true.
-    fn ref_is_commit(&self) -> bool;
-
-    /// Returns the `git` ref for this `uses:`, if present.
-    fn commit_ref(&self) -> Option<&str>;
-
-    /// Returns the *symbolic* `git` ref for this `uses`, if present.
-    ///
-    /// Commit refs (i.e. SHA refs) are not returned.
-    fn symbolic_ref(&self) -> Option<&str>;
 }
 
 impl RepositoryUsesExt for RepositoryUses {
@@ -223,24 +214,6 @@ impl RepositoryUsesExt for RepositoryUses {
         };
 
         pat.matches(self)
-    }
-
-    fn ref_is_commit(&self) -> bool {
-        self.git_ref().len() == 40 && self.git_ref().chars().all(|c| c.is_ascii_hexdigit())
-    }
-
-    fn commit_ref(&self) -> Option<&str> {
-        match &self.git_ref() {
-            git_ref if self.ref_is_commit() => Some(git_ref),
-            _ => None,
-        }
-    }
-
-    fn symbolic_ref(&self) -> Option<&str> {
-        match &self.git_ref() {
-            git_ref if !self.ref_is_commit() => Some(git_ref),
-            _ => None,
-        }
     }
 }
 
@@ -270,7 +243,7 @@ impl UsesExt for Uses {
             // and the "hashedness" of a local action is mostly moot anyways
             // (since it's fully contained within the calling repo),
             Uses::Local(_) => false,
-            Uses::Repository(repo) => !repo.ref_is_commit(),
+            Uses::Repository(repo) => !RepoRef::from(repo).ref_is_commit(),
             Uses::Docker(docker) => docker.hash().is_none(),
         }
     }

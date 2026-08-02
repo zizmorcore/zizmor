@@ -7,17 +7,17 @@
 //! `foo`, making it unclear to the end user which is selected.
 
 use anyhow::anyhow;
-use github_actions_models::common::{RepositoryUses, Uses};
+use github_actions_models::common::Uses;
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::audit::AuditError;
 use crate::finding::Finding;
 use crate::finding::location::Locatable as _;
+use crate::models::repo_ref::RepoRef;
 use crate::models::{StepCommon as _, action::CompositeStep};
 use crate::{
     finding::{Confidence, Severity},
     github,
-    models::uses::RepositoryUsesExt as _,
     state::AuditState,
 };
 
@@ -35,20 +35,26 @@ audit_meta!(
 );
 
 impl RefConfusion {
-    async fn confusable(&self, uses: &RepositoryUses) -> Result<bool, AuditError> {
+    async fn confusable(&self, uses: impl Into<RepoRef<'_>>) -> Result<bool, AuditError> {
+        let uses = uses.into();
+
         let Some(sym_ref) = uses.symbolic_ref() else {
+            return Ok(false);
+        };
+
+        let Some(slug) = uses.slug() else {
             return Ok(false);
         };
 
         // TODO: use a tokio JoinSet here?
         let branches_match = self
             .client
-            .has_branch(uses.owner(), uses.repo(), sym_ref)
+            .has_branch(slug.owner(), slug.repo(), sym_ref)
             .await
             .map_err(Self::err)?;
         let tags_match = self
             .client
-            .has_tag(uses.owner(), uses.repo(), sym_ref)
+            .has_tag(slug.owner(), slug.repo(), sym_ref)
             .await
             .map_err(Self::err)?;
 

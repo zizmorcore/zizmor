@@ -8,7 +8,7 @@
 use std::borrow::Cow;
 
 use anyhow::anyhow;
-use github_actions_models::common::{RepositoryUses, Uses};
+use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
@@ -17,7 +17,11 @@ use crate::{
     config::Config,
     finding::{Confidence, Finding, Severity, location::Locatable as _},
     github::{self, ComparisonStatus},
-    models::{StepCommon as _, uses::RepositoryUsesExt as _, workflow::Workflow},
+    models::{
+        StepCommon as _,
+        repo_ref::{RepoRef, Slug},
+        workflow::Workflow,
+    },
     state::AuditState,
 };
 
@@ -48,14 +52,14 @@ enum IntermediateDetermination {
 impl ImpostorCommit {
     async fn named_ref_contains_commit(
         &self,
-        uses: &RepositoryUses,
+        slug: &Slug<'_>,
         base_ref: &str,
         head_ref: &str,
     ) -> Result<bool, AuditError> {
         Ok(
             match self
                 .client
-                .compare_commits(uses.owner(), uses.repo(), base_ref, head_ref)
+                .compare_commits(slug.owner(), slug.repo(), base_ref, head_ref)
                 .await
                 .map_err(Self::err)?
             {
@@ -108,12 +112,12 @@ impl ImpostorCommit {
     /// We currently assume this is slower because it's through the REST API.
     async fn fast_path_impostor_check(
         &self,
-        uses: &RepositoryUses,
+        slug: &Slug<'_>,
         candidate_sha: &str,
     ) -> IntermediateDetermination {
         match self
             .client
-            .branch_commits(uses.owner(), uses.repo(), candidate_sha)
+            .branch_commits(slug.owner(), slug.repo(), candidate_sha)
             .await
         {
             Ok(branch_commits) => {
@@ -124,7 +128,7 @@ impl ImpostorCommit {
                 }
             }
             Err(e) => {
-                tracing::warn!("fast path impostor check failed for {uses}: {e}");
+                tracing::warn!("fast path impostor check failed for {slug}: {e}");
                 IntermediateDetermination::Indeterminate
             }
         }
@@ -133,7 +137,7 @@ impl ImpostorCommit {
     /// Perform both our fastest path and fast path impostor check on the candidate SHA.
     async fn combined_fast_paths_impostor_check(
         &self,
-        uses: &RepositoryUses,
+        slug: &Slug<'_>,
         tags: &[github::Tag],
         branches: &[github::Branch],
         candidate_sha: &str,
@@ -143,7 +147,7 @@ impl ImpostorCommit {
             .await?
         {
             IntermediateDetermination::Indeterminate => {
-                Ok(self.fast_path_impostor_check(uses, candidate_sha).await)
+                Ok(self.fast_path_impostor_check(slug, candidate_sha).await)
             }
             determination => Ok(determination),
         }
@@ -158,7 +162,7 @@ impl ImpostorCommit {
     /// of requests (thousands for repos with thousands of branches or tags).
     async fn slow_path_impostor_check(
         &self,
-        uses: &RepositoryUses,
+        slug: &Slug<'_>,
         tags: &[github::Tag],
         branches: &[github::Branch],
         candidate_sha: &str,
@@ -166,7 +170,7 @@ impl ImpostorCommit {
         for branch in branches {
             if self
                 .named_ref_contains_commit(
-                    uses,
+                    slug,
                     &format!("refs/heads/{}", branch.name),
                     candidate_sha,
                 )
@@ -178,7 +182,7 @@ impl ImpostorCommit {
 
         for tag in tags {
             if self
-                .named_ref_contains_commit(uses, &format!("refs/tags/{}", tag.name), candidate_sha)
+                .named_ref_contains_commit(slug, &format!("refs/tags/{}", tag.name), candidate_sha)
                 .await?
             {
                 return Ok(IntermediateDetermination::NotImpostor);
@@ -193,7 +197,12 @@ impl ImpostorCommit {
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    async fn impostor(&self, uses: &RepositoryUses) -> Result<bool, AuditError> {
+    async fn impostor(&self, uses: impl Into<RepoRef<'_>>) -> Result<bool, AuditError> {
+        let uses = uses.into();
+        let Some(slug) = uses.slug() else {
+            return Ok(false);
+        };
+
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
         let Some(initial_candidate_sha) = uses.commit_ref() else {
             return Ok(false);
@@ -208,18 +217,18 @@ impl ImpostorCommit {
 
         let tags = self
             .client
-            .list_tags(uses.owner(), uses.repo())
+            .list_tags(slug.owner(), slug.repo())
             .await
             .map_err(Self::err)?;
 
         let branches = self
             .client
-            .list_branches(uses.owner(), uses.repo())
+            .list_branches(slug.owner(), slug.repo())
             .await
             .map_err(Self::err)?;
 
         match self
-            .combined_fast_paths_impostor_check(uses, &tags, &branches, initial_candidate_sha)
+            .combined_fast_paths_impostor_check(&slug, &tags, &branches, initial_candidate_sha)
             .await?
         {
             IntermediateDetermination::NotImpostor => return Ok(false),
@@ -234,7 +243,7 @@ impl ImpostorCommit {
         // underlying commit SHA for the checks below.
         let final_candidate_sha: Cow<'_, str> = match self
             .client
-            .tag_sha_to_commit_sha(uses.owner(), uses.repo(), initial_candidate_sha)
+            .tag_sha_to_commit_sha(slug.owner(), slug.repo(), initial_candidate_sha)
             .await
             .map_err(Self::err)?
         {
@@ -246,7 +255,7 @@ impl ImpostorCommit {
         // paths again if the SHA has changed.
         if initial_candidate_sha != final_candidate_sha {
             match self
-                .combined_fast_paths_impostor_check(uses, &tags, &branches, &final_candidate_sha)
+                .combined_fast_paths_impostor_check(&slug, &tags, &branches, &final_candidate_sha)
                 .await?
             {
                 IntermediateDetermination::NotImpostor => return Ok(false),
@@ -258,7 +267,7 @@ impl ImpostorCommit {
         }
 
         match self
-            .slow_path_impostor_check(uses, &tags, &branches, &final_candidate_sha)
+            .slow_path_impostor_check(&slug, &tags, &branches, &final_candidate_sha)
             .await?
         {
             IntermediateDetermination::NotImpostor => Ok(false),

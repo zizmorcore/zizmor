@@ -1,7 +1,7 @@
 use std::sync::LazyLock;
 
 use github_actions_models::common::{
-    EnvValue, Uses,
+    EnvValue, RepositoryUses, Uses,
     expr::{ExplicitExpr, LoE},
 };
 use itertools::Itertools as _;
@@ -12,7 +12,10 @@ use crate::{
     audit::AuditError,
     finding::{Confidence, Finding, Fix, Persona, Severity, location::Routable as _},
     github::{Client, ClientError},
-    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _, version::Version},
+    models::{
+        StepBodyCommon, StepCommon, repo_ref::RepoRef, uses::RepositoryUsesExt as _,
+        version::Version,
+    },
     state::AuditState,
     utils::split_patterns,
 };
@@ -43,9 +46,9 @@ impl Artipacked {
     /// we return `None`.
     async fn is_checkout_v6_or_higher(
         &self,
-        uses: &github_actions_models::common::RepositoryUses,
+        uses: &RepositoryUses,
     ) -> Result<Option<bool>, ClientError> {
-        let version = if !uses.ref_is_commit() {
+        let version = if !RepoRef::from(uses).ref_is_commit() {
             uses.git_ref().to_string()
         } else {
             match self.client {
