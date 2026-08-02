@@ -84,7 +84,7 @@ impl RepositoryUsesPattern {
                 _url,
                 slug: Some(slug),
                 git_ref,
-            } => self.matches_slug(&slug, git_ref),
+            } => self.matches_slug(slug, git_ref),
             // Our URL doesn't have a slug, so we can't meaningfully match it (yet).
             _ => false,
         }
