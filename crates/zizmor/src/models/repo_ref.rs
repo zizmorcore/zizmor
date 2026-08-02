@@ -158,10 +158,16 @@ impl<'doc> From<&'doc RemoteRepo> for RepoRef<'doc> {
 mod tests {
     use url::Url;
 
-    use crate::models::repo_ref::RepoRef;
+    use crate::models::repo_ref::{RepoRef, Slug};
 
     #[test]
-    fn test_from_url() {
+    fn test_slug_display() {
+        let slug = Slug::new("foo", "bar", "foo/bar");
+        assert_eq!(slug.to_string(), "foo/bar");
+    }
+
+    #[test]
+    fn test_reporef_from_url() {
         // Non-GitHub URL: no additional information.
         let url = Url::parse("https://example.com/nonsense").unwrap();
         insta::assert_debug_snapshot!(RepoRef::from_url(&url, "v1"), @r#"
