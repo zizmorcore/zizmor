@@ -59,7 +59,7 @@ impl ActionCoordinate {
 
         // If our coordinate's `uses:` template doesn't match the step's `uses:`,
         // then no usage semantics are possible.
-        if !uses_pattern.matches(uses) {
+        if !uses_pattern.matches_uses(uses) {
             return None;
         }
 

@@ -101,7 +101,7 @@ impl TemplateInjection {
         // the context capabilities FST.
         ACTION_INJECTION_SINKS
             .iter()
-            .find(|(pattern, _)| pattern.matches(uses))
+            .find(|(pattern, _)| pattern.matches_uses(uses))
             .map(|(_, sinks)| sinks.as_slice())
             .unwrap_or(&[])
     }

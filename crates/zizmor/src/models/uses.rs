@@ -10,7 +10,7 @@ use github_actions_models::common::{RepositoryUses, Uses};
 use regex::Regex;
 use serde::Deserialize;
 
-use crate::models::repo_ref::RepoRef;
+use crate::models::repo_ref::{RepoRef, Slug};
 
 /// Matches all variants of [`RepositoryUsesPattern`] except `*`.
 ///
@@ -77,7 +77,35 @@ pub(crate) enum RepositoryUsesPattern {
 }
 
 impl RepositoryUsesPattern {
-    pub(crate) fn matches(&self, uses: &RepositoryUses) -> bool {
+    pub(crate) fn matches_slug(&self, slug: &Slug<'_>, slug_git_ref: &str) -> bool {
+        match self {
+            RepositoryUsesPattern::ExactWithRef {
+                owner,
+                repo,
+                subpath,
+                git_ref,
+            } => {
+                if subpath.is_some() {
+                    // Slugs never contain subpaths, so this will never match.
+                    false
+                } else {
+                    slug.owner().eq_ignore_ascii_case(owner)
+                        && slug.repo().eq_ignore_ascii_case(repo)
+                        && slug_git_ref == git_ref
+                }
+            }
+            RepositoryUsesPattern::ExactPath { .. } => false,
+            // `owner/repo` and `owner/repo/*` behave the same for slugs.
+            RepositoryUsesPattern::ExactRepo { owner, repo }
+            | RepositoryUsesPattern::InRepo { owner, repo } => {
+                slug.owner().eq_ignore_ascii_case(owner) && slug.repo().eq_ignore_ascii_case(repo)
+            }
+            RepositoryUsesPattern::InOwner(owner) => slug.owner().eq_ignore_ascii_case(owner),
+            RepositoryUsesPattern::Any => true,
+        }
+    }
+
+    pub(crate) fn matches_uses(&self, uses: &RepositoryUses) -> bool {
         match self {
             RepositoryUsesPattern::ExactWithRef {
                 owner,
@@ -202,10 +230,7 @@ impl<'de> Deserialize<'de> for RepositoryUsesPattern {
 ///
 /// Some of these APIs are projections of [`RepoRef`]'s APIs.
 pub(crate) trait RepositoryUsesExt {
-    /// Returns whether this `uses:` clause matches the given pattern.
-    ///
-    /// This uses [`RepositoryUsesPattern`] under the hood, and follows the
-    /// same matching rules.
+    /// See [`RepoRef::matches`].
     fn matches(&self, pattern: &str) -> bool;
 
     /// See [`RepoRef::ref_is_commit`].
@@ -217,11 +242,7 @@ pub(crate) trait RepositoryUsesExt {
 
 impl RepositoryUsesExt for RepositoryUses {
     fn matches(&self, template: &str) -> bool {
-        let Ok(pat) = template.parse::<RepositoryUsesPattern>() else {
-            return false;
-        };
-
-        pat.matches(self)
+        RepoRef::from(self).matches(template)
     }
 
     fn ref_is_commit(&self) -> bool {
@@ -481,7 +502,7 @@ mod tests {
             let pattern = RepositoryUsesPattern::from_str(pattern)?;
 
             assert_eq!(
-                pattern.matches(&uses),
+                pattern.matches_uses(&uses),
                 matches,
                 "pattern: {pattern:?}, uses: {uses:?}, matches: {matches}"
             );
