@@ -4,7 +4,7 @@ use subfeature::Subfeature;
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
 use crate::config::{Config, ForbiddenUsesConfigInner};
-use crate::finding::location::Locatable;
+use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::pre_commit::PreCommitConfig;
 use crate::models::repo_ref::RepoRef;
