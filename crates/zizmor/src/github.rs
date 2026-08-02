@@ -515,7 +515,7 @@ impl Client {
         branch: &str,
     ) -> Result<bool, ClientError> {
         Ok(self
-            .list_branches_internal(&slug)
+            .list_branches_internal(slug)
             .await?
             .iter()
             .any(|branch_ref| branch_ref.name == branch))

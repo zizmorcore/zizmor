@@ -116,7 +116,7 @@ impl ImpostorCommit {
         slug: &Slug<'_>,
         candidate_sha: &str,
     ) -> IntermediateDetermination {
-        match self.client.branch_commits(&slug, candidate_sha).await {
+        match self.client.branch_commits(slug, candidate_sha).await {
             Ok(branch_commits) => {
                 if branch_commits.is_empty() {
                     IntermediateDetermination::Impostor
