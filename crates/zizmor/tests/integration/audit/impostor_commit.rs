@@ -45,3 +45,29 @@ fn test_peels_tag_sha_to_commit_sha() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_pre_commit() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+    zizmor()
+        .input(input_under_test("impostor-commit/.pre-commit-config.yml"))
+        .offline(NetworkMode::AssertOnline)
+        .run()?,
+    @"
+    error[impostor-commit]: commit with no history in referenced repository
+     --> @@INPUT@@:4:5
+      |
+    3 |   - repo: https://github.com/actions/checkout
+      |     ----------------------------------------- this repo
+    4 |     rev: c7d749a2d57b4b375d1ebcd17cfbfb60c676f18e
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uses a commit that doesn't belong to the specified org/repo
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
