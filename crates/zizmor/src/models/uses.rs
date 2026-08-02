@@ -199,12 +199,20 @@ impl<'de> Deserialize<'de> for RepositoryUsesPattern {
 }
 
 /// Useful APIs for interacting with `uses: owner/repo` clauses.
+///
+/// Some of these APIs are projections of [`RepoRef`]'s APIs.
 pub(crate) trait RepositoryUsesExt {
     /// Returns whether this `uses:` clause matches the given pattern.
     ///
     /// This uses [`RepositoryUsesPattern`] under the hood, and follows the
     /// same matching rules.
     fn matches(&self, pattern: &str) -> bool;
+
+    /// See [`RepoRef::ref_is_commit`].
+    fn ref_is_commit(&self) -> bool;
+
+    /// See [`RepoRef::commit_ref`].
+    fn commit_ref(&self) -> Option<&str>;
 }
 
 impl RepositoryUsesExt for RepositoryUses {
@@ -214,6 +222,14 @@ impl RepositoryUsesExt for RepositoryUses {
         };
 
         pat.matches(self)
+    }
+
+    fn ref_is_commit(&self) -> bool {
+        RepoRef::from(self).ref_is_commit()
+    }
+
+    fn commit_ref(&self) -> Option<&str> {
+        RepoRef::from(self).commit_ref()
     }
 }
 

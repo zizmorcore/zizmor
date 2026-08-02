@@ -197,14 +197,14 @@ impl ImpostorCommit {
     /// Returns a boolean indicating whether or not this commit is an "impostor",
     /// i.e. resolves due to presence in GitHub's fork network but is not actually
     /// present in any of the specified `owner/repo`'s tags or branches.
-    async fn impostor(&self, uses: impl Into<RepoRef<'_>>) -> Result<bool, AuditError> {
-        let uses = uses.into();
-        let Some(slug) = uses.slug() else {
+    async fn impostor(&self, repo_ref: impl Into<RepoRef<'_>>) -> Result<bool, AuditError> {
+        let repo_ref = repo_ref.into();
+        let Some(slug) = repo_ref.slug() else {
             return Ok(false);
         };
 
         // If there's no ref or the ref is not a commit, there's nothing to impersonate.
-        let Some(initial_candidate_sha) = uses.commit_ref() else {
+        let Some(initial_candidate_sha) = repo_ref.commit_ref() else {
             return Ok(false);
         };
 

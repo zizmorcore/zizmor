@@ -12,10 +12,7 @@ use crate::{
     audit::AuditError,
     finding::{Confidence, Finding, Fix, Persona, Severity, location::Routable as _},
     github::{Client, ClientError},
-    models::{
-        StepBodyCommon, StepCommon, repo_ref::RepoRef, uses::RepositoryUsesExt as _,
-        version::Version,
-    },
+    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _, version::Version},
     state::AuditState,
     utils::split_patterns,
 };
@@ -48,7 +45,7 @@ impl Artipacked {
         &self,
         uses: &RepositoryUses,
     ) -> Result<Option<bool>, ClientError> {
-        let version = if !RepoRef::from(uses).ref_is_commit() {
+        let version = if !uses.ref_is_commit() {
             uses.git_ref().to_string()
         } else {
             match self.client {
