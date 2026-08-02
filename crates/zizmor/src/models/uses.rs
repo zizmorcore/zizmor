@@ -305,6 +305,9 @@ mod tests {
 
     use anyhow::anyhow;
     use github_actions_models::common::Uses;
+    use url::Url;
+
+    use crate::models::repo_ref::RepoRef;
 
     use super::RepositoryUsesPattern;
 
@@ -452,6 +455,40 @@ mod tests {
                 RepositoryUsesPattern::Any,
             ]
         );
+    }
+
+    #[test]
+    fn test_repositoryusespattern_matches_repo_ref() -> anyhow::Result<()> {
+        for (url, git_ref, pattern, matches) in [
+            // OK: case insensitive
+            (
+                Url::parse("https://github.com/actions/checkout")?,
+                "v3",
+                "Actions/Checkout@v3",
+                true,
+            ),
+            // NOT OK: domain is not slug-able
+            (
+                Url::parse("https://notgithub.com/actions/checkout")?,
+                "v3",
+                "Actions/Checkout@v3",
+                false,
+            ),
+            // NOT OK: subpath patterns never match
+            (
+                Url::parse("https://github.com/actions/checkout")?,
+                "v3",
+                "Actions/Checkout/foo@v3",
+                false,
+            ),
+        ] {
+            let repo_ref = RepoRef::from_url(&url, git_ref);
+            let pattern = RepositoryUsesPattern::from_str(pattern)?;
+
+            assert_eq!(pattern.matches(&repo_ref), matches);
+        }
+
+        Ok(())
     }
 
     #[test]
