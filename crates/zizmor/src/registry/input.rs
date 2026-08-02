@@ -22,6 +22,7 @@ use crate::{
         action::Action,
         dependabot::Dependabot,
         pre_commit::{PreCommitConfig, PreCommitHooks},
+        repo_ref::Slug,
         workflow::Workflow,
     },
 };
@@ -190,17 +191,15 @@ impl std::str::FromStr for InputSlug {
             None => (s, None),
         };
 
-        let components = path.split('/').collect::<Vec<_>>();
+        let Some(slug) = Slug::parse(path) else {
+            return Err(CollectionError::InvalidInput(s.into()));
+        };
 
-        match components.len() {
-            2 => Ok(Self {
-                owner: components[0].into(),
-                repo: components[1].into(),
-                git_ref: git_ref.map(|s| s.into()),
-            }),
-            x if x < 2 => Err(CollectionError::InvalidInput(s.into())),
-            _ => Err(CollectionError::InvalidInput(s.into())),
-        }
+        Ok(Self {
+            owner: slug.owner().into(),
+            repo: slug.repo().into(),
+            git_ref: git_ref.map(|s| s.into()),
+        })
     }
 }
 

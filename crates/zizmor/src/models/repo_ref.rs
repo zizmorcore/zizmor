@@ -19,6 +19,19 @@ pub(crate) struct Slug<'doc> {
 }
 
 impl<'doc> Slug<'doc> {
+    pub(crate) fn parse(slug: &'doc str) -> Option<Self> {
+        let mut parts = slug.split('/');
+
+        if let Some(owner) = parts.next()
+            && let Some(repo) = parts.next()
+            && let None = parts.next()
+        {
+            Some(Self::new(owner, repo, slug))
+        } else {
+            None
+        }
+    }
+
     /// Construct a new [`Slug`] from parts.
     ///
     /// Assumes that each part is well-formed.
