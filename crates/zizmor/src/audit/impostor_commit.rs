@@ -60,7 +60,7 @@ impl ImpostorCommit {
         Ok(
             match self
                 .client
-                .compare_commits(slug.owner(), slug.repo(), base_ref, head_ref)
+                .compare_commits(slug, base_ref, head_ref)
                 .await
                 .map_err(Self::err)?
             {
@@ -116,11 +116,7 @@ impl ImpostorCommit {
         slug: &Slug<'_>,
         candidate_sha: &str,
     ) -> IntermediateDetermination {
-        match self
-            .client
-            .branch_commits(slug.owner(), slug.repo(), candidate_sha)
-            .await
-        {
+        match self.client.branch_commits(&slug, candidate_sha).await {
             Ok(branch_commits) => {
                 if branch_commits.is_empty() {
                     IntermediateDetermination::Impostor
@@ -216,17 +212,9 @@ impl ImpostorCommit {
         // as a tag SHA, try the fast paths again, and then only fall through
         // to the slow path after that.
 
-        let tags = self
-            .client
-            .list_tags(slug.owner(), slug.repo())
-            .await
-            .map_err(Self::err)?;
+        let tags = self.client.list_tags(&slug).await.map_err(Self::err)?;
 
-        let branches = self
-            .client
-            .list_branches(slug.owner(), slug.repo())
-            .await
-            .map_err(Self::err)?;
+        let branches = self.client.list_branches(&slug).await.map_err(Self::err)?;
 
         match self
             .combined_fast_paths_impostor_check(&slug, &tags, &branches, initial_candidate_sha)
@@ -244,7 +232,7 @@ impl ImpostorCommit {
         // underlying commit SHA for the checks below.
         let final_candidate_sha: Cow<'_, str> = match self
             .client
-            .tag_sha_to_commit_sha(slug.owner(), slug.repo(), initial_candidate_sha)
+            .tag_sha_to_commit_sha(&slug, initial_candidate_sha)
             .await
             .map_err(Self::err)?
         {

@@ -8,7 +8,7 @@ use url::Url;
 use crate::utils::once::warn_once;
 
 /// A GitHub `owner/repo` slug.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) struct Slug<'doc> {
     /// The repo owner.
     owner: &'doc str,
@@ -19,6 +19,13 @@ pub(crate) struct Slug<'doc> {
 }
 
 impl<'doc> Slug<'doc> {
+    /// Construct a new [`Slug`] from parts.
+    ///
+    /// Assumes that each part is well-formed.
+    fn new(owner: &'doc str, repo: &'doc str, slug: &'doc str) -> Self {
+        Self { owner, repo, slug }
+    }
+
     pub(crate) fn owner(&self) -> &'doc str {
         self.owner
     }
@@ -29,6 +36,12 @@ impl<'doc> Slug<'doc> {
 
     pub(crate) fn slug(&self) -> &'doc str {
         self.slug
+    }
+}
+
+impl<'doc> From<&'doc RepositoryUses> for Slug<'doc> {
+    fn from(uses: &'doc RepositoryUses) -> Self {
+        Self::new(uses.owner(), uses.repo(), uses.slug())
     }
 }
 
@@ -45,17 +58,9 @@ pub(crate) enum RepoRef<'doc> {
     /// A repository reference from a Git URL.
     Url {
         _url: &'doc Url,
-        /// The logical "owner" of the repository, if inferrable.
-        /// This will be none if the URL is not of a known shape, e.g.
-        /// comes from a host where the URL structure is not known
-        /// to imply an `owner/repo` layout.
-        owner: Option<&'doc str>,
 
-        /// The repo name.
-        repo: Option<&'doc str>,
-
-        /// The `owner/repo` slug.
-        slug: Option<&'doc str>,
+        /// The GitHub `owner/repo` within the URL, if present.
+        slug: Option<Slug<'doc>>,
 
         /// A Git tag or other reference for the repository, if present.
         git_ref: &'doc str,
@@ -64,9 +69,8 @@ pub(crate) enum RepoRef<'doc> {
 
 impl<'doc> RepoRef<'doc> {
     pub(crate) fn from_url(url: &'doc Url, git_ref: &'doc str) -> Self {
-        // Opportunistically pull some extra information
-        // out of the URL, if we know its shape.
-        let extra = if url.host_str() == Some("github.com") {
+        // Opportunistically pull the slug out of the URL, if we know its shape.
+        let slug = if url.host_str() == Some("github.com") {
             // We expect `https://github.com/owner/repo`, but
             // the user can naturally feed us nonsense.
             let path = url.path();
@@ -81,7 +85,7 @@ impl<'doc> RepoRef<'doc> {
                 && !repo.is_empty()
                 && let None = parts.next()
             {
-                Some((owner, repo, &path[1..]))
+                Some(Slug::new(owner, repo, &path[1..]))
             } else {
                 // Either too many or too few components.
                 warn_once!("invalid looking GitHub repository URL: {url}");
@@ -93,27 +97,16 @@ impl<'doc> RepoRef<'doc> {
 
         Self::Url {
             _url: url,
-            owner: extra.map(|e| e.0),
-            repo: extra.map(|e| e.1),
-            slug: extra.map(|e| e.2),
+            slug,
             git_ref,
         }
     }
 
+    /// Returns the [`Slug`] for this [`RepoRef`], if it has one.
     pub(crate) fn slug(&self) -> Option<Slug<'doc>> {
         match self {
-            RepoRef::Uses(uses) => Some(Slug {
-                owner: uses.owner(),
-                repo: uses.repo(),
-                slug: uses.slug(),
-            }),
-            RepoRef::Url {
-                owner: Some(owner),
-                repo: Some(repo),
-                slug: Some(slug),
-                ..
-            } => Some(Slug { owner, repo, slug }),
-            _ => None,
+            RepoRef::Uses(uses) => Some(Slug::from(*uses)),
+            RepoRef::Url { slug, .. } => slug.as_ref().copied(),
         }
     }
 
@@ -188,8 +181,6 @@ mod tests {
                 query: None,
                 fragment: None,
             },
-            owner: None,
-            repo: None,
             slug: None,
             git_ref: "v1",
         }
@@ -214,14 +205,12 @@ mod tests {
                 query: None,
                 fragment: None,
             },
-            owner: Some(
-                "foo",
-            ),
-            repo: Some(
-                "bar",
-            ),
             slug: Some(
-                "foo/bar",
+                Slug {
+                    owner: "foo",
+                    repo: "bar",
+                    slug: "foo/bar",
+                },
             ),
             git_ref: "v1",
         }
@@ -246,8 +235,6 @@ mod tests {
                 query: None,
                 fragment: None,
             },
-            owner: None,
-            repo: None,
             slug: None,
             git_ref: "v1",
         }

@@ -169,7 +169,7 @@ impl TyposquatUses {
             .persona(Persona::Regular);
 
         let (confidence, annotation) = match &self.client {
-            Some(client) => match client.repo_exists(uses.owner(), uses.repo()).await {
+            Some(client) => match client.repo_exists(&uses.into()).await {
                 Ok(true) => (
                     Confidence::High,
                     format!("{slug} {squat} and resolves to a live repository"),

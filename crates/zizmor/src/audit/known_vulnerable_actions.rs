@@ -62,7 +62,7 @@ impl KnownVulnerableActions {
             version if !repo_ref.ref_is_commit() => {
                 let Some(commit_ref) = self
                     .client
-                    .commit_for_ref(slug.owner(), slug.repo(), version)
+                    .commit_for_ref(&slug, version)
                     .await
                     .map_err(Self::err)?
                 else {
@@ -73,7 +73,7 @@ impl KnownVulnerableActions {
 
                 match self
                     .client
-                    .longest_tag_for_commit(slug.owner(), slug.repo(), &commit_ref)
+                    .longest_tag_for_commit(&slug, &commit_ref)
                     .await
                     .map_err(Self::err)?
                 {
@@ -92,7 +92,7 @@ impl KnownVulnerableActions {
             commit_ref => {
                 match self
                     .client
-                    .longest_tag_for_commit(slug.owner(), slug.repo(), commit_ref)
+                    .longest_tag_for_commit(&slug, commit_ref)
                     .await
                     .map_err(Self::err)?
                 {
@@ -108,7 +108,7 @@ impl KnownVulnerableActions {
 
         let advisories = self
             .client
-            .gha_advisories(slug.owner(), slug.repo(), &version)
+            .gha_advisories(&slug, &version)
             .await
             .map_err(Self::err)?;
 
@@ -182,13 +182,13 @@ impl KnownVulnerableActions {
 
                 let (target_ref, target_commit) = match self
                     .client
-                    .commit_for_ref(uses.owner(), uses.repo(), &prefixed_version)
+                    .commit_for_ref(&uses.into(), &prefixed_version)
                     .await
                 {
                     Ok(Some(commit)) => Some((&prefixed_version, commit)),
                     Ok(None) | Err(_) => self
                         .client
-                        .commit_for_ref(uses.owner(), uses.repo(), &bare_version)
+                        .commit_for_ref(&uses.into(), &bare_version)
                         .await
                         .map_err(Self::err)?
                         .map(|commit| (&bare_version, commit)),

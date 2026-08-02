@@ -26,7 +26,8 @@ use tracing::instrument;
 
 use crate::{
     CollectionOptions,
-    registry::input::{CollectionError, InputGroup, InputKey, InputKind, RepoSlug},
+    models::repo_ref::Slug,
+    registry::input::{CollectionError, InputGroup, InputKey, InputKind, InputSlug},
     utils::ZIZMOR_AGENT,
 };
 
@@ -359,9 +360,9 @@ impl Client {
             .build()
     }
 
-    async fn list_refs(&self, owner: &str, repo: &str) -> Result<Vec<RemoteHead>, ClientError> {
+    async fn list_refs(&self, slug: &Slug<'_>) -> Result<Vec<RemoteHead>, ClientError> {
         let url = format!(
-            "https://{host}/{owner}/{repo}.git/git-upload-pack",
+            "https://{host}/{slug}.git/git-upload-pack",
             host = self.host
         );
 
@@ -400,8 +401,8 @@ impl Client {
                     // false negatives.
                     Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
                         Err(ClientError::RepoMissingOrPrivate {
-                            owner: owner.to_string(),
-                            repo: repo.to_string(),
+                            owner: slug.owner().to_string(),
+                            repo: slug.repo().to_string(),
                         })
                     }
                     Err(e) => Err(e.into()),
@@ -434,12 +435,8 @@ impl Client {
         }
     }
 
-    async fn list_branches_internal(
-        &self,
-        owner: &str,
-        repo: &str,
-    ) -> Result<Vec<Branch>, ClientError> {
-        self.list_refs(owner, repo)
+    async fn list_branches_internal(&self, slug: &Slug<'_>) -> Result<Vec<Branch>, ClientError> {
+        self.list_refs(slug)
             .await
             .map(|v| {
                 v.iter()
@@ -455,22 +452,18 @@ impl Client {
             })
             .map_err(|e| ClientError::ListBranches {
                 source: e.into(),
-                owner: owner.to_string(),
-                repo: repo.to_string(),
+                owner: slug.owner().to_string(),
+                repo: slug.repo().to_string(),
             })
     }
 
     #[instrument(skip(self))]
-    pub(crate) async fn list_branches(
-        &self,
-        owner: &str,
-        repo: &str,
-    ) -> Result<Vec<Branch>, ClientError> {
-        self.list_branches_internal(owner, repo).await
+    pub(crate) async fn list_branches(&self, slug: &Slug<'_>) -> Result<Vec<Branch>, ClientError> {
+        self.list_branches_internal(slug).await
     }
 
-    async fn list_tags_internal(&self, owner: &str, repo: &str) -> Result<Vec<Tag>, ClientError> {
-        self.list_refs(owner, repo)
+    async fn list_tags_internal(&self, slug: &Slug<'_>) -> Result<Vec<Tag>, ClientError> {
+        self.list_refs(slug)
             .await
             .map(|v| {
                 let mut tags: Vec<_> = v
@@ -505,39 +498,33 @@ impl Client {
             })
             .map_err(|e| ClientError::ListTags {
                 source: e.into(),
-                owner: owner.to_string(),
-                repo: repo.to_string(),
+                owner: slug.owner().to_string(),
+                repo: slug.repo().to_string(),
             })
     }
 
     #[instrument(skip(self))]
-    pub(crate) async fn list_tags(&self, owner: &str, repo: &str) -> Result<Vec<Tag>, ClientError> {
-        self.list_tags_internal(owner, repo).await
+    pub(crate) async fn list_tags(&self, slug: &Slug<'_>) -> Result<Vec<Tag>, ClientError> {
+        self.list_tags_internal(slug).await
     }
 
     #[instrument(skip(self))]
     pub(crate) async fn has_branch(
         &self,
-        owner: &str,
-        repo: &str,
+        slug: &Slug<'_>,
         branch: &str,
     ) -> Result<bool, ClientError> {
         Ok(self
-            .list_branches_internal(owner, repo)
+            .list_branches_internal(&slug)
             .await?
             .iter()
             .any(|branch_ref| branch_ref.name == branch))
     }
 
     #[instrument(skip(self))]
-    pub(crate) async fn has_tag(
-        &self,
-        owner: &str,
-        repo: &str,
-        tag: &str,
-    ) -> Result<bool, ClientError> {
+    pub(crate) async fn has_tag(&self, slug: &Slug<'_>, tag: &str) -> Result<bool, ClientError> {
         Ok(self
-            .list_tags_internal(owner, repo)
+            .list_tags_internal(slug)
             .await?
             .iter()
             .any(|tag_ref| tag_ref.name == tag))
@@ -546,12 +533,11 @@ impl Client {
     #[instrument(skip(self))]
     pub(crate) async fn commit_for_ref(
         &self,
-        owner: &str,
-        repo: &str,
+        slug: &Slug<'_>,
         git_ref: &str,
     ) -> Result<Option<String>, ClientError> {
-        let branches = self.list_branches_internal(owner, repo).await?;
-        let tags = self.list_tags_internal(owner, repo).await?;
+        let branches = self.list_branches_internal(slug).await?;
+        let tags = self.list_tags_internal(slug).await?;
 
         tracing::debug!("Finding commit for reference {git_ref}");
 
@@ -578,8 +564,7 @@ impl Client {
     #[instrument(skip(self))]
     pub(crate) async fn tag_sha_to_commit_sha(
         &self,
-        owner: &str,
-        repo: &str,
+        slug: &Slug<'_>,
         maybe_tag_sha: &str,
     ) -> Result<Option<String>, ClientError> {
         #[derive(Deserialize)]
@@ -608,10 +593,8 @@ impl Client {
         let mut next_tag_sha = maybe_tag_sha.to_string();
         loop {
             let url = format!(
-                "{api_base}/repos/{owner}/{repo}/git/tags/{tag_sha}",
+                "{api_base}/repos/{slug}/git/tags/{tag_sha}",
                 api_base = self.api_base,
-                owner = owner,
-                repo = repo,
                 tag_sha = next_tag_sha
             );
 
@@ -644,8 +627,7 @@ impl Client {
     #[instrument(skip(self))]
     pub(crate) async fn longest_tag_for_commit(
         &self,
-        owner: &str,
-        repo: &str,
+        slug: &Slug<'_>,
         commit: &str,
     ) -> Result<Option<Tag>, ClientError> {
         // Annoying: GitHub doesn't provide a rev-parse or similar API to
@@ -653,7 +635,7 @@ impl Client {
         // do it for them.
         // This could be optimized in various ways, not least of which
         // is not pulling every tag eagerly before scanning them.
-        let tags = self.list_tags(owner, repo).await?;
+        let tags = self.list_tags(slug).await?;
 
         // Heuristic: there can be multiple tags for a commit, so we pick
         // the longest one. This isn't super sound, but it gets us from
@@ -667,14 +649,13 @@ impl Client {
     #[instrument(skip(self))]
     pub(crate) async fn branch_commits(
         &self,
-        owner: &str,
-        repo: &str,
+        slug: &Slug<'_>,
         commit: &str,
     ) -> Result<BranchCommits, ClientError> {
         // NOTE(ww): This API is undocumented.
         // See: https://github.com/orgs/community/discussions/78161
         let url = format!(
-            "https://{host}/{owner}/{repo}/branch_commits/{commit}",
+            "https://{host}/{slug}/branch_commits/{commit}",
             host = self.host
         );
 
@@ -691,8 +672,8 @@ impl Client {
     }
 
     #[instrument(skip(self))]
-    pub(crate) async fn repo_exists(&self, owner: &str, repo: &str) -> Result<bool, ClientError> {
-        match self.list_refs(owner, repo).await {
+    pub(crate) async fn repo_exists(&self, slug: &Slug<'_>) -> Result<bool, ClientError> {
+        match self.list_refs(slug).await {
             Ok(_) => Ok(true),
             Err(ClientError::Inner(inner))
                 if matches!(inner.as_ref(), ClientError::RepoMissingOrPrivate { .. }) =>
@@ -707,13 +688,12 @@ impl Client {
     #[instrument(skip(self))]
     pub(crate) async fn compare_commits(
         &self,
-        owner: &str,
-        repo: &str,
+        slug: &Slug<'_>,
         base: &str,
         head: &str,
     ) -> Result<Option<ComparisonStatus>, ClientError> {
         let url = format!(
-            "{api_base}/repos/{owner}/{repo}/compare/{base}...{head}",
+            "{api_base}/repos/{slug}/compare/{base}...{head}",
             api_base = self.api_base
         );
 
@@ -732,8 +712,7 @@ impl Client {
     #[instrument(skip(self))]
     pub(crate) async fn gha_advisories(
         &self,
-        owner: &str,
-        repo: &str,
+        slug: &Slug<'_>,
         version: &str,
     ) -> Result<Vec<Advisory>, ClientError> {
         // TODO: Paginate this as well.
@@ -743,7 +722,7 @@ impl Client {
             .get(url)
             .query(&[
                 ("ecosystem", "actions"),
-                ("affects", &format!("{owner}/{repo}@{version}")),
+                ("affects", &format!("{slug}@{version}")),
             ])
             .send()
             .await?
@@ -760,7 +739,7 @@ impl Client {
     #[instrument(skip(self, slug, file))]
     pub(crate) async fn fetch_single_file(
         &self,
-        slug: &RepoSlug,
+        slug: &InputSlug,
         file: &str,
     ) -> Result<Option<String>, ClientError> {
         tracing::debug!("fetching {file} from {slug}");
@@ -800,7 +779,7 @@ impl Client {
     #[instrument(skip(self, options, group))]
     pub(crate) async fn fetch_workflows(
         &self,
-        slug: &RepoSlug,
+        slug: &InputSlug,
         options: &CollectionOptions,
         group: &mut InputGroup,
     ) -> Result<(), CollectionError> {
@@ -866,7 +845,7 @@ impl Client {
     #[instrument(skip(self, options, group))]
     pub(crate) async fn fetch_audit_inputs(
         &self,
-        slug: &RepoSlug,
+        slug: &InputSlug,
         options: &CollectionOptions,
         group: &mut InputGroup,
     ) -> Result<(), CollectionError> {
@@ -1069,7 +1048,12 @@ pub(crate) struct File {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::{Client, GitHubHost, GitHubToken};
+    use github_actions_models::common::RepositoryUses;
+
+    use crate::{
+        github::{Client, GitHubHost, GitHubToken},
+        models::repo_ref::Slug,
+    };
 
     #[test]
     fn test_github_host() {
@@ -1126,15 +1110,14 @@ mod tests {
         )
         .unwrap();
 
+        let uses = RepositoryUses::parse("woodruffw-experiments/zizmor-recursive-tags").unwrap();
+        let slug = Slug::from(&uses);
+
         // No hop: 3fdd4fca8fc76b254cefefca92381c41b28d1f0d is already a
         // commit SHA, so we get `Ok(None)`.
         assert_eq!(
             client
-                .tag_sha_to_commit_sha(
-                    "woodruffw-experiments",
-                    "zizmor-recursive-tags",
-                    "3fdd4fca8fc76b254cefefca92381c41b28d1f0d"
-                )
+                .tag_sha_to_commit_sha(&slug, "3fdd4fca8fc76b254cefefca92381c41b28d1f0d")
                 .await
                 .unwrap(),
             None
@@ -1144,11 +1127,7 @@ mod tests {
         // at commit 3fdd4fca8fc76b254cefefca92381c41b28d1f0d.
         assert_eq!(
             client
-                .tag_sha_to_commit_sha(
-                    "woodruffw-experiments",
-                    "zizmor-recursive-tags",
-                    "06f9d47abf340b709b412900a7b3ce33557d32b5"
-                )
+                .tag_sha_to_commit_sha(&slug, "06f9d47abf340b709b412900a7b3ce33557d32b5")
                 .await
                 .unwrap(),
             Some("3fdd4fca8fc76b254cefefca92381c41b28d1f0d".into())
@@ -1159,11 +1138,7 @@ mod tests {
         // 3fdd4fca8fc76b254cefefca92381.
         assert_eq!(
             client
-                .tag_sha_to_commit_sha(
-                    "woodruffw-experiments",
-                    "zizmor-recursive-tags",
-                    "bcb36f3d551340e11b88c376e74e8ae77fc6cf0b"
-                )
+                .tag_sha_to_commit_sha(&slug, "bcb36f3d551340e11b88c376e74e8ae77fc6cf0b")
                 .await
                 .unwrap(),
             Some("3fdd4fca8fc76b254cefefca92381c41b28d1f0d".into())
@@ -1175,11 +1150,7 @@ mod tests {
         // 3fdd4fca8fc76b254cefefca92381c41b.
         assert_eq!(
             client
-                .tag_sha_to_commit_sha(
-                    "woodruffw-experiments",
-                    "zizmor-recursive-tags",
-                    "1accca34bff60347d96faaf713d328ca1250d37b"
-                )
+                .tag_sha_to_commit_sha(&slug, "1accca34bff60347d96faaf713d328ca1250d37b")
                 .await
                 .unwrap(),
             Some("3fdd4fca8fc76b254cefefca92381c41b28d1f0d".into())
