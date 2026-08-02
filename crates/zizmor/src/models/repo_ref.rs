@@ -97,7 +97,7 @@ impl<'doc> RepoRef<'doc> {
             owner: extra.map(|e| e.0),
             repo: extra.map(|e| e.1),
             slug: extra.map(|e| e.2),
-            git_ref: git_ref,
+            git_ref,
         }
     }
 
