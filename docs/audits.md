@@ -22,8 +22,8 @@ Legend:
 
 [adhoc-packages.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/adhoc-packages.yml
 
-Detects `#!yaml run:` steps that install packages in an ad-hoc manner, i.e. outside of a managed
-and locked manifest.
+Detects `#!yaml run:` steps that install or manipulate packages in an ad-hoc
+manner, i.e. outside of a managed and locked manifest.
 
 Installing packages directly with commands like `#!bash gem install <pkg>` or
 `#!bash npm install <pkg>` represents a potential risk:
@@ -38,12 +38,15 @@ Installing packages directly with commands like `#!bash gem install <pkg>` or
   will be newly resolved and may undermine the user's intent of a safe
   cutoff.
 
+Similarly, this audit flags commands like `#!bash bundle add` and `#!bash yarn add`,
+since they mutate the CI's ephemeral lockfile state.
+
 This audit currently detects ad-hoc installation patterns for the following ecosystems and tools:
 
 | Ecosystem | Tools |
 |-----------|-------|
-| JavaScript | `npm` |
-| Ruby | `gem` |
+| JavaScript | `npm`, `yarn`, `pnpm` |
+| Ruby | `gem`, `bundle` |
 
 ### Remediation
 
