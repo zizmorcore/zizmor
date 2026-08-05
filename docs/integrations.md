@@ -354,14 +354,50 @@ shells. It supports all of the shells supported by
 [`clap_complete`](https://crates.io/crates/clap_complete),
 which includes popular shells like `bash`, `zsh`, and `fish`.
 
-To enable tab completion, you can use the `--completions=<shell>` flag
-to emit a completion script for the specified shell. For example,
-to enable tab completion for `bash`, you can run:
+!!! tip
 
-```bash
-zizmor --completions=bash > ~/.bash_completion.d/zizmor # (1)!
-```
+    You can run `echo $SHELL` to help you determine your shell.
 
-1. The correct location of your completion script will depend on your
-   shell and its configuration. Consult your shell's documentation
-   for more information.
+To enable shell autocompletion for zizmor, run one of the following:
+
+=== "Bash"
+
+    ```bash
+    echo 'eval "$(zizmor --completions bash)"' >> ~/.bashrc
+    ```
+
+=== "Zsh"
+
+    ```bash
+    echo 'eval "$(zizmor --completions zsh)"' >> ~/.zshrc
+    ```
+
+=== "fish"
+
+    ```bash
+    echo 'zizmor --completions fish | source' > ~/.config/fish/completions/zizmor.fish
+    ```
+
+=== "Elvish"
+
+    ```bash
+    echo 'eval (zizmor --completions elvish | slurp)' >> ~/.elvish/rc.elv
+    ```
+
+=== "PowerShell / pwsh"
+
+    ```powershell
+    if (!(Test-Path -Path $PROFILE)) {
+      New-Item -ItemType File -Path $PROFILE -Force
+    }
+    Add-Content -Path $PROFILE -Value '(& zizmor --completions powershell) | Out-String | Invoke-Expression'
+    ```
+
+=== "Nushell"
+
+    ```nu
+    mkdir ($nu.user-autoload-dirs | first)
+    zizmor --completions nushell | save --force ($nu.user-autoload-dirs | first | path join zizmor.nu)
+    ```
+
+Then restart your shell or source your shell configuration file.
