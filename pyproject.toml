@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.14.1,<2.0"]
 build-backend = "maturin"
 
 # NOTE: This section is a stub; needed to prevent
@@ -17,8 +17,8 @@ include = [{ path = "README.md", format = "sdist" }, { path = "LICENSE", format 
 
 [dependency-groups]
 bench = [
-    "pytest>=9.0.3",
-    "pytest-codspeed>=4.2.0",
+    "pytest>=9.1.1",
+    "pytest-codspeed>=5.0.3",
     "urllib3>=2.6.2",
 ]
 docs = ["zensical"]
