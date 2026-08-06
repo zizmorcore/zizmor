@@ -7,10 +7,10 @@ use crate::{
     config::Config,
     finding::{
         Confidence, Finding, Fix, FixDisposition, Severity,
-        location::{Locatable, Routable},
+        location::{Locatable, Routable as _},
     },
     models::{
-        AsDocument, StepCommon,
+        AsDocument, StepCommon as _,
         action::CompositeStep,
         workflow::{ReusableWorkflowCallJob, Step},
     },
@@ -55,7 +55,7 @@ impl SelfRepository {
                             .primary(),
                     )
                     .fix(Fix {
-                        title: format!("rewrite './...' to '$/...'"),
+                        title: "rewrite './...' to '$/...'".to_string(),
                         key: parent.location().key,
                         disposition: FixDisposition::Safe,
                         patches: vec![Patch {
