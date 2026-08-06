@@ -1,0 +1,7 @@
+# archived-action-repos.txt
+# one per line, comment lines begin with #
+#
+# NOTE(reubenwong97): Following the approach for `archived-action-repos.txt`, this list was
+# obtained via a GitHub search for `path:.pre-commit-hooks.yaml is:archived` as of 2026-08-07.
+
+facebook/pyre-check

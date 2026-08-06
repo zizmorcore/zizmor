@@ -45,6 +45,7 @@ dulvui/godot-android-export
 elstudio/actions-settings
 expo/expo-preview-action
 fabasoad/setup-zizmor-action
+facebook/pyre-check
 facebook/pysa-action
 fregante/release-with-changelog
 google/mirror-branch-action

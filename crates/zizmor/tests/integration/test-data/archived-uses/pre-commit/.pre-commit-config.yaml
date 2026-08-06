@@ -1,0 +1,5 @@
+repos:
+  - repo: https://github.com/facebook/pyre-check
+    rev: v0.9.25
+    hooks:
+      - id: pyre-check
