@@ -594,17 +594,8 @@ impl Workspace {
         let new = std::fs::read_to_string(&self.path().join(file))?;
 
         let diff = similar::TextDiff::from_lines(&old, &new);
-        let mut output = String::new();
-        for change in diff.iter_all_changes() {
-            let sign = match change.tag() {
-                similar::ChangeTag::Delete => "-",
-                similar::ChangeTag::Insert => "+",
-                similar::ChangeTag::Equal => continue,
-            };
-            output.push_str(&format!("{sign}{change}"));
-        }
 
-        Ok(output)
+        Ok(diff.unified_diff().context_radius(3).to_string())
     }
 }
 
