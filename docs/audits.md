@@ -1689,6 +1689,64 @@ there are steps you can take to minimize their risk:
 
 [ephemeral ("just-in-time") runners]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-just-in-time-runners
 
+## `self-repository`
+
+| Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|-------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action  | [self-repository.yml]            | v1.30.0        | ✅            | ✅                | ❌          |
+
+[self-repository.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/self-repository.yml
+
+Detects uses of in-repo actions or reusable workflows that don't use GitHub's
+dedicated "self-repository" syntax.
+
+As of July 2026, GitHub supports a new "self-repository" syntax
+(`#!yaml uses: $/...`) when referring to actions or reusable workflows
+within `#!yaml uses:` clauses.
+
+This syntax has security and policy enforcement benefits when compared to
+the old "workspace-relative" (`#!yaml uses: ./...`) syntax:
+
+- Unlike the "workspace-relative" fork, the "self-repository" form is not subject
+  to runtime filesystem state, meaning that it can't load an action that was
+  cloned at runtime in a previous step.
+- Using the "self-repository" form makes it possible to enforce a "fully pinned"
+  policy on GitHub itself, as the "self-repository" form is treated as a form
+  pinning whereas the "workspace-relative" form is not.
+
+Other resources:
+
+* [GitHub Blog: Reference same-repository actions with self-repository syntax](https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/)
+* [Bypassing GitHub Actions policies in the dumbest way possible](https://blog.yossarian.net/2025/06/11/github-actions-policies-dumb-bypass)
+
+### Remediation
+
+Replace any workspace-relative `#!yaml uses:` clause with its self-repository equivalent.
+
+For example:
+
+!!! example
+
+    === "Before :warning:"
+
+        ```yaml title="self-repository.yml" hl_lines="5"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: ./my-action
+        ```
+
+    === "After :white_check_mark:"
+
+        ```yaml title="self-repository.yml" hl_lines="5"
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: $/my-action
+        ```
+
 ## `stale-action-refs`
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |

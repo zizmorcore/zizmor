@@ -20,4 +20,4 @@ jobs:
     name: job2
     # normal permissions finding here, since callers are always
     # responsible for setting permissions
-    uses: ./.github/workflows/fake.yml
+    uses: $/.github/workflows/fake.yml

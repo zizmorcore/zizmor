@@ -8,4 +8,4 @@ on:
 jobs:
   testcase:
     name: "testcase"
-    uses: ./.github/workflows/reusable.yml
+    uses: $/.github/workflows/reusable.yml

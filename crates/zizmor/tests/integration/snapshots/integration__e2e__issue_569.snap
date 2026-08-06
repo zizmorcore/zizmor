@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
-expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\",\n\"--collect=workflows\"]).input(\"python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6\").run()?"
+expression: "zizmor().offline(NetworkMode::AssertOnline).output(OutputMode::Both).args([\"--no-online-audits\",\n\"--collect=workflows\"]).input(\"python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6\").run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
  INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
@@ -269,6 +269,112 @@ help[obfuscation]: obfuscated usage of GitHub Actions features
     |
 184 |       Windows MSI${{ '' }}
     |                      ^^ can be replaced by its static evaluation
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+  --> .github/workflows/build.yml:38:11
+   |
+26 |     name: Change detection
+   |     ---------------------- this job
+...
+38 |     uses: ./.github/workflows/reusable-context.yml
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+  --> .github/workflows/build.yml:44:11
+   |
+41 |     name: Docs
+   |     ---------- this job
+...
+44 |     uses: ./.github/workflows/reusable-docs.yml
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/build.yml:176:11
+    |
+151 | /     name: >-
+152 | |       Windows
+153 | |       ${{ fromJSON(matrix.free-threading) && '(free-threading)' || '' }}
+    | |________________________________________________________________________- this job
+...
+176 |       uses: ./.github/workflows/reusable-windows.yml
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/build.yml:193:11
+    |
+183 | /     name: >-  # ${{ '' } is a hack to nest jobs under the same sidebar category
+184 | |       Windows MSI${{ '' }}
+    | |__________________________- this job
+...
+193 |       uses: ./.github/workflows/reusable-windows-msi.yml
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/build.yml:225:11
+    |
+198 | /     name: >-
+199 | |       macOS
+200 | |       ${{ fromJSON(matrix.free-threading) && '(free-threading)' || '' }}
+    | |________________________________________________________________________- this job
+...
+225 |       uses: ./.github/workflows/reusable-macos.yml
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/build.yml:256:11
+    |
+232 | /     name: >-
+233 | |       Ubuntu
+234 | |       ${{ fromJSON(matrix.free-threading) && '(free-threading)' || '' }}
+235 | |       ${{ fromJSON(matrix.bolt) && '(bolt)' || '' }}
+    | |____________________________________________________- this job
+...
+256 |       uses: ./.github/workflows/reusable-ubuntu.yml
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/build.yml:329:11
+    |
+326 |     name: 'WASI'
+    |     ------------ this job
+...
+329 |     uses: ./.github/workflows/reusable-wasi.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/build.yml:522:11
+    |
+512 | /     name: >-
+513 | |       Thread sanitizer
+514 | |       ${{ fromJSON(matrix.free-threading) && '(free-threading)' || '' }}
+    | |________________________________________________________________________- this job
+...
+522 |       uses: ./.github/workflows/reusable-tsan.yml
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
     |
     = note: audit confidence → High
     = note: this finding has an auto-fix
@@ -715,4 +821,4 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
-151 findings (1 ignored, 73 suppressed): 0 informational, 2 low, 0 medium, 75 high
+159 findings (1 ignored, 73 suppressed): 0 informational, 10 low, 0 medium, 75 high

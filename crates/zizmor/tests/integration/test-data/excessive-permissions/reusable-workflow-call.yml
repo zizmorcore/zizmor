@@ -7,4 +7,4 @@ jobs:
   job1:
     name: job1
     # finding: reusable jobs should always specify their permissions
-    uses: ./.github/workflows/zizmor-child.yml
+    uses: $/.github/workflows/zizmor-child.yml

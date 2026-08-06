@@ -48,6 +48,7 @@ pub(crate) mod ref_version_mismatch;
 pub(crate) mod secrets_inherit;
 pub(crate) mod secrets_outside_env;
 pub(crate) mod self_hosted_runner;
+pub(crate) mod self_repository;
 pub(crate) mod stale_action_refs;
 pub(crate) mod superfluous_actions;
 pub(crate) mod template_injection;

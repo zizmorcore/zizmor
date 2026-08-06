@@ -266,7 +266,7 @@ fn test_issue_472_repro() -> Result<()> {
     22 | |     # normal permissions finding here, since callers are always
     23 | |     # responsible for setting permissions, even if the workflow
     24 | |     # is reusable-only
-    25 | |     uses: ./.github/workflows/fake.yml
+    25 | |     uses: $/.github/workflows/fake.yml
        | |                                       ^
        | |                                       |
        | |_______________________________________this job
@@ -296,7 +296,7 @@ fn test_reusable_workflow_call() -> Result<()> {
      7 | /   job1:
      8 | |     name: job1
      9 | |     # finding: reusable jobs should always specify their permissions
-    10 | |     uses: ./.github/workflows/zizmor-child.yml
+    10 | |     uses: $/.github/workflows/zizmor-child.yml
        | |                                               ^
        | |                                               |
        | |_______________________________________________this job
@@ -329,7 +329,7 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
      4 | |   workflow_call:
     ...  |
     22 | |     # responsible for setting permissions
-    23 | |     uses: ./.github/workflows/fake.yml
+    23 | |     uses: $/.github/workflows/fake.yml
        | |_______________________________________^ default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
@@ -358,7 +358,7 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
     20 | |     name: job2
     21 | |     # normal permissions finding here, since callers are always
     22 | |     # responsible for setting permissions
-    23 | |     uses: ./.github/workflows/fake.yml
+    23 | |     uses: $/.github/workflows/fake.yml
        | |                                       ^
        | |                                       |
        | |_______________________________________this job

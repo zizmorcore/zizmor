@@ -139,7 +139,8 @@ define_audit_rules! {
     github_app,
     unpinned_tools,
     adhoc_packages,
-    insecure_url_scheme;
+    insecure_url_scheme,
+    self_repository;
 
     [DependabotCooldownRuleConfig] dependabot_cooldown,
     [ForbiddenUsesRuleConfig] forbidden_uses,
