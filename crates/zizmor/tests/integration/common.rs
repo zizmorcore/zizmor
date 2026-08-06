@@ -583,6 +583,29 @@ impl Workspace {
             }
         }
     }
+
+    pub fn diff<'a, F>(self, file: impl Into<&'a Utf8Path>, zizmor: F) -> anyhow::Result<String>
+    where
+        F: FnOnce(&Workspace) -> anyhow::Result<String>,
+    {
+        let file = file.into();
+        let old = std::fs::read_to_string(&self.path().join(file))?;
+        let _ = zizmor(&self)?;
+        let new = std::fs::read_to_string(&self.path().join(file))?;
+
+        let diff = similar::TextDiff::from_lines(&old, &new);
+        let mut output = String::new();
+        for change in diff.iter_all_changes() {
+            let sign = match change.tag() {
+                similar::ChangeTag::Delete => "-",
+                similar::ChangeTag::Insert => "+",
+                similar::ChangeTag::Equal => continue,
+            };
+            output.push_str(&format!("{sign}{change}"));
+        }
+
+        Ok(output)
+    }
 }
 
 pub struct WorkspaceBuilder {
