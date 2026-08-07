@@ -1,0 +1,16 @@
+name: ISSUE-1914-REPRO
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+permissions: {}
+
+jobs:
+  update-dist:
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "repro"
