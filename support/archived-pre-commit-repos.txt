@@ -1,0 +1,40 @@
+# archived-pre-commit-repos.txt
+# one per line, comment lines begin with #
+#
+# NOTE(reubenwong97): This list was seeded by searching sourcegraph.com for indexed
+# repositories containing a `.pre-commit-hooks.yaml` file. Query used:
+# `file:^\.pre-commit-hooks\.yaml$ archived:only count:all select:repo`
+
+APIDevTools/swagger-cli
+aquasecurity/cfsec
+araichev/gtfs_kit
+asottile-archive/seed-isort-config
+benmezger/gjira
+brettcannon/caniusepython3
+DariuszPorowski/chatgpt-pre-commit-hooks
+datreeio/datree
+dnephin/pre-commit-golang
+gherynos/pre-commit-java
+gruntwork-io/terraform-aws-couchbase
+hcodes/yaspeller
+jeffa5/typstfmt
+josephfrazier/prettier_d
+life4/flakehell
+Lucas-C/pre-commit-hooks-bandit
+mapbox/secret-shield
+MarcoGorelli/absolufy-imports
+nix-community/nixpkgs-fmt
+onedr0p/sops-pre-commit
+owenlamont/uv-secure
+pre-commit/mirrors-autopep8
+pre-commit/mirrors-isort
+pre-commit/mirrors-prettier
+PyCQA/pydocstyle
+rapidsai/frigate
+seandstewart/typical
+segmentio/golines
+snok/pep585-upgrade
+sphinx-quant/sphinx-quant
+tenable/terrascan
+terrencepreilly/darglint
+thegeeklab/ansible-later

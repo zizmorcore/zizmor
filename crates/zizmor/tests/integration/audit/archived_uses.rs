@@ -65,3 +65,25 @@ fn test_composite_action() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_pre_commit_config() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor().input(input_under_test("archived-uses/pre-commit/.pre-commit-config.yaml")).run()?, @"
+    warning[archived-uses]: action or reusable workflow from archived repository
+     --> @@INPUT@@:2:11
+      |
+    2 |   - repo: https://github.com/pre-commit/mirrors-prettier
+      |     ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      |     |     |
+      |     |     repository is archived
+      |     this repo
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
