@@ -1,4 +1,4 @@
-use crate::common::{input_under_test, zizmor};
+use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
 
 #[test]
 fn test_caching_disabled_by_default() -> anyhow::Result<()> {
@@ -761,6 +761,89 @@ fn test_trigger_heuristics_tag_and_branch() -> anyhow::Result<()> {
 
     4 findings (2 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_cache_disable_opt_out_boolean() -> anyhow::Result<()> {
+    let workflow_content = r#"
+name: Test Workflow
+on: release
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: softprops/action-gh-release@v1
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/cache-poisoning.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/cache-poisoning.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -12,4 +12,5 @@
+                 ~/.cargo/registry
+                 ~/.cargo/git
+               key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    +          lookup-only: true
+           - uses: softprops/action-gh-release@v1
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_cache_disable_opt_in_boolean() -> anyhow::Result<()> {
+    let workflow_content = r#"
+name: Test Workflow
+on: release
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+      - uses: softprops/action-gh-release@v1
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/cache-poisoning.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/cache-poisoning.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -9,5 +9,5 @@
+           - uses: actions/setup-go@v4
+             with:
+               go-version: '1.21'
+    -          cache: true
+    +          cache: false
+           - uses: softprops/action-gh-release@v1
+    "
     );
 
     Ok(())
