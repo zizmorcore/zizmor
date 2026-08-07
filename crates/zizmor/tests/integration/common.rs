@@ -544,11 +544,13 @@ impl Workspace {
         let name = name.into();
 
         if let Some(parent) = name.parent() {
+            let parent = self.path().join(parent);
             fs::create_dir_all(parent).expect("failed to create parent directories: {parent}");
         }
 
         let destination = self.path().join(name);
-        fs::write(destination, contents).expect("failed to write contents to {destination}");
+        fs::write(&destination, contents)
+            .expect(&format!("failed to write contents to {destination}"));
     }
 
     /// Copy the contents of `source` into `dest`.
