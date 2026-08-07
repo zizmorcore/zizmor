@@ -583,6 +583,20 @@ impl Workspace {
             }
         }
     }
+
+    pub fn diff<'a, F>(self, file: impl Into<&'a Utf8Path>, zizmor: F) -> anyhow::Result<String>
+    where
+        F: FnOnce(&Workspace) -> anyhow::Result<String>,
+    {
+        let file = file.into();
+        let old = std::fs::read_to_string(&self.path().join(file))?;
+        let _ = zizmor(&self)?;
+        let new = std::fs::read_to_string(&self.path().join(file))?;
+
+        let diff = similar::TextDiff::from_lines(&old, &new);
+
+        Ok(diff.unified_diff().context_radius(3).to_string())
+    }
 }
 
 pub struct WorkspaceBuilder {

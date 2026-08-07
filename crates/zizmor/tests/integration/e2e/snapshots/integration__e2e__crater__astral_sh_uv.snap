@@ -500,6 +500,209 @@ info[anonymous-definition]: workflow or action definition without a name
    = note: audit confidence → High
    = tip: use 'name: ...' to give this job a name
 
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:139:11
+    |
+138 |   check-fmt:
+    |   --------- this job
+139 |     uses: ./.github/workflows/check-fmt.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:143:11
+    |
+141 |   check-lint:
+    |   ---------- this job
+142 |     needs: plan
+143 |     uses: ./.github/workflows/check-lint.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:151:11
+    |
+148 |   check-docs:
+    |   ---------- this job
+...
+151 |     uses: ./.github/workflows/check-docs.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:157:11
+    |
+154 |   check-zizmor:
+    |   ------------ this job
+...
+157 |     uses: ./.github/workflows/check-zizmor.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:165:11
+    |
+162 |   check-publish:
+    |   ------------- this job
+...
+165 |     uses: ./.github/workflows/check-publish.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:170:11
+    |
+167 |   check-release:
+    |   ------------- this job
+...
+170 |     uses: ./.github/workflows/check-release.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:175:11
+    |
+172 |   check-generated-files:
+    |   --------------------- this job
+...
+175 |     uses: ./.github/workflows/check-generated-files.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:183:11
+    |
+180 |   test:
+    |   ---- this job
+...
+183 |     uses: ./.github/workflows/test.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:191:11
+    |
+188 |   test-windows-trampolines:
+    |   ------------------------ this job
+...
+191 |     uses: ./.github/workflows/test-windows-trampolines.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:196:11
+    |
+193 |   build-dev-binaries:
+    |   ------------------ this job
+...
+196 |     uses: ./.github/workflows/build-dev-binaries.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:205:11
+    |
+200 |   test-smoke:
+    |   ---------- this job
+...
+205 |     uses: ./.github/workflows/test-smoke.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:214:11
+    |
+209 |   test-integration:
+    |   ---------------- this job
+...
+214 |     uses: ./.github/workflows/test-integration.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:226:11
+    |
+221 |   test-system:
+    |   ----------- this job
+...
+226 |     uses: ./.github/workflows/test-system.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:235:11
+    |
+230 |   test-ecosystem:
+    |   -------------- this job
+...
+235 |     uses: ./.github/workflows/test-ecosystem.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:242:11
+    |
+239 |   build-release-binaries:
+    |   ---------------------- this job
+...
+242 |     uses: ./.github/workflows/build-release-binaries.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:248:11
+    |
+245 |   build-docker:
+    |   ------------ this job
+...
+248 |     uses: ./.github/workflows/build-docker.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:261:11
+    |
+258 |   bench:
+    |   ----- this job
+...
+261 |     uses: ./.github/workflows/bench.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/publish-crates.yml:5:1
    |
@@ -966,6 +1169,90 @@ help[concurrency-limits]: insufficient job-level concurrency limits
     |
     = note: audit confidence → High
 
+help[self-repository]: use GitHub's dedicated self-repository syntax
+  --> .github/workflows/release.yml:97:11
+   |
+93 |   custom-build-release-binaries:
+   |   ----------------------------- this job
+...
+97 |     uses: ./.github/workflows/build-release-binaries.yml
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/release.yml:106:11
+    |
+102 |   custom-build-docker:
+    |   ------------------- this job
+...
+106 |     uses: ./.github/workflows/build-docker.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/release.yml:215:11
+    |
+210 |   custom-publish-pypi:
+    |   ------------------- this job
+...
+215 |     uses: ./.github/workflows/publish-pypi.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/release.yml:230:11
+    |
+224 |   custom-publish-crates:
+    |   --------------------- this job
+...
+230 |     uses: ./.github/workflows/publish-crates.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/release.yml:297:11
+    |
+293 |   custom-publish-docs:
+    |   ------------------- this job
+...
+297 |     uses: ./.github/workflows/publish-docs.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/release.yml:306:11
+    |
+302 |   custom-publish-versions:
+    |   ----------------------- this job
+...
+306 |     uses: ./.github/workflows/publish-versions.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/release.yml:315:11
+    |
+311 |   custom-publish-mirror:
+    |   --------------------- this job
+...
+315 |     uses: ./.github/workflows/publish-mirror.yml
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
 help[undocumented-permissions]: permissions without explanatory comments
   --> .github/workflows/sync-python-releases.yml:17:7
    |
@@ -1406,4 +1693,4 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-130 findings (2 suppressed): 24 informational, 81 low, 16 medium, 7 high
+154 findings (2 suppressed): 24 informational, 105 low, 16 medium, 7 high

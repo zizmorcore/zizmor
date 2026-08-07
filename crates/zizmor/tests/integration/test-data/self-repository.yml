@@ -1,0 +1,23 @@
+name: self-repository
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  neutral:
+    name: neutral
+    runs-on: ubuntu-latest
+    steps:
+      # NOT OK: should be $/some-action
+      - name: uses-local-composite-action
+        uses: ./some-action
+
+  reusable:
+    # NOT OK: should be $/.github/workflows/reuse.yml
+    name: uses-reusable-workflow
+    uses: ./.github/workflows/reuse.yml

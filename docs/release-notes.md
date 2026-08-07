@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [self-repository] detects usages of the old "workspace-relative"
+  form for local reusable workflows and actions and recommends the new "self-repository"
+  form instead (#2271)
+
 ### Enhancements 🌱
 
 * The [impostor-commit] audit now supports pre-commit config inputs (#2256)
@@ -2028,6 +2034,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [unsound-ternary]: ./audits.md#unsound-ternary
 [adhoc-packages]: ./audits.md#adhoc-packages
 [insecure-url-scheme]: ./audits.md#insecure-url-scheme
+[self-repository]: ./audits.md#self-repository
 
 [exit code]: ./usage.md#exit-codes
 

@@ -93,4 +93,5 @@ fst.workspace = true
 assert_cmd.workspace = true
 walkdir.workspace = true
 insta.workspace = true
+similar.workspace = true
 tempfile.workspace = true

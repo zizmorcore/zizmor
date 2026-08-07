@@ -22,4 +22,4 @@ jobs:
     # normal permissions finding here, since callers are always
     # responsible for setting permissions, even if the workflow
     # is reusable-only
-    uses: ./.github/workflows/fake.yml
+    uses: $/.github/workflows/fake.yml

@@ -4386,6 +4386,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "similar",
  "subfeature",
  "tar",
  "tempfile",

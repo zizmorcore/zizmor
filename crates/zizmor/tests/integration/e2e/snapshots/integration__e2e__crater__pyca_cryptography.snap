@@ -139,6 +139,18 @@ info[anonymous-definition]: workflow or action definition without a name
    = note: audit confidence → High
    = tip: use 'name: ...' to give this job a name
 
+help[self-repository]: use GitHub's dedicated self-repository syntax
+  --> .github/workflows/benchmark.yml:39:15
+   |
+37 |       - name: Clone test vectors
+   |         ------------------------ this step
+38 |         timeout-minutes: 2
+39 |         uses: ./cryptography-base/.github/actions/fetch-vectors
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
 info[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/boring-open-awslc-bump.yml:12:3
    |
@@ -386,6 +398,192 @@ info[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → Medium
 
+help[self-repository]: use GitHub's dedicated self-repository syntax
+  --> .github/workflows/ci.yml:84:15
+   |
+82 |       - name: Clone test vectors
+   |         ------------------------ this step
+83 |         timeout-minutes: 2
+84 |         uses: ./.github/actions/fetch-vectors
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:124:15
+    |
+123 |       - name: Cache rust and pip
+    |         ------------------------ this step
+124 |         uses: ./.github/actions/cache
+    |               ^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:148:15
+    |
+148 |       - uses: ./.github/actions/upload-coverage
+    |         ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |     |
+    |         |     use '$/...' instead of './...'
+    |         this step
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:184:15
+    |
+183 |       - name: Cache rust and pip
+    |         ------------------------ this step
+184 |         uses: ./.github/actions/cache
+    |               ^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:190:15
+    |
+188 |       - name: Clone test vectors
+    |         ------------------------ this step
+189 |         timeout-minutes: 2
+190 |         uses: ./.github/actions/fetch-vectors
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:210:15
+    |
+210 |       - uses: ./.github/actions/upload-coverage
+    |         ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |     |
+    |         |     use '$/...' instead of './...'
+    |         this step
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:247:15
+    |
+246 |       - name: Cache rust and pip
+    |         ------------------------ this step
+247 |         uses: ./.github/actions/cache
+    |               ^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:253:15
+    |
+251 |       - name: Clone test vectors
+    |         ------------------------ this step
+252 |         timeout-minutes: 2
+253 |         uses: ./.github/actions/fetch-vectors
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:273:15
+    |
+273 |       - uses: ./.github/actions/upload-coverage
+    |         ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |     |
+    |         |     use '$/...' instead of './...'
+    |         this step
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:298:15
+    |
+297 |       - name: Cache rust and pip
+    |         ------------------------ this step
+298 |         uses: ./.github/actions/cache
+    |               ^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:316:15
+    |
+314 |       - name: Clone test vectors
+    |         ------------------------ this step
+315 |         timeout-minutes: 2
+316 |         uses: ./.github/actions/fetch-vectors
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:342:15
+    |
+342 |       - uses: ./.github/actions/upload-coverage
+    |         ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |     |
+    |         |     use '$/...' instead of './...'
+    |         this step
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:373:15
+    |
+372 |       - name: Cache rust and pip
+    |         ------------------------ this step
+373 |         uses: ./.github/actions/cache
+    |               ^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:395:15
+    |
+393 |       - name: Clone test vectors
+    |         ------------------------ this step
+394 |         timeout-minutes: 2
+395 |         uses: ./.github/actions/fetch-vectors
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:407:15
+    |
+407 |       - uses: ./.github/actions/upload-coverage
+    |         ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |     |
+    |         |     use '$/...' instead of './...'
+    |         this step
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/ci.yml:486:15
+    |
+485 |       - name: Cache rust and pip
+    |         ------------------------ this step
+486 |         uses: ./.github/actions/cache
+    |               ^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
 info[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/downstream-version-bump.yml:12:3
    |
@@ -446,6 +644,17 @@ help[concurrency-limits]: insufficient job-level concurrency limits
    |       ----------------- job affected by missing workflow concurrency
    |
    = note: audit confidence → High
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+  --> .github/workflows/linkcheck.yml:32:15
+   |
+31 |       - name: Cache rust and pip
+   |         ------------------------ this step
+32 |         uses: ./.github/actions/cache
+   |               ^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
 
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/lock.yml:1:1
@@ -727,6 +936,39 @@ info[superfluous-actions]: action functionality is already included by the runne
     |
     = note: audit confidence → Medium
 
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/wheel-builder.yml:167:15
+    |
+166 |       - name: Smoketest
+    |         --------------- this step
+167 |         uses: ./.github/actions/wheel-smoketest
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/wheel-builder.yml:298:15
+    |
+297 |       - name: Smoketest
+    |         --------------- this step
+298 |         uses: ./.github/actions/wheel-smoketest
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
+help[self-repository]: use GitHub's dedicated self-repository syntax
+   --> .github/workflows/wheel-builder.yml:383:15
+    |
+382 |       - name: Smoketest
+    |         --------------- this step
+383 |         uses: ./.github/actions/wheel-smoketest
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use '$/...' instead of './...'
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
 info[anonymous-definition]: workflow or action definition without a name
   --> .github/workflows/x509-limbo-version-bump.yml:12:3
    |
@@ -771,4 +1013,4 @@ info[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → Low
 
-78 findings (9 suppressed): 19 informational, 35 low, 5 medium, 10 high
+99 findings (9 suppressed): 19 informational, 56 low, 5 medium, 10 high

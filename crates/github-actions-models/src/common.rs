@@ -301,7 +301,7 @@ impl Uses {
     /// Returns the original raw `uses:` clause.
     pub fn raw(&self) -> &str {
         match self {
-            Uses::Local(local) => &local.path,
+            Uses::Local(local) => local.raw(),
             Uses::Repository(repo) => repo.raw(),
             Uses::Docker(docker) => docker.raw(),
         }
@@ -312,7 +312,7 @@ impl Uses {
 #[derive(Debug, PartialEq)]
 #[non_exhaustive]
 pub struct LocalUses {
-    pub path: String,
+    path: String,
 }
 
 impl LocalUses {
@@ -326,6 +326,11 @@ impl LocalUses {
     /// See: <https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/>
     pub fn is_self_repository(&self) -> bool {
         self.path.starts_with('$')
+    }
+
+    /// Return the path referenced by this [`LocalUses`].
+    pub fn raw(&self) -> &str {
+        &self.path
     }
 }
 

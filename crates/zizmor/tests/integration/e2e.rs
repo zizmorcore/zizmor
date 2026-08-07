@@ -36,10 +36,33 @@ fn issue_569() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .offline(NetworkMode::AssertOnline)
-            .output(OutputMode::Both)
+            .output(OutputMode::Stderr)
             .args(["--no-online-audits", "--collect=workflows"])
             .input("python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6")
-            .run()?
+            .run()?,
+        @"
+    INFO zizmor: 🌈 zizmor v@@VERSION@@
+    INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/build.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/documentation-links.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/jit.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/lint.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/mypy.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/new-bugs-announce-notifier.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/project-updater.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/require-pr-label.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/reusable-context.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/reusable-docs.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/reusable-macos.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/reusable-tsan.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/reusable-ubuntu.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/reusable-wasi.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/reusable-windows-msi.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/reusable-windows.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/stale.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/tail-call.yml
+    INFO audit: zizmor: 🌈 completed .github/workflows/verify-ensurepip-wheels.yml
+    "
     );
     Ok(())
 }

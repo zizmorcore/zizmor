@@ -17,8 +17,8 @@ jobs:
     steps:
       - name: no-finding-1
         # workflow is local, so tagging is superfluous
-        uses: ./.github/workflows/reusable.yml
+        uses: $/.github/workflows/reusable.yml
 
       - name: no-finding-2
         # no pedantic finding for tag-pinned local workflows
-        uses: ./.github/workflows/reusable.yml@tag
+        uses: $/.github/workflows/reusable.yml@tag

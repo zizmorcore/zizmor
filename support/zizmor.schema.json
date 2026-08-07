@@ -324,6 +324,9 @@
         "self-hosted-runner": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
+        "self-repository": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "stale-action-refs": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
