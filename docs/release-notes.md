@@ -20,6 +20,8 @@ of `zizmor`.
 
     Many thanks to @connorshea for proposing and implementing this enhancement!
 
+* The `archived-uses` audit now supports pre-commit config inputs (#2272)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`

@@ -73,8 +73,8 @@ fn test_pre_commit_config() -> anyhow::Result<()> {
     warning[archived-uses]: action or reusable workflow from archived repository
      --> @@INPUT@@:2:11
       |
-    2 |   - repo: https://github.com/facebook/pyre-check
-      |     ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    2 |   - repo: https://github.com/pre-commit/mirrors-prettier
+      |     ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       |     |     |
       |     |     repository is archived
       |     this repo
