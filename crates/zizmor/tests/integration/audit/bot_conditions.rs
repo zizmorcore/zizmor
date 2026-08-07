@@ -1,4 +1,4 @@
-use crate::common::{input_under_test, zizmor};
+use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
 
 #[test]
 fn test_regular_persona() -> anyhow::Result<()> {
@@ -151,5 +151,186 @@ fn test_regular_persona() -> anyhow::Result<()> {
     "
     );
 
+    Ok(())
+}
+
+#[test]
+fn test_fix_replace_actor() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(
+        ".github/workflows/bot-conditions.yml",
+        r#"
+name: Test Workflow
+on:
+  pull_request_target:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#,
+    );
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/bot-conditions.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @r#"
+    @@ -6,8 +6,8 @@
+     jobs:
+       test:
+         runs-on: ubuntu-latest
+    -    if: github.actor == 'dependabot[bot]'
+    +    if: github.event.pull_request.user.login == 'dependabot[bot]'
+         steps:
+           - name: Test Step
+    -        if: github.actor == 'dependabot[bot]'
+    +        if: github.event.pull_request.user.login == 'dependabot[bot]'
+             run: echo "hello"
+    "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_issue_comment_trigger() -> anyhow::Result<()> {
+    let issue_comment_workflow = r#"
+name: Test Issue Comment
+on: issue_comment
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.ACTOR == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(
+        ".github/workflows/bot-conditions.yml",
+        issue_comment_workflow,
+    );
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/bot-conditions.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @r#"
+    @@ -5,8 +5,8 @@
+     jobs:
+       test:
+         runs-on: ubuntu-latest
+    -    if: github.ACTOR == 'dependabot[bot]'
+    +    if: github.event.comment.user.login == 'dependabot[bot]'
+         steps:
+           - name: Test Step
+    -        if: github.actor == 'dependabot[bot]'
+    +        if: github.event.comment.user.login == 'dependabot[bot]'
+             run: echo "hello"
+    "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_pull_request_review_trigger() -> anyhow::Result<()> {
+    let pr_review_workflow = r#"
+name: Test PR Review
+on: pull_request_review
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]'
+        run: echo "hello"
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/bot-conditions.yml", pr_review_workflow);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/bot-conditions.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @r#"
+    @@ -5,8 +5,8 @@
+     jobs:
+       test:
+         runs-on: ubuntu-latest
+    -    if: github.actor == 'dependabot[bot]'
+    +    if: github.event.review.user.login == 'dependabot[bot]'
+         steps:
+           - name: Test Step
+    -        if: github.actor == 'dependabot[bot]'
+    +        if: github.event.review.user.login == 'dependabot[bot]'
+             run: echo "hello"
+    "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_nontrivial_condition() -> anyhow::Result<()> {
+    let workflow_content = r#"
+name: Test Workflow
+on:
+  pull_request_target:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]' || github.actor == 'renovate[bot]'
+    steps:
+      - name: Test Step
+        if: github.actor == 'dependabot[bot]' && contains(github.event.pull_request.title, 'chore')
+        run: echo "hello"
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/bot-conditions.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/bot-conditions.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @r#"
+    @@ -6,8 +6,8 @@
+     jobs:
+       test:
+         runs-on: ubuntu-latest
+    -    if: github.actor == 'dependabot[bot]' || github.actor == 'renovate[bot]'
+    +    if: github.event.pull_request.user.login == 'dependabot[bot]' || github.actor == 'renovate[bot]'
+         steps:
+           - name: Test Step
+    -        if: github.actor == 'dependabot[bot]' && contains(github.event.pull_request.title, 'chore')
+    +        if: github.event.pull_request.user.login == 'dependabot[bot]' && contains(github.event.pull_request.title, 'chore')
+             run: echo "hello"
+    "#
+    );
     Ok(())
 }
