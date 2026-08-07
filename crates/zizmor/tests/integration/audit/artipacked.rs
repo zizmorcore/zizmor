@@ -1,4 +1,4 @@
-use crate::common::{input_under_test, zizmor};
+use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
 
 #[test]
 fn test_regular_persona() -> anyhow::Result<()> {
@@ -205,6 +205,98 @@ fn test_composite_action() -> anyhow::Result<()> {
        = note: this finding has an auto-fix
 
     2 findings (2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_merges_into_existing_with_block() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(
+        ".github/workflows/artipacked.yml",
+        r#"
+name: Test Workflow
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            fetch-depth: 2
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+            name: my-artifact
+            path: .
+"#,
+    );
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/artipacked.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -10,6 +10,7 @@
+             with:
+                 token: ${{ secrets.GITHUB_TOKEN }}
+                 fetch-depth: 2
+    +            persist-credentials: false
+           - name: Upload artifacts
+             uses: actions/upload-artifact@v4
+             with:
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_creates_block_when_missing() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(
+        ".github/workflows/artipacked.yml",
+        r#"
+name: Test Workflow
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-artifact
+          path: .
+"#,
+    );
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/artipacked.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -7,6 +7,8 @@
+         steps:
+           - name: Checkout
+             uses: actions/checkout@v4
+    +        with:
+    +          persist-credentials: false
+           - name: Upload artifacts
+             uses: actions/upload-artifact@v4
+             with:
     "
     );
 
