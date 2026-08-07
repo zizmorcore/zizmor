@@ -735,6 +735,14 @@
         - danmar/cppcheck#7044
 
 
+-   ![](https://github.com/Dash-Industry-Forum.png?size=40){ width="40" loading=lazy align=left } Dash-Industry-Forum
+
+    ---
+
+    ??? example "Examples"
+        - Dash-Industry-Forum/dash.js#5100
+
+
 -   ![](https://github.com/DataDog.png?size=40){ width="40" loading=lazy align=left } DataDog
 
     ---
@@ -1663,6 +1671,14 @@
         - jupyterlab/jupyter-ai#1577
 
 
+-   ![](https://github.com/jupyterlab-contrib.png?size=40){ width="40" loading=lazy align=left } jupyterlab-contrib
+
+    ---
+
+    ??? example "Examples"
+        - jupyterlab-contrib/jupyterlab_code_formatter#403
+
+
 -   ![](https://github.com/jupytext.png?size=40){ width="40" loading=lazy align=left } jupytext
 
     ---
@@ -1770,6 +1786,14 @@
 
     ??? example "Examples"
         - lemon24/reader@01bbe67e5722e373c62a108c3685c443042ee901
+
+
+-   ![](https://github.com/libexpat.png?size=40){ width="40" loading=lazy align=left } libexpat
+
+    ---
+
+    ??? example "Examples"
+        - libexpat/libexpat#1308
 
 
 -   ![](https://github.com/libssh2.png?size=40){ width="40" loading=lazy align=left } libssh2
@@ -3599,6 +3623,14 @@
         - vitejs/vite-plugin-basic-ssl#113
         - vitejs/vite-plugin-react#1232
         - vitejs/vite-plugin-vue#787
+
+
+-   ![](https://github.com/vitessio.png?size=40){ width="40" loading=lazy align=left } vitessio
+
+    ---
+
+    ??? example "Examples"
+        - vitessio/vitess#19149
 
 
 -   ![](https://github.com/vitest-dev.png?size=40){ width="40" loading=lazy align=left } vitest-dev

@@ -166,6 +166,7 @@ CycloneDX/cyclonedx-python#1054
 CycloneDX/specification#925
 dani-garcia/vaultwarden#5537
 danmar/cppcheck#7044
+Dash-Industry-Forum/dash.js#5100
 DataDog/datadog-agent#30871
 DataDog/dd-trace-py#11640
 DataDog/dd-trace-rb#4456
@@ -351,6 +352,7 @@ Julian/lean.nvim@4f9d48499b002ab361a4351142cae2f6f5403646
 junit-team/junit-framework#4838
 junit-team/junit-framework#4840
 jupyterhub/jupyterhub#5049
+jupyterlab-contrib/jupyterlab_code_formatter#403
 jupyterlab/jupyter-ai#1577
 jupytext/jupytext#1569
 kanidm/kanidm#3430
@@ -370,6 +372,7 @@ langfuse/langfuse#13048
 langfuse/langfuse-js#783
 langfuse/langfuse-python#1623
 lemon24/reader@01bbe67e5722e373c62a108c3685c443042ee901
+libexpat/libexpat#1308
 libssh2/libssh2#1609
 lissy93/dashy#2140
 llvm/llvm-project#187905
@@ -722,6 +725,7 @@ vitejs/vite-ecosystem-ci#469
 vitejs/vite-plugin-basic-ssl#113
 vitejs/vite-plugin-react#1232
 vitejs/vite-plugin-vue#787
+vitessio/vitess#19149
 vitest-dev/vitest#10375
 vlang/v#22681
 VowpalWabbit/vowpal_wabbit#4918
