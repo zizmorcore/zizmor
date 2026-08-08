@@ -8,6 +8,7 @@
 
 use anyhow::anyhow;
 use github_actions_models::common::Uses;
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::audit::AuditError;
@@ -193,12 +194,14 @@ impl Audit for RefConfusion {
                         .add_location(
                             repo.location()
                                 .with_keys(["repo".into()])
+                                .subfeature(Subfeature::new(0, remote.repo.as_str()))
                                 .annotated("this repo"),
                         )
                         .add_location(
                             repo.location()
                                 .primary()
                                 .with_keys(["rev".into()])
+                                .subfeature(Subfeature::new(0, remote.rev.as_str()))
                                 .annotated(REF_CONFUSION_ANNOTATION),
                         )
                         .build(pre_commit)?,

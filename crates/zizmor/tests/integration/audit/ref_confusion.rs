@@ -35,12 +35,12 @@ fn test_ref_confusion_pre_commit() -> Result<()> {
             .run()?,
         @"
     warning[ref-confusion]: git ref for action with ambiguous ref type
-     --> @@INPUT@@:3:5
+     --> @@INPUT@@:3:10
       |
     2 |   - repo: https://github.com/woodruffw/gha-hazmat
-      |     --------------------------------------------- this repo
+      |           --------------------------------------- this repo
     3 |     rev: confusable
-      |     ^^^^^^^^^^^^^^^ uses a ref that's provided by both the branch and tag namespaces
+      |          ^^^^^^^^^^ uses a ref that's provided by both the branch and tag namespaces
       |
       = note: audit confidence → High
 
