@@ -28,6 +28,8 @@ of `zizmor`.
 
 * The `archived-uses` audit now supports pre-commit config inputs (#2272)
 
+* The `ref-confusion` audit now supports pre-commit config inputs (#2274)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`

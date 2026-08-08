@@ -8,11 +8,13 @@
 
 use anyhow::anyhow;
 use github_actions_models::common::Uses;
+use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::audit::AuditError;
 use crate::finding::Finding;
 use crate::finding::location::Locatable as _;
+use crate::models::pre_commit::PreCommitConfig;
 use crate::models::repo_ref::RepoRef;
 use crate::models::{StepCommon as _, action::CompositeStep};
 use crate::{
@@ -167,6 +169,44 @@ impl Audit for RefConfusion {
                     .build(step)
                     .map_err(Self::err)?,
             );
+        }
+
+        Ok(findings)
+    }
+
+    async fn audit_pre_commit_config<'doc>(
+        &self,
+        pre_commit: &'doc PreCommitConfig,
+        _config: &crate::config::Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let mut findings = vec![];
+
+        for repo in pre_commit.repos() {
+            let Some(remote) = repo.repo() else {
+                continue;
+            };
+
+            if self.confusable(remote).await? {
+                findings.push(
+                    Self::finding()
+                        .severity(Severity::Medium)
+                        .confidence(Confidence::High)
+                        .add_location(
+                            repo.location()
+                                .with_keys(["repo".into()])
+                                .subfeature(Subfeature::new(0, remote.repo.as_str()))
+                                .annotated("this repo"),
+                        )
+                        .add_location(
+                            repo.location()
+                                .primary()
+                                .with_keys(["rev".into()])
+                                .subfeature(Subfeature::new(0, remote.rev.as_str()))
+                                .annotated(REF_CONFUSION_ANNOTATION),
+                        )
+                        .build(pre_commit)?,
+                )
+            }
         }
 
         Ok(findings)
