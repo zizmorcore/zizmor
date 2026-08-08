@@ -5,6 +5,7 @@
 [![Crates.io](https://img.shields.io/crates/v/zizmor)](https://crates.io/crates/zizmor)
 [![Packaging status](https://img.shields.io/repology/repositories/zizmor)](https://repology.org/project/zizmor/versions)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/woodruffw?style=flat&logo=githubsponsors&labelColor=white&color=white)](https://github.com/sponsors/woodruffw)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/zizmorcore/zizmor/badge)](https://api.securityscorecards.dev/projects/github.com/zizmorcore/zizmor)
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.com/invite/PGU3zGZuGG)
 
 `zizmor` is a static analysis tool for CI/CD systems.
