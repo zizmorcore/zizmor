@@ -26,9 +26,9 @@ of `zizmor`.
 
     Many thanks to @connorshea for proposing and implementing this enhancement!
 
-* The `archived-uses` audit now supports pre-commit config inputs (#2272)
+* The [archived-uses] audit now supports pre-commit config inputs (#2272)
 
-* The `ref-confusion` audit now supports pre-commit config inputs (#2274)
+* The [ref-confusion] audit now supports pre-commit config inputs (#2274)
 
 ### Bug Fixes 🐛
 
@@ -2039,6 +2039,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [adhoc-packages]: ./audits.md#adhoc-packages
 [insecure-url-scheme]: ./audits.md#insecure-url-scheme
 [self-repository]: ./audits.md#self-repository
+[ref-confusion]: ./audits.md#ref-confusion
 
 [exit code]: ./usage.md#exit-codes
 
