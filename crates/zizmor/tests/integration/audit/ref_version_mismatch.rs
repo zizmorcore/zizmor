@@ -246,3 +246,336 @@ fn test_issue_2165() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_add_version_comment_composite_action() -> anyhow::Result<()> {
+    use crate::common::WorkspaceBuilder;
+
+    let action_content = r#"
+name: Test Missing Version Comment
+description: Test Missing Version Comment
+runs:
+  using: composite
+  steps:
+    - name: Checkout without version comment
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        persist-credentials: false
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file("action/action.yml", action_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff("action/action.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all", "--persona=pedantic"])
+                .offline(NetworkMode::AssertOnline)
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -5,6 +5,6 @@
+       using: composite
+       steps:
+         - name: Checkout without version comment
+    -      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    +      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+           with:
+             persist-credentials: false
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_add_version_comment_workflow() -> anyhow::Result<()> {
+    use crate::common::WorkspaceBuilder;
+
+    let workflow_content = r#"
+name: Test Missing Version Comment
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout without version comment
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all", "--persona=pedantic"])
+                .offline(NetworkMode::AssertOnline)
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -7,6 +7,6 @@
+         runs-on: ubuntu-latest
+         steps:
+           - name: Checkout without version comment
+    -        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    +        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+             with:
+               persist-credentials: false
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_version_comment_mismatch() -> anyhow::Result<()> {
+    use crate::common::WorkspaceBuilder;
+
+    let workflow_content = r#"
+name: Test Version Comment Mismatch
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with mismatched version comment
+        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+        with:
+          persist-credentials: false
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all", "--persona=pedantic"])
+                .offline(NetworkMode::AssertOnline)
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -7,6 +7,6 @@
+         runs-on: ubuntu-latest
+         steps:
+           - name: Checkout with mismatched version comment
+    -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+    +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+             with:
+               persist-credentials: false
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_version_comment_mismatch_crlf() -> anyhow::Result<()> {
+    use crate::common::WorkspaceBuilder;
+
+    let workflow_content = r#"
+name: Test Version Comment Mismatch
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with mismatched version comment
+        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+        with:
+          persist-credentials: false
+"#
+    .replace('\n', "\r\n");
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all", "--persona=pedantic"])
+                .offline(NetworkMode::AssertOnline)
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -7,6 +7,6 @@
+         runs-on: ubuntu-latest
+         steps:
+           - name: Checkout with mismatched version comment
+    -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+    +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+             with:
+               persist-credentials: false
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_version_comment_mismatch_bizarre_formatting() -> anyhow::Result<()> {
+    use crate::common::WorkspaceBuilder;
+
+    let workflow_content = r#"
+name: Test Missing Version Comment
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all", "--persona=pedantic"])
+                .offline(NetworkMode::AssertOnline)
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -7,6 +7,6 @@
+         runs-on: ubuntu-latest
+         steps:
+           -
+    -        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    +        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+             with:
+               persist-credentials: false
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_version_comment_different_formats() -> anyhow::Result<()> {
+    use crate::common::WorkspaceBuilder;
+
+    let workflow_content = r#"
+name: Test Different Version Formats
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tag format
+        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # tag=v3.0.0
+        with:
+          persist-credentials: false
+      - name: Simple format
+        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+        with:
+          persist-credentials: false
+      - name: Version format
+        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # version: v3.0.0
+        with:
+          persist-credentials: false
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all", "--persona=pedantic"])
+                .offline(NetworkMode::AssertOnline)
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -7,14 +7,14 @@
+         runs-on: ubuntu-latest
+         steps:
+           - name: Tag format
+    -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # tag=v3.0.0
+    +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+             with:
+               persist-credentials: false
+           - name: Simple format
+    -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+    +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+             with:
+               persist-credentials: false
+           - name: Version format
+    -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # version: v3.0.0
+    +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+             with:
+               persist-credentials: false
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_version_comment_nonexistent_ref() -> anyhow::Result<()> {
+    use crate::common::WorkspaceBuilder;
+
+    let workflow_content = r#"
+name: nonexistent
+
+on:
+  push:
+
+permissions: {}
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v9.9.9
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all", "--persona=pedantic"])
+                .offline(NetworkMode::AssertOnline)
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -12,4 +12,4 @@
+         runs-on: ubuntu-latest
+         steps:
+           - name: Setup Go
+    -        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v9.9.9
+    +        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+    "
+    );
+
+    Ok(())
+}
