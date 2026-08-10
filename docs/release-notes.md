@@ -35,6 +35,9 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
   input containing a `prek`-specific `builtin` section (#2259)
 
+* Fixed a bug where the [unpinned-uses] audit would fail to honor
+  ignore comments within the same step scope (#2289)
+
 ## 1.29.0
 
 ### New Features 🌈
@@ -126,7 +129,7 @@ of `zizmor`.
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [secrets-outside-env] audit would not honor
-  ignore comments within the same job scope (#2157)
+  ignore comments within the same job scope (#2158)
 
 * Fixed a bug where the [ref-version-mismatch] audit would not honor
   ignore comments within the same steps scope (#2177)
