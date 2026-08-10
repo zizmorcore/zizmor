@@ -183,6 +183,7 @@ impl UnpinnedUses {
             .confidence(Confidence::High)
             .severity(severity)
             .persona(persona)
+            .add_location(parent.location().hidden())
             .add_location(
                 parent
                     .location()
