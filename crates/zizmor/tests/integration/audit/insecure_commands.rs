@@ -151,10 +151,10 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/bot-conditions.yml", workflow_content);
+    workspace.add_file(".github/workflows/insecure-commands.yml", workflow_content);
 
     insta::assert_snapshot!(
-        &workspace.diff(".github/workflows/bot-conditions.yml", |workspace| {
+        &workspace.diff(".github/workflows/insecure-commands.yml", |workspace| {
             zizmor()
                 .args(["--fix=all"])
                 .input(workspace.path())
@@ -192,10 +192,10 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/bot-conditions.yml", workflow_content);
+    workspace.add_file(".github/workflows/insecure-commands.yml", workflow_content);
 
     insta::assert_snapshot!(
-        &workspace.diff(".github/workflows/bot-conditions.yml", |workspace| {
+        &workspace.diff(".github/workflows/insecure-commands.yml", |workspace| {
             zizmor()
                 .args(["--fix=all"])
                 .input(workspace.path())
@@ -204,11 +204,11 @@ jobs:
         @"
     @@ -2,7 +2,6 @@
      on: push
-
+     
      env:
     -  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
        GLOBAL_VAR: keep-me
-
+     
      jobs:
     "
     );
