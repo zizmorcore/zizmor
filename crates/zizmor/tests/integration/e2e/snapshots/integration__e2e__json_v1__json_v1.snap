@@ -244,6 +244,52 @@ expression: output
               "verbatim_path": "@@INPUT@@"
             }
           },
+          "annotation": "this step",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "unpinned-0"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 0
+              }
+            ]
+          },
+          "feature_kind": "Normal",
+          "kind": "Hidden"
+        },
+        "concrete": {
+          "location": {
+            "start_point": {
+              "row": 15,
+              "column": 8
+            },
+            "end_point": {
+              "row": 18,
+              "column": 0
+            },
+            "offset_span": {
+              "start": 295,
+              "end": 372
+            }
+          },
+          "feature": "uses: actions/checkout@v3\n        with:\n          persist-credentials: false\n",
+          "comments": []
+        }
+      },
+      {
+        "symbolic": {
+          "key": {
+            "Local": {
+              "verbatim_path": "@@INPUT@@"
+            }
+          },
           "annotation": "action is not pinned to a hash (required by blanket policy)",
           "route": {
             "route": [
