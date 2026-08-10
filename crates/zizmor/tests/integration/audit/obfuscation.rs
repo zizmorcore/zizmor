@@ -1,4 +1,4 @@
-use crate::common::{input_under_test, zizmor};
+use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
 use anyhow::Result;
 
 #[test]
@@ -255,6 +255,166 @@ fn test_issue_1769() -> Result<()> {
        = note: audit confidence → High
 
     2 findings (1 suppressed): 1 informational, 0 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
+
+/// Test that we correctly replace `${{ 'foo' }}` with `foo` instead of `${{ foo }}`.
+///
+/// Reproducer for #1578; see: <https://github.com/zizmorcore/zizmor/issues/1578>.
+#[test]
+fn test_fix_static_evaluation() -> anyhow::Result<()> {
+    let workflow_content = r#"
+name: Test Workflow
+on: push
+
+permissions: {}
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 # ... because release-please scans historical commits to build releases, so we need all the history.
+          persist-credentials: false
+      - id: release
+        uses: $/vendor/github.com/googleapis/release-please-action
+        with:
+          config-file: "tools/releasing/config.release-please.json"
+          manifest-file: "tools/releasing/manifest.release-please.json"
+          target-branch: "${{ inputs.rp_target_branch }}"
+    outputs:
+      iac/terraform/attribution.tfm--release_created: ${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=safe"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @r#"
+    @@ -19,4 +19,4 @@
+               manifest-file: "tools/releasing/manifest.release-please.json"
+               target-branch: "${{ inputs.rp_target_branch }}"
+         outputs:
+    -      iac/terraform/attribution.tfm--release_created: ${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}
+    +      iac/terraform/attribution.tfm--release_created: steps.release.outputs.iac/terraform/attribution.tfm--release_created
+    "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_uses_path_empty_components() -> anyhow::Result<()> {
+    let workflow_content = r#"
+name: Test Workflow
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout////@v4
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=safe"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -6,4 +6,4 @@
+       test:
+         runs-on: ubuntu-latest
+         steps:
+    -      - uses: actions/checkout////@v4
+    +      - uses: actions/checkout@v4
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_uses_path_dot() -> anyhow::Result<()> {
+    let workflow_content = r#"
+name: Test Workflow
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: github/codeql-action/./init@v2
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=safe"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -6,4 +6,4 @@
+       test:
+         runs-on: ubuntu-latest
+         steps:
+    -      - uses: github/codeql-action/./init@v2
+    +      - uses: github/codeql-action/init@v2
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_uses_path_double_dot() -> anyhow::Result<()> {
+    let workflow_content = r#"
+name: Test Workflow
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/cache/save/../save@v4
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=safe"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -6,4 +6,4 @@
+       test:
+         runs-on: ubuntu-latest
+         steps:
+    -      - uses: actions/cache/save/../save@v4
+    +      - uses: actions/cache/save@v4
     "
     );
 
