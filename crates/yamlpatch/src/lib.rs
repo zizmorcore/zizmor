@@ -842,7 +842,11 @@ fn handle_block_mapping_addition(
                     result.push('\n');
                     result.push_str(&indent);
                     result.push_str("  "); // 2 spaces for nested content
-                    result.push_str(line.trim_start());
+                    // `serialize_yaml_value` anchors its output at column 0, so
+                    // each line's own leading whitespace *is* its depth relative
+                    // to the value's root. Trimming it here would flatten every
+                    // nested level into a sibling of the top-level key.
+                    result.push_str(line);
                 }
             }
             result
@@ -1079,7 +1083,32 @@ fn apply_value_replacement(
 
         // Regular block style - use standard formatting
         let val_str = serialize_yaml_value(value)?;
-        format!("{} {}", key_part, val_str.trim())
+
+        // A multi-line block collection can't share the key's line: splicing it
+        // after `key:` puts the collection's first entry on that line and leaves
+        // the remaining lines at the key's own depth, e.g. `target: outer:`,
+        // which is not valid YAML. Emit it as a nested block instead.
+        if val_str.contains('\n')
+            && matches!(
+                value,
+                yaml_serde::Value::Mapping(_) | yaml_serde::Value::Sequence(_)
+            )
+        {
+            let key_indent = &key_part[..key_part.len() - key_part.trim_start().len()];
+            let mut result = key_part.to_string();
+            for line in val_str.lines() {
+                if !line.trim().is_empty() {
+                    result.push('\n');
+                    result.push_str(key_indent);
+                    result.push_str("  "); // 2 spaces for nested content
+                    // As above: preserve each line's own relative depth.
+                    result.push_str(line);
+                }
+            }
+            result
+        } else {
+            format!("{} {}", key_part, val_str.trim())
+        }
     } else {
         // This is just a value, replace it directly
 
