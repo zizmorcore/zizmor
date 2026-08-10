@@ -1,4 +1,4 @@
-use crate::common::{input_under_test, zizmor};
+use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
 use anyhow::Result;
 
 #[test]
@@ -129,6 +129,88 @@ fn test_issue_839_repro() -> Result<()> {
 
     2 findings (1 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_job_level() -> anyhow::Result<()> {
+    let workflow_content = r#"
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+      OTHER_VAR: keep-me
+      ANOTHER_VAR: also-keep
+    steps:
+      - run: echo "test"
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/bot-conditions.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/bot-conditions.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -5,7 +5,6 @@
+       test:
+         runs-on: ubuntu-latest
+         env:
+    -      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+           OTHER_VAR: keep-me
+           ANOTHER_VAR: also-keep
+         steps:
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_workflow_level() -> anyhow::Result<()> {
+    let workflow_content = r#"
+on: push
+
+env:
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+  GLOBAL_VAR: keep-me
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/bot-conditions.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/bot-conditions.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -2,7 +2,6 @@
+     on: push
+
+     env:
+    -  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+       GLOBAL_VAR: keep-me
+
+     jobs:
+    "
     );
 
     Ok(())
