@@ -597,7 +597,13 @@ impl Workspace {
 
         let diff = similar::TextDiff::from_lines(&old, &new);
 
-        Ok(diff.unified_diff().context_radius(3).to_string())
+        let rendered = diff
+            .unified_diff()
+            .context_radius(1)
+            .missing_newline_hint(false)
+            .to_string();
+
+        Ok(rendered)
     }
 }
 
