@@ -41,6 +41,11 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would reject a `dependabot.yml` containing
   a `goproxy-server` registry definition (#2300)
 
+* Fixed a handful of unsound patch bugs when performing YAML add and/or
+  replace operations (#2295)
+
+    Many thanks to @dmbuil for proposing and implementing this improvement!
+
 ## 1.29.0
 
 ### New Features 🌈
