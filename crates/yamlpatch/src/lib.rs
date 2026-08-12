@@ -842,7 +842,11 @@ fn handle_block_mapping_addition(
                     result.push('\n');
                     result.push_str(&indent);
                     result.push_str("  "); // 2 spaces for nested content
-                    result.push_str(line.trim_start());
+                    // `serialize_yaml_value` anchors its output at column 0, so
+                    // each line's own leading whitespace *is* its depth relative
+                    // to the value's root. Trimming it here would flatten every
+                    // nested level into a sibling of the top-level key.
+                    result.push_str(line);
                 }
             }
             result
@@ -1079,7 +1083,33 @@ fn apply_value_replacement(
 
         // Regular block style - use standard formatting
         let val_str = serialize_yaml_value(value)?;
-        format!("{} {}", key_part, val_str.trim())
+
+        // A non-empty block collection can't share the key's line: splicing it
+        // after `key:` produces invalid YAML even when its serialized form is a
+        // single line, e.g. `target: outer: value` or `target: - value`. Emit it
+        // as a nested block instead, while keeping empty collections inline.
+        let is_nonempty_block_collection = match value {
+            yaml_serde::Value::Mapping(mapping) => !mapping.is_empty(),
+            yaml_serde::Value::Sequence(sequence) => !sequence.is_empty(),
+            _ => false,
+        };
+
+        if is_nonempty_block_collection {
+            let key_indent = &key_part[..key_part.len() - key_part.trim_start().len()];
+            let mut result = key_part.to_string();
+            for line in val_str.lines() {
+                if !line.trim().is_empty() {
+                    result.push('\n');
+                    result.push_str(key_indent);
+                    result.push_str("  "); // 2 spaces for nested content
+                    // As above: preserve each line's own relative depth.
+                    result.push_str(line);
+                }
+            }
+            result
+        } else {
+            format!("{} {}", key_part, val_str.trim())
+        }
     } else {
         // This is just a value, replace it directly
 

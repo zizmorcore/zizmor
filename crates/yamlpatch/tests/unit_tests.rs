@@ -3975,3 +3975,350 @@ foo:
       - [def, ghi]
     ");
 }
+
+#[test]
+fn test_add_nested_block_mapping() {
+    let original = r#"
+top:
+  existing: 1
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    // A value nested two levels deep.
+    let value: yaml_serde::Value = yaml_serde::from_str("outer:\n  inner: value\n").unwrap();
+
+    let operations = vec![Patch {
+        route: route!("top"),
+        operation: Op::Add {
+            key: "added".to_string(),
+            value,
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    top:
+      existing: 1
+      added:
+        outer:
+          inner: value
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_replace_nested_block_mapping() {
+    let original = r#"
+top:
+  target:
+    old: 1
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+
+    // Control: replacing the same route with a *scalar* works, confirming
+    // the route itself is correct.
+    let scalar_ops = vec![Patch {
+        route: route!("top", "target"),
+        operation: Op::Replace(yaml_serde::Value::String("replaced".to_string())),
+    }];
+    let scalar_result = apply_yaml_patches(&document, &scalar_ops);
+    assert!(
+        scalar_result.is_ok(),
+        "control case should succeed: {:?}",
+        scalar_result.err()
+    );
+
+    let value: yaml_serde::Value = yaml_serde::from_str("outer:\n  inner: value\n").unwrap();
+    let operations = vec![Patch {
+        route: route!("top", "target"),
+        operation: Op::Replace(value),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations)
+        .expect("Op::Replace with a block mapping value should succeed");
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    top:
+      target:
+        outer:
+          inner: value
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_replace_block_sequence() {
+    let original = r#"
+top:
+  target:
+    old: 1
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let value: yaml_serde::Value = yaml_serde::from_str("- a\n- b\n").unwrap();
+
+    let operations = vec![Patch {
+        route: route!("top", "target"),
+        operation: Op::Replace(value),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    top:
+      target:
+        - a
+        - b
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_replace_single_entry_block_mapping() {
+    let original = r#"
+top:
+  target:
+    old: 1
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let value: yaml_serde::Value = yaml_serde::from_str("new: value\n").unwrap();
+    let operations = vec![Patch {
+        route: route!("top", "target"),
+        operation: Op::Replace(value),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    top:
+      target:
+        new: value
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_replace_single_entry_block_sequence() {
+    let original = r#"
+top:
+  target:
+    old: 1
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let value: yaml_serde::Value = yaml_serde::from_str("- value\n").unwrap();
+    let operations = vec![Patch {
+        route: route!("top", "target"),
+        operation: Op::Replace(value),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    top:
+      target:
+        - value
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_replace_empty_collections_inline() {
+    let original = r#"
+top:
+  target:
+    old: 1
+"#;
+
+    for (serialized, expected) in [("{}", "{}"), ("[]", "[]")] {
+        let document = yamlpath::Document::new(original).unwrap();
+        let value: yaml_serde::Value = yaml_serde::from_str(serialized).unwrap();
+        let operations = vec![Patch {
+            route: route!("top", "target"),
+            operation: Op::Replace(value),
+        }];
+
+        let result = apply_yaml_patches(&document, &operations).unwrap();
+        assert_eq!(result.source(), format!("\ntop:\n  target: {expected}\n"));
+    }
+}
+
+/// This is a backstop test; `Replace` currently mistakes any colon in a
+/// sequence scalar for a mapping key separator.
+#[test]
+#[should_panic]
+fn test_replace_sequence_scalar_containing_colon() {
+    let original = r#"
+top:
+  - https://example.com
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let operations = vec![Patch {
+        route: route!("top", 0),
+        operation: Op::Replace(yaml_serde::Value::String("new".to_string())),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+    assert_eq!(result.source(), "\ntop:\n  - new\n");
+}
+
+/// This is a backstop test; `Replace` does not yet indent block collections
+/// relative to a block sequence marker.
+#[test]
+#[should_panic]
+fn test_replace_block_sequence_scalar_with_mapping() {
+    let original = r#"
+top:
+  - old
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let value: yaml_serde::Value = yaml_serde::from_str("new:\n  child: value\n").unwrap();
+    let operations = vec![Patch {
+        route: route!("top", 0),
+        operation: Op::Replace(value),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+    assert_eq!(result.source(), "\ntop:\n  - new:\n      child: value\n");
+}
+
+#[test]
+fn test_replace_deeply_nested_block_mapping() {
+    let original = r#"
+top:
+  target:
+    old: 1
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let value: yaml_serde::Value =
+        yaml_serde::from_str("a:\n  b:\n    c:\n      d: deep\n").unwrap();
+
+    let operations = vec![Patch {
+        route: route!("top", "target"),
+        operation: Op::Replace(value),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    // Every level keeps its own relative depth.
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    top:
+      target:
+        a:
+          b:
+            c:
+              d: deep
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_add_nested_block_mapping_preserves_comments() {
+    // Comment preservation is the reason to reach for yamlpatch over a
+    // serialize/deserialize round-trip, so pin it together with the nesting.
+    let original = r#"# Top-of-file comment.
+outer:
+  # Comment attached to the existing entry.
+  existing:
+    nested:
+      key: 1  # trailing comment
+# Final comment.
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let value: yaml_serde::Value =
+        yaml_serde::from_str("first:\n  second: value\nsibling: other\n").unwrap();
+
+    let operations = vec![Patch {
+        route: route!("outer"),
+        operation: Op::Add {
+            key: "added".to_string(),
+            value,
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+    # Top-of-file comment.
+    outer:
+      # Comment attached to the existing entry.
+      existing:
+        nested:
+          key: 1  # trailing comment
+      added:
+        first:
+          second: value
+        sibling: other
+    # Final comment.
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_merge_into_nested_block_mapping() {
+    // `Op::MergeInto` lowers to `Op::Add` when the key is absent, so it is
+    // subject to the same flattening bug.
+    let original = r#"
+outer:
+  target:
+    existing: 1
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let mut updates: indexmap::IndexMap<String, yaml_serde::Value> = indexmap::IndexMap::new();
+    updates.insert(
+        "first".to_string(),
+        yaml_serde::from_str("second: value\n").unwrap(),
+    );
+
+    let operations = vec![Patch {
+        route: route!("outer", "target"),
+        operation: Op::MergeInto {
+            key: "added".to_string(),
+            updates,
+        },
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    outer:
+      target:
+        existing: 1
+        added:
+          first:
+            second: value
+
+    --- END PATCH ---
+    ");
+}
