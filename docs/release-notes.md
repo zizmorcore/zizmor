@@ -38,6 +38,9 @@ of `zizmor`.
 * Fixed a bug where the [unpinned-uses] audit would fail to honor
   ignore comments within the same step scope (#2289)
 
+* Fixed a bug where `zizmor` would reject a `dependabot.yml` containing
+  a `goproxy-server` registry definition (#2300)
+
 ## 1.29.0
 
 ### New Features 🌈

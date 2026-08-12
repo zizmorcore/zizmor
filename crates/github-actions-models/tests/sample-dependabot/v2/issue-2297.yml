@@ -1,0 +1,21 @@
+# https://github.com/zizmorcore/zizmor/issues/2297
+version: 2
+registries:
+  go-artifactory:
+    type: goproxy-server
+    url: https://sample.jfrog.io/artifactory/api/go/go-all
+    username: sample-username
+    password: sample-password
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    registries:
+      - go-artifactory
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
+    open-pull-requests-limit: 5
