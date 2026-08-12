@@ -4162,6 +4162,47 @@ top:
     }
 }
 
+/// This is a backstop test; `Replace` currently mistakes any colon in a
+/// sequence scalar for a mapping key separator.
+#[test]
+#[should_panic]
+fn test_replace_sequence_scalar_containing_colon() {
+    let original = r#"
+top:
+  - https://example.com
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let operations = vec![Patch {
+        route: route!("top", 0),
+        operation: Op::Replace(yaml_serde::Value::String("new".to_string())),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+    assert_eq!(result.source(), "\ntop:\n  - new\n");
+}
+
+/// This is a backstop test; `Replace` does not yet indent block collections
+/// relative to a block sequence marker.
+#[test]
+#[should_panic]
+fn test_replace_block_sequence_scalar_with_mapping() {
+    let original = r#"
+top:
+  - old
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let value: yaml_serde::Value = yaml_serde::from_str("new:\n  child: value\n").unwrap();
+    let operations = vec![Patch {
+        route: route!("top", 0),
+        operation: Op::Replace(value),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+    assert_eq!(result.source(), "\ntop:\n  - new:\n      child: value\n");
+}
+
 #[test]
 fn test_replace_deeply_nested_block_mapping() {
     let original = r#"
