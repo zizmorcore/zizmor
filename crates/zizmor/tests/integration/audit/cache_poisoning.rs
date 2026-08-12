@@ -796,9 +796,7 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -12,4 +12,5 @@
-                 ~/.cargo/registry
-                 ~/.cargo/git
+    @@ -14,2 +14,3 @@
                key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     +          lookup-only: true
            - uses: softprops/action-gh-release@v1
@@ -836,9 +834,7 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -9,5 +9,5 @@
-           - uses: actions/setup-go@v4
-             with:
+    @@ -11,3 +11,3 @@
                go-version: '1.21'
     -          cache: true
     +          cache: false

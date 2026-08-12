@@ -300,14 +300,12 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @r#"
-    @@ -19,4 +19,4 @@
-               manifest-file: "tools/releasing/manifest.release-please.json"
-               target-branch: "${{ inputs.rp_target_branch }}"
+        @"
+    @@ -21,2 +21,2 @@
          outputs:
     -      iac/terraform/attribution.tfm--release_created: ${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}
     +      iac/terraform/attribution.tfm--release_created: steps.release.outputs.iac/terraform/attribution.tfm--release_created
-    "#
+    "
     );
 
     Ok(())
@@ -337,9 +335,7 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,4 +6,4 @@
-       test:
-         runs-on: ubuntu-latest
+    @@ -8,2 +8,2 @@
          steps:
     -      - uses: actions/checkout////@v4
     +      - uses: actions/checkout@v4
@@ -373,9 +369,7 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,4 +6,4 @@
-       test:
-         runs-on: ubuntu-latest
+    @@ -8,2 +8,2 @@
          steps:
     -      - uses: github/codeql-action/./init@v2
     +      - uses: github/codeql-action/init@v2
@@ -409,9 +403,7 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,4 +6,4 @@
-       test:
-         runs-on: ubuntu-latest
+    @@ -8,2 +8,2 @@
          steps:
     -      - uses: actions/cache/save/../save@v4
     +      - uses: actions/cache/save@v4

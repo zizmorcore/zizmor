@@ -233,9 +233,7 @@ updates:
                 .run()
         })?,
         @"
-    @@ -7,3 +7,5 @@
-         schedule:
-           interval: daily
+    @@ -9 +9,3 @@
          insecure-external-code-execution: deny
     +    cooldown:
     +      default-days: 7
@@ -269,15 +267,11 @@ updates:
                 .run()
         })?,
         @"
-    @@ -4,7 +4,7 @@
-     updates:
-       - package-ecosystem: pip
+    @@ -6,3 +6,3 @@
          directory: /
     -    cooldown: {}
     +    cooldown: { default-days: 7 }
          schedule:
-           interval: daily
-         insecure-external-code-execution: deny
     "
     );
     Ok(())
@@ -309,15 +303,11 @@ updates:
                 .run()
         })?,
         @"
-    @@ -5,7 +5,7 @@
-       - package-ecosystem: pip
-         directory: /
+    @@ -7,3 +7,3 @@
          cooldown:
     -      default-days: 2
     +      default-days: 7
          schedule:
-           interval: daily
-         insecure-external-code-execution: deny
     "
     );
     Ok(())
@@ -353,20 +343,16 @@ updates:
                 .run()
         })?,
         @"
-    @@ -6,10 +6,12 @@
-         directory: /
-         schedule:
+    @@ -8,2 +8,4 @@
            interval: daily
     +    cooldown:
     +      default-days: 7
      
-       - package-ecosystem: npm
-         directory: /
+    @@ -12,3 +14,3 @@
          cooldown:
     -      default-days: 1
     +      default-days: 7
          schedule:
-           interval: weekly
     "
     );
     Ok(())

@@ -161,14 +161,10 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -5,7 +5,6 @@
-       test:
-         runs-on: ubuntu-latest
+    @@ -7,3 +7,2 @@
          env:
     -      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
            OTHER_VAR: keep-me
-           ANOTHER_VAR: also-keep
-         steps:
     "
     );
 
@@ -202,14 +198,10 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -2,7 +2,6 @@
-     on: push
-     
+    @@ -4,3 +4,2 @@
      env:
     -  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
        GLOBAL_VAR: keep-me
-     
-     jobs:
     "
     );
 
