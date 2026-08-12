@@ -4086,6 +4086,83 @@ top:
 }
 
 #[test]
+fn test_replace_single_entry_block_mapping() {
+    let original = r#"
+top:
+  target:
+    old: 1
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let value: yaml_serde::Value = yaml_serde::from_str("new: value\n").unwrap();
+    let operations = vec![Patch {
+        route: route!("top", "target"),
+        operation: Op::Replace(value),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    top:
+      target:
+        new: value
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_replace_single_entry_block_sequence() {
+    let original = r#"
+top:
+  target:
+    old: 1
+"#;
+
+    let document = yamlpath::Document::new(original).unwrap();
+    let value: yaml_serde::Value = yaml_serde::from_str("- value\n").unwrap();
+    let operations = vec![Patch {
+        route: route!("top", "target"),
+        operation: Op::Replace(value),
+    }];
+
+    let result = apply_yaml_patches(&document, &operations).unwrap();
+
+    insta::assert_snapshot!(format_patch(result.source()), @r"
+    --- PATCH ---
+
+    top:
+      target:
+        - value
+
+    --- END PATCH ---
+    ");
+}
+
+#[test]
+fn test_replace_empty_collections_inline() {
+    let original = r#"
+top:
+  target:
+    old: 1
+"#;
+
+    for (serialized, expected) in [("{}", "{}"), ("[]", "[]")] {
+        let document = yamlpath::Document::new(original).unwrap();
+        let value: yaml_serde::Value = yaml_serde::from_str(serialized).unwrap();
+        let operations = vec![Patch {
+            route: route!("top", "target"),
+            operation: Op::Replace(value),
+        }];
+
+        let result = apply_yaml_patches(&document, &operations).unwrap();
+        assert_eq!(result.source(), format!("\ntop:\n  target: {expected}\n"));
+    }
+}
+
+#[test]
 fn test_replace_deeply_nested_block_mapping() {
     let original = r#"
 top:

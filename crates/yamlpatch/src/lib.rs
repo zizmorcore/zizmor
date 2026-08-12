@@ -1084,16 +1084,17 @@ fn apply_value_replacement(
         // Regular block style - use standard formatting
         let val_str = serialize_yaml_value(value)?;
 
-        // A multi-line block collection can't share the key's line: splicing it
-        // after `key:` puts the collection's first entry on that line and leaves
-        // the remaining lines at the key's own depth, e.g. `target: outer:`,
-        // which is not valid YAML. Emit it as a nested block instead.
-        if val_str.contains('\n')
-            && matches!(
-                value,
-                yaml_serde::Value::Mapping(_) | yaml_serde::Value::Sequence(_)
-            )
-        {
+        // A non-empty block collection can't share the key's line: splicing it
+        // after `key:` produces invalid YAML even when its serialized form is a
+        // single line, e.g. `target: outer: value` or `target: - value`. Emit it
+        // as a nested block instead, while keeping empty collections inline.
+        let is_nonempty_block_collection = match value {
+            yaml_serde::Value::Mapping(mapping) => !mapping.is_empty(),
+            yaml_serde::Value::Sequence(sequence) => !sequence.is_empty(),
+            _ => false,
+        };
+
+        if is_nonempty_block_collection {
             let key_indent = &key_part[..key_part.len() - key_part.trim_start().len()];
             let mut result = key_part.to_string();
             for line in val_str.lines() {
