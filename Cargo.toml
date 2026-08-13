@@ -47,7 +47,7 @@ flate2 = "1.1.9"
 fst = "0.4.7"
 futures = "0.3"
 http = "1.4.1"
-http-cache-reqwest = { version = "1.0.0-alpha.6", features = ["manager-moka"] }
+http-cache-reqwest = { version = "1.0.0-alpha.7", features = ["manager-cacache", "manager-moka"] }
 human-panic = "2.0.8"
 ignore = "0.4.25"
 indexmap = { version = "2.13.1", features = ["serde"] }
@@ -71,7 +71,7 @@ tempfile = "3"
 tar = "0.4.46"
 terminal-link = "0.1.0"
 thiserror = "2.0.18"
-tokio = { version = "1.52.2", features = ["rt-multi-thread", "io-std"] }
+tokio = { version = "1.52.2", features = ["macros", "rt-multi-thread", "io-std"] }
 tower-lsp-server = "0.23"
 tracing = "0.1.44"
 tracing-indicatif = "0.3.14"
