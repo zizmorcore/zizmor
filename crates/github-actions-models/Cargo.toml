@@ -1,26 +1,25 @@
 [package]
 name = "github-actions-models"
 description = "Unofficial, high-quality data models for GitHub Actions workflows, actions, and related components"
-repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-models"
-keywords = ["github", "ci"]
-categories = ["api-bindings"]
 readme = "README.md"
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-models"
+keywords = ["ci", "github"]
+categories = ["api-bindings"]
 
 version.workspace = true
-authors.workspace = true
-homepage.workspace = true
 edition.workspace = true
+homepage.workspace = true
 license.workspace = true
-
-[lints]
-workspace = true
 
 [dependencies]
 indexmap.workspace = true
 self_cell.workspace = true
 serde.workspace = true
-yaml_serde.workspace = true
 tracing.workspace = true
+yaml_serde.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+
+[lints]
+workspace = true

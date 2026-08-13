@@ -1,23 +1,22 @@
 [package]
 name = "github-actions-expressions"
 description = "GitHub Actions expression parser and data types"
-repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-expressions"
 readme = "README.md"
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/github-actions-expressions"
 
 version.workspace = true
+edition.workspace = true
 homepage.workspace = true
 license.workspace = true
-authors.workspace = true
-edition.workspace = true
-
-[lints]
-workspace = true
 
 [dependencies]
-thiserror.workspace = true
 serde_json.workspace = true
 subfeature.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
 serde.workspace = true
+
+[lints]
+workspace = true

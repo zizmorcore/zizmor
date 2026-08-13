@@ -14,7 +14,6 @@ members = [
 
 [workspace.package]
 version = "1.30.0-rc1"
-authors = ["William Woodruff <william@yossarian.net>"]
 edition = "2024"
 rust-version = "1.97.0"
 readme = "README.md"

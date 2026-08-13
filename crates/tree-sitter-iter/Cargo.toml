@@ -3,11 +3,10 @@ name = "tree-sitter-iter"
 description = "A very simple pre-order iterator for tree-sitter CSTs"
 
 version.workspace = true
-authors.workspace = true
-homepage.workspace = true
 edition.workspace = true
-license.workspace = true
 rust-version.workspace = true
+homepage.workspace = true
+license.workspace = true
 
 [dependencies]
 tree-sitter.workspace = true

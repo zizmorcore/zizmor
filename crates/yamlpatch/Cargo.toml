@@ -2,28 +2,24 @@
 name = "yamlpatch"
 description = "Comment and format-preserving YAML patch operations"
 repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/yamlpatch"
-keywords = ["yaml", "patch"]
-authors = [
-    "Mostafa Moradian <mstfmoradian@gmail.com>",
-    "William Woodruff <william@yossarian.net>",
-]
+keywords = ["patch", "yaml"]
 
 version.workspace = true
-homepage.workspace = true
 edition.workspace = true
+homepage.workspace = true
 license.workspace = true
-
-[lints]
-workspace = true
 
 [dependencies]
 indexmap.workspace = true
 line-index.workspace = true
 serde_json.workspace = true
-yaml_serde.workspace = true
 subfeature.workspace = true
 thiserror.workspace = true
+yaml_serde.workspace = true
 yamlpath.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+
+[lints]
+workspace = true
