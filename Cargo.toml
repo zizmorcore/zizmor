@@ -47,7 +47,7 @@ flate2 = "1.1.9"
 fst = "0.4.7"
 futures = "0.3"
 http = "1.4.1"
-http-cache-reqwest = { version = "1.0.0-alpha.7", features = ["manager-cacache", "manager-moka"] }
+http-cache-reqwest = { version = "1.0.0-alpha.7", default-features = false, features = ["manager-cacache", "manager-moka"] }
 human-panic = "2.0.8"
 ignore = "0.4.25"
 indexmap = { version = "2.13.1", features = ["serde"] }
