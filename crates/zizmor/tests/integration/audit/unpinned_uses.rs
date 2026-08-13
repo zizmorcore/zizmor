@@ -626,3 +626,260 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix() -> anyhow::Result<()> {
+    use crate::common::{NetworkMode, WorkspaceBuilder};
+
+    let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with ref-pin
+        uses: actions/checkout@v6.0.1
+        with:
+          persist-credentials: false
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .offline(NetworkMode::AssertOnline)
+                .output(crate::common::OutputMode::Both)
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -9,3 +9,3 @@
+           - name: Checkout with ref-pin
+    -        uses: actions/checkout@v6.0.1
+    +        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+             with:
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_crlf() -> anyhow::Result<()> {
+    use crate::common::{NetworkMode, WorkspaceBuilder};
+
+    let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with ref-pin
+        uses: actions/checkout@v6.0.1
+        with:
+          persist-credentials: false
+"#
+    .replace("\n", "\r\n");
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .offline(NetworkMode::AssertOnline)
+                .output(crate::common::OutputMode::Both)
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -9,3 +9,3 @@
+           - name: Checkout with ref-pin
+    -        uses: actions/checkout@v6.0.1
+    +        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+             with:
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_overwrites_comment() -> anyhow::Result<()> {
+    use crate::common::{NetworkMode, WorkspaceBuilder};
+
+    let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+        - name: Checkout with ref-pin
+          uses: actions/checkout@v6.0.1 # old comment
+          with:
+            persist-credentials: false
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .offline(NetworkMode::AssertOnline)
+                .output(crate::common::OutputMode::Both)
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -9,3 +9,3 @@
+             - name: Checkout with ref-pin
+    -          uses: actions/checkout@v6.0.1 # old comment
+    +          uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+               with:
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_bizarre_formatting() -> anyhow::Result<()> {
+    use crate::common::{NetworkMode, WorkspaceBuilder};
+
+    let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        uses: actions/checkout@v6.0.1
+        with:
+          persist-credentials: false
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .offline(NetworkMode::AssertOnline)
+                .output(crate::common::OutputMode::Both)
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -9,3 +9,3 @@
+           -
+    -        uses: actions/checkout@v6.0.1
+    +        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+             with:
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_preserves_subpath() -> anyhow::Result<()> {
+    use crate::common::{NetworkMode, WorkspaceBuilder};
+
+    let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: bytecodealliance/actions/wasmtime/setup@v1.1.3
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .offline(NetworkMode::AssertOnline)
+                .output(crate::common::OutputMode::Both)
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -8,2 +8,2 @@
+         steps:
+    -      - uses: bytecodealliance/actions/wasmtime/setup@v1.1.3
+    +      - uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
+    "
+    );
+
+    Ok(())
+}
+
+/// Tests that we expand a major version ref like `@v1` to the full version `v1.2.0`
+/// in the fix's inserted comment.
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_major_version_pins_to_full_version() -> anyhow::Result<()> {
+    use crate::common::{NetworkMode, WorkspaceBuilder};
+
+    let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with major-only ref
+        uses: actions/checkout@v1
+        with:
+          persist-credentials: false
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .offline(NetworkMode::AssertOnline)
+                .output(crate::common::OutputMode::Both)
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -9,3 +9,3 @@
+           - name: Checkout with major-only ref
+    -        uses: actions/checkout@v1
+    +        uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
+             with:
+    "
+    );
+
+    Ok(())
+}
