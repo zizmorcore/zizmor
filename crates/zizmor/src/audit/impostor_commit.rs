@@ -26,7 +26,7 @@ use crate::{
     state::AuditState,
 };
 
-pub const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
+const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
 
 pub(crate) struct ImpostorCommit {
     pub(crate) client: github::Client,

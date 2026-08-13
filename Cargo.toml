@@ -89,16 +89,26 @@ yaml_serde = "0.10"
 
 [workspace.lints.clippy]
 dbg_macro = "warn"
+empty_drop = "warn"
+empty_structs_with_brackets = "warn"
+exit = "warn"
+get_unwrap = "warn"
+if_not_else = "allow"
 needless_lifetimes = "warn"
 print_stderr = "warn"
 print_stdout = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+rest_pat_in_fully_bound_structs = "warn"
 todo = "warn"
 unimplemented = "warn"
 unused_trait_names = "warn"
 unwrap_used = "warn"
 use_debug = "warn"
+use_self = "warn"
 
 [workspace.lints.rust]
+unreachable_pub = "warn"
 unsafe_code = "forbid"
 
 [profile.dev.package]

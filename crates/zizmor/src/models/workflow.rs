@@ -214,7 +214,7 @@ impl Workflow {
     /// this through [`Locatable`] would require a split lifetime between
     /// `'self` and `'doc` for just this and [`Action`], i.e. the owning
     /// container types rather than the borrowing subtypes.
-    pub fn location(&self) -> SymbolicLocation<'_> {
+    pub(crate) fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
             key: &self.key,
             annotation: "this workflow".into(),
