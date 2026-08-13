@@ -91,6 +91,13 @@ In general, **most users will want to use local discovery**, which is the
 default behavior. Global discovery only takes precedence when explicitly
 requested with `--config` or `ZIZMOR_CONFIG`.
 
+## JSON Schema
+
+A JSON Schema for `zizmor` can be found [here](https://raw.githubusercontent.com/woodruffw/zizmor/main/support/zizmor.schema.json).
+
+[SchemaStore](https://www.schemastore.org) also provides access to `zizmor`'s JSON Schema,
+meaning that any IDE that integrates with SchemaStore should obtain it automatically.
+
 ## Settings
 
 ### `rules.<id>.disable` {#rules-id-disable}
