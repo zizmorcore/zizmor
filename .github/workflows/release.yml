@@ -6,9 +6,11 @@
 # - `release-binaries.yml`: build and attach binaries to the new release on GitHub
 # - `release-pypi.yml`: build and publish distributions of zizmor to PyPI
 # - `release-crates.yml`: publish the zizmor crates to crates.io
+# - `release-docker.yml`: build and publish Docker images to GHCR
 #
 # To enable those child workflows, this workflow creates the release
-# and then invokes each as a reusable workflow, passing the tag as an input.
+# and then invokes each as a reusable workflow, passing the release tag or version
+# as an input.
 
 name: Release zizmor 🌈
 
@@ -109,7 +111,7 @@ jobs:
       release-tag: ${{ needs.plan-release.outputs.release-tag }}
 
   release-docker:
-    name: Publisher Docker images for ${{ needs.plan-release.outputs.release-tag }}
+    name: Publish Docker images for ${{ needs.plan-release.outputs.release-tag }}
     # NOTE: needs `release-pypi` because it pulls the latest wheels from PyPI.
     needs: [plan-release, draft-release, release-pypi]
 
