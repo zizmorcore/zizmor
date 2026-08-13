@@ -1162,6 +1162,7 @@ dependencies = [
  "postcard",
  "serde",
  "tokio",
+ "url",
 ]
 
 [[package]]
