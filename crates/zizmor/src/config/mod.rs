@@ -133,7 +133,7 @@ impl<'de> Deserialize<'de> for WorkflowRule {
         D: serde::Deserializer<'de>,
     {
         let raw = String::deserialize(deserializer)?;
-        WorkflowRule::from_str(&raw).map_err(de::Error::custom)
+        Self::from_str(&raw).map_err(de::Error::custom)
     }
 }
 

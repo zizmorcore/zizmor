@@ -94,7 +94,7 @@ impl UnredactedSecrets {
                 }
             }
             Expr::Index(expr) => results.extend(Self::secret_leakages(expr)),
-            Expr::Context(Context { parts, .. }) => {
+            Expr::Context(Context { parts }) => {
                 results.extend(parts.iter().flat_map(Self::secret_leakages))
             }
             Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {

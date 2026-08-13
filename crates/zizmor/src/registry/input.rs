@@ -75,7 +75,7 @@ pub(crate) enum CollectionError {
 
     /// A single input file failed to load as a specific kind.
     #[error("failed to load {1} as {2}")]
-    Inner(#[source] Box<CollectionError>, String, InputKind),
+    Inner(#[source] Box<Self>, String, InputKind),
 
     /// The input doesn't have a `.yml` or `.yaml` extension.
     #[error("invalid input: must have .yml or .yaml extension")]
@@ -121,7 +121,7 @@ impl CollectionError {
     /// `Inner` variant, in which case it recurses into the inner error.
     pub(crate) fn inner(&self) -> &Self {
         match self {
-            CollectionError::Inner(inner, _, _) => inner.inner(),
+            Self::Inner(inner, _, _) => inner.inner(),
             _ => self,
         }
     }
@@ -144,11 +144,11 @@ pub(crate) enum InputKind {
 impl std::fmt::Display for InputKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InputKind::Workflow => write!(f, "workflow"),
-            InputKind::Action => write!(f, "action"),
-            InputKind::Dependabot => write!(f, "dependabot config"),
-            InputKind::PreCommitConfig => write!(f, "pre-commit config"),
-            InputKind::PreCommitHooks => write!(f, "pre-commit hooks definition"),
+            Self::Workflow => write!(f, "workflow"),
+            Self::Action => write!(f, "action"),
+            Self::Dependabot => write!(f, "dependabot config"),
+            Self::PreCommitConfig => write!(f, "pre-commit config"),
+            Self::PreCommitHooks => write!(f, "pre-commit hooks definition"),
         }
     }
 }
@@ -325,8 +325,8 @@ pub(crate) enum InputKey {
 impl std::fmt::Display for InputKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InputKey::Local(local) => write!(f, "file://{path}", path = local.verbatim_path),
-            InputKey::Remote(remote) => {
+            Self::Local(local) => write!(f, "file://{path}", path = local.verbatim_path),
+            Self::Remote(remote) => {
                 // No ref means assume HEAD, i.e. whatever's on the default branch.
                 let git_ref = remote.slug.git_ref.as_deref().unwrap_or("HEAD");
                 write!(
@@ -337,7 +337,7 @@ impl std::fmt::Display for InputKey {
                     path = remote.path
                 )
             }
-            InputKey::Stdin(_) => write!(f, "<stdin>"),
+            Self::Stdin(_) => write!(f, "<stdin>"),
         }
     }
 }
@@ -404,12 +404,12 @@ impl InputKey {
             // Local keys: always use the "best" relative path,
             // which is opportunistically relative to the repo root
             // if possible.
-            InputKey::Local(local) => local.best_identifier.as_str(),
+            Self::Local(local) => local.best_identifier.as_str(),
             // Remote keys: always use the path within the repository,
             // which is always relative.
-            InputKey::Remote(remote) => remote.path.as_str(),
+            Self::Remote(remote) => remote.path.as_str(),
             // Standard input uses an arbitrary identifier.
-            InputKey::Stdin(_) => "<stdin>",
+            Self::Stdin(_) => "<stdin>",
         }
     }
 
@@ -419,9 +419,9 @@ impl InputKey {
     /// and will be the native path for local keys.
     pub(crate) fn presentation_path(&self) -> &str {
         match self {
-            InputKey::Local(local) => local.native_path.as_str(),
-            InputKey::Remote(remote) => remote.path.as_str(),
-            InputKey::Stdin(_) => "<stdin>",
+            Self::Local(local) => local.native_path.as_str(),
+            Self::Remote(remote) => remote.path.as_str(),
+            Self::Stdin(_) => "<stdin>",
         }
     }
 
@@ -430,24 +430,24 @@ impl InputKey {
         // NOTE: Safe unwraps, since the presence of a filename component
         // is a construction invariant of all `InputKey` variants.
         match self {
-            InputKey::Local(local) => local
+            Self::Local(local) => local
                 .verbatim_path
                 .file_name()
                 .expect("expected input key to have a filename component"),
-            InputKey::Remote(remote) => remote
+            Self::Remote(remote) => remote
                 .path
                 .file_name()
                 .expect("expected input key to have a filename component"),
-            InputKey::Stdin(_) => "<stdin>",
+            Self::Stdin(_) => "<stdin>",
         }
     }
 
     /// Returns the group this input belongs to.
     pub(crate) fn group(&self) -> &Group {
         match self {
-            InputKey::Local(local) => &local.group,
-            InputKey::Remote(remote) => &remote.group,
-            InputKey::Stdin(stdin) => &stdin.group,
+            Self::Local(local) => &local.group,
+            Self::Remote(remote) => &remote.group,
+            Self::Stdin(stdin) => &stdin.group,
         }
     }
 }

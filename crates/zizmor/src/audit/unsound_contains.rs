@@ -103,7 +103,7 @@ impl UnsoundContains {
                 func: _,
                 args: exprs,
             })
-            | Expr::Context(Context { parts: exprs, .. }) => {
+            | Expr::Context(Context { parts: exprs }) => {
                 Box::new(exprs.iter().flat_map(Self::walk_tree_for_unsound_contains))
             }
             Expr::Index(expr) => Self::walk_tree_for_unsound_contains(expr),

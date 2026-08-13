@@ -63,28 +63,28 @@ impl Style {
         let multiline = trimmed.contains(&b'\n');
 
         match feature.kind() {
-            yamlpath::FeatureKind::BlockMapping => Style::BlockMapping,
-            yamlpath::FeatureKind::BlockSequence => Style::BlockSequence,
+            yamlpath::FeatureKind::BlockMapping => Self::BlockMapping,
+            yamlpath::FeatureKind::BlockSequence => Self::BlockSequence,
             yamlpath::FeatureKind::FlowMapping => {
                 if multiline {
-                    Style::MultilineFlowMapping
+                    Self::MultilineFlowMapping
                 } else {
-                    Style::FlowMapping
+                    Self::FlowMapping
                 }
             }
             yamlpath::FeatureKind::FlowSequence => {
                 if multiline {
-                    Style::MultilineFlowSequence
+                    Self::MultilineFlowSequence
                 } else {
-                    Style::FlowSequence
+                    Self::FlowSequence
                 }
             }
             yamlpath::FeatureKind::Scalar => match trimmed[0] {
-                b'|' => Style::MultilineLiteralScalar,
-                b'>' => Style::MultilineFoldedScalar,
-                b'"' => Style::DoubleQuoted,
-                b'\'' => Style::SingleQuoted,
-                _ => Style::PlainScalar,
+                b'|' => Self::MultilineLiteralScalar,
+                b'>' => Self::MultilineFoldedScalar,
+                b'"' => Self::DoubleQuoted,
+                b'\'' => Self::SingleQuoted,
+                _ => Self::PlainScalar,
             },
         }
     }

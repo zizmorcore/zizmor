@@ -23,8 +23,8 @@ use crate::{
 impl From<LocationKind> for AnnotationKind {
     fn from(kind: LocationKind) -> Self {
         match kind {
-            LocationKind::Primary => AnnotationKind::Primary,
-            LocationKind::Related => AnnotationKind::Context,
+            LocationKind::Primary => Self::Primary,
+            LocationKind::Related => Self::Context,
             // Unreachable because we filter out hidden locations earlier.
             LocationKind::Hidden => unreachable!(),
         }

@@ -89,8 +89,8 @@ pub(crate) enum FixDisposition {
 impl fmt::Display for FixDisposition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            FixDisposition::Safe => write!(f, "safe"),
-            FixDisposition::Unsafe => write!(f, "unsafe"),
+            Self::Safe => write!(f, "safe"),
+            Self::Unsafe => write!(f, "unsafe"),
         }
     }
 }

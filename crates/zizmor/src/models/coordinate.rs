@@ -35,8 +35,8 @@ pub(crate) enum ActionCoordinate {
 impl ActionCoordinate {
     pub(crate) fn uses_pattern(&self) -> &RepositoryUsesPattern {
         match self {
-            ActionCoordinate::Configurable { uses_pattern, .. } => uses_pattern,
-            ActionCoordinate::NotConfigurable(inner) => inner,
+            Self::Configurable { uses_pattern, .. } => uses_pattern,
+            Self::NotConfigurable(inner) => inner,
         }
     }
 
@@ -64,7 +64,7 @@ impl ActionCoordinate {
         }
 
         match self {
-            ActionCoordinate::Configurable {
+            Self::Configurable {
                 uses_pattern: _,
                 control,
             } => {
@@ -79,7 +79,7 @@ impl ActionCoordinate {
                 }
             }
             // The mere presence of this `uses:` implies the expected usage semantics.
-            ActionCoordinate::NotConfigurable(_) => Some(Usage::Always),
+            Self::NotConfigurable(_) => Some(Usage::Always),
         }
     }
 }
@@ -126,10 +126,10 @@ impl Not for ControlEvaluation {
 
     fn not(self) -> Self::Output {
         match self {
-            ControlEvaluation::DefaultSatisfied => ControlEvaluation::NotSatisfied,
-            ControlEvaluation::Satisfied => ControlEvaluation::NotSatisfied,
-            ControlEvaluation::NotSatisfied => ControlEvaluation::Satisfied,
-            ControlEvaluation::Conditional => ControlEvaluation::Conditional,
+            Self::DefaultSatisfied => Self::NotSatisfied,
+            Self::Satisfied => Self::NotSatisfied,
+            Self::NotSatisfied => Self::Satisfied,
+            Self::Conditional => Self::Conditional,
         }
     }
 }
@@ -140,54 +140,22 @@ impl BitAnd for ControlEvaluation {
     fn bitand(self, rhs: Self) -> Self::Output {
         // NOTE: This could be done less literally, but I find it easier to read.
         match (self, rhs) {
-            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::DefaultSatisfied) => {
-                ControlEvaluation::DefaultSatisfied
-            }
-            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Satisfied) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::NotSatisfied) => {
-                ControlEvaluation::NotSatisfied
-            }
-            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Conditional) => {
-                ControlEvaluation::Conditional
-            }
-            (ControlEvaluation::Satisfied, ControlEvaluation::DefaultSatisfied) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::Satisfied, ControlEvaluation::Satisfied) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::Satisfied, ControlEvaluation::NotSatisfied) => {
-                ControlEvaluation::NotSatisfied
-            }
-            (ControlEvaluation::Satisfied, ControlEvaluation::Conditional) => {
-                ControlEvaluation::Conditional
-            }
-            (ControlEvaluation::NotSatisfied, ControlEvaluation::DefaultSatisfied) => {
-                ControlEvaluation::NotSatisfied
-            }
-            (ControlEvaluation::NotSatisfied, ControlEvaluation::Satisfied) => {
-                ControlEvaluation::NotSatisfied
-            }
-            (ControlEvaluation::NotSatisfied, ControlEvaluation::NotSatisfied) => {
-                ControlEvaluation::NotSatisfied
-            }
-            (ControlEvaluation::NotSatisfied, ControlEvaluation::Conditional) => {
-                ControlEvaluation::NotSatisfied
-            }
-            (ControlEvaluation::Conditional, ControlEvaluation::DefaultSatisfied) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::Conditional, ControlEvaluation::Satisfied) => {
-                ControlEvaluation::Conditional
-            }
-            (ControlEvaluation::Conditional, ControlEvaluation::NotSatisfied) => {
-                ControlEvaluation::NotSatisfied
-            }
-            (ControlEvaluation::Conditional, ControlEvaluation::Conditional) => {
-                ControlEvaluation::Conditional
-            }
+            (Self::DefaultSatisfied, Self::DefaultSatisfied) => Self::DefaultSatisfied,
+            (Self::DefaultSatisfied, Self::Satisfied) => Self::Satisfied,
+            (Self::DefaultSatisfied, Self::NotSatisfied) => Self::NotSatisfied,
+            (Self::DefaultSatisfied, Self::Conditional) => Self::Conditional,
+            (Self::Satisfied, Self::DefaultSatisfied) => Self::Satisfied,
+            (Self::Satisfied, Self::Satisfied) => Self::Satisfied,
+            (Self::Satisfied, Self::NotSatisfied) => Self::NotSatisfied,
+            (Self::Satisfied, Self::Conditional) => Self::Conditional,
+            (Self::NotSatisfied, Self::DefaultSatisfied) => Self::NotSatisfied,
+            (Self::NotSatisfied, Self::Satisfied) => Self::NotSatisfied,
+            (Self::NotSatisfied, Self::NotSatisfied) => Self::NotSatisfied,
+            (Self::NotSatisfied, Self::Conditional) => Self::NotSatisfied,
+            (Self::Conditional, Self::DefaultSatisfied) => Self::Satisfied,
+            (Self::Conditional, Self::Satisfied) => Self::Conditional,
+            (Self::Conditional, Self::NotSatisfied) => Self::NotSatisfied,
+            (Self::Conditional, Self::Conditional) => Self::Conditional,
         }
     }
 }
@@ -198,54 +166,22 @@ impl BitOr for ControlEvaluation {
     fn bitor(self, rhs: Self) -> Self::Output {
         // TODO: Does this mapping make sense?
         match (self, rhs) {
-            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::DefaultSatisfied) => {
-                ControlEvaluation::DefaultSatisfied
-            }
-            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Satisfied) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::NotSatisfied) => {
-                ControlEvaluation::DefaultSatisfied
-            }
-            (ControlEvaluation::DefaultSatisfied, ControlEvaluation::Conditional) => {
-                ControlEvaluation::DefaultSatisfied
-            }
-            (ControlEvaluation::Satisfied, ControlEvaluation::DefaultSatisfied) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::Satisfied, ControlEvaluation::Satisfied) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::Satisfied, ControlEvaluation::NotSatisfied) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::Satisfied, ControlEvaluation::Conditional) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::NotSatisfied, ControlEvaluation::DefaultSatisfied) => {
-                ControlEvaluation::DefaultSatisfied
-            }
-            (ControlEvaluation::NotSatisfied, ControlEvaluation::Satisfied) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::NotSatisfied, ControlEvaluation::NotSatisfied) => {
-                ControlEvaluation::NotSatisfied
-            }
-            (ControlEvaluation::NotSatisfied, ControlEvaluation::Conditional) => {
-                ControlEvaluation::Conditional
-            }
-            (ControlEvaluation::Conditional, ControlEvaluation::DefaultSatisfied) => {
-                ControlEvaluation::DefaultSatisfied
-            }
-            (ControlEvaluation::Conditional, ControlEvaluation::Satisfied) => {
-                ControlEvaluation::Satisfied
-            }
-            (ControlEvaluation::Conditional, ControlEvaluation::NotSatisfied) => {
-                ControlEvaluation::Conditional
-            }
-            (ControlEvaluation::Conditional, ControlEvaluation::Conditional) => {
-                ControlEvaluation::Conditional
-            }
+            (Self::DefaultSatisfied, Self::DefaultSatisfied) => Self::DefaultSatisfied,
+            (Self::DefaultSatisfied, Self::Satisfied) => Self::Satisfied,
+            (Self::DefaultSatisfied, Self::NotSatisfied) => Self::DefaultSatisfied,
+            (Self::DefaultSatisfied, Self::Conditional) => Self::DefaultSatisfied,
+            (Self::Satisfied, Self::DefaultSatisfied) => Self::Satisfied,
+            (Self::Satisfied, Self::Satisfied) => Self::Satisfied,
+            (Self::Satisfied, Self::NotSatisfied) => Self::Satisfied,
+            (Self::Satisfied, Self::Conditional) => Self::Satisfied,
+            (Self::NotSatisfied, Self::DefaultSatisfied) => Self::DefaultSatisfied,
+            (Self::NotSatisfied, Self::Satisfied) => Self::Satisfied,
+            (Self::NotSatisfied, Self::NotSatisfied) => Self::NotSatisfied,
+            (Self::NotSatisfied, Self::Conditional) => Self::Conditional,
+            (Self::Conditional, Self::DefaultSatisfied) => Self::DefaultSatisfied,
+            (Self::Conditional, Self::Satisfied) => Self::Satisfied,
+            (Self::Conditional, Self::NotSatisfied) => Self::Conditional,
+            (Self::Conditional, Self::Conditional) => Self::Conditional,
         }
     }
 }
@@ -271,11 +207,11 @@ pub(crate) enum ControlExpr {
         satisfied_by_default: bool,
     },
     /// Universal quantification: all of the fields must be satisfied.
-    All(Vec<ControlExpr>),
+    All(Vec<Self>),
     /// Existential quantification: any of the fields must be satisfied.
-    Any(Vec<ControlExpr>),
+    Any(Vec<Self>),
     /// Negation: the "opposite" of the expression's satisfaction.
-    Not(Box<ControlExpr>),
+    Not(Box<Self>),
 }
 
 impl ControlExpr {
@@ -293,21 +229,21 @@ impl ControlExpr {
         }
     }
 
-    pub(crate) fn all(exprs: impl IntoIterator<Item = ControlExpr>) -> Self {
+    pub(crate) fn all(exprs: impl IntoIterator<Item = Self>) -> Self {
         Self::All(exprs.into_iter().collect())
     }
 
-    pub(crate) fn any(exprs: impl IntoIterator<Item = ControlExpr>) -> Self {
+    pub(crate) fn any(exprs: impl IntoIterator<Item = Self>) -> Self {
         Self::Any(exprs.into_iter().collect())
     }
 
-    pub(crate) fn not(expr: ControlExpr) -> Self {
+    pub(crate) fn not(expr: Self) -> Self {
         Self::Not(Box::new(expr))
     }
 
     pub(crate) fn eval(&self, with: &IndexMap<String, EnvValue>) -> ControlEvaluation {
         match self {
-            ControlExpr::Single {
+            Self::Single {
                 toggle,
                 field_name,
                 field_type,
@@ -378,15 +314,15 @@ impl ControlExpr {
                     ControlEvaluation::NotSatisfied
                 }
             }
-            ControlExpr::All(exprs) => exprs
+            Self::All(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(with))
                 .fold(ControlEvaluation::Satisfied, |acc, expr| acc & expr),
-            ControlExpr::Any(exprs) => exprs
+            Self::Any(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(with))
                 .fold(ControlEvaluation::NotSatisfied, |acc, expr| acc | expr),
-            ControlExpr::Not(expr) => !expr.eval(with),
+            Self::Not(expr) => !expr.eval(with),
         }
     }
 }

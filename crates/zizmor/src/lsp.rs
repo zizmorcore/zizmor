@@ -382,10 +382,10 @@ impl From<Severity> for ls_types::DiagnosticSeverity {
     fn from(value: Severity) -> Self {
         // TODO: Does this mapping make sense?
         match value {
-            Severity::Informational => ls_types::DiagnosticSeverity::INFORMATION,
-            Severity::Low => ls_types::DiagnosticSeverity::WARNING,
-            Severity::Medium => ls_types::DiagnosticSeverity::WARNING,
-            Severity::High => ls_types::DiagnosticSeverity::ERROR,
+            Severity::Informational => Self::INFORMATION,
+            Severity::Low => Self::WARNING,
+            Severity::Medium => Self::WARNING,
+            Severity::High => Self::ERROR,
         }
     }
 }

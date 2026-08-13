@@ -15,10 +15,10 @@ impl From<Severity> for ResultKind {
     fn from(value: Severity) -> Self {
         // TODO: Does this mapping make sense?
         match value {
-            Severity::Informational => ResultKind::Review,
-            Severity::Low => ResultKind::Fail,
-            Severity::Medium => ResultKind::Fail,
-            Severity::High => ResultKind::Fail,
+            Severity::Informational => Self::Review,
+            Severity::Low => Self::Fail,
+            Severity::Medium => Self::Fail,
+            Severity::High => Self::Fail,
         }
     }
 }
@@ -26,10 +26,10 @@ impl From<Severity> for ResultKind {
 impl From<Severity> for ResultLevel {
     fn from(value: Severity) -> Self {
         match value {
-            Severity::Informational => ResultLevel::Note,
-            Severity::Low => ResultLevel::Note,
-            Severity::Medium => ResultLevel::Warning,
-            Severity::High => ResultLevel::Error,
+            Severity::Informational => Self::Note,
+            Severity::Low => Self::Note,
+            Severity::Medium => Self::Warning,
+            Severity::High => Self::Error,
         }
     }
 }

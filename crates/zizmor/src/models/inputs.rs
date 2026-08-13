@@ -27,8 +27,8 @@ impl Capability {
     /// Unify two capabilities in favor of the more permissive one.
     pub(crate) fn unify(self, other: Self) -> Self {
         match (self, other) {
-            (Capability::Arbitrary, _) | (_, Capability::Arbitrary) => Capability::Arbitrary,
-            (Capability::Structured, _) | (_, Capability::Structured) => Capability::Structured,
+            (Self::Arbitrary, _) | (_, Self::Arbitrary) => Self::Arbitrary,
+            (Self::Structured, _) | (_, Self::Structured) => Self::Structured,
             _ => self,
         }
     }

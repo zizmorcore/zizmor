@@ -75,31 +75,31 @@ pub(crate) enum AuditInput {
 impl AuditInput {
     pub(crate) fn key(&self) -> &InputKey {
         match self {
-            AuditInput::Workflow(workflow) => &workflow.key,
-            AuditInput::Action(action) => &action.key,
-            AuditInput::Dependabot(dependabot) => &dependabot.key,
-            AuditInput::PreCommitConfig(pre_commit_config) => &pre_commit_config.key,
-            AuditInput::PreCommitHooks(pre_commit_hooks) => &pre_commit_hooks.key,
+            Self::Workflow(workflow) => &workflow.key,
+            Self::Action(action) => &action.key,
+            Self::Dependabot(dependabot) => &dependabot.key,
+            Self::PreCommitConfig(pre_commit_config) => &pre_commit_config.key,
+            Self::PreCommitHooks(pre_commit_hooks) => &pre_commit_hooks.key,
         }
     }
 
     pub(crate) fn link(&self) -> Option<&str> {
         match self {
-            AuditInput::Workflow(workflow) => workflow.link.as_deref(),
-            AuditInput::Action(action) => action.link.as_deref(),
-            AuditInput::Dependabot(dependabot) => dependabot.link.as_deref(),
-            AuditInput::PreCommitConfig(pre_commit_config) => pre_commit_config.link.as_deref(),
-            AuditInput::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.link.as_deref(),
+            Self::Workflow(workflow) => workflow.link.as_deref(),
+            Self::Action(action) => action.link.as_deref(),
+            Self::Dependabot(dependabot) => dependabot.link.as_deref(),
+            Self::PreCommitConfig(pre_commit_config) => pre_commit_config.link.as_deref(),
+            Self::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.link.as_deref(),
         }
     }
 
     pub(crate) fn location(&self) -> SymbolicLocation<'_> {
         match self {
-            AuditInput::Workflow(workflow) => workflow.location(),
-            AuditInput::Action(action) => action.location(),
-            AuditInput::Dependabot(dependabot) => dependabot.location(),
-            AuditInput::PreCommitConfig(pre_commit_config) => pre_commit_config.location(),
-            AuditInput::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.location(),
+            Self::Workflow(workflow) => workflow.location(),
+            Self::Action(action) => action.location(),
+            Self::Dependabot(dependabot) => dependabot.location(),
+            Self::PreCommitConfig(pre_commit_config) => pre_commit_config.location(),
+            Self::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.location(),
         }
     }
 
@@ -112,18 +112,18 @@ impl AuditInput {
     /// TODO: This is kind of goofy. Maybe we should do this by construction,
     /// i.e. have an `Audit::audit_raw_gha` instead.
     pub(crate) fn supports_gha_template_syntax(&self) -> bool {
-        matches!(self, AuditInput::Workflow(_) | AuditInput::Action(_))
+        matches!(self, Self::Workflow(_) | Self::Action(_))
     }
 }
 
 impl<'a> AsDocument<'a, 'a> for AuditInput {
     fn as_document(&'a self) -> &'a Document {
         match self {
-            AuditInput::Workflow(workflow) => workflow.as_document(),
-            AuditInput::Action(action) => action.as_document(),
-            AuditInput::Dependabot(dependabot) => dependabot.as_document(),
-            AuditInput::PreCommitConfig(pre_commit_config) => pre_commit_config.as_document(),
-            AuditInput::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.as_document(),
+            Self::Workflow(workflow) => workflow.as_document(),
+            Self::Action(action) => action.as_document(),
+            Self::Dependabot(dependabot) => dependabot.as_document(),
+            Self::PreCommitConfig(pre_commit_config) => pre_commit_config.as_document(),
+            Self::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.as_document(),
         }
     }
 }
@@ -131,11 +131,11 @@ impl<'a> AsDocument<'a, 'a> for AuditInput {
 impl<'a> Routable<'a, 'a> for AuditInput {
     fn route(&'a self) -> yamlpath::Route<'a> {
         match self {
-            AuditInput::Workflow(workflow) => workflow.location().route,
-            AuditInput::Action(action) => action.location().route,
-            AuditInput::Dependabot(dependabot) => dependabot.location().route,
-            AuditInput::PreCommitConfig(pre_commit_config) => pre_commit_config.location().route,
-            AuditInput::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.location().route,
+            Self::Workflow(workflow) => workflow.location().route,
+            Self::Action(action) => action.location().route,
+            Self::Dependabot(dependabot) => dependabot.location().route,
+            Self::PreCommitConfig(pre_commit_config) => pre_commit_config.location().route,
+            Self::PreCommitHooks(pre_commit_hooks) => pre_commit_hooks.location().route,
         }
     }
 }

@@ -83,9 +83,9 @@ static CONTEXT_CAPABILITIES_FST: LazyLock<Map<&[u8]>> = LazyLock::new(|| {
 impl Capability {
     fn from_context(context: &str) -> Option<Self> {
         match CONTEXT_CAPABILITIES_FST.get(context) {
-            Some(0) => Some(Capability::Arbitrary),
-            Some(1) => Some(Capability::Structured),
-            Some(2) => Some(Capability::Fixed),
+            Some(0) => Some(Self::Arbitrary),
+            Some(1) => Some(Self::Structured),
+            Some(2) => Some(Self::Fixed),
             Some(_) => unreachable!("unexpected context capability"),
             _ => None,
         }
@@ -120,7 +120,7 @@ impl TemplateInjection {
             Some(models::StepBodyCommon::Uses {
                 uses: Uses::Repository(uses),
                 with: LoE::Literal(with),
-            }) => TemplateInjection::action_injection_sinks(uses)
+            }) => Self::action_injection_sinks(uses)
                 .iter()
                 .filter_map(|input| {
                     let input = *input;

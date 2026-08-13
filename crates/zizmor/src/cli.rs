@@ -341,23 +341,23 @@ pub(crate) enum Shell {
 impl Generator for Shell {
     fn file_name(&self, name: &str) -> String {
         match self {
-            Shell::Bash => clap_complete::shells::Bash.file_name(name),
-            Shell::Elvish => clap_complete::shells::Elvish.file_name(name),
-            Shell::Fish => clap_complete::shells::Fish.file_name(name),
-            Shell::Nushell => clap_complete_nushell::Nushell.file_name(name),
-            Shell::Powershell => clap_complete::shells::PowerShell.file_name(name),
-            Shell::Zsh => clap_complete::shells::Zsh.file_name(name),
+            Self::Bash => clap_complete::shells::Bash.file_name(name),
+            Self::Elvish => clap_complete::shells::Elvish.file_name(name),
+            Self::Fish => clap_complete::shells::Fish.file_name(name),
+            Self::Nushell => clap_complete_nushell::Nushell.file_name(name),
+            Self::Powershell => clap_complete::shells::PowerShell.file_name(name),
+            Self::Zsh => clap_complete::shells::Zsh.file_name(name),
         }
     }
 
     fn generate(&self, cmd: &clap::Command, buf: &mut dyn std::io::Write) {
         match self {
-            Shell::Bash => clap_complete::shells::Bash.generate(cmd, buf),
-            Shell::Elvish => clap_complete::shells::Elvish.generate(cmd, buf),
-            Shell::Fish => clap_complete::shells::Fish.generate(cmd, buf),
-            Shell::Nushell => clap_complete_nushell::Nushell.generate(cmd, buf),
-            Shell::Powershell => clap_complete::shells::PowerShell.generate(cmd, buf),
-            Shell::Zsh => clap_complete::shells::Zsh.generate(cmd, buf),
+            Self::Bash => clap_complete::shells::Bash.generate(cmd, buf),
+            Self::Elvish => clap_complete::shells::Elvish.generate(cmd, buf),
+            Self::Fish => clap_complete::shells::Fish.generate(cmd, buf),
+            Self::Nushell => clap_complete_nushell::Nushell.generate(cmd, buf),
+            Self::Powershell => clap_complete::shells::PowerShell.generate(cmd, buf),
+            Self::Zsh => clap_complete::shells::Zsh.generate(cmd, buf),
         }
     }
 }
@@ -407,13 +407,13 @@ impl From<CliRenderLinks> for RenderLinks {
                 // TODO: Switch this to the support-hyperlinks crate?
                 // See: https://github.com/zkat/supports-hyperlinks/pull/8
                 if stdout().is_terminal() {
-                    RenderLinks::Always
+                    Self::Always
                 } else {
-                    RenderLinks::Never
+                    Self::Never
                 }
             }
-            CliRenderLinks::Always => RenderLinks::Always,
-            CliRenderLinks::Never => RenderLinks::Never,
+            CliRenderLinks::Always => Self::Always,
+            CliRenderLinks::Never => Self::Never,
         }
     }
 }
@@ -442,13 +442,13 @@ impl From<CliShowAuditUrls> for ShowAuditUrls {
         match value {
             CliShowAuditUrls::Auto => {
                 if utils::is_ci() || !stdout().is_terminal() {
-                    ShowAuditUrls::Always
+                    Self::Always
                 } else {
-                    ShowAuditUrls::Never
+                    Self::Never
                 }
             }
-            CliShowAuditUrls::Always => ShowAuditUrls::Always,
-            CliShowAuditUrls::Never => ShowAuditUrls::Never,
+            CliShowAuditUrls::Always => Self::Always,
+            CliShowAuditUrls::Never => Self::Never,
         }
     }
 }
@@ -471,15 +471,15 @@ impl ColorMode {
     /// but can't be inferred due to type erasure (e.g. `Box<dyn Write>`).
     pub(crate) fn color_choice_for_terminal(&self, io: impl IsTerminal) -> anstream::ColorChoice {
         match self {
-            ColorMode::Auto => {
+            Self::Auto => {
                 if io.is_terminal() {
                     anstream::ColorChoice::Always
                 } else {
                     anstream::ColorChoice::Never
                 }
             }
-            ColorMode::Always => anstream::ColorChoice::Always,
-            ColorMode::Never => anstream::ColorChoice::Never,
+            Self::Always => anstream::ColorChoice::Always,
+            Self::Never => anstream::ColorChoice::Never,
         }
     }
 }
@@ -610,9 +610,9 @@ pub(crate) enum FixMode {
 impl fmt::Display for FixMode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            FixMode::Safe => write!(f, "safe"),
-            FixMode::UnsafeOnly => write!(f, "unsafe-only"),
-            FixMode::All => write!(f, "all"),
+            Self::Safe => write!(f, "safe"),
+            Self::UnsafeOnly => write!(f, "unsafe-only"),
+            Self::All => write!(f, "all"),
         }
     }
 }

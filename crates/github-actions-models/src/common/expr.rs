@@ -17,7 +17,7 @@ impl ExplicitExpr {
             return None;
         }
 
-        Some(ExplicitExpr(expr))
+        Some(Self(expr))
     }
 
     /// Return the original string underlying this expression, including
