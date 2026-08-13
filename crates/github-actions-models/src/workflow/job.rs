@@ -65,7 +65,7 @@ impl<'de> Deserialize<'de> for RunsOn {
         // serde lacks the ability to do inter-field invariants at the derive
         // layer, so we enforce the invariant that a `RunsOn::Group`
         // has either a `group` or at least one label here.
-        if let RunsOn::Group { group, labels } = &runs_on
+        if let Self::Group { group, labels } = &runs_on
             && group.is_none()
             && labels.is_empty()
         {

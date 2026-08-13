@@ -497,7 +497,7 @@ self_cell::self_cell!(
 
 impl Tree {
     fn build(inner: SourceTree) -> Result<Self, QueryError> {
-        Tree::try_new(SourceTree::clone(&inner), |tree| {
+        Self::try_new(SourceTree::clone(&inner), |tree| {
             let mut anchor_map: AnchorMap = HashMap::new();
 
             for anchor in TreeIter::new(tree).filter(|n| n.is_anchor()) {

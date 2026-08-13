@@ -74,7 +74,7 @@ impl<'doc> SymbolicLocation<'doc> {
     pub(crate) fn with_keys(
         &self,
         keys: impl IntoIterator<Item = yamlpath::Component<'doc>>,
-    ) -> SymbolicLocation<'doc> {
+    ) -> Self {
         SymbolicLocation {
             key: self.key,
             annotation: self.annotation.clone(),
@@ -86,43 +86,37 @@ impl<'doc> SymbolicLocation<'doc> {
     }
 
     /// Adds a subfeature to the current `SymbolicLocation`.
-    pub(crate) fn subfeature(
-        mut self,
-        subfeature: subfeature::Subfeature<'doc>,
-    ) -> SymbolicLocation<'doc> {
+    pub(crate) fn subfeature(mut self, subfeature: subfeature::Subfeature<'doc>) -> Self {
         self.feature_kind = SymbolicFeature::Subfeature(subfeature);
         self
     }
 
     /// Mark this symbolic location as a "key-only" feature,
-    pub(crate) fn key_only(mut self) -> SymbolicLocation<'doc> {
+    pub(crate) fn key_only(mut self) -> Self {
         self.feature_kind = SymbolicFeature::KeyOnly;
         self
     }
 
     /// Adds a human-readable annotation to the current `SymbolicLocation`.
-    pub(crate) fn annotated(
-        mut self,
-        annotation: impl Into<Cow<'doc, str>>,
-    ) -> SymbolicLocation<'doc> {
+    pub(crate) fn annotated(mut self, annotation: impl Into<Cow<'doc, str>>) -> Self {
         self.annotation = annotation.into();
         self
     }
 
     /// Adds a URL to the current `SymbolicLocation`.
-    pub(crate) fn with_url(mut self, url: impl Into<String>) -> SymbolicLocation<'doc> {
+    pub(crate) fn with_url(mut self, url: impl Into<String>) -> Self {
         self.link = Some(Link::new(&self.annotation, &url.into()).to_string());
         self
     }
 
     /// Mark the current `SymbolicLocation` as a "primary" location.
-    pub(crate) fn primary(mut self) -> SymbolicLocation<'doc> {
+    pub(crate) fn primary(mut self) -> Self {
         self.kind = LocationKind::Primary;
         self
     }
 
     /// Mark the current `SymbolicLocation` as a "hidden" location.
-    pub(crate) fn hidden(mut self) -> SymbolicLocation<'doc> {
+    pub(crate) fn hidden(mut self) -> Self {
         self.kind = LocationKind::Hidden;
         self
     }

@@ -95,7 +95,7 @@ impl EnvValue {
     /// For example, `foo:` and `foo: ''` would both return true.
     pub fn is_empty(&self) -> bool {
         match self {
-            EnvValue::String(s) => s.is_empty(),
+            Self::String(s) => s.is_empty(),
             _ => false,
         }
     }
@@ -108,8 +108,8 @@ impl EnvValue {
     /// "1", "yes", etc. are not.
     pub fn csharp_bool(&self) -> bool {
         match self {
-            EnvValue::Boolean(true) => true,
-            EnvValue::String(maybe) => maybe.trim().eq_ignore_ascii_case("true"),
+            Self::Boolean(true) => true,
+            Self::String(maybe) => maybe.trim().eq_ignore_ascii_case("true"),
             _ => false,
         }
     }
@@ -122,9 +122,9 @@ impl EnvValue {
     /// See: <https://github.com/actions/toolkit/blob/b68d04/packages/core/src/core.ts#L198>
     pub fn actions_toolkit_bool(&self) -> Option<bool> {
         match self {
-            EnvValue::Boolean(b) => Some(*b),
-            EnvValue::String(s) if matches!(s.trim(), "true" | "True" | "TRUE") => Some(true),
-            EnvValue::String(s) if matches!(s.trim(), "false" | "False" | "FALSE") => Some(false),
+            Self::Boolean(b) => Some(*b),
+            Self::String(s) if matches!(s.trim(), "true" | "True" | "TRUE") => Some(true),
+            Self::String(s) if matches!(s.trim(), "false" | "False" | "FALSE") => Some(false),
             _ => None,
         }
     }
@@ -142,7 +142,7 @@ enum SoV<T> {
 }
 
 impl<T> From<SoV<T>> for Vec<T> {
-    fn from(val: SoV<T>) -> Vec<T> {
+    fn from(val: SoV<T>) -> Self {
         match val {
             SoV::One(v) => vec![v],
             SoV::Many(vs) => vs,
@@ -237,10 +237,10 @@ impl<'de> Deserialize<'de> for If {
         }
 
         match RawIf::deserialize(deserializer)? {
-            RawIf::Bool(b) => Ok(If::Bool(b)),
-            RawIf::Int(n) => Ok(If::Bool(n != 0)),
-            RawIf::Float(f) => Ok(If::Bool(f != 0.0 && !f.is_nan())),
-            RawIf::Expr(s) => Ok(If::Expr(s)),
+            RawIf::Bool(b) => Ok(Self::Bool(b)),
+            RawIf::Int(n) => Ok(Self::Bool(n != 0)),
+            RawIf::Float(f) => Ok(Self::Bool(f != 0.0 && !f.is_nan())),
+            RawIf::Expr(s) => Ok(Self::Expr(s)),
         }
     }
 }
@@ -301,9 +301,9 @@ impl Uses {
     /// Returns the original raw `uses:` clause.
     pub fn raw(&self) -> &str {
         match self {
-            Uses::Local(local) => local.raw(),
-            Uses::Repository(repo) => repo.raw(),
-            Uses::Docker(docker) => docker.raw(),
+            Self::Local(local) => local.raw(),
+            Self::Repository(repo) => repo.raw(),
+            Self::Docker(docker) => docker.raw(),
         }
     }
 }
@@ -317,7 +317,7 @@ pub struct LocalUses {
 
 impl LocalUses {
     fn new(path: impl Into<String>) -> Self {
-        LocalUses { path: path.into() }
+        Self { path: path.into() }
     }
 
     /// Whether this [`LocalUses`] is a "self-referencing" action,
@@ -407,7 +407,7 @@ impl Display for RepositoryUses {
 impl RepositoryUses {
     /// Parse a `uses: some/repo` clause.
     pub fn parse(uses: impl Into<String>) -> Result<Self, UsesError> {
-        RepositoryUses::try_new(uses.into(), |s| {
+        Self::try_new(uses.into(), |s| {
             let inner = RepositoryUsesInner::from_str(s)?;
             Ok(inner)
         })
@@ -522,7 +522,7 @@ self_cell!(
 impl DockerUses {
     /// Parse a `uses: docker://some-image` clause.
     pub fn parse(uses: impl Into<String>) -> Self {
-        DockerUses::new(uses.into(), |s| DockerUsesInner::from_str(s))
+        Self::new(uses.into(), |s| DockerUsesInner::from_str(s))
     }
 
     /// Get the raw uses clause. This does not include the `docker://` prefix.
@@ -557,7 +557,7 @@ impl<'de> Deserialize<'de> for DockerUses {
         D: Deserializer<'de>,
     {
         let uses = <Cow<'de, str>>::deserialize(deserializer)?;
-        Ok(DockerUses::parse(uses))
+        Ok(Self::parse(uses))
     }
 }
 

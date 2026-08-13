@@ -15,7 +15,7 @@ use crate::{
 
 /// Result of applying fixes.
 #[derive(Debug)]
-pub struct FixResult {
+pub(crate) struct FixResult {
     /// Number of fixes that were successfully applied.
     pub applied_count: usize,
     /// Number of fixes that failed to apply.
@@ -23,7 +23,7 @@ pub struct FixResult {
 }
 
 /// Apply all fixes associated with findings, filtered by the specified fix mode.
-pub fn apply_fixes(
+pub(crate) fn apply_fixes(
     fix_mode: FixMode,
     results: &FindingRegistry,
     registry: &InputRegistry,

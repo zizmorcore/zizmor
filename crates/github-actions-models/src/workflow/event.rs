@@ -180,8 +180,8 @@ where
 impl<T> From<Option<T>> for OptionalBody<T> {
     fn from(value: Option<T>) -> Self {
         match value {
-            Some(v) => OptionalBody::Body(v),
-            None => OptionalBody::Default,
+            Some(v) => Self::Body(v),
+            None => Self::Default,
         }
     }
 }

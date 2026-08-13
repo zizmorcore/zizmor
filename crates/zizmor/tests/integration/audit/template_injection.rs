@@ -731,7 +731,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -767,7 +767,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -804,7 +804,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -845,7 +845,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -888,7 +888,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -930,7 +930,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -975,7 +975,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -1011,7 +1011,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -1047,7 +1047,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -1083,7 +1083,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -1118,7 +1118,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -1153,7 +1153,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -1189,7 +1189,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
@@ -1235,7 +1235,7 @@ jobs:
 "#;
 
     let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {

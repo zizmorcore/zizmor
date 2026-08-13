@@ -318,7 +318,7 @@ impl Audit for KnownVulnerableActions {
             .gh_client
             .clone()
             .ok_or_else(|| AuditLoadError::Skip(anyhow!("can't run without a GitHub API token")))
-            .map(|client| KnownVulnerableActions { client })
+            .map(|client| Self { client })
     }
 
     async fn audit_step<'doc>(

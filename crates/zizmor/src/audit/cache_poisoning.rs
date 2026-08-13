@@ -315,7 +315,7 @@ enum CacheControlExpr {
     // An expression like `github.event_name == 'push' && github.ref_type == 'tag'`
     RefTypeTagPush,
     /// A negation of another cache control expression.
-    Not(Box<CacheControlExpr>),
+    Not(Box<Self>),
 }
 
 impl CacheControlExpr {
@@ -463,7 +463,7 @@ impl CachePoisoning {
             return Some(PublishingScenario::UsingReleaseTriggers(triggers));
         };
 
-        let well_know_publisher = CachePoisoning::detected_well_known_publisher_step(steps)?;
+        let well_know_publisher = Self::detected_well_known_publisher_step(steps)?;
         Some(PublishingScenario::UsingReleaseAction(well_know_publisher))
     }
 

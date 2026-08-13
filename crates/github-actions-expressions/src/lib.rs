@@ -190,7 +190,7 @@ impl<'a> SpannedExpr<'a> {
     /// For example, `${{ foo.bar == 'true' && 'hello' || '' }}` returns
     /// `['hello', '']` since those are the two possible evaluated values.
     /// `${{ foo.abc || foo.def }}` returns `[foo.abc, foo.def]`.
-    pub fn leaf_expressions(&self) -> Vec<&SpannedExpr<'a>> {
+    pub fn leaf_expressions(&self) -> Vec<&Self> {
         let mut leaves = vec![];
 
         match self.deref() {
@@ -215,7 +215,7 @@ impl<'a> SpannedExpr<'a> {
     ///
     /// A computed index is any index operation with a non-literal
     /// evaluation, e.g. `foo[a.b.c]`.
-    pub fn computed_indices(&self) -> Vec<&SpannedExpr<'a>> {
+    pub fn computed_indices(&self) -> Vec<&Self> {
         let mut index_exprs = vec![];
 
         match self.deref() {
@@ -254,7 +254,7 @@ impl<'a> SpannedExpr<'a> {
     /// it doesn't include "trivially" reducible expressions like literals,
     /// since flagging these as reducible within a larger expression
     /// would be misleading.
-    pub fn constant_reducible_subexprs(&self) -> Vec<&SpannedExpr<'a>> {
+    pub fn constant_reducible_subexprs(&self) -> Vec<&Self> {
         if !self.is_literal() && self.constant_reducible() {
             return vec![self];
         }
@@ -414,7 +414,7 @@ impl<'src> Expr<'src> {
     /// For example, `a == b` is considered to match `b == a`, but `a > b` is not
     /// considered to match `b > a`. This check is recusive, i.e. two nested binary expressions
     /// will be fully checked for commutative equivalence.
-    pub fn commutative_matches(&self, other: &Expr<'src>) -> bool {
+    pub fn commutative_matches(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::BinExpr(sb), Self::BinExpr(ob)) => {
                 if sb.op != ob.op {
@@ -479,9 +479,9 @@ pub enum Evaluation {
     /// The null value.
     Null,
     /// An array value. Array evaluations can only be realized through `fromJSON`.
-    Array(Vec<Evaluation>),
+    Array(Vec<Self>),
     /// An object value. Object evaluations can only be realized through `fromJSON`.
-    Object(std::collections::HashMap<String, Evaluation>),
+    Object(std::collections::HashMap<String, Self>),
 }
 
 impl TryFrom<serde_json::Value> for Evaluation {
@@ -489,29 +489,29 @@ impl TryFrom<serde_json::Value> for Evaluation {
 
     fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
         match value {
-            serde_json::Value::Null => Ok(Evaluation::Null),
-            serde_json::Value::Bool(b) => Ok(Evaluation::Boolean(b)),
+            serde_json::Value::Null => Ok(Self::Null),
+            serde_json::Value::Bool(b) => Ok(Self::Boolean(b)),
             serde_json::Value::Number(n) => {
                 if let Some(f) = n.as_f64() {
-                    Ok(Evaluation::Number(f))
+                    Ok(Self::Number(f))
                 } else {
                     Err(())
                 }
             }
-            serde_json::Value::String(s) => Ok(Evaluation::String(s)),
+            serde_json::Value::String(s) => Ok(Self::String(s)),
             serde_json::Value::Array(arr) => {
                 let elements = arr
                     .into_iter()
                     .map(|elem| elem.try_into())
                     .collect::<Result<_, _>>()?;
-                Ok(Evaluation::Array(elements))
+                Ok(Self::Array(elements))
             }
             serde_json::Value::Object(obj) => {
                 let mut map = std::collections::HashMap::new();
                 for (key, value) in obj {
                     map.insert(key, value.try_into()?);
                 }
-                Ok(Evaluation::Object(map))
+                Ok(Self::Object(map))
             }
         }
     }
@@ -522,9 +522,9 @@ impl TryInto<serde_json::Value> for Evaluation {
 
     fn try_into(self) -> Result<serde_json::Value, Self::Error> {
         match self {
-            Evaluation::Null => Ok(serde_json::Value::Null),
-            Evaluation::Boolean(b) => Ok(serde_json::Value::Bool(b)),
-            Evaluation::Number(n) => {
+            Self::Null => Ok(serde_json::Value::Null),
+            Self::Boolean(b) => Ok(serde_json::Value::Bool(b)),
+            Self::Number(n) => {
                 // NOTE: serde_json has different internal representations
                 // for integers and floats, so we need to handle both cases
                 // to ensure we serialize integers without a decimal point.
@@ -538,15 +538,15 @@ impl TryInto<serde_json::Value> for Evaluation {
                     Err(())
                 }
             }
-            Evaluation::String(s) => Ok(serde_json::Value::String(s)),
-            Evaluation::Array(arr) => {
+            Self::String(s) => Ok(serde_json::Value::String(s)),
+            Self::Array(arr) => {
                 let elements = arr
                     .into_iter()
                     .map(|elem| elem.try_into())
                     .collect::<Result<_, _>>()?;
                 Ok(serde_json::Value::Array(elements))
             }
-            Evaluation::Object(obj) => {
+            Self::Object(obj) => {
                 let mut map = serde_json::Map::new();
                 for (key, value) in obj {
                     map.insert(key, value.try_into()?);
@@ -567,12 +567,12 @@ impl Evaluation {
     /// - Arrays and dictionaries are always truthy (non-empty objects)
     pub fn as_boolean(&self) -> bool {
         match self {
-            Evaluation::Boolean(b) => *b,
-            Evaluation::Null => false,
-            Evaluation::Number(n) => *n != 0.0 && !n.is_nan(),
-            Evaluation::String(s) => !s.is_empty(),
+            Self::Boolean(b) => *b,
+            Self::Null => false,
+            Self::Number(n) => *n != 0.0 && !n.is_nan(),
+            Self::String(s) => !s.is_empty(),
             // Arrays and objects are always truthy, even if empty.
-            Evaluation::Array(_) | Evaluation::Object(_) => true,
+            Self::Array(_) | Self::Object(_) => true,
         }
     }
 
@@ -581,17 +581,17 @@ impl Evaluation {
     /// See: <https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#operators>
     pub fn as_number(&self) -> f64 {
         match self {
-            Evaluation::String(s) => parse_number(s),
-            Evaluation::Number(n) => *n,
-            Evaluation::Boolean(b) => {
+            Self::String(s) => parse_number(s),
+            Self::Number(n) => *n,
+            Self::Boolean(b) => {
                 if *b {
                     1.0
                 } else {
                     0.0
                 }
             }
-            Evaluation::Null => 0.0,
-            Evaluation::Array(_) | Evaluation::Object(_) => f64::NAN,
+            Self::Null => 0.0,
+            Self::Array(_) | Self::Object(_) => f64::NAN,
         }
     }
 

@@ -1,34 +1,16 @@
 [package]
 name = "zizmor"
 description = "Static analysis for GitHub Actions"
-repository = "https://github.com/zizmorcore/zizmor"
 documentation = "https://docs.zizmor.sh"
-keywords = ["cli", "github-actions", "static-analysis", "security"]
+repository = "https://github.com/zizmorcore/zizmor"
+keywords = ["cli", "github-actions", "security", "static-analysis"]
 categories = ["command-line-utilities", "security"]
 
 version.workspace = true
+edition.workspace = true
+readme.workspace = true
 homepage.workspace = true
 license.workspace = true
-readme.workspace = true
-authors.workspace = true
-edition.workspace = true
-
-[lints]
-workspace = true
-
-[features]
-default = ["lsp"]
-lsp = ["dep:tower-lsp-server"]
-# Enable JSON Schema generation for zizmor.yml
-schema = ["dep:schemars"]
-# Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
-gh-token-tests = []
-# Test-only: enable all online audits.
-online-tests = ["gh-token-tests"]
-# Test-only: enable 'crater' tests.
-crater-tests = ["online-tests"]
-# Test-only: enable tests that require `unbuffer` for TTY behavior.
-tty-tests = []
 
 [dependencies]
 annotate-snippets.workspace = true
@@ -37,9 +19,9 @@ anyhow.workspace = true
 async-trait.workspace = true
 camino = { workspace = true, features = ["serde1"] }
 clap = { workspace = true, features = ["derive", "env"] }
-clap-verbosity-flag = { workspace = true, features = ["tracing"] }
 clap_complete.workspace = true
 clap_complete_nushell.workspace = true
+clap-verbosity-flag = { workspace = true, features = ["tracing"] }
 etcetera.workspace = true
 flate2.workspace = true
 fst.workspace = true
@@ -63,12 +45,11 @@ reqwest-middleware = { workspace = true, features = ["query"] }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-yaml_serde.workspace = true
 subfeature.workspace = true
 tar.workspace = true
 terminal-link.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "io-std"] }
+tokio = { workspace = true, features = ["io-std", "rt-multi-thread"] }
 tower-lsp-server = { workspace = true, optional = true }
 tracing.workspace = true
 tracing-indicatif.workspace = true
@@ -78,20 +59,38 @@ tree-sitter-bash.workspace = true
 tree-sitter-powershell.workspace = true
 typomania.workspace = true
 url.workspace = true
-yamlpath.workspace = true
+yaml_serde.workspace = true
 yamlpatch.workspace = true
+yamlpath.workspace = true
 zizmor-sarif.workspace = true
 
-[target.'cfg(not(any(target_family = "windows", target_os = "openbsd")))'.dependencies]
-tikv-jemallocator.workspace = true
+[dev-dependencies]
+assert_cmd.workspace = true
+insta.workspace = true
+similar.workspace = true
+tempfile.workspace = true
+walkdir.workspace = true
 
 [build-dependencies]
 csv.workspace = true
 fst.workspace = true
 
-[dev-dependencies]
-assert_cmd.workspace = true
-walkdir.workspace = true
-insta.workspace = true
-similar.workspace = true
-tempfile.workspace = true
+[target.'cfg(not(any(target_family = "windows", target_os = "openbsd")))'.dependencies]
+tikv-jemallocator.workspace = true
+
+[features]
+default = ["lsp"]
+# Test-only: enable 'crater' tests.
+crater-tests = ["online-tests"]
+# Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
+gh-token-tests = []
+lsp = ["dep:tower-lsp-server"]
+# Test-only: enable all online audits.
+online-tests = ["gh-token-tests"]
+# Enable JSON Schema generation for zizmor.yml
+schema = ["dep:schemars"]
+# Test-only: enable tests that require `unbuffer` for TTY behavior.
+tty-tests = []
+
+[lints]
+workspace = true

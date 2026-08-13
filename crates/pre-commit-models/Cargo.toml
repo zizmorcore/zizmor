@@ -1,16 +1,15 @@
 [package]
 name = "pre-commit-models"
-description = "Unofficial, high-quality data models for pre-commit configurations and hook definitions"
-repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/pre-commit-models"
-keywords = ["pre-commit", "ci"]
-categories = ["api-bindings"]
-readme = "README.md"
-authors.workspace = true
-homepage.workspace = true
-edition.workspace = true
-license.workspace = true
-rust-version.workspace = true
 version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Unofficial, high-quality data models for pre-commit configurations and hook definitions"
+readme = "README.md"
+homepage.workspace = true
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/pre-commit-models"
+license.workspace = true
+keywords = ["ci", "pre-commit"]
+categories = ["api-bindings"]
 
 [dependencies]
 indexmap.workspace = true

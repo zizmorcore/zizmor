@@ -48,7 +48,7 @@ const VERSION_PLACEHOLDER: &str = "@@VERSION@@";
 static PLACEHOLDER_PATH_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"@@\w+@@[\\/\w.-]*").unwrap());
 
-pub fn input_under_test(name: &str) -> Utf8PathBuf {
+pub(crate) fn input_under_test(name: &str) -> Utf8PathBuf {
     let file_path = TEST_PREFIX.join(name);
 
     if !file_path.exists() {
@@ -58,7 +58,7 @@ pub fn input_under_test(name: &str) -> Utf8PathBuf {
     file_path
 }
 
-pub enum OutputMode {
+pub(crate) enum OutputMode {
     Stdout,
     #[allow(dead_code, reason = "currently not used by any integration test")]
     Stderr,
@@ -66,7 +66,7 @@ pub enum OutputMode {
 }
 
 #[derive(Default)]
-pub enum NetworkMode {
+pub(crate) enum NetworkMode {
     /// The zizmor run is implicitly offline or online, i.e. depends
     /// on whether `--gh-token`, etc.
     Implicit,
@@ -77,7 +77,7 @@ pub enum NetworkMode {
     AssertOnline,
 }
 
-pub struct Zizmor {
+pub(crate) struct Zizmor {
     cmd: Command,
     stdin: Option<String>,
     unbuffer: bool,
@@ -115,7 +115,7 @@ const SCRUBBED_ENV_PREFIXES: &[&str] = &["GH_", "GITHUB_", "ZIZMOR_", "RUNNER_",
 
 impl Zizmor {
     /// Create a new zizmor runner.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let mut cmd = Command::new(cargo::cargo_bin!());
 
         // Scrub our environment of any pre-existing variables
@@ -150,80 +150,84 @@ impl Zizmor {
         }
     }
 
-    pub fn stdin(mut self, input: impl Into<String>) -> Self {
+    pub(crate) fn stdin(mut self, input: impl Into<String>) -> Self {
         self.stdin = Some(input.into());
         self
     }
 
-    pub fn args<'a>(mut self, args: impl IntoIterator<Item = &'a str>) -> Self {
+    pub(crate) fn args<'a>(mut self, args: impl IntoIterator<Item = &'a str>) -> Self {
         self.cmd.args(args);
         self
     }
 
-    pub fn setenv(mut self, key: &str, value: &str) -> Self {
+    pub(crate) fn setenv(mut self, key: &str, value: &str) -> Self {
         self.cmd.env(key, value);
         self
     }
 
-    pub fn input(mut self, input: impl Into<Utf8PathBuf>) -> Self {
+    pub(crate) fn input(mut self, input: impl Into<Utf8PathBuf>) -> Self {
         self.inputs.push(input.into());
         self
     }
 
-    pub fn config(mut self, config: impl Into<String>) -> Self {
+    pub(crate) fn config(mut self, config: impl Into<String>) -> Self {
         self.config = Some(config.into());
         self
     }
 
-    pub fn no_config(mut self, flag: bool) -> Self {
+    pub(crate) fn no_config(mut self, flag: bool) -> Self {
         self.no_config = flag;
         self
     }
 
-    pub fn unbuffer(mut self, flag: bool) -> Self {
+    pub(crate) fn unbuffer(mut self, flag: bool) -> Self {
         self.unbuffer = flag;
         self
     }
 
-    pub fn offline(mut self, flag: NetworkMode) -> Self {
+    pub(crate) fn offline(mut self, flag: NetworkMode) -> Self {
         self.offline = flag;
         self
     }
 
-    pub fn gh_token(mut self, flag: bool) -> Self {
+    pub(crate) fn gh_token(mut self, flag: bool) -> Self {
         self.gh_token = flag;
         self
     }
 
-    pub fn output(mut self, output: OutputMode) -> Self {
+    pub(crate) fn output(mut self, output: OutputMode) -> Self {
         self.output = output;
         self
     }
 
-    pub fn expects_failure(mut self, code: i32) -> Self {
+    pub(crate) fn expects_failure(mut self, code: i32) -> Self {
         self = self.output(OutputMode::Both);
         self.expects_failure = Some(code);
         self
     }
 
-    pub fn show_audit_urls(mut self, flag: bool) -> Self {
+    pub(crate) fn show_audit_urls(mut self, flag: bool) -> Self {
         self.show_audit_urls = flag;
         self
     }
 
-    pub fn working_dir(mut self, dir: impl Into<Utf8PathBuf>) -> Self {
+    pub(crate) fn working_dir(mut self, dir: impl Into<Utf8PathBuf>) -> Self {
         self.working_dir = dir.into();
         self.cmd.current_dir(&self.working_dir);
         self
     }
 
-    pub fn add_filter(mut self, needle: impl Into<String>, replacement: impl Into<String>) -> Self {
+    pub(crate) fn add_filter(
+        mut self,
+        needle: impl Into<String>,
+        replacement: impl Into<String>,
+    ) -> Self {
         let replacement = format!("@@{replacement}@@", replacement = replacement.into());
         self.filters.push((needle.into(), replacement));
         self
     }
 
-    pub fn run(mut self) -> Result<String> {
+    pub(crate) fn run(mut self) -> Result<String> {
         if let Some(stdin) = &self.stdin {
             self.cmd.write_stdin(stdin.as_bytes());
         }
@@ -516,7 +520,7 @@ fn spellings_of(path: &Utf8Path) -> Vec<String> {
     ]
 }
 
-pub fn zizmor() -> Zizmor {
+pub(crate) fn zizmor() -> Zizmor {
     Zizmor::new()
 }
 
@@ -525,7 +529,7 @@ pub fn zizmor() -> Zizmor {
 /// Workspaces are built using [`WorkspaceBuilder`] and are used for tests
 /// that have nontrivial path/layout conditions, such as needing to imitate
 /// Git or other state.
-pub struct Workspace {
+pub(crate) struct Workspace {
     path: Utf8PathBuf,
     /// Solely to retain ownership of the tempdir/prevent cleanup until drop.
     #[allow(dead_code)]
@@ -533,14 +537,14 @@ pub struct Workspace {
 }
 
 impl Workspace {
-    pub fn path(&self) -> &Utf8Path {
+    pub(crate) fn path(&self) -> &Utf8Path {
         self.path.as_path()
     }
 
     /// Add a file named `name` to the workspace with contents `contents`.
     ///
     /// Any intermediate directories in `name` are created if they don't already exist.
-    pub fn add_file<'a>(&self, name: impl Into<&'a Utf8Path>, contents: &str) {
+    pub(crate) fn add_file<'a>(&self, name: impl Into<&'a Utf8Path>, contents: &str) {
         let name = name.into();
 
         if let Some(parent) = name.parent() {
@@ -550,7 +554,7 @@ impl Workspace {
 
         let destination = self.path().join(name);
         fs::write(&destination, contents)
-            .expect(&format!("failed to write contents to {destination}"));
+            .unwrap_or_else(|_| panic!("failed to write contents to {destination}"));
     }
 
     /// Copy the contents of `source` into `dest`.
@@ -558,7 +562,7 @@ impl Workspace {
     /// `source` can be a directory, in which case it's copied recursively.
     ///
     /// `dest` will be joined to the workspace's root.
-    pub fn copy<'a>(&self, source: impl Into<&'a Utf8Path>, dest: impl Into<&'a Utf8Path>) {
+    pub(crate) fn copy<'a>(&self, source: impl Into<&'a Utf8Path>, dest: impl Into<&'a Utf8Path>) {
         let source = source.into();
         let dest = self.path().join(dest.into());
 
@@ -586,14 +590,18 @@ impl Workspace {
         }
     }
 
-    pub fn diff<'a, F>(self, file: impl Into<&'a Utf8Path>, zizmor: F) -> anyhow::Result<String>
+    pub(crate) fn diff<'a, F>(
+        self,
+        file: impl Into<&'a Utf8Path>,
+        zizmor: F,
+    ) -> anyhow::Result<String>
     where
-        F: FnOnce(&Workspace) -> anyhow::Result<String>,
+        F: FnOnce(&Self) -> anyhow::Result<String>,
     {
         let file = file.into();
-        let old = std::fs::read_to_string(&self.path().join(file))?;
+        let old = std::fs::read_to_string(self.path().join(file))?;
         let _ = zizmor(&self)?;
-        let new = std::fs::read_to_string(&self.path().join(file))?;
+        let new = std::fs::read_to_string(self.path().join(file))?;
 
         let diff = similar::TextDiff::from_lines(&old, &new);
 
@@ -607,30 +615,30 @@ impl Workspace {
     }
 }
 
-pub struct WorkspaceBuilder {
+pub(crate) struct WorkspaceBuilder {
     root_name: Option<String>,
     git_repo: bool,
 }
 
 impl WorkspaceBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             root_name: None,
             git_repo: false,
         }
     }
 
-    pub fn root_name(mut self, name: impl Into<String>) -> Self {
+    pub(crate) fn root_name(mut self, name: impl Into<String>) -> Self {
         self.root_name = Some(name.into());
         self
     }
 
-    pub fn is_git_repo(mut self, is_git_repo: bool) -> Self {
+    pub(crate) fn is_git_repo(mut self, is_git_repo: bool) -> Self {
         self.git_repo = is_git_repo;
         self
     }
 
-    pub fn build(self) -> anyhow::Result<Workspace> {
+    pub(crate) fn build(self) -> anyhow::Result<Workspace> {
         let tempdir = tempfile::tempdir()?;
         let mut root = tempdir.path().to_path_buf();
 

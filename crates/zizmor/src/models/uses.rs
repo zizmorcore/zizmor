@@ -92,7 +92,7 @@ impl RepositoryUsesPattern {
 
     fn matches_slug(&self, slug: &Slug<'_>, slug_git_ref: &str) -> bool {
         match self {
-            RepositoryUsesPattern::ExactWithRef {
+            Self::ExactWithRef {
                 owner,
                 repo,
                 subpath,
@@ -107,20 +107,19 @@ impl RepositoryUsesPattern {
                         && slug_git_ref == git_ref
                 }
             }
-            RepositoryUsesPattern::ExactPath { .. } => false,
+            Self::ExactPath { .. } => false,
             // `owner/repo` and `owner/repo/*` behave the same for slugs.
-            RepositoryUsesPattern::ExactRepo { owner, repo }
-            | RepositoryUsesPattern::InRepo { owner, repo } => {
+            Self::ExactRepo { owner, repo } | Self::InRepo { owner, repo } => {
                 slug.owner().eq_ignore_ascii_case(owner) && slug.repo().eq_ignore_ascii_case(repo)
             }
-            RepositoryUsesPattern::InOwner(owner) => slug.owner().eq_ignore_ascii_case(owner),
-            RepositoryUsesPattern::Any => true,
+            Self::InOwner(owner) => slug.owner().eq_ignore_ascii_case(owner),
+            Self::Any => true,
         }
     }
 
     fn matches_uses(&self, uses: &RepositoryUses) -> bool {
         match self {
-            RepositoryUsesPattern::ExactWithRef {
+            Self::ExactWithRef {
                 owner,
                 repo,
                 subpath,
@@ -131,7 +130,7 @@ impl RepositoryUsesPattern {
                     && uses.subpath() == subpath.as_deref()
                     && uses.git_ref() == git_ref
             }
-            RepositoryUsesPattern::ExactPath {
+            Self::ExactPath {
                 owner,
                 repo,
                 subpath,
@@ -146,16 +145,16 @@ impl RepositoryUsesPattern {
                     && uses.repo().eq_ignore_ascii_case(repo)
                     && uses.subpath().is_some_and(|s| s == subpath)
             }
-            RepositoryUsesPattern::ExactRepo { owner, repo } => {
+            Self::ExactRepo { owner, repo } => {
                 uses.owner().eq_ignore_ascii_case(owner)
                     && uses.repo().eq_ignore_ascii_case(repo)
                     && uses.subpath().is_none()
             }
-            RepositoryUsesPattern::InRepo { owner, repo } => {
+            Self::InRepo { owner, repo } => {
                 uses.owner().eq_ignore_ascii_case(owner) && uses.repo().eq_ignore_ascii_case(repo)
             }
-            RepositoryUsesPattern::InOwner(owner) => uses.owner().eq_ignore_ascii_case(owner),
-            RepositoryUsesPattern::Any => true,
+            Self::InOwner(owner) => uses.owner().eq_ignore_ascii_case(owner),
+            Self::Any => true,
         }
     }
 }
@@ -165,7 +164,7 @@ impl FromStr for RepositoryUsesPattern {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == "*" {
-            return Ok(RepositoryUsesPattern::Any);
+            return Ok(Self::Any);
         }
 
         let caps = REPOSITORY_USES_PATTERN
@@ -178,23 +177,23 @@ impl FromStr for RepositoryUsesPattern {
         let git_ref = caps.get(4).map(|m| m.as_str());
 
         match (owner, repo, subpath, git_ref) {
-            (owner, "*", None, None) => Ok(RepositoryUsesPattern::InOwner(owner.into())),
-            (owner, repo, None, None) => Ok(RepositoryUsesPattern::ExactRepo {
+            (owner, "*", None, None) => Ok(Self::InOwner(owner.into())),
+            (owner, repo, None, None) => Ok(Self::ExactRepo {
                 owner: owner.into(),
                 repo: repo.into(),
             }),
             (_, "*", Some(_), _) => Err(anyhow::anyhow!("invalid pattern: {s}")),
-            (owner, repo, Some("*"), None) => Ok(RepositoryUsesPattern::InRepo {
+            (owner, repo, Some("*"), None) => Ok(Self::InRepo {
                 owner: owner.into(),
                 repo: repo.into(),
             }),
-            (owner, repo, Some(subpath), None) => Ok(RepositoryUsesPattern::ExactPath {
+            (owner, repo, Some(subpath), None) => Ok(Self::ExactPath {
                 owner: owner.into(),
                 repo: repo.into(),
                 subpath: subpath.into(),
             }),
             (_, _, Some("*"), Some(_)) => Err(anyhow::anyhow!("invalid pattern: {s}")),
-            (owner, repo, subpath, Some(git_ref)) => Ok(RepositoryUsesPattern::ExactWithRef {
+            (owner, repo, subpath, Some(git_ref)) => Ok(Self::ExactWithRef {
                 owner: owner.into(),
                 repo: repo.into(),
                 subpath: subpath.map(|s| s.into()),
@@ -207,16 +206,16 @@ impl FromStr for RepositoryUsesPattern {
 impl std::fmt::Display for RepositoryUsesPattern {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RepositoryUsesPattern::Any => write!(f, "*"),
-            RepositoryUsesPattern::InOwner(owner) => write!(f, "{owner}/*"),
-            RepositoryUsesPattern::InRepo { owner, repo } => write!(f, "{owner}/{repo}/*"),
-            RepositoryUsesPattern::ExactRepo { owner, repo } => write!(f, "{owner}/{repo}"),
-            RepositoryUsesPattern::ExactPath {
+            Self::Any => write!(f, "*"),
+            Self::InOwner(owner) => write!(f, "{owner}/*"),
+            Self::InRepo { owner, repo } => write!(f, "{owner}/{repo}/*"),
+            Self::ExactRepo { owner, repo } => write!(f, "{owner}/{repo}"),
+            Self::ExactPath {
                 owner,
                 repo,
                 subpath,
             } => write!(f, "{owner}/{repo}/{subpath}"),
-            RepositoryUsesPattern::ExactWithRef {
+            Self::ExactWithRef {
                 owner,
                 repo,
                 subpath,
@@ -235,7 +234,7 @@ impl<'de> Deserialize<'de> for RepositoryUsesPattern {
         D: serde::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        RepositoryUsesPattern::from_str(&s).map_err(serde::de::Error::custom)
+        Self::from_str(&s).map_err(serde::de::Error::custom)
     }
 }
 
@@ -277,11 +276,11 @@ impl UsesExt for Uses {
     /// Whether the `uses:` is unpinned.
     fn unpinned(&self) -> bool {
         match self {
-            Uses::Docker(docker) => docker.hash().is_none() && docker.tag().is_none(),
-            Uses::Repository(_) => false,
+            Self::Docker(docker) => docker.hash().is_none() && docker.tag().is_none(),
+            Self::Repository(_) => false,
             // Local `uses:` are always unpinned; any `@ref` component
             // is actually part of the path.
-            Uses::Local(_) => true,
+            Self::Local(_) => true,
         }
     }
 
@@ -292,9 +291,9 @@ impl UsesExt for Uses {
             // since we don't really analyze local action uses at all,
             // and the "hashedness" of a local action is mostly moot anyways
             // (since it's fully contained within the calling repo),
-            Uses::Local(_) => false,
-            Uses::Repository(repo) => !RepoRef::from(repo).ref_is_commit(),
-            Uses::Docker(docker) => docker.hash().is_none(),
+            Self::Local(_) => false,
+            Self::Repository(repo) => !RepoRef::from(repo).ref_is_commit(),
+            Self::Docker(docker) => docker.hash().is_none(),
         }
     }
 }

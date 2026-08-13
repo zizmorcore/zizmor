@@ -147,7 +147,7 @@ pub(crate) enum ClientError {
     #[error("couldn't list branches for {owner}/{repo}")]
     ListBranches {
         #[source]
-        source: Box<ClientError>,
+        source: Box<Self>,
         owner: String,
         repo: String,
     },
@@ -155,7 +155,7 @@ pub(crate) enum ClientError {
     #[error("couldn't list tags for {owner}/{repo}")]
     ListTags {
         #[source]
-        source: Box<ClientError>,
+        source: Box<Self>,
         owner: String,
         repo: String,
     },
@@ -168,7 +168,7 @@ pub(crate) enum ClientError {
     RepoMissingOrPrivate { owner: String, repo: String },
     /// Any of the errors above, wrapped from concurrent contexts.
     #[error(transparent)]
-    Inner(#[from] Arc<ClientError>),
+    Inner(#[from] Arc<Self>),
 }
 
 #[derive(Clone, Copy, Debug)]
