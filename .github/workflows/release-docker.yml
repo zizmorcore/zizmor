@@ -1,17 +1,39 @@
 name: Build and release Docker images 🐳
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      version:
-        description: "The version of zizmor to build against"
+      release-version:
+        type: string
         required: true
+        description: |
+          The version to release (e.g., 1.0.0).
+
+          Note that this version does NOT have a `v` prefix.
 
       latest:
-        description: "Whether to tag the image as latest"
-        required: false
-        default: true
         type: boolean
+        required: true
+        default: true
+        description: |
+          Whether to tag the image as `latest`
+
+  workflow_dispatch:
+    inputs:
+      release-version:
+        type: string
+        required: true
+        description: |
+          The version to release (e.g., 1.0.0).
+
+          Note that this version does NOT have a `v` prefix.
+
+      latest:
+        type: boolean
+        required: true
+        default: true
+        description: |
+          Whether to tag the image as `latest`
 
 permissions: {}
 
@@ -74,7 +96,7 @@ jobs:
           labels: ${{ steps.docker-metadata.outputs.labels }}
           outputs: type=image,"name=${{ env.ZIZMOR_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
           build-args: |
-            ZIZMOR_VERSION=${{ github.event.inputs.version }}
+            ZIZMOR_VERSION=${{ github.event.inputs.release-version }}
 
       - name: Export digest
         run: |
@@ -134,7 +156,7 @@ jobs:
         with:
           images: "${{ env.ZIZMOR_IMAGE }}"
           tags: |
-            type=raw,value=${{ github.event.inputs.version }}
+            type=raw,value=${{ github.event.inputs.release-version }}
             type=raw,value=latest,enable=${{ github.event.inputs.latest }}
 
       - name: Create manifest list and push
