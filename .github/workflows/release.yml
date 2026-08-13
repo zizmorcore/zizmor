@@ -71,7 +71,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ needs.plan-release.outputs.release-tag }}
-          PRERELEASE_FLAG: ${{ needs.plan-release.outputs.prerelease && '--prerelease' || '' }}
+          PRERELEASE_FLAG: ${{ needs.plan-release.outputs.prerelease == 'true' && '--prerelease' || '' }}
 
   release-binaries:
     name: Build and attach binaries for ${{ needs.plan-release.outputs.release-tag }}
@@ -121,4 +121,4 @@ jobs:
     with:
       # NOTE: uses release-version, not release-tag because the former isn't prefixed with a `v`.
       release-version: ${{ needs.plan-release.outputs.release-version }}
-      latest: ${{ !needs.plan-release.outputs.release-version }}
+      latest: ${{ needs.plan-release.outputs.prerelease == 'false' }}
