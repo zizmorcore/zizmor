@@ -4,6 +4,6 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 #![allow(clippy::redundant_field_names)]
 
-mod common;
+pub mod common;
 pub mod config;
 pub mod hooks;

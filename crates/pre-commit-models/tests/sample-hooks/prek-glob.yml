@@ -1,0 +1,11 @@
+---
+- id: example
+  name: Example
+  entry: example
+  language: system
+  files:
+    glob: "**/*.yaml"
+  exclude:
+    glob:
+      - "**/snapshots/**"
+      - "vendor/**"
