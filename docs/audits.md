@@ -406,8 +406,7 @@ by workflow and job identifiers, rather than run IDs.
 
 !!! note
 
-    This is a `--pedantic` only audit because it is pretty noisy for the average user.
-    In the future, this rule might apply to persona `regular` as well.
+    This is a `--pedantic` only audit, as it is pretty noisy for the average user.
 
 Other resources:
 
