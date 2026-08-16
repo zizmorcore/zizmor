@@ -308,6 +308,14 @@ help[template-injection]: code injection via template expansion
     |
     = note: audit confidence → High
 
+help[stale-action-refs]: commit hash does not point to a Git tag
+  --> .github/workflows/ci.yml:74:15
+   |
+74 |         uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+   |
+   = note: audit confidence → High
+
 error[unpinned-images]: unpinned image references
    --> .github/workflows/ci.yml:152:5
     |
@@ -377,16 +385,6 @@ info[anonymous-definition]: workflow or action definition without a name
     |
     = note: audit confidence → High
     = tip: use 'name: ...' to give this job a name
-
-help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-  --> .github/workflows/ci.yml:74:9
-   |
-74 |         uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
-   |
-   = note: audit confidence → High
-   = tip: add version comment '# v1'
-   = note: this finding has an auto-fix
 
 info[superfluous-actions]: action functionality is already included by the runner
   --> .github/workflows/ci.yml:74:15
@@ -853,6 +851,22 @@ help[template-injection]: code injection via template expansion
     |
     = note: audit confidence → High
 
+help[stale-action-refs]: commit hash does not point to a Git tag
+   --> .github/workflows/wheel-builder.yml:266:15
+    |
+266 |       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    |
+    = note: audit confidence → High
+
+help[stale-action-refs]: commit hash does not point to a Git tag
+   --> .github/workflows/wheel-builder.yml:351:15
+    |
+351 |       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    |
+    = note: audit confidence → High
+
 error[unpinned-images]: unpinned image references
   --> .github/workflows/wheel-builder.yml:60:7
    |
@@ -860,26 +874,6 @@ error[unpinned-images]: unpinned image references
    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
    |
    = note: audit confidence → High
-
-help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/wheel-builder.yml:266:9
-    |
-266 |       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
-    |
-    = note: audit confidence → High
-    = tip: add version comment '# v1'
-    = note: this finding has an auto-fix
-
-help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/wheel-builder.yml:351:9
-    |
-351 |       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
-    |
-    = note: audit confidence → High
-    = tip: add version comment '# v1'
-    = note: this finding has an auto-fix
 
 help[concurrency-limits]: insufficient job-level concurrency limits
    --> .github/workflows/wheel-builder.yml:4:1
