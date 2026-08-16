@@ -404,6 +404,10 @@ resource waste vector for attackers, particularly on billed runners. Separately,
 it can be a source of subtle race conditions when attempting to locate artifacts
 by workflow and job identifiers, rather than run IDs.
 
+!!! note
+
+    This is a `--pedantic` only audit, as it is pretty noisy for the average user.
+
 Other resources:
 
 * [Guidelines on green software practices for GitHub Actions CI workflows]
