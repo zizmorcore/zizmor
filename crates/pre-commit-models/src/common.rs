@@ -16,6 +16,8 @@ pub enum FilePattern {
 }
 
 /// The accepted forms for a prek `glob` value.
+// TODO: `github-actions-models` has the same scalar-or-vector shape in `SoV`.
+// Consider moving both types into a shared models crate.
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum GlobPatterns {
