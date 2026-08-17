@@ -31,12 +31,10 @@ pub struct Config {
     pub default_stages: Option<Vec<String>>,
 
     /// The global file include pattern.
-    #[serde(default)]
-    pub files: FilePattern,
+    pub files: Option<FilePattern>,
 
     /// The global file exclude pattern.
-    #[serde(default)]
-    pub exclude: FilePattern,
+    pub exclude: Option<FilePattern>,
 
     /// Whether to have pre-commit stop running hooks after the first
     /// failure.

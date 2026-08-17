@@ -15,12 +15,6 @@ pub enum FilePattern {
     },
 }
 
-impl Default for FilePattern {
-    fn default() -> Self {
-        Self::Regex(String::new())
-    }
-}
-
 /// The accepted forms for a prek `glob` value.
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
