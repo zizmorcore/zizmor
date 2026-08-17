@@ -9,6 +9,8 @@ pub enum FilePattern {
     /// A regular expression, supported by both pre-commit and prek.
     Regex(String),
     /// A prek-specific glob mapping.
+    ///
+    /// See: <https://prek.j178.dev/reference/configuration/#files>
     Glob {
         /// One or more glob patterns.
         glob: GlobPatterns,
