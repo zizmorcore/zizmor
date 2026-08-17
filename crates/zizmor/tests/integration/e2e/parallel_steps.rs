@@ -19,7 +19,7 @@ fn test_basic() -> Result<()> {
             .run()?,
         @r#"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
-     WARN audit:audit{input=Workflow(file://@@INPUT@@)}: zizmor::models::workflow: one or more inputs contains parallel steps; zizmor's support for these is currently experimental. see https://docs.zizmor.sh/usage/#parallel-step for details
+     WARN audit:audit{input=Workflow(file://@@INPUT@@)}: zizmor_core::models::workflow: one or more inputs contains parallel steps; zizmor's support for these is currently experimental. see https://docs.zizmor.sh/usage/#parallel-step for details
      INFO audit: zizmor: 🌈 completed @@INPUT@@
     error[template-injection]: code injection via template expansion
       --> @@INPUT@@:16:28

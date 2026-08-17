@@ -233,7 +233,7 @@ fn test_stdin_empty() -> anyhow::Result<()> {
             .run()?,
         @"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
-     WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
+     WARN collect_inputs: zizmor_collect: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected
       |
@@ -791,7 +791,7 @@ fn test_stdin_valid_yaml_unknown_schema() -> anyhow::Result<()> {
             .run()?,
         @"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
-     WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
+     WARN collect_inputs: zizmor_collect: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected
       |
@@ -819,7 +819,7 @@ fn test_stdin_valid_yaml_unknown_schema_strict() -> anyhow::Result<()> {
             .run()?,
         @"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
-     WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
+     WARN collect_inputs: zizmor_collect: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected
       |

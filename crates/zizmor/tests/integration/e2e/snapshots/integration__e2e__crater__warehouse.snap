@@ -3,7 +3,7 @@ source: crates/zizmor/tests/integration/e2e/crater.rs
 expression: "zizmor().offline(NetworkMode::AssertOnline).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"pypi/warehouse@9ed30d191788fcfa9c5be56bcce9b743e758903e\").run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
- INFO collect_inputs: zizmor::registry::input: collected 8 inputs from pypi/warehouse
+ INFO collect_inputs:collect_from_repo_slug{slug=InputSlug { owner: "pypi", repo: "warehouse", git_ref: Some("9ed30d191788fcfa9c5be56bcce9b743e758903e") }}: zizmor_collect: collected 8 inputs from pypi/warehouse
  INFO audit: zizmor: 🌈 completed .github/dependabot.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/ci.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/codeql-analysis.yml

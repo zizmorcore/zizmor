@@ -8,6 +8,11 @@ members = [
   "crates/tree-sitter-iter",
   "crates/yamlpatch",
   "crates/yamlpath",
+  "crates/zizmor-audit",
+  "crates/zizmor-config",
+  "crates/zizmor-collect",
+  "crates/zizmor-cli",
+  "crates/zizmor-core",
   "crates/zizmor",
   "crates/zizmor-sarif",
 ]
@@ -28,6 +33,11 @@ subfeature = { path = "crates/subfeature", version = "1.30.0-rc1" }
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.30.0-rc1" }
 yamlpatch = { path = "crates/yamlpatch", version = "1.30.0-rc1" }
 yamlpath = { path = "crates/yamlpath", version = "1.30.0-rc1" }
+zizmor-audit = { path = "crates/zizmor-audit", version = "1.30.0-rc1" }
+zizmor-config = { path = "crates/zizmor-config", version = "1.30.0-rc1" }
+zizmor-collect = { path = "crates/zizmor-collect", version = "1.30.0-rc1" }
+zizmor-cli = { path = "crates/zizmor-cli", version = "1.30.0-rc1", default-features = false }
+zizmor-core = { path = "crates/zizmor-core", version = "1.30.0-rc1" }
 zizmor-sarif = { path = "crates/zizmor-sarif", version = "1.30.0-rc1" }
 
 annotate-snippets = "0.12.16"

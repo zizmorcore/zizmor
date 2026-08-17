@@ -1,0 +1,53 @@
+[package]
+name = "zizmor-core"
+description = "Shared models and foundational types for zizmor"
+repository = "https://github.com/zizmorcore/zizmor"
+version.workspace = true
+edition.workspace = true
+readme = "README.md"
+homepage.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+camino = { workspace = true, features = ["serde1"] }
+clap = { workspace = true, features = ["derive"], optional = true }
+github-actions-expressions.workspace = true
+github-actions-models.workspace = true
+http.workspace = true
+http-cache-reqwest.workspace = true
+indexmap.workspace = true
+itertools.workspace = true
+jsonschema.workspace = true
+line-index.workspace = true
+pre-commit-models.workspace = true
+regex.workspace = true
+reqwest = { workspace = true, features = ["json", "query", "rustls"] }
+reqwest-middleware = { workspace = true, features = ["query"] }
+schemars = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+subfeature.workspace = true
+terminal-link.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tree-sitter.workspace = true
+tree-sitter-bash.workspace = true
+tree-sitter-powershell.workspace = true
+url.workspace = true
+yaml_serde.workspace = true
+yamlpath.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+
+[features]
+clap = ["dep:clap"]
+gh-token-tests = []
+schema = ["dep:schemars"]
+
+[lints]
+workspace = true

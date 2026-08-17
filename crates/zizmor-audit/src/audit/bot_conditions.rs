@@ -1,0 +1,482 @@
+use std::{ops::Deref as _, sync::LazyLock};
+
+use github_actions_expressions::{
+    Expr, SpannedExpr,
+    call::Call,
+    context::{Context, ContextPattern},
+    op::{BinExpr, BinOp, UnOp},
+};
+use github_actions_models::{
+    common::If,
+    workflow::event::{BareEvent, OptionalBody},
+};
+
+use super::{Audit, AuditLoadError, AuditState, audit_meta};
+use crate::{
+    audit::AuditError,
+    finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
+    models::workflow::{JobCommon as _, Workflow},
+    utils::{self, ExtractedExpr},
+};
+use subfeature::Subfeature;
+use yamlpatch::{Op, Patch};
+
+pub struct BotConditions;
+
+audit_meta!(BotConditions, "bot-conditions", "spoofable bot actor check");
+
+#[allow(clippy::unwrap_used)]
+static SPOOFABLE_ACTOR_NAME_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    vec![
+        ContextPattern::try_new("github.actor").unwrap(),
+        ContextPattern::try_new("github.triggering_actor").unwrap(),
+        ContextPattern::try_new("github.event.pull_request.sender.login").unwrap(),
+    ]
+});
+
+#[allow(clippy::unwrap_used)]
+static SPOOFABLE_ACTOR_ID_CONTEXTS: LazyLock<Vec<ContextPattern>> = LazyLock::new(|| {
+    vec![
+        ContextPattern::try_new("github.actor_id").unwrap(),
+        ContextPattern::try_new("github.event.pull_request.sender.id").unwrap(),
+    ]
+});
+
+// A list of known bot actor IDs; we need to hardcode these because they
+// have no equivalent `[bot]' suffix check.
+//
+// Stored as strings because every equality is stringly-typed
+// in GHA expressions anyways.
+//
+// NOTE: This list also contains non-user IDs like integration IDs.
+// The thinking there is that users will sometimes confuse the two,
+// so we should flag them as well.
+const BOT_ACTOR_IDS: &[&str] = &[
+    "29110",    //dependabot[bot]'s integration ID
+    "49699333", // dependabot[bot]
+    "27856297", // dependabot-preview[bot]
+    "29139614", // renovate[bot]
+];
+
+#[async_trait::async_trait]
+impl Audit for BotConditions {
+    fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
+    where
+        Self: Sized,
+    {
+        Ok(Self)
+    }
+
+    async fn audit_normal_job<'doc>(
+        &self,
+        job: &super::NormalJob<'doc>,
+        _config: &zizmor_config::Config,
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
+        let mut findings = vec![];
+
+        // Track conditions with explicit categorization
+        let mut conds = vec![];
+
+        // Job-level condition
+        if let Some(If::Expr(expr)) = &job.r#if {
+            conds.push((
+                expr,
+                job.location_with_grip(),
+                job.location().with_keys(["if".into()]),
+            ));
+        }
+
+        // Step-level conditions
+        for step in job.steps() {
+            if let Some(If::Expr(expr)) = &step.r#if() {
+                conds.push((
+                    expr,
+                    step.location_with_grip(),
+                    step.location().with_keys(["if".into()]),
+                ));
+            }
+        }
+
+        for (expr, parent, if_loc) in conds {
+            // Handle a fenced `if:` by extracting it explicitly.
+            // We need this indirection because of multiline YAML strings,
+            // e.g. where the literal string value might be something like
+            // `${{ ... }}\n`.
+            let bare = match utils::extract_fenced_expression(expr, 0) {
+                Some((expr, _)) => expr.as_bare(),
+                None => ExtractedExpr::new(expr).as_bare(),
+            };
+
+            let Ok(expr) = Expr::parse(bare) else {
+                tracing::warn!("couldn't parse expression: {expr}");
+                continue;
+            };
+
+            if let Some((subfeature, actor_context, confidence)) = Self::bot_condition(&expr) {
+                let if_route = if_loc.route.clone();
+
+                let mut finding_builder = Self::finding()
+                    .severity(Severity::High)
+                    .confidence(confidence)
+                    .add_location(parent.clone())
+                    .add_location(
+                        if_loc
+                            .primary()
+                            .subfeature(subfeature)
+                            .annotated("actor context may be spoofable"),
+                    );
+
+                if let Some(fix) = Self::attempt_fix(job.parent(), actor_context, if_route) {
+                    finding_builder = finding_builder.fix(fix);
+                }
+
+                findings.push(finding_builder.build(job.parent())?);
+            }
+        }
+
+        Ok(findings)
+    }
+}
+
+impl BotConditions {
+    /// Get appropriate user context paths based on workflow trigger events.
+    /// Returns (actor_name_context, actor_id_context) for the given workflow.
+    fn get_user_contexts_for_triggers(workflow: &Workflow) -> Option<(&str, &str)> {
+        use github_actions_models::workflow::Trigger;
+
+        // Check for single specific event types first
+        match &workflow.on {
+            Trigger::BareEvent(event) => Self::get_contexts_for_event(event),
+            Trigger::BareEvents(event_list) if event_list.len() == 1 => {
+                Self::get_contexts_for_event(&event_list[0])
+            }
+            Trigger::Events(event_map) if event_map.count() == 1 => {
+                // Check each possible event type
+                if !matches!(event_map.issue_comment, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::IssueComment);
+                }
+                if !matches!(event_map.pull_request, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::PullRequest);
+                }
+                if !matches!(event_map.pull_request_target, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::PullRequestTarget);
+                }
+                if !matches!(event_map.discussion_comment, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::DiscussionComment);
+                }
+                if !matches!(event_map.pull_request_review, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::PullRequestReview);
+                }
+                if !matches!(event_map.pull_request_review_comment, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::PullRequestReviewComment);
+                }
+                if !matches!(event_map.issues, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Issues);
+                }
+                if !matches!(event_map.discussion, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Discussion);
+                }
+                if !matches!(event_map.release, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Release);
+                }
+                if !matches!(event_map.push, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Push);
+                }
+                if !matches!(event_map.milestone, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Milestone);
+                }
+                if !matches!(event_map.label, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Label);
+                }
+                if !matches!(event_map.project, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Project);
+                }
+                if !matches!(event_map.watch, OptionalBody::Missing) {
+                    return Self::get_contexts_for_event(&BareEvent::Watch);
+                }
+
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Get context paths for a specific event type.
+    fn get_contexts_for_event(event: &BareEvent) -> Option<(&str, &str)> {
+        match event {
+            BareEvent::IssueComment => Some((
+                "github.event.comment.user.login",
+                "github.event.comment.user.id",
+            )),
+            BareEvent::DiscussionComment => Some((
+                "github.event.comment.user.login",
+                "github.event.comment.user.id",
+            )),
+            BareEvent::PullRequestReview => Some((
+                "github.event.review.user.login",
+                "github.event.review.user.id",
+            )),
+            BareEvent::PullRequestReviewComment => Some((
+                "github.event.comment.user.login",
+                "github.event.comment.user.id",
+            )),
+            BareEvent::Issues => Some((
+                "github.event.issue.user.login",
+                "github.event.issue.user.id",
+            )),
+            BareEvent::Discussion => Some((
+                "github.event.discussion.user.login",
+                "github.event.discussion.user.id",
+            )),
+            BareEvent::PullRequest | BareEvent::PullRequestTarget => Some((
+                "github.event.pull_request.user.login",
+                "github.event.pull_request.user.id",
+            )),
+            BareEvent::Release => Some((
+                "github.event.release.author.login",
+                "github.event.release.author.id",
+            )),
+            BareEvent::Create | BareEvent::Delete => {
+                Some(("github.event.sender.login", "github.event.sender.id"))
+            }
+            BareEvent::Milestone => Some((
+                "github.event.milestone.creator.login",
+                "github.event.milestone.creator.id",
+            )),
+            BareEvent::Label
+            | BareEvent::Project
+            | BareEvent::Fork
+            | BareEvent::Watch
+            | BareEvent::Public => Some(("github.event.sender.login", "github.event.sender.id")),
+            _ => None,
+        }
+    }
+
+    /// Walks the expression tree to find a potentially dominating bot condition.
+    ///
+    /// Returns a two-tuple of `((expr, actor-expr), dominating)`, where
+    /// `expr` is the expression that matches a bot condition,
+    /// `actor-expr` is the sub-expression for the offending actor context, and
+    /// `dominating` is a boolean indicating whether the condition dominates
+    /// the overall expression.
+    fn walk_tree_for_bot_condition<'a, 'src>(
+        expr: &'a SpannedExpr<'src>,
+        dominating: bool,
+    ) -> (Option<(&'a SpannedExpr<'src>, &'a SpannedExpr<'src>)>, bool) {
+        match expr.deref() {
+            // We can't easily analyze the call's semantics, but we can
+            // check to see if any of the call's arguments are
+            // bot conditions. We treat a call as non-dominating always.
+            // TODO: Should probably check some variant of `contains` here.
+            Expr::Call(Call {
+                func: _,
+                args: exprs,
+            })
+            | Expr::Context(Context { parts: exprs }) => exprs
+                .iter()
+                .map(|arg| Self::walk_tree_for_bot_condition(arg, false))
+                .reduce(|(bc, _), (bc_next, _)| (bc.or(bc_next), false))
+                .unwrap_or((None, dominating)),
+            Expr::Index(expr) => Self::walk_tree_for_bot_condition(expr, dominating),
+            Expr::BinExpr(BinExpr { lhs, op, rhs }) => match op {
+                // || is dominating.
+                BinOp::Or => {
+                    let (bc_lhs, _) = Self::walk_tree_for_bot_condition(lhs, true);
+                    let (bc_rhs, _) = Self::walk_tree_for_bot_condition(rhs, true);
+
+                    (bc_lhs.or(bc_rhs), true)
+                }
+                // == is trivially dominating.
+                BinOp::Eq => {
+                    let context_expr = match (lhs.as_ref().deref(), rhs.as_ref().deref()) {
+                        (Expr::Context(_), _) => lhs.as_ref(),
+                        (_, Expr::Context(_)) => rhs.as_ref(),
+                        _ => return (None, true),
+                    };
+
+                    match (lhs.as_ref().deref(), rhs.as_ref().deref()) {
+                        (Expr::Context(ctx), Expr::Literal(lit))
+                        | (Expr::Literal(lit), Expr::Context(ctx)) => {
+                            if (SPOOFABLE_ACTOR_NAME_CONTEXTS.iter().any(|x| x.matches(ctx))
+                                && lit.as_str().ends_with("[bot]"))
+                                || (SPOOFABLE_ACTOR_ID_CONTEXTS.iter().any(|x| x.matches(ctx))
+                                    && BOT_ACTOR_IDS.contains(&lit.as_str().as_ref()))
+                            {
+                                ((Some((expr, context_expr))), true)
+                            } else {
+                                (None, true)
+                            }
+                        }
+                        (_, _) => {
+                            let (bc_lhs, _) = Self::walk_tree_for_bot_condition(lhs, true);
+                            let (bc_rhs, _) = Self::walk_tree_for_bot_condition(rhs, true);
+
+                            (bc_lhs.or(bc_rhs), true)
+                        }
+                    }
+                }
+                // Every other binop is non-dominating.
+                _ => {
+                    let (bc_lhs, _) = Self::walk_tree_for_bot_condition(lhs, false);
+                    let (bc_rhs, _) = Self::walk_tree_for_bot_condition(rhs, false);
+
+                    (bc_lhs.or(bc_rhs), false)
+                }
+            },
+            Expr::UnExpr { op, expr } => match op {
+                // We don't really know what we're negating, so naively
+                // assume we're non-dominating.
+                //
+                // TODO: This is slightly incorrect, since we should
+                // treat `!(github.actor == 'dependabot[bot]')` as a
+                // negative case even though it has an interior bot condition.
+                // However, to model this correctly we need to go from a
+                // boolean condition to a three-state: `Some(bool)` for
+                // an explicitly toggled condition, and `None` for no condition.
+                UnOp::Not => Self::walk_tree_for_bot_condition(expr, false),
+            },
+            _ => (None, dominating),
+        }
+    }
+
+    fn bot_condition<'a, 'doc>(
+        expr: &'a SpannedExpr<'doc>,
+    ) -> Option<(Subfeature<'doc>, &'a SpannedExpr<'doc>, Confidence)> {
+        // We're looking for `github.actor == *[bot]` anywhere in the expression tree.
+        // The bot condition is said to "dominate" if controls the entire
+        // expression truth value. For example, `github.actor == 'dependabot[bot]' || foo`
+        // has the bot condition as dominating, since regardless of `foo` the check
+        // always passes if the actor is dependabot[bot].
+        match Self::walk_tree_for_bot_condition(expr, true) {
+            // We have a bot condition and it dominates the expression.
+            (Some((expr, context_expr)), true) => {
+                Some((Subfeature::new(0, expr), context_expr, Confidence::High))
+            }
+            // We have a bot condition but it doesn't dominate the expression.
+            (Some((expr, context_expr)), false) => {
+                Some((Subfeature::new(0, expr), context_expr, Confidence::Medium))
+            }
+            // No bot condition.
+            (..) => None,
+        }
+    }
+
+    fn attempt_fix<'doc>(
+        workflow: &'doc Workflow,
+        spoofable_context: &SpannedExpr<'doc>,
+        if_route: yamlpath::Route<'doc>,
+    ) -> Option<Fix<'doc>> {
+        // Get appropriate contexts based on workflow triggers
+        let (safe_name_context, safe_id_context) = Self::get_user_contexts_for_triggers(workflow)?;
+
+        // Get the exact spoofable context as it appears in the source;
+        // we need this exactly as it appears to perform a reliable patch.
+        let spoofable_context_raw = spoofable_context.origin.raw;
+
+        let SpannedExpr {
+            origin: _,
+            inner: Expr::Context(spoofable_context),
+        } = spoofable_context
+        else {
+            return None;
+        };
+
+        // Determine whether we need to replace our offending context
+        // with a safe name or ID variant.
+        let safe_context = if SPOOFABLE_ACTOR_NAME_CONTEXTS
+            .iter()
+            .any(|pat| pat.matches(spoofable_context))
+        {
+            safe_name_context
+        } else {
+            safe_id_context
+        };
+
+        Some(Fix {
+            title: "replace spoofable actor context".into(),
+            key: &workflow.key,
+            disposition: FixDisposition::Safe,
+            patches: vec![Patch {
+                route: if_route,
+                operation: Op::RewriteFragment {
+                    from: subfeature::Subfeature::new(0, spoofable_context_raw),
+                    to: safe_context.into(),
+                },
+            }],
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bot_condition() {
+        for (cond, context, confidence) in &[
+            // Trivial dominating cases.
+            (
+                "github.actor == 'dependabot[bot]'",
+                "github.actor",
+                Confidence::High,
+            ),
+            (
+                "'dependabot[bot]' == github.actor",
+                "github.actor",
+                Confidence::High,
+            ),
+            (
+                "'dependabot[bot]' == GitHub.actor",
+                "GitHub.actor",
+                Confidence::High,
+            ),
+            (
+                "'dependabot[bot]' == GitHub.ACTOR",
+                "GitHub.ACTOR",
+                Confidence::High,
+            ),
+            (
+                "'dependabot[bot]' == GitHub.triggering_actor",
+                "GitHub.triggering_actor",
+                Confidence::High,
+            ),
+            // Dominating cases with OR.
+            (
+                "'dependabot[bot]' == github.actor || true",
+                "github.actor",
+                Confidence::High,
+            ),
+            (
+                "'dependabot[bot]' == github.actor || false",
+                "github.actor",
+                Confidence::High,
+            ),
+            (
+                "'dependabot[bot]' == github.actor || github.actor == 'foobar'",
+                "github.actor",
+                Confidence::High,
+            ),
+            (
+                "github.actor == 'foobar' || 'dependabot[bot]' == github.actor",
+                "github.actor",
+                Confidence::High,
+            ),
+            // Non-dominating cases with AND.
+            (
+                "'dependabot[bot]' == github.actor && something.else",
+                "github.actor",
+                Confidence::Medium,
+            ),
+            (
+                "something.else && 'dependabot[bot]' == github.actor",
+                "github.actor",
+                Confidence::Medium,
+            ),
+        ] {
+            let cond = Expr::parse(cond).unwrap();
+            let (_, found_context, found_confidence) = BotConditions::bot_condition(&cond).unwrap();
+            assert_eq!(found_context.origin.raw, *context);
+            assert_eq!(found_confidence, *confidence);
+        }
+    }
+}

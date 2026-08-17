@@ -9,44 +9,56 @@ use annotate_snippets::{Group, Level, Renderer};
 use anstream::{eprintln, println, stderr};
 use anyhow::anyhow;
 use clap::{CommandFactory as _, Parser as _};
-use finding::{Confidence, Persona, Severity};
 use futures::stream::{FuturesOrdered, StreamExt as _};
 use indicatif::ProgressStyle;
 use owo_colors::OwoColorize as _;
-use registry::input::{InputKey, InputRegistry};
-use registry::{AuditRegistry, FindingRegistry};
-use state::AuditState;
 use terminal_link::Link;
 use thiserror::Error;
 use tracing::{Span, info_span, instrument};
 use tracing_indicatif::{IndicatifLayer, span_ext::IndicatifSpanExt as _};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
-
-use crate::{
-    audit::AuditError,
-    cli::{
-        App, CliConfidence, CliSeverity, CollectionModeSet, CollectionOptions, ColorMode,
-        OutputFormat, completions,
-    },
-    config::{Config, ConfigError, ConfigErrorInner},
-    github::Client,
+use zizmor_audit::{audit::AuditError, registry::AuditRegistry, state::AuditState};
+use zizmor_cli::{App, ColorMode, OutputFormat, Threshold, completions};
+use zizmor_collect::{CollectionError, InputRegistry};
+use zizmor_config::{Config, ConfigError, ConfigErrorInner};
+use zizmor_core::{
+    finding::Persona,
+    github::{Client, ClientError},
     models::AsDocument as _,
-    registry::input::CollectionError,
-    utils::once::warn_once,
 };
 
-mod audit;
-mod cli;
-mod config;
-mod finding;
-mod github;
+use crate::{finding_registry::FindingRegistry, utils::once::warn_once};
+
+mod finding_registry;
 #[cfg(feature = "lsp")]
 mod lsp;
-mod models;
 mod output;
-mod registry;
-mod state;
-mod utils;
+mod utils {
+    /// Returns whether we are running in a CI environment.
+    pub(crate) fn is_ci() -> bool {
+        static IS_CI: std::sync::LazyLock<bool> =
+            std::sync::LazyLock::new(|| std::env::var_os("CI").is_some());
+        *IS_CI
+    }
+
+    pub(crate) mod once {
+        macro_rules! once {
+            ($expression:expr) => {{
+                static ONCE: std::sync::Once = std::sync::Once::new();
+                ONCE.call_once(|| $expression)
+            }};
+        }
+
+        macro_rules! warn_once {
+            ($($arg:tt)+) => ({
+                crate::utils::once::once!(tracing::warn!($($arg)+))
+            });
+        }
+
+        pub(crate) use once;
+        pub(crate) use warn_once;
+    }
+}
 
 #[cfg(all(
     not(target_family = "windows"),
@@ -71,7 +83,7 @@ const THANKS: &[(&str, &str)] = &[
 #[instrument(skip_all)]
 async fn collect_inputs(
     inputs: &[String],
-    options: &CollectionOptions,
+    options: &zizmor_collect::CollectionOptions,
     gh_client: Option<&Client>,
 ) -> Result<InputRegistry, CollectionError> {
     let mut registry = InputRegistry::new();
@@ -81,7 +93,7 @@ async fn collect_inputs(
         registry.register_group(input, options, gh_client).await?;
     }
 
-    if registry.len() == 0 {
+    if registry.is_empty() {
         return Err(CollectionError::NoInputs);
     }
 
@@ -98,11 +110,12 @@ enum Error {
     #[error(transparent)]
     Collection(#[from] CollectionError),
     /// An error while running the LSP server.
+    #[cfg(feature = "lsp")]
     #[error(transparent)]
     Lsp(#[from] lsp::Error),
     /// An error from the GitHub API client.
     #[error(transparent)]
-    Client(#[from] github::ClientError),
+    Client(#[from] ClientError),
     /// An error while loading audit rules.
     #[error("failed to load audit rules")]
     AuditLoad(#[source] anyhow::Error),
@@ -142,7 +155,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     #[cfg(feature = "schema")]
     if app.args.generate_schema {
-        println!("{}", config::schema::generate_schema());
+        println!("{}", zizmor_config::schema::generate_schema());
         return Ok(ExitCode::SUCCESS);
     }
 
@@ -268,34 +281,37 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         }
     }
 
-    let collection_mode_set = CollectionModeSet::from(app.input.collect.as_slice());
+    let collection_mode_set =
+        zizmor_collect::CollectionModeSet(app.input.collect.iter().copied().collect());
 
     let min_severity = match app.audit.min_severity {
-        Some(CliSeverity::Unknown) => {
+        Some(Threshold(None)) => {
             tracing::warn!("`unknown` is a deprecated minimum severity that has no effect");
             tracing::warn!("future versions of zizmor will reject this value");
             None
         }
-        Some(CliSeverity::Informational) => Some(Severity::Informational),
-        Some(CliSeverity::Low) => Some(Severity::Low),
-        Some(CliSeverity::Medium) => Some(Severity::Medium),
-        Some(CliSeverity::High) => Some(Severity::High),
+        Some(Threshold(Some(severity))) => Some(severity),
         None => None,
     };
 
     let min_confidence = match app.audit.min_confidence {
-        Some(CliConfidence::Unknown) => {
+        Some(Threshold(None)) => {
             tracing::warn!("`unknown` is a deprecated minimum confidence that has no effect");
             tracing::warn!("future versions of zizmor will reject this value");
             None
         }
-        Some(CliConfidence::Low) => Some(Confidence::Low),
-        Some(CliConfidence::Medium) => Some(Confidence::Medium),
-        Some(CliConfidence::High) => Some(Confidence::High),
+        Some(Threshold(Some(confidence))) => Some(confidence),
         None => None,
     };
 
-    let global_config = Config::global(app)?;
+    let global_config = if app.args.no_config {
+        tracing::debug!(target: "zizmor_config", "skipping config discovery: explicitly disabled");
+        None
+    } else if let Some(path) = &app.args.config {
+        Some(Config::load(camino::Utf8Path::new(path))?)
+    } else {
+        None
+    };
 
     let gh_client = app
         .network
@@ -304,7 +320,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         .map(|token| Client::new(&app.network.gh_hostname, token, &app.network.cache_dir))
         .transpose()?;
 
-    let collection_options = CollectionOptions {
+    let collection_options = zizmor_collect::CollectionOptions {
         mode_set: collection_mode_set,
         strict: app.input.strict_collection,
         no_config: app.args.no_config,

@@ -1,4 +1,4 @@
-Static analysis for GitHub Actions
+Static analysis for CI/CD systems
 
 Usage: zizmor [OPTIONS] <INPUT>...
 

@@ -311,12 +311,12 @@ Some things that can be useful to discuss beforehand:
 
 When developing a new `zizmor` audit, there are a couple of implementation details to be aware of:
 
-- All existing audits live in a Rust module grouped under `crates/zizmor/src/audit` folder
-- The expected behavior for all audits is defined by the `Audit` trait at `crates/zizmor/src/audit/mod.rs`
-- The expected outcome of an executed audit is defined by the `Finding` struct at `crates/zizmor/src/finding/mod.rs`
-- Any `Audit` implementation can have access to an `AuditState` instance, as per `crates/zizmor/src/state.rs`
-- If an audit requires data from the GitHub API, there is a `Client` implementation at `crates/zizmor/src/github_api.rs`
-- All the audits must be registered in the default `AuditRegistry` at `crates/zizmor/src/registry.rs`
+- All existing audits live in Rust modules under `crates/zizmor-audit/src/audit`
+- The expected behavior for all audits is defined by the `Audit` trait at `crates/zizmor-audit/src/audit/mod.rs`
+- The expected outcome of an executed audit is defined by the `Finding` struct at `crates/zizmor-audit/src/finding.rs`
+- Any `Audit` implementation can access an `AuditState` instance, as defined in `crates/zizmor-audit/src/state.rs`
+- If an audit requires data from the GitHub API, there is a `Client` implementation at `crates/zizmor-core/src/github.rs`
+- All audits must be registered in the default `AuditRegistry` at `crates/zizmor-audit/src/registry.rs`
 
 Last but not least, it's useful to run the following checks before opening a Pull Request:
 
@@ -343,14 +343,14 @@ cargo test
 
 The general procedure for adding a new audit can be described as:
 
-- Define a new file at `crates/zizmor/src/audit/my_new_audit.rs`
+- Define a new file at `crates/zizmor-audit/src/audit/my_new_audit.rs`
 - Define a struct like `MyNewAudit`
 - Use the `audit_meta!` macro to implement `AuditCore` for `MyNewAudit`
 - Implement the `Audit` trait for `MyNewAudit`
     - You may want to use both the `AuditState` and `github_api::Client` to get the job done
 - Assign the proper `location` when creating a `Finding`, grabbing it from the
   proper `Workflow`, `Job` or `Step` instance
-- Add `MyNewAudit` to `AuditRegistry::default_audits` in `crates/zizmor/src/registry.rs`
+- Add `MyNewAudit` to `AuditRegistry::default_audits` in `crates/zizmor-audit/src/registry.rs`
 - Add proper integration tests covering some scenarios to the snapshot tests
   in `crates/zizmor/tests/integration/snapshot.rs`
 - Add proper docs for this new audit at `docs/audits`. Take care to add your new
@@ -383,7 +383,7 @@ working as expected.
 
 The general procedure for changing an existing audit is:
 
-- Locate the existing audit file at `crates/zizmor/src/audit`
+- Locate the existing audit file at `crates/zizmor-audit/src/audit`
 - Change the behaviour to match new requirements there (e.g. consuming a new CLI info exposed through `AuditState`)
 - Ensure that tests and samples at `tests/` reflect changed behaviour accordingly (e.g. the confidence for finding has changed)
 - Ensure that `docs/audits` reflect changed behaviour accordingly (e.g. an audit that is no longer pedantic)

@@ -8,7 +8,8 @@
 
 use std::io;
 
-use crate::finding;
+use zizmor_audit::finding;
+use zizmor_core::input::InputKey;
 
 // NOTE: Internally this format still uses a lot of zizmor's internal types.
 // As those change, this module will gain "frozen" copies with converters.
@@ -27,7 +28,7 @@ struct V1Finding<'a> {
 #[derive(serde::Serialize)]
 struct V1Fix<'a> {
     title: &'a str,
-    key: &'a crate::InputKey,
+    key: &'a InputKey,
     disposition: finding::FixDisposition,
 }
 

@@ -1,9 +1,9 @@
 ---
 source: crates/zizmor/tests/integration/e2e/crater.rs
-expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"curl/curl@6c8956c1cbf5cffcd2fd4571cf277e2eec280578\").run()?"
+expression: "zizmor().offline(NetworkMode::AssertOnline).output(OutputMode::Both).args([\"--persona=pedantic\"]).input(\"curl/curl@6c8956c1cbf5cffcd2fd4571cf277e2eec280578\").run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
- INFO collect_inputs: zizmor::registry::input: collected 17 inputs from curl/curl
+ INFO collect_inputs:collect_from_repo_slug{slug=InputSlug { owner: "curl", repo: "curl", git_ref: Some("6c8956c1cbf5cffcd2fd4571cf277e2eec280578") }}: zizmor_collect: collected 17 inputs from curl/curl
  INFO audit: zizmor: 🌈 completed .github/dependabot.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/appveyor-status.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/checkdocs.yml

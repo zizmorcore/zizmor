@@ -1,44 +1,92 @@
 //! "plain" (i.e. cargo-style) output.
 
 use itertools::Itertools as _;
-use std::collections::{HashMap, hash_map::Entry};
+use std::{
+    collections::{HashMap, hash_map::Entry},
+    io::{IsTerminal as _, stdout},
+};
 
 use annotate_snippets::{Annotation, AnnotationKind, Group, Level, Renderer, Snippet};
 use anstream::{eprintln, print, println};
 use owo_colors::OwoColorize as _;
-
-use crate::{
-    cli::{RenderLinks, ShowAuditUrls},
+use zizmor_audit::finding::{Finding, FixDisposition};
+use zizmor_cli::{CliRenderLinks, CliShowAuditUrls};
+use zizmor_collect::InputRegistry;
+use zizmor_core::{
     finding::{
-        Finding, FixDisposition, Severity,
+        Severity,
         location::{Location, LocationKind},
     },
+    input::InputKey,
     models::AsDocument as _,
-    registry::{
-        FindingRegistry,
-        input::{InputKey, InputRegistry},
-    },
 };
 
-impl From<LocationKind> for AnnotationKind {
-    fn from(kind: LocationKind) -> Self {
-        match kind {
-            LocationKind::Primary => Self::Primary,
-            LocationKind::Related => Self::Context,
-            // Unreachable because we filter out hidden locations earlier.
-            LocationKind::Hidden => unreachable!(),
+use crate::{finding_registry::FindingRegistry, utils::is_ci};
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum RenderLinks {
+    Always,
+    Never,
+}
+
+impl From<CliRenderLinks> for RenderLinks {
+    fn from(value: CliRenderLinks) -> Self {
+        match value {
+            CliRenderLinks::Auto => {
+                // We render links if stdout is a terminal. This is assumed
+                // to preclude CI environments and log files.
+                //
+                // TODO: Switch this to the support-hyperlinks crate?
+                // See: https://github.com/zkat/supports-hyperlinks/pull/8
+                if stdout().is_terminal() {
+                    Self::Always
+                } else {
+                    Self::Never
+                }
+            }
+            CliRenderLinks::Always => Self::Always,
+            CliRenderLinks::Never => Self::Never,
         }
     }
 }
 
-impl From<&Severity> for Level<'_> {
-    fn from(sev: &Severity) -> Self {
-        match sev {
-            Severity::Informational => Level::INFO,
-            Severity::Low => Level::HELP,
-            Severity::Medium => Level::WARNING,
-            Severity::High => Level::ERROR,
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum ShowAuditUrls {
+    Always,
+    Never,
+}
+
+impl From<CliShowAuditUrls> for ShowAuditUrls {
+    fn from(value: CliShowAuditUrls) -> Self {
+        match value {
+            CliShowAuditUrls::Auto => {
+                if is_ci() || !stdout().is_terminal() {
+                    Self::Always
+                } else {
+                    Self::Never
+                }
+            }
+            CliShowAuditUrls::Always => Self::Always,
+            CliShowAuditUrls::Never => Self::Never,
         }
+    }
+}
+
+fn annotation_kind(kind: LocationKind) -> AnnotationKind {
+    match kind {
+        LocationKind::Primary => AnnotationKind::Primary,
+        LocationKind::Related => AnnotationKind::Context,
+        // Unreachable because we filter out hidden locations earlier.
+        LocationKind::Hidden => unreachable!(),
+    }
+}
+
+fn severity_level(sev: Severity) -> Level<'static> {
+    match sev {
+        Severity::Informational => Level::INFO,
+        Severity::Low => Level::HELP,
+        Severity::Medium => Level::WARNING,
+        Severity::High => Level::ERROR,
     }
 }
 
@@ -85,7 +133,7 @@ pub(crate) fn finding_snippets<'doc>(
                         _ => &loc.symbolic.annotation,
                     };
 
-                    AnnotationKind::from(loc.symbolic.kind)
+                    annotation_kind(loc.symbolic.kind)
                         .span(
                             loc.concrete.location.offset_span.start
                                 ..loc.concrete.location.offset_span.end,
@@ -214,7 +262,7 @@ fn render_finding(
     show_urls_mode: &ShowAuditUrls,
     render_links_mode: &RenderLinks,
 ) {
-    let mut title = Level::from(&finding.determinations.severity)
+    let mut title = severity_level(finding.determinations.severity)
         .primary_title(finding.desc)
         .id(finding.ident);
 

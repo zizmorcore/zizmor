@@ -1,0 +1,48 @@
+[package]
+name = "zizmor-audit"
+description = "Audit engine and audit implementations for zizmor"
+repository = "https://github.com/zizmorcore/zizmor"
+version.workspace = true
+edition.workspace = true
+readme = "README.md"
+homepage.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+fst.workspace = true
+github-actions-expressions.workspace = true
+github-actions-models.workspace = true
+indexmap.workspace = true
+itertools.workspace = true
+regex.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+subfeature.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tree-sitter.workspace = true
+tree-sitter-bash.workspace = true
+tree-sitter-powershell.workspace = true
+typomania.workspace = true
+yamlpatch.workspace = true
+yamlpath.workspace = true
+yaml_serde.workspace = true
+zizmor-config.workspace = true
+zizmor-core.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+
+[build-dependencies]
+csv.workspace = true
+fst.workspace = true
+
+[features]
+online-tests = []
+
+[lints]
+workspace = true

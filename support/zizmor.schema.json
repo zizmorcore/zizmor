@@ -215,7 +215,7 @@
           "description": "Remaps the audit's severity to the given severity.\n\nIt will apply this severity regardless of what the real severity is, including when an audit\ncan be multiple severities.",
           "anyOf": [
             {
-              "$ref": "#/definitions/RemapSeverity"
+              "$ref": "#/definitions/Severity"
             },
             {
               "type": "null"
@@ -224,16 +224,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "RemapSeverity": {
-      "description": "Severity level for use in remap configuration.",
-      "type": "string",
-      "enum": [
-        "informational",
-        "low",
-        "medium",
-        "high"
-      ]
     },
     "RepositoryUsesPattern": {
       "title": "Represents a pattern for matching repository `uses` references.",
@@ -420,6 +410,15 @@
         }
       },
       "additionalProperties": false
+    },
+    "Severity": {
+      "type": "string",
+      "enum": [
+        "informational",
+        "low",
+        "medium",
+        "high"
+      ]
     },
     "UnpinnedUsesConfig": {
       "title": "Configuration for the `unpinned-uses` audit.",

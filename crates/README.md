@@ -3,9 +3,15 @@
 This directory contains `zizmor`'s various crates.
 
 See the table and each subdirectory for more details on each crate.
+
 | Crate | Version | Documentation | Description |
 |-------|---------|---------------|-------------|
-| [`zizmor`][zizmor-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor)][zizmor-crates] | [![docs.zizmor.sh](https://img.shields.io/badge/zizmor-docs.zizmor.sh-blue)][zizmor-docs] | The `zizmor` CLI and core auditing functionality. |
+| [`zizmor`][zizmor-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor)][zizmor-crates] | [![docs.zizmor.sh](https://img.shields.io/badge/zizmor-docs.zizmor.sh-blue)][zizmor-docs] | The leaf crate for the `zizmor` command-line application. |
+| [`zizmor-audit`][zizmor-audit-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor-audit)][zizmor-audit-crates] | [![docs.rs](https://img.shields.io/docsrs/zizmor-audit)][zizmor-audit-docs] | The audit engine and audit implementations for `zizmor`. |
+| [`zizmor-cli`][zizmor-cli-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor-cli)][zizmor-cli-crates] | [![docs.rs](https://img.shields.io/docsrs/zizmor-cli)][zizmor-cli-docs] | Command-line argument models and related CLI support for `zizmor`. |
+| [`zizmor-collect`][zizmor-collect-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor-collect)][zizmor-collect-crates] | [![docs.rs](https://img.shields.io/docsrs/zizmor-collect)][zizmor-collect-docs] | Local, standard input, and remote input collection for `zizmor`. |
+| [`zizmor-config`][zizmor-config-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor-config)][zizmor-config-crates] | [![docs.rs](https://img.shields.io/docsrs/zizmor-config)][zizmor-config-docs] | Configuration parsing, loading, and discovery for `zizmor`. |
+| [`zizmor-core`][zizmor-core-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor-core)][zizmor-core-crates] | [![docs.rs](https://img.shields.io/docsrs/zizmor-core)][zizmor-core-docs] | Shared models, foundational types, utilities, and GitHub client support for `zizmor`. |
 | [`subfeature`][subfeature-dir] | [![Crates.io](https://img.shields.io/crates/v/subfeature)][subfeature-crates] | [![docs.rs](https://img.shields.io/docsrs/subfeature)][subfeature-docs] | Subfeature handling APIs. |
 | [`yamlpath`][yamlpath-dir] | [![Crates.io](https://img.shields.io/crates/v/yamlpath)][yamlpath-crates] | [![docs.rs](https://img.shields.io/docsrs/yamlpath)][yamlpath-docs] | Format-preserving YAML feature extraction. |
 | [`yamlpatch`][yamlpath-dir] | [![Crates.io](https://img.shields.io/crates/v/yamlpatch)][yamlpath-crates] | [![docs.rs](https://img.shields.io/docsrs/yamlpatch)][yamlpath-docs] | Comment and format-preserving YAML patch operations. |
@@ -18,6 +24,26 @@ See the table and each subdirectory for more details on each crate.
 [zizmor-dir]: ./zizmor
 [zizmor-crates]: https://crates.io/crates/zizmor
 [zizmor-docs]: https://docs.zizmor.sh/
+
+[zizmor-audit-dir]: ./zizmor-audit
+[zizmor-audit-crates]: https://crates.io/crates/zizmor-audit
+[zizmor-audit-docs]: https://docs.rs/zizmor-audit
+
+[zizmor-cli-dir]: ./zizmor-cli
+[zizmor-cli-crates]: https://crates.io/crates/zizmor-cli
+[zizmor-cli-docs]: https://docs.rs/zizmor-cli
+
+[zizmor-collect-dir]: ./zizmor-collect
+[zizmor-collect-crates]: https://crates.io/crates/zizmor-collect
+[zizmor-collect-docs]: https://docs.rs/zizmor-collect
+
+[zizmor-config-dir]: ./zizmor-config
+[zizmor-config-crates]: https://crates.io/crates/zizmor-config
+[zizmor-config-docs]: https://docs.rs/zizmor-config
+
+[zizmor-core-dir]: ./zizmor-core
+[zizmor-core-crates]: https://crates.io/crates/zizmor-core
+[zizmor-core-docs]: https://docs.rs/zizmor-core
 
 [subfeature-dir]: ./subfeature
 [subfeature-crates]: https://crates.io/crates/subfeature

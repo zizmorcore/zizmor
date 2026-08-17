@@ -35,9 +35,9 @@ webhooks-to-contexts:
 	support/webhooks-to-contexts.py
 
 .PHONY: codeql-injection-sinks
-codeql-injection-sinks: crates/zizmor/data/codeql-injection-sinks.json
+codeql-injection-sinks: crates/zizmor-audit/data/codeql-injection-sinks.json
 
-crates/zizmor/data/codeql-injection-sinks.json: support/codeql-injection-sinks.py
+crates/zizmor-audit/data/codeql-injection-sinks.json: support/codeql-injection-sinks.py
 	$< > $@
 
 .PHONY: sync-expression-tests

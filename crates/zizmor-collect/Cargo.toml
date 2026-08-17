@@ -1,0 +1,33 @@
+[package]
+name = "zizmor-collect"
+description = "Input collection for zizmor"
+repository = "https://github.com/zizmorcore/zizmor"
+version.workspace = true
+edition.workspace = true
+readme = "README.md"
+homepage.workspace = true
+license.workspace = true
+
+[dependencies]
+camino.workspace = true
+clap = { workspace = true, features = ["derive"], optional = true }
+anyhow.workspace = true
+flate2.workspace = true
+ignore.workspace = true
+itertools.workspace = true
+tar.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+yaml_serde.workspace = true
+yamlpath.workspace = true
+zizmor-config.workspace = true
+zizmor-core.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[features]
+clap = ["dep:clap"]
+
+[lints]
+workspace = true

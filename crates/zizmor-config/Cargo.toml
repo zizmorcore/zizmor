@@ -1,0 +1,33 @@
+[package]
+name = "zizmor-config"
+description = "Configuration support for zizmor"
+repository = "https://github.com/zizmorcore/zizmor"
+version.workspace = true
+edition.workspace = true
+readme = "README.md"
+homepage.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+camino.workspace = true
+github-actions-models.workspace = true
+regex.workspace = true
+schemars = { workspace = true, optional = true }
+serde.workspace = true
+serde_json = { workspace = true, optional = true }
+thiserror.workspace = true
+tracing.workspace = true
+yaml_serde.workspace = true
+zizmor-core.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+jsonschema.workspace = true
+serde_json.workspace = true
+
+[features]
+schema = ["dep:schemars", "dep:serde_json", "zizmor-core/schema"]
+
+[lints]
+workspace = true

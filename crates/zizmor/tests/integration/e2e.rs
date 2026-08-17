@@ -377,7 +377,7 @@ fn test_issue_1394() -> Result<()> {
             .run()?,
         @r#"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
-     WARN collect_inputs: zizmor::registry::input: failed to parse input: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+     WARN collect_inputs: zizmor_collect: failed to parse input: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
     fatal: no audit was performed
     error: no inputs collected
       |
@@ -893,11 +893,11 @@ fn issue_2182() -> Result<()> {
                 "woodruffw-experiments/zizmor-issue-2182@74a136e0e7d58127e47ad87fd5db72370634e2f9"
             )
             .run()?,
-        @"
+        @r#"
     INFO zizmor: 🌈 zizmor v@@VERSION@@
-    INFO collect_inputs: zizmor::registry::input: collected 1 inputs from woodruffw-experiments/zizmor-issue-2182
+    INFO collect_inputs:collect_from_repo_slug{slug=InputSlug { owner: "woodruffw-experiments", repo: "zizmor-issue-2182", git_ref: Some("74a136e0e7d58127e47ad87fd5db72370634e2f9") }}: zizmor_collect: collected 1 inputs from woodruffw-experiments/zizmor-issue-2182
     INFO audit: zizmor: 🌈 completed dummy/action.yml
-    "
+    "#
     );
 
     Ok(())

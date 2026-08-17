@@ -7,17 +7,16 @@ use camino::{Utf8Path, Utf8PathBuf};
 use thiserror::Error;
 use tower_lsp_server::ls_types::{self, TextDocumentSyncKind};
 use tower_lsp_server::{Client, LanguageServer, LspService, Server};
+use zizmor_audit::{registry::AuditRegistry, state::AuditState};
+use zizmor_collect::{InputGroup, InputRegistry};
+use zizmor_config::Config;
+use zizmor_core::{
+    finding::{Persona, Severity, location::Point},
+    input::{AuditInput, InputKey},
+    models::{action::Action, dependabot::Dependabot, workflow::Workflow},
+};
 
-use crate::audit::AuditInput;
-use crate::config::Config;
-use crate::finding::location::Point;
-use crate::finding::{Persona, Severity};
-use crate::models::action::Action;
-use crate::models::dependabot::Dependabot;
-use crate::models::workflow::Workflow;
-use crate::registry::input::{InputGroup, InputRegistry};
-use crate::registry::{FindingRegistry, input::InputKey};
-use crate::{AuditRegistry, AuditState};
+use crate::finding_registry::FindingRegistry;
 
 #[derive(Debug, Error)]
 #[error("LSP server error")]
@@ -291,7 +290,7 @@ impl Backend {
             let workspace_dirs = self.workspace_dirs.read().await;
 
             for dir in workspace_dirs.as_slice() {
-                match Config::discover_local(dir.as_path(), Some(dir.as_path())).await {
+                match Config::discover_local(dir.as_path(), Some(dir.as_path())) {
                     Ok(Some(cfg)) => {
                         config = cfg;
                         break;
@@ -342,10 +341,10 @@ impl Backend {
                 let primary = finding.primary_location();
                 ls_types::Diagnostic {
                     range: ls_types::Range {
-                        start: primary.concrete.location.start_point.into(),
-                        end: primary.concrete.location.end_point.into(),
+                        start: point_to_position(primary.concrete.location.start_point),
+                        end: point_to_position(primary.concrete.location.end_point),
                     },
-                    severity: Some(finding.determinations.severity.into()),
+                    severity: Some(severity_to_diagnostic(finding.determinations.severity)),
                     code: Some(ls_types::NumberOrString::String(finding.ident.into())),
                     code_description: Some(ls_types::CodeDescription {
                         href: ls_types::Uri::from_str(finding.url)
@@ -378,24 +377,20 @@ impl Backend {
     }
 }
 
-impl From<Severity> for ls_types::DiagnosticSeverity {
-    fn from(value: Severity) -> Self {
-        // TODO: Does this mapping make sense?
-        match value {
-            Severity::Informational => Self::INFORMATION,
-            Severity::Low => Self::WARNING,
-            Severity::Medium => Self::WARNING,
-            Severity::High => Self::ERROR,
-        }
+fn severity_to_diagnostic(value: Severity) -> ls_types::DiagnosticSeverity {
+    // TODO: Does this mapping make sense?
+    match value {
+        Severity::Informational => ls_types::DiagnosticSeverity::INFORMATION,
+        Severity::Low => ls_types::DiagnosticSeverity::WARNING,
+        Severity::Medium => ls_types::DiagnosticSeverity::WARNING,
+        Severity::High => ls_types::DiagnosticSeverity::ERROR,
     }
 }
 
-impl From<Point> for ls_types::Position {
-    fn from(value: Point) -> Self {
-        Self {
-            line: value.row as u32,
-            character: value.column as u32,
-        }
+fn point_to_position(value: Point) -> ls_types::Position {
+    ls_types::Position {
+        line: value.row as u32,
+        character: value.column as u32,
     }
 }
 

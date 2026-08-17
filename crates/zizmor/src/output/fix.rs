@@ -5,13 +5,12 @@ use std::collections::HashMap;
 use anyhow::{Context as _, Result};
 use camino::Utf8Path;
 use owo_colors::OwoColorize as _;
+use zizmor_audit::finding::{Finding, Fix, FixDisposition};
+use zizmor_cli::FixMode;
+use zizmor_collect::InputRegistry;
+use zizmor_core::{input::InputKey, models::AsDocument as _};
 
-use crate::{
-    cli::FixMode,
-    finding::{Finding, Fix, FixDisposition},
-    models::AsDocument as _,
-    registry::{FindingRegistry, input::InputKey, input::InputRegistry},
-};
+use crate::finding_registry::FindingRegistry;
 
 /// Result of applying fixes.
 #[derive(Debug)]

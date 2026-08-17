@@ -2,6 +2,8 @@
 
 use std::collections::{BTreeMap, HashSet};
 
+use zizmor_audit::finding::Finding;
+use zizmor_core::finding::{Severity, location::Location};
 use zizmor_sarif::{
     ArtifactContent, ArtifactLocation, CodeFlow, Invocation, Location as SarifLocation,
     LogicalLocation, Message, MultiformatMessageString, PhysicalLocation, PropertyBag, Region,
@@ -9,28 +11,22 @@ use zizmor_sarif::{
     ThreadFlowLocation, ThreadFlowLocationImportance, Tool, ToolComponent,
 };
 
-use crate::finding::{Finding, Severity, location::Location};
-
-impl From<Severity> for ResultKind {
-    fn from(value: Severity) -> Self {
-        // TODO: Does this mapping make sense?
-        match value {
-            Severity::Informational => Self::Review,
-            Severity::Low => Self::Fail,
-            Severity::Medium => Self::Fail,
-            Severity::High => Self::Fail,
-        }
+fn result_kind(value: Severity) -> ResultKind {
+    // TODO: Does this mapping make sense?
+    match value {
+        Severity::Informational => ResultKind::Review,
+        Severity::Low => ResultKind::Fail,
+        Severity::Medium => ResultKind::Fail,
+        Severity::High => ResultKind::Fail,
     }
 }
 
-impl From<Severity> for ResultLevel {
-    fn from(value: Severity) -> Self {
-        match value {
-            Severity::Informational => Self::Note,
-            Severity::Low => Self::Note,
-            Severity::Medium => Self::Warning,
-            Severity::High => Self::Error,
-        }
+fn result_level(value: Severity) -> ResultLevel {
+    match value {
+        Severity::Informational => ResultLevel::Note,
+        Severity::Low => ResultLevel::Note,
+        Severity::Medium => ResultLevel::Warning,
+        Severity::High => ResultLevel::Error,
     }
 }
 
@@ -139,8 +135,8 @@ fn build_result(finding: &Finding<'_>) -> SarifResult {
 
     SarifResult {
         code_flows,
-        kind: Some(ResultKind::from(finding.determinations.severity)),
-        level: Some(ResultLevel::from(finding.determinations.severity)),
+        kind: Some(result_kind(finding.determinations.severity)),
+        level: Some(result_level(finding.determinations.severity)),
         locations: vec![build_location(primary, None)],
         // NOTE: Between 1.4.0 and 1.9.0 we used the primary location's
         // annotation for the message here. This produced a _slightly_
@@ -210,14 +206,14 @@ fn build_location(location: &Location<'_>, id: Option<i64>) -> SarifLocation {
 
 #[cfg(test)]
 mod tests {
-    use zizmor_sarif::ResultKind;
+    use zizmor_core::finding::Severity;
 
-    use crate::finding::Severity;
+    use super::result_kind;
 
     #[test]
     fn test_resultkind_from_severity() {
         assert_eq!(
-            serde_json::to_string(&ResultKind::from(Severity::High)).unwrap(),
+            serde_json::to_string(&result_kind(Severity::High)).unwrap(),
             "\"fail\""
         );
     }

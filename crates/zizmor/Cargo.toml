@@ -16,37 +16,15 @@ license.workspace = true
 annotate-snippets.workspace = true
 anstream.workspace = true
 anyhow.workspace = true
-async-trait.workspace = true
 camino = { workspace = true, features = ["serde1"] }
 clap = { workspace = true, features = ["derive", "env"] }
-clap_complete.workspace = true
-clap_complete_nushell.workspace = true
-clap-verbosity-flag = { workspace = true, features = ["tracing"] }
-etcetera.workspace = true
-flate2.workspace = true
-fst.workspace = true
 futures.workspace = true
-github-actions-expressions.workspace = true
-github-actions-models.workspace = true
-http.workspace = true
-http-cache-reqwest.workspace = true
 human-panic.workspace = true
-ignore.workspace = true
-indexmap.workspace = true
 indicatif.workspace = true
 itertools.workspace = true
-jsonschema.workspace = true
-line-index.workspace = true
 owo-colors.workspace = true
-pre-commit-models.workspace = true
-regex.workspace = true
-reqwest = { workspace = true, features = ["json", "query", "rustls"] }
-reqwest-middleware = { workspace = true, features = ["query"] }
-schemars = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-subfeature.workspace = true
-tar.workspace = true
 terminal-link.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["io-std", "rt-multi-thread"] }
@@ -54,26 +32,20 @@ tower-lsp-server = { workspace = true, optional = true }
 tracing.workspace = true
 tracing-indicatif.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
-tree-sitter.workspace = true
-tree-sitter-bash.workspace = true
-tree-sitter-powershell.workspace = true
-typomania.workspace = true
-url.workspace = true
-yaml_serde.workspace = true
-yamlpatch.workspace = true
-yamlpath.workspace = true
+zizmor-audit.workspace = true
+zizmor-cli.workspace = true
+zizmor-collect.workspace = true
+zizmor-config.workspace = true
+zizmor-core.workspace = true
 zizmor-sarif.workspace = true
 
 [dev-dependencies]
 assert_cmd.workspace = true
 insta.workspace = true
+regex.workspace = true
 similar.workspace = true
 tempfile.workspace = true
 walkdir.workspace = true
-
-[build-dependencies]
-csv.workspace = true
-fst.workspace = true
 
 [target.'cfg(not(any(target_family = "windows", target_os = "openbsd")))'.dependencies]
 tikv-jemallocator.workspace = true
@@ -83,12 +55,12 @@ default = ["lsp"]
 # Test-only: enable 'crater' tests.
 crater-tests = ["online-tests"]
 # Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
-gh-token-tests = []
-lsp = ["dep:tower-lsp-server"]
+gh-token-tests = ["zizmor-core/gh-token-tests"]
+lsp = ["dep:tower-lsp-server", "zizmor-cli/lsp"]
 # Test-only: enable all online audits.
-online-tests = ["gh-token-tests"]
+online-tests = ["gh-token-tests", "zizmor-audit/online-tests"]
 # Enable JSON Schema generation for zizmor.yml
-schema = ["dep:schemars"]
+schema = ["zizmor-cli/schema", "zizmor-config/schema"]
 # Test-only: enable tests that require `unbuffer` for TTY behavior.
 tty-tests = []
 

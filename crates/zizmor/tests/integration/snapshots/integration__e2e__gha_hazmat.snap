@@ -3,7 +3,7 @@ source: crates/zizmor/tests/integration/e2e.rs
 expression: "zizmor().offline(NetworkMode::AssertOnline).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw/gha-hazmat@83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61\").run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
- INFO collect_inputs: zizmor::registry::input: collected 22 inputs from woodruffw/gha-hazmat
+ INFO collect_inputs:collect_from_repo_slug{slug=InputSlug { owner: "woodruffw", repo: "gha-hazmat", git_ref: Some("83e7e24df76fe8b5c0a1748b6fb24107a0e4fa61") }}: zizmor_collect: collected 22 inputs from woodruffw/gha-hazmat
  INFO audit: zizmor: 🌈 completed .github/workflows/artipacked.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/bot-conditions.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/cache-poisoning.yml
