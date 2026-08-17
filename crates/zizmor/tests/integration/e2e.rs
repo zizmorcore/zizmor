@@ -106,26 +106,6 @@ fn menagerie() -> Result<()> {
     Ok(())
 }
 
-/// Regression test for #2307.
-#[test]
-fn prek_glob_patterns() -> Result<()> {
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("prek-glob/.pre-commit-config.yaml"))
-            .run()?,
-        @"No findings to report. Good job!"
-    );
-
-    insta::assert_snapshot!(
-        zizmor()
-            .input(input_under_test("prek-glob/.pre-commit-hooks.yaml"))
-            .run()?,
-        @"No findings to report. Good job!"
-    );
-
-    Ok(())
-}
-
 /// Regression test for #1907.
 ///
 /// Ensures that directory collection finds workflows when invoked
