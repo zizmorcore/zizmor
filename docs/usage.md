@@ -997,6 +997,25 @@ zizmor --gh-hostname custom.example.com ...
 GH_HOST=custom.ghe.com zizmor ...
 ```
 
+To resolve actions from GitHub Enterprise and `github.com`, provide a token for
+each host. A token from a GitHub Enterprise host is not valid on `github.com`.
+Set `GITHUB_COM_TOKEN` to a classic GitHub.com PAT with no scopes:
+
+```bash
+GH_HOST=custom.ghe.com \
+GITHUB_TOKEN="$ENTERPRISE_TOKEN" \
+GITHUB_COM_TOKEN="$DOTCOM_TOKEN" \
+zizmor ...
+```
+
+For each repository, `zizmor` checks the enterprise host first. If the
+repository is unavailable, `zizmor` checks `github.com`. An enterprise
+repository masks a `github.com` repository with the same `owner/repo` name.
+This behavior matches GitHub Actions.
+
+`GITHUB_COM_TOKEN` has no effect when the primary host is already
+`github.com`.
+
 ## Limitations
 
 `zizmor` can help you secure your CI/CD setup by finding common,
