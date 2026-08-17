@@ -35,10 +35,12 @@ mod lineref;
 mod pktline;
 
 /// Represents different types of GitHub hosts.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) enum GitHubHost {
     Enterprise(String),
-    Standard(String),
+    EnterpriseCloud(String),
+    #[default]
+    Standard,
 }
 
 impl GitHubHost {
@@ -52,8 +54,10 @@ impl GitHubHost {
             return Err("must be a domain name, not a URL".into());
         }
 
-        if normalized.eq_ignore_ascii_case("github.com") || normalized.ends_with(".ghe.com") {
-            Ok(Self::Standard(hostname.into()))
+        if normalized.eq_ignore_ascii_case("github.com") {
+            Ok(Self::Standard)
+        } else if normalized.ends_with(".ghe.com") {
+            Ok(Self::EnterpriseCloud(hostname.into()))
         } else {
             Ok(Self::Enterprise(hostname.into()))
         }
@@ -62,21 +66,17 @@ impl GitHubHost {
     fn to_api_host(&self) -> String {
         match self {
             Self::Enterprise(host) => host.clone(),
-            Self::Standard(host) => format!("api.{host}"),
+            Self::EnterpriseCloud(host) => format!("api.{host}"),
+            Self::Standard => "api.github.com".into(),
         }
     }
 
     fn to_api_url(&self) -> String {
         match self {
             Self::Enterprise(_) => format!("https://{host}/api/v3", host = self.to_api_host()),
-            Self::Standard(_) => format!("https://{host}", host = self.to_api_host()),
+            Self::EnterpriseCloud(_) => format!("https://{host}", host = self.to_api_host()),
+            Self::Standard => "https://api.github.com".into(),
         }
-    }
-}
-
-impl Default for GitHubHost {
-    fn default() -> Self {
-        Self::Standard("github.com".into())
     }
 }
 
@@ -84,7 +84,8 @@ impl Display for GitHubHost {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Enterprise(host) => write!(f, "{host}"),
-            Self::Standard(host) => write!(f, "{host}"),
+            Self::EnterpriseCloud(host) => write!(f, "{host}"),
+            Self::Standard => write!(f, "github.com"),
         }
     }
 }
