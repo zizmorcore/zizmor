@@ -91,7 +91,7 @@ impl PreCommitConfig {
 
     /// Returns this pre-commit config's [`SymbolicLocation`].
     ///
-    /// See [`Workflow::location`] for an explanation of why this isn't
+    /// See [`crate::models::workflow::Workflow::location`] for an explanation of why this isn't
     /// implemented through the [`Locatable`] trait.
     pub fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
@@ -242,7 +242,7 @@ impl PreCommitHooks {
 
     /// Returns this pre-commit config's [`SymbolicLocation`].
     ///
-    /// See [`Workflow::location`] for an explanation of why this isn't
+    /// See [`crate::models::workflow::Workflow::location`] for an explanation of why this isn't
     /// implemented through the [`Locatable`] trait.
     pub fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {

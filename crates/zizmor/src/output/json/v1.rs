@@ -8,8 +8,8 @@
 
 use std::io;
 
-use zizmor_audit::finding;
-use zizmor_core::input::InputKey;
+use zizmor_audit::finding::{Finding, Fix, FixDisposition};
+use zizmor_core::{finding, input::InputKey};
 
 // NOTE: Internally this format still uses a lot of zizmor's internal types.
 // As those change, this module will gain "frozen" copies with converters.
@@ -29,11 +29,11 @@ struct V1Finding<'a> {
 struct V1Fix<'a> {
     title: &'a str,
     key: &'a InputKey,
-    disposition: finding::FixDisposition,
+    disposition: FixDisposition,
 }
 
-impl<'a> From<&'a finding::Fix<'a>> for V1Fix<'a> {
-    fn from(fix: &'a finding::Fix<'a>) -> Self {
+impl<'a> From<&'a Fix<'a>> for V1Fix<'a> {
+    fn from(fix: &'a Fix<'a>) -> Self {
         Self {
             title: fix.title.as_str(),
             key: fix.key,
@@ -42,8 +42,8 @@ impl<'a> From<&'a finding::Fix<'a>> for V1Fix<'a> {
     }
 }
 
-impl<'a> From<&'a finding::Finding<'a>> for V1Finding<'a> {
-    fn from(finding: &'a finding::Finding<'a>) -> Self {
+impl<'a> From<&'a Finding<'a>> for V1Finding<'a> {
+    fn from(finding: &'a Finding<'a>) -> Self {
         Self {
             ident: finding.ident,
             desc: finding.desc,
@@ -56,10 +56,7 @@ impl<'a> From<&'a finding::Finding<'a>> for V1Finding<'a> {
     }
 }
 
-pub(crate) fn output<'a>(
-    sink: impl io::Write,
-    findings: &[finding::Finding<'a>],
-) -> anyhow::Result<()> {
+pub(crate) fn output<'a>(sink: impl io::Write, findings: &[Finding<'a>]) -> anyhow::Result<()> {
     serde_json::to_writer_pretty(
         sink,
         &findings.iter().map(V1Finding::from).collect::<Vec<_>>(),

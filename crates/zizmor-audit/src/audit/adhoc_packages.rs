@@ -1,11 +1,12 @@
 use anyhow::Context as _;
 use subfeature::Subfeature;
 use tree_sitter::StreamingIterator as _;
+use zizmor_core::finding::{Confidence, Severity};
 
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{Audit, AuditLoadError};
 use crate::audit::AuditError;
 use crate::{
-    finding::{Confidence, Finding, Severity},
+    finding::Finding,
     models::{StepBodyCommon, StepCommon},
     state::AuditState,
     utils,
@@ -17,7 +18,7 @@ const PWSH_COMMAND_QUERY: &str = "(command \
     command_elements: (command_elements (_)+ @args) \
 ) @span";
 
-pub struct AdhocPackages {
+pub(crate) struct AdhocPackages {
     bash_command_query: utils::SpannedQuery,
     pwsh_command_query: utils::SpannedQuery,
 }

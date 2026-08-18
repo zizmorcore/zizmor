@@ -19,7 +19,7 @@ use std::fmt::Write as _;
 ///
 /// This recognizes:
 ///
-/// 1. The literal `if: false` (which deserializes as [`common::If::Bool(false)`]).
+/// 1. The literal `if: false` (which deserializes as [`common::If::Bool`] with `false`).
 /// 2. Bare or fenced expressions that const-evaluate to a falsy boolean,
 ///    e.g. `if: ${{ false }}`, `if: false && something`.
 ///
@@ -45,12 +45,10 @@ pub mod dependabot;
 pub mod inputs;
 pub mod pre_commit;
 pub mod repo_ref;
-mod repository_uses_pattern;
+pub mod repository_uses_pattern;
 pub mod uses;
 pub mod version;
 pub mod workflow;
-
-pub use repository_uses_pattern::RepositoryUsesPattern;
 
 fn parse_validation_errors(errors: Vec<jsonschema::ErrorEntry<'_>>) -> anyhow::Error {
     let mut message = String::new();

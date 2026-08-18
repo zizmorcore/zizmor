@@ -3,21 +3,22 @@ use github_actions_models::common::{RepositoryUses, Uses, expr::LoE};
 use yamlpatch::{Op, Patch};
 
 use zizmor_config::Config;
+use zizmor_core::finding::{
+    Confidence, Persona, Severity,
+    location::{Feature, Location, Routable as _},
+};
 
 use crate::{
     audit::AuditError,
-    finding::{
-        Confidence, Finding, Fix, FixDisposition, Persona, Severity,
-        location::{Feature, Location, Routable as _},
-    },
+    finding::{Finding, Fix, FixDisposition},
     models::{StepCommon, action::CompositeStep, workflow::Step},
     utils::parse_fenced_expressions_from_routable,
 };
 use subfeature::Subfeature;
 
-use super::{Audit, AuditInput, AuditLoadError, AuditState, audit_meta};
+use super::{Audit, AuditInput, AuditLoadError, AuditState};
 
-pub struct Obfuscation;
+pub(crate) struct Obfuscation;
 
 audit_meta!(
     Obfuscation,

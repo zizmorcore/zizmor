@@ -9,15 +9,18 @@ use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
 
-use crate::audit::{Audit, AuditError, audit_meta};
-use crate::finding::location::{Locatable as _, Routable as _};
-use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
+use crate::audit::{Audit, AuditError};
+use crate::finding::{Finding, Fix, FixDisposition};
 use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage};
 use crate::models::workflow::{JobCommon as _, NormalJob, Step, Steps};
 use crate::models::{StepBodyCommon, StepCommon};
 use crate::state::AuditState;
 use crate::utils::ExtractedExpr;
 use zizmor_config::Config;
+use zizmor_core::finding::{
+    Confidence, Severity,
+    location::{Locatable as _, Routable as _},
+};
 
 use indexmap::IndexMap;
 use yamlpatch::{Op, Patch};
@@ -399,7 +402,7 @@ impl<'a> CacheControlField<'a> {
     }
 }
 
-pub struct CachePoisoning;
+pub(crate) struct CachePoisoning;
 
 audit_meta!(
     CachePoisoning,
@@ -495,7 +498,7 @@ impl CachePoisoning {
 
     fn create_configurable_action_fix<'doc>(
         &self,
-        _uses_pattern: &crate::models::RepositoryUsesPattern,
+        _uses_pattern: &crate::models::repository_uses_pattern::RepositoryUsesPattern,
         control: &ControlExpr,
         step: &Step<'doc>,
     ) -> Option<Fix<'doc>> {

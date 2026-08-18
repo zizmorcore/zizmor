@@ -8,12 +8,13 @@
 use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
 
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{Audit, AuditLoadError};
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Severity, location::Routable as _};
 
 use crate::{
     audit::AuditError,
-    finding::{Confidence, Finding, Fix, Severity, location::Routable as _},
+    finding::{Finding, Fix},
     github,
     models::{
         StepCommon, action::CompositeStep, repo_ref::RepoRef, uses::RepositoryUsesExt as _,
@@ -23,7 +24,7 @@ use crate::{
 };
 use yamlpatch::{Op, Patch};
 
-pub struct KnownVulnerableActions {
+pub(crate) struct KnownVulnerableActions {
     client: github::Client,
 }
 

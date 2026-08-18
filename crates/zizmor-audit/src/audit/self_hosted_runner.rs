@@ -10,15 +10,11 @@ use github_actions_models::{
     workflow::job::RunsOn,
 };
 
-use super::{Audit, AuditLoadError, Job, audit_meta};
-use crate::finding::location::Locatable as _;
-use crate::{
-    audit::AuditError,
-    finding::{Confidence, Persona, Severity},
-    state::AuditState,
-};
+use super::{Audit, AuditLoadError, Job};
+use crate::{audit::AuditError, state::AuditState};
+use zizmor_core::finding::{Confidence, Persona, Severity, location::Locatable as _};
 
-pub struct SelfHostedRunner;
+pub(crate) struct SelfHostedRunner;
 
 audit_meta!(
     SelfHostedRunner,

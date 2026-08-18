@@ -5,10 +5,11 @@ use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Persona, Severity, location::Locatable as _};
 
 use crate::{
-    audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    finding::{Confidence, Finding, FindingBuilder, Persona, Severity, location::Locatable as _},
+    audit::{Audit, AuditError, AuditLoadError},
+    finding::{Finding, FindingBuilder},
     models::{
         StepCommon as _,
         action::CompositeStep,
@@ -24,7 +25,7 @@ static ARCHIVED_REPOS_FST: LazyLock<Set<&[u8]>> = LazyLock::new(|| {
         .expect("couldn't initialize archived repos FST")
 });
 
-pub struct ArchivedUses;
+pub(crate) struct ArchivedUses;
 
 audit_meta!(
     ArchivedUses,
@@ -33,7 +34,7 @@ audit_meta!(
 );
 
 impl ArchivedUses {
-    pub fn uses_is_archived<'doc>(
+    pub(crate) fn uses_is_archived<'doc>(
         repo_ref: impl Into<RepoRef<'doc>>,
     ) -> Option<FindingBuilder<'doc>> {
         let repo_ref = repo_ref.into();

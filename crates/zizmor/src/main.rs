@@ -27,7 +27,20 @@ use zizmor_core::{
     models::AsDocument as _,
 };
 
-use crate::{finding_registry::FindingRegistry, utils::once::warn_once};
+use crate::finding_registry::FindingRegistry;
+
+macro_rules! once {
+    ($expression:expr) => {{
+        static ONCE: std::sync::Once = std::sync::Once::new();
+        ONCE.call_once(|| $expression)
+    }};
+}
+
+macro_rules! warn_once {
+    ($($arg:tt)+) => ({
+        once!(tracing::warn!($($arg)+))
+    });
+}
 
 mod finding_registry;
 #[cfg(feature = "lsp")]
@@ -39,24 +52,6 @@ mod utils {
         static IS_CI: std::sync::LazyLock<bool> =
             std::sync::LazyLock::new(|| std::env::var_os("CI").is_some());
         *IS_CI
-    }
-
-    pub(crate) mod once {
-        macro_rules! once {
-            ($expression:expr) => {{
-                static ONCE: std::sync::Once = std::sync::Once::new();
-                ONCE.call_once(|| $expression)
-            }};
-        }
-
-        macro_rules! warn_once {
-            ($($arg:tt)+) => ({
-                crate::utils::once::once!(tracing::warn!($($arg)+))
-            });
-        }
-
-        pub(crate) use once;
-        pub(crate) use warn_once;
     }
 }
 

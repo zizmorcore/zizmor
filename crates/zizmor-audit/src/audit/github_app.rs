@@ -5,10 +5,11 @@ use indexmap::IndexMap;
 use subfeature::Subfeature;
 
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Persona, Severity};
 
 use crate::{
-    audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    finding::{Confidence, Finding, Persona, Severity},
+    audit::{Audit, AuditError, AuditLoadError},
+    finding::Finding,
     models::{
         StepBodyCommon, StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _,
         workflow::Step,
@@ -52,7 +53,7 @@ static ORG_ONLY_PERMISSIONS: LazyLock<HashSet<&str>> = LazyLock::new(|| {
     .collect()
 });
 
-pub struct GitHubApp;
+pub(crate) struct GitHubApp;
 
 audit_meta!(
     GitHubApp,

@@ -15,7 +15,7 @@
 
 use std::ops::{BitAnd, BitOr, Not};
 
-use crate::models::RepositoryUsesPattern;
+use crate::models::repository_uses_pattern::RepositoryUsesPattern;
 use github_actions_models::common::{EnvValue, Uses, expr::LoE};
 use indexmap::IndexMap;
 
@@ -341,7 +341,7 @@ pub enum Usage {
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::models::RepositoryUsesPattern;
+    use crate::models::repository_uses_pattern::RepositoryUsesPattern;
     use github_actions_models::common::EnvValue;
     use indexmap::IndexMap;
 

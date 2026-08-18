@@ -2,12 +2,12 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use github_actions_models::common::{BasePermission, Permission, Permissions};
 
-use super::{Audit, AuditLoadError, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job};
 use crate::audit::AuditError;
-use crate::finding::location::Locatable as _;
-use crate::{
-    finding::{Confidence, Persona, Severity, location::SymbolicLocation},
-    state::AuditState,
+use crate::state::AuditState;
+use zizmor_core::finding::{
+    Confidence, Persona, Severity,
+    location::{Locatable as _, SymbolicLocation},
 };
 
 // Subjective mapping of permissions to severities, when given `write` access.
@@ -42,7 +42,7 @@ audit_meta!(
     "overly broad permissions"
 );
 
-pub struct ExcessivePermissions;
+pub(crate) struct ExcessivePermissions;
 
 #[async_trait::async_trait]
 impl Audit for ExcessivePermissions {

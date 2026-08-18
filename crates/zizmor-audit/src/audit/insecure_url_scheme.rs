@@ -3,10 +3,11 @@ use std::{collections::HashSet, sync::LazyLock};
 use subfeature::Subfeature;
 
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
 use crate::{
-    audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    finding::{Confidence, Finding, Severity, location::Locatable as _},
+    audit::{Audit, AuditError, AuditLoadError},
+    finding::Finding,
     models::pre_commit,
     state::AuditState,
 };
@@ -23,7 +24,7 @@ static INSECURE_SCHEMES: LazyLock<HashSet<&str>> = LazyLock::new(|| {
     .collect()
 });
 
-pub struct InsecureURLScheme;
+pub(crate) struct InsecureURLScheme;
 
 audit_meta!(
     InsecureURLScheme,

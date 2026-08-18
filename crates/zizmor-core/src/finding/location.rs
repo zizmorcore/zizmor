@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use std::ops::Range;
 
 use crate::input::InputKey;
-use crate::{models::AsDocument, utils::once::static_regex};
+use crate::models::AsDocument;
 use line_index::{LineCol, TextSize};
 use serde::Serialize;
 use subfeature::Subfeature;

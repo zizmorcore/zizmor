@@ -10,23 +10,19 @@ use anyhow::anyhow;
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 
-use super::{Audit, AuditLoadError, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job};
 use crate::audit::AuditError;
 use crate::finding::Finding;
-use crate::finding::location::Locatable as _;
 use crate::models::pre_commit::PreCommitConfig;
 use crate::models::repo_ref::RepoRef;
 use crate::models::{StepCommon as _, action::CompositeStep};
-use crate::{
-    finding::{Confidence, Severity},
-    github,
-    state::AuditState,
-};
+use crate::{github, state::AuditState};
+use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
 const REF_CONFUSION_ANNOTATION: &str =
     "uses a ref that's provided by both the branch and tag namespaces";
 
-pub struct RefConfusion {
+pub(crate) struct RefConfusion {
     client: github::Client,
 }
 

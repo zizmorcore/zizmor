@@ -5,8 +5,6 @@
 //! [semantic versioning](https://semver.org/), as GitHub Actions
 //! has no structured versioning scheme.
 
-use crate::utils::once::static_regex;
-
 static_regex!(
     VERSION_PATTERN,
     r#"(?x)            # verbose mode

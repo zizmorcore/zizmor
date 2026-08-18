@@ -3,13 +3,14 @@ use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
 use zizmor_config::Config;
+use zizmor_core::finding::{
+    Confidence, Severity,
+    location::{Locatable, Routable as _},
+};
 
 use crate::{
-    audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    finding::{
-        Confidence, Finding, Fix, FixDisposition, Severity,
-        location::{Locatable, Routable as _},
-    },
+    audit::{Audit, AuditError, AuditLoadError},
+    finding::{Finding, Fix, FixDisposition},
     models::{
         AsDocument, StepCommon as _,
         action::CompositeStep,
@@ -24,7 +25,7 @@ audit_meta!(
     "use GitHub's dedicated self-repository syntax"
 );
 
-pub struct SelfRepository;
+pub(crate) struct SelfRepository;
 
 impl SelfRepository {
     async fn audit_common<'a, 'doc, P>(

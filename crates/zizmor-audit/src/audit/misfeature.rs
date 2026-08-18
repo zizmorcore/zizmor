@@ -2,10 +2,11 @@ use github_actions_models::common::{Uses, expr::LoE};
 use subfeature::Subfeature;
 
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Persona, Severity};
 
 use crate::{
-    audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    finding::{Confidence, Finding, Persona, Severity},
+    audit::{Audit, AuditError, AuditLoadError},
+    finding::Finding,
     models::{
         StepBodyCommon, StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _,
         workflow::Step,
@@ -20,7 +21,7 @@ audit_meta!(
     "usage of GitHub Actions misfeatures"
 );
 
-pub struct Misfeature;
+pub(crate) struct Misfeature;
 
 impl Misfeature {
     fn process_step<'doc>(

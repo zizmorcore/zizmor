@@ -1,16 +1,11 @@
-use super::{Audit, AuditLoadError, Job, audit_meta};
-use crate::finding::location::Locatable as _;
+use super::{Audit, AuditLoadError, Job};
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Persona, Severity, location::Locatable as _};
 
-use crate::{
-    audit::AuditError,
-    finding::{Confidence, Finding, Persona, Severity},
-    models::workflow::Workflow,
-    state::AuditState,
-};
+use crate::{audit::AuditError, finding::Finding, models::workflow::Workflow, state::AuditState};
 use github_actions_models::workflow::Concurrency;
 
-pub struct ConcurrencyLimits;
+pub(crate) struct ConcurrencyLimits;
 
 audit_meta!(
     ConcurrencyLimits,

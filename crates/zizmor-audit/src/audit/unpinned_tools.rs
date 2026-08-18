@@ -1,21 +1,22 @@
 use github_actions_models::common::{EnvValue, Uses, expr::LoE};
 use subfeature::Subfeature;
 
-use crate::audit::{Audit, AuditError, audit_meta};
-use crate::finding::{Confidence, Finding, Severity};
+use crate::audit::{Audit, AuditError};
+use crate::finding::Finding;
 use crate::models::StepBodyCommon;
 use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
 use crate::state::AuditState;
 use crate::utils::ExtractedExpr;
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Severity};
 
 use super::AuditLoadError;
 
 static KNOWN_UNPINNED_TOOLS_ACTIONS: &[&str] =
     &["aquasecurity/setup-trivy", "1password/load-secrets-action"];
 
-pub struct UnpinnedTools;
+pub(crate) struct UnpinnedTools;
 
 audit_meta!(
     UnpinnedTools,

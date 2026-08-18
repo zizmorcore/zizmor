@@ -1,12 +1,9 @@
-pub struct AnonymousDefinition;
+pub(crate) struct AnonymousDefinition;
 
-use crate::{
-    audit::AuditError,
-    finding::{Confidence, Persona, Severity, location::Locatable as _},
-    state::AuditState,
-};
+use crate::{audit::AuditError, state::AuditState};
+use zizmor_core::finding::{Confidence, Persona, Severity, location::Locatable as _};
 
-use super::{Audit, AuditLoadError, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job};
 
 // Workflows without a name can be hard to find in the GitHub UI, so
 // severity is set higher than for Job.

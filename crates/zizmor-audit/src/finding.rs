@@ -4,12 +4,13 @@ use anyhow::anyhow;
 use serde::Serialize;
 use std::fmt;
 use zizmor_config::Config;
-pub use zizmor_core::finding::{Confidence, Determinations, Persona, Severity, location};
+use zizmor_core::finding::{
+    Confidence, Determinations, Persona, Severity,
+    location::{Location, LocationKind, SymbolicLocation},
+};
 
-use self::location::{Location, SymbolicLocation};
 use crate::{
     audit::AuditError,
-    finding::location::LocationKind,
     input::{Group, InputKey},
     models::AsDocument,
 };

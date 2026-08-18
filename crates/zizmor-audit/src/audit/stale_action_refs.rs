@@ -4,18 +4,19 @@ use anyhow::anyhow;
 use github_actions_models::common::{RepositoryUses, Uses};
 use subfeature::Subfeature;
 
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{Audit, AuditLoadError};
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Persona, Severity};
 
 use crate::{
     audit::AuditError,
-    finding::{Confidence, Finding, Persona, Severity},
+    finding::Finding,
     github,
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
     state::AuditState,
 };
 
-pub struct StaleActionRefs {
+pub(crate) struct StaleActionRefs {
     client: github::Client,
 }
 

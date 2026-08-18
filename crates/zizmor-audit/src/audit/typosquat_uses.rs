@@ -8,10 +8,11 @@ use typomania::{
 };
 
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Persona, Severity, location::Locatable as _};
 
 use crate::{
-    audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    finding::{Confidence, Finding, FindingBuilder, Persona, Severity, location::Locatable as _},
+    audit::{Audit, AuditError, AuditLoadError},
+    finding::{Finding, FindingBuilder},
     github::Client,
     models::{
         StepCommon as _,
@@ -145,7 +146,7 @@ impl AuthorSet for ActionOwner {
     }
 }
 
-pub struct TyposquatUses {
+pub(crate) struct TyposquatUses {
     client: Option<Client>,
 }
 

@@ -2,19 +2,20 @@ use github_actions_expressions::Expr;
 use subfeature::Subfeature;
 
 use zizmor_config::Config;
-
-use crate::{
-    audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    finding::{
-        Confidence, Finding, Persona, Severity,
-        location::{Feature, Locatable as _, Location},
-    },
-    models::workflow::{JobCommon as _, NormalJob},
-    state::AuditState,
-    utils::{once::warn_once, parse_fenced_expressions_from_routable},
+use zizmor_core::finding::{
+    Confidence, Persona, Severity,
+    location::{Feature, Locatable as _, Location},
 };
 
-pub struct SecretsOutsideEnvironment;
+use crate::{
+    audit::{Audit, AuditError, AuditLoadError},
+    finding::Finding,
+    models::workflow::{JobCommon as _, NormalJob},
+    state::AuditState,
+    utils::parse_fenced_expressions_from_routable,
+};
+
+pub(crate) struct SecretsOutsideEnvironment;
 
 audit_meta!(
     SecretsOutsideEnvironment,

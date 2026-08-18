@@ -4,19 +4,19 @@ use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
 use zizmor_config::Config;
-
-use crate::{
-    audit::{Audit, AuditError, AuditLoadError, AuditState, audit_meta},
-    finding::{
-        Confidence, Finding, Fix, Persona, Severity,
-        location::{Comment, Feature, Location, Routable as _},
-    },
-    github,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
-    utils::once::static_regex,
+use zizmor_core::finding::{
+    Confidence, Persona, Severity,
+    location::{Comment, Feature, Location, Routable as _},
 };
 
-pub struct RefVersionMismatch {
+use crate::{
+    audit::{Audit, AuditError, AuditLoadError, AuditState},
+    finding::{Finding, Fix},
+    github,
+    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
+};
+
+pub(crate) struct RefVersionMismatch {
     client: github::Client,
 }
 
@@ -263,7 +263,8 @@ impl Audit for RefVersionMismatch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{finding::location::Locatable as _, input::InputKey, models::action::Action};
+    use crate::{input::InputKey, models::action::Action};
+    use zizmor_core::finding::location::Locatable as _;
 
     #[test]
     fn test_version_comment_pattern() {

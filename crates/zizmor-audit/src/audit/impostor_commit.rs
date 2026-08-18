@@ -11,12 +11,13 @@ use anyhow::anyhow;
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 
-use super::{Audit, AuditLoadError, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job};
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
 use crate::{
     audit::AuditError,
-    finding::{Confidence, Finding, Severity, location::Locatable as _},
+    finding::Finding,
     github::{self, ComparisonStatus},
     models::{
         StepCommon as _,
@@ -29,7 +30,7 @@ use crate::{
 
 const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
 
-pub struct ImpostorCommit {
+pub(crate) struct ImpostorCommit {
     pub client: github::Client,
 }
 

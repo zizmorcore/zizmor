@@ -4,12 +4,11 @@ use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
-use super::{Audit, AuditLoadError, AuditState, audit_meta};
+use super::{Audit, AuditLoadError, AuditState};
 use crate::audit::AuditError;
-use crate::finding::location::{Locatable, Routable as _};
-use crate::finding::{Confidence, Finding, Fix, Persona, Severity};
+use crate::finding::{Finding, Fix};
 use crate::github;
-use crate::models::RepositoryUsesPattern;
+use crate::models::repository_uses_pattern::RepositoryUsesPattern;
 use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::version::Version;
 use crate::models::workflow::ReusableWorkflowCallJob;
@@ -17,8 +16,12 @@ use crate::models::{
     AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step,
 };
 use zizmor_config::{Config, UsesPolicy};
+use zizmor_core::finding::{
+    Confidence, Persona, Severity,
+    location::{Locatable, Routable as _},
+};
 
-pub struct UnpinnedUses {
+pub(crate) struct UnpinnedUses {
     client: Option<github::Client>,
 }
 

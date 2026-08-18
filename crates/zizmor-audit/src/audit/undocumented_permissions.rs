@@ -1,12 +1,12 @@
 use github_actions_models::common::{Permission, Permissions};
 
-use super::{Audit, AuditLoadError, Job, audit_meta};
+use super::{Audit, AuditLoadError, Job};
 use crate::audit::AuditError;
-use crate::finding::location::Locatable as _;
 use crate::models::AsDocument as _;
-use crate::{
-    finding::{Confidence, Persona, Severity, location::SymbolicLocation},
-    state::AuditState,
+use crate::state::AuditState;
+use zizmor_core::finding::{
+    Confidence, Persona, Severity,
+    location::{Locatable as _, SymbolicLocation},
 };
 
 audit_meta!(
@@ -15,7 +15,7 @@ audit_meta!(
     "permissions without explanatory comments"
 );
 
-pub struct UndocumentedPermissions;
+pub(crate) struct UndocumentedPermissions;
 
 #[async_trait::async_trait]
 impl Audit for UndocumentedPermissions {

@@ -1,7 +1,7 @@
 //! Generic handling of "repository references," i.e. a reference to some Git
 //! repository, potentially qualified in various ways.
 
-use crate::{models::RepositoryUsesPattern, utils::once::warn_once};
+use crate::models::repository_uses_pattern::RepositoryUsesPattern;
 use github_actions_models::common::RepositoryUses;
 use pre_commit_models::config::RemoteRepo;
 use url::Url;

@@ -72,7 +72,7 @@ impl UsesExt for Uses {
 mod tests {
     use std::str::FromStr as _;
 
-    use crate::models::RepositoryUsesPattern;
+    use crate::models::repository_uses_pattern::RepositoryUsesPattern;
     use anyhow::anyhow;
     use github_actions_models::common::Uses;
     use url::Url;

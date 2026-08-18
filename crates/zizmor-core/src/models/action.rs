@@ -33,7 +33,7 @@ static ACTION_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
 
 /// Represents an entire (composite) action.
 ///
-/// This type implements [`Deref`] for [`action::Action`], providing
+/// This type implements [`std::ops::Deref`] for [`action::Action`], providing
 /// access to the underlying data model.
 pub struct Action {
     /// This action's unique key into zizmor's runtime registry.
@@ -122,7 +122,7 @@ impl Action {
 
     /// Returns this action's [`SymbolicLocation`].
     ///
-    /// See [`Workflow::location`] for an explanation of why this isn't
+    /// See [`crate::models::workflow::Workflow::location`] for an explanation of why this isn't
     /// implemented through the [`Locatable`] trait.
     pub fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {
@@ -178,7 +178,7 @@ impl<'a, 'doc> AsDocument<'a, 'doc> for DockerAction<'doc> {
     }
 }
 
-/// An iterable container for steps within a [`Job`].
+/// An iterable container for steps within a [`github_actions_models::workflow::Job`].
 ///
 /// Composite steps whose `if:` condition is statically known to be false
 /// (e.g. `if: false` or `if: ${{ false }}`) are skipped, since such steps

@@ -3,14 +3,11 @@ use github_actions_models::{
     workflow::job::{Container, DockerCredentials},
 };
 
-use super::{Audit, AuditLoadError, Job, audit_meta};
-use crate::{
-    audit::AuditError,
-    finding::{Confidence, Severity, location::Locatable as _},
-    state::AuditState,
-};
+use super::{Audit, AuditLoadError, Job};
+use crate::{audit::AuditError, state::AuditState};
+use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
-pub struct HardcodedContainerCredentials;
+pub(crate) struct HardcodedContainerCredentials;
 
 audit_meta!(
     HardcodedContainerCredentials,

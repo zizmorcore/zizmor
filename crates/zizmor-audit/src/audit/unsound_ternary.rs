@@ -4,18 +4,15 @@ use github_actions_expressions::{
 };
 use subfeature::Subfeature;
 
-use crate::{
-    audit::AuditError,
-    finding::{
-        Confidence, Severity,
-        location::{Feature, Location},
-    },
-    utils::parse_fenced_expressions_from_routable,
+use crate::{audit::AuditError, utils::parse_fenced_expressions_from_routable};
+use zizmor_core::finding::{
+    Confidence, Severity,
+    location::{Feature, Location},
 };
 
-use super::{Audit, AuditInput, AuditLoadError, AuditState, audit_meta};
+use super::{Audit, AuditInput, AuditLoadError, AuditState};
 
-pub struct UnsoundTernary;
+pub(crate) struct UnsoundTernary;
 
 audit_meta!(
     UnsoundTernary,

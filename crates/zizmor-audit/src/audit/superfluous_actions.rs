@@ -1,19 +1,20 @@
 use std::sync::LazyLock;
 
-use crate::models::RepositoryUsesPattern;
+use crate::models::repository_uses_pattern::RepositoryUsesPattern;
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Persona, Severity};
 
 use crate::{
-    audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    finding::{Confidence, Finding, Persona, Severity},
+    audit::{Audit, AuditError, AuditLoadError},
+    finding::Finding,
     models::{StepCommon, action::CompositeStep, repo_ref::RepoRef, workflow::Step},
     state::AuditState,
 };
 
-pub struct SuperfluousActions;
+pub(crate) struct SuperfluousActions;
 
 audit_meta!(
     SuperfluousActions,

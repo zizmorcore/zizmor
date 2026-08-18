@@ -1,17 +1,18 @@
 use github_actions_models::common;
 
 use crate::{
-    audit::{Audit, AuditError, audit_meta},
-    finding::{
-        Confidence, Fix, FixDisposition, Severity,
-        location::{Locatable as _, SymbolicLocation},
-    },
+    audit::{Audit, AuditError},
+    finding::{Fix, FixDisposition},
     models::AsDocument,
     utils,
 };
 use yamlpatch::{Op, Patch};
+use zizmor_core::finding::{
+    Confidence, Severity,
+    location::{Locatable as _, SymbolicLocation},
+};
 
-pub struct UnsoundCondition;
+pub(crate) struct UnsoundCondition;
 
 audit_meta!(
     UnsoundCondition,

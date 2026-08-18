@@ -7,7 +7,7 @@
 
 use thiserror::Error;
 
-use crate::{github::pktline, utils::once::static_regex};
+use crate::github::pktline;
 
 // A regex pattern for parsing Git line refs.
 //

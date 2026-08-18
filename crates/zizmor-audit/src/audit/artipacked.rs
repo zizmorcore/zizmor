@@ -6,11 +6,12 @@ use github_actions_models::common::{
 };
 use itertools::Itertools as _;
 use subfeature::Subfeature;
+use zizmor_core::finding::{Confidence, Persona, Severity, location::Routable as _};
 
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{Audit, AuditLoadError};
 use crate::{
     audit::AuditError,
-    finding::{Confidence, Finding, Fix, Persona, Severity, location::Routable as _},
+    finding::{Finding, Fix},
     github::{Client, ClientError},
     models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _, version::Version},
     state::AuditState,
@@ -21,7 +22,7 @@ use yamlpatch::{Op, Patch};
 #[allow(clippy::unwrap_used)]
 static V6: LazyLock<Version> = LazyLock::new(|| Version::parse("v6").unwrap());
 
-pub struct Artipacked {
+pub(crate) struct Artipacked {
     client: Option<Client>,
 }
 

@@ -1,16 +1,16 @@
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 
-use super::{Audit, AuditLoadError, AuditState, audit_meta};
+use super::{Audit, AuditLoadError, AuditState};
 use crate::audit::AuditError;
-use crate::finding::location::Locatable as _;
-use crate::finding::{Confidence, Finding, Persona, Severity};
+use crate::finding::Finding;
 use crate::models::pre_commit::PreCommitConfig;
 use crate::models::repo_ref::RepoRef;
 use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
 use zizmor_config::{Config, ForbiddenUsesConfigInner};
+use zizmor_core::finding::{Confidence, Persona, Severity, location::Locatable as _};
 
-pub struct ForbiddenUses;
+pub(crate) struct ForbiddenUses;
 
 audit_meta!(
     ForbiddenUses,

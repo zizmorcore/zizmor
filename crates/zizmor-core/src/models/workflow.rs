@@ -26,7 +26,7 @@ use crate::{
         inputs::{Capability, HasInputs},
         workflow::matrix::Matrix,
     },
-    utils::{self, once::warn_once},
+    utils,
 };
 
 static WORKFLOW_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
@@ -211,7 +211,7 @@ impl Workflow {
     /// NOTE: This is intentionally implemented directly on the `Workflow` type
     /// rather than through the [`Locatable`] trait, since introducing
     /// this through [`Locatable`] would require a split lifetime between
-    /// `'self` and `'doc` for just this and [`Action`], i.e. the owning
+    /// `'self` and `'doc` for just this and [`crate::models::action::Action`], i.e. the owning
     /// container types rather than the borrowing subtypes.
     pub fn location(&self) -> SymbolicLocation<'_> {
         SymbolicLocation {

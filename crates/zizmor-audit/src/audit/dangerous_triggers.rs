@@ -2,15 +2,16 @@ use github_actions_models::common::Uses;
 use github_actions_models::workflow::Job;
 use github_actions_models::workflow::job::{Step, UsesStep};
 
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{Audit, AuditLoadError};
 use crate::audit::AuditError;
-use crate::finding::{Confidence, Finding, Severity};
+use crate::finding::Finding;
 use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::workflow::Workflow;
 use crate::state::AuditState;
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Severity};
 
-pub struct DangerousTriggers;
+pub(crate) struct DangerousTriggers;
 
 audit_meta!(
     DangerousTriggers,

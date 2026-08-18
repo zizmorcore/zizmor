@@ -7,23 +7,22 @@ use tree_sitter::{
     Language, Parser, QueryCapture, QueryCursor, QueryMatches, StreamingIterator as _, Tree,
 };
 
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{Audit, AuditLoadError};
 use crate::audit::AuditError;
-use crate::finding::location::Locatable as _;
-use crate::finding::{Confidence, Finding, Severity};
+use crate::finding::Finding;
 use crate::models::StepCommon as _;
 use crate::models::workflow::{Step, StepInner};
 use crate::state::AuditState;
 use crate::utils;
-use crate::utils::once::static_regex;
 use zizmor_config::Config;
+use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
 static_regex!(
     GITHUB_ENV_WRITE_CMD,
     r#"(?mi)^.+\s*>>?\s*"?%(?<destination>GITHUB_ENV|GITHUB_PATH)%"?.*$"#
 );
 
-pub struct GitHubEnv {
+pub(crate) struct GitHubEnv {
     bash: Language,
     pwsh: Language,
 

@@ -17,21 +17,22 @@
 
 use std::{env, ops::Deref as _, sync::LazyLock, vec};
 
-use crate::models::RepositoryUsesPattern;
+use crate::models::repository_uses_pattern::RepositoryUsesPattern;
 use fst::Map;
 use github_actions_expressions::{Expr, context::Context, literal::Literal};
 use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
 use itertools::Itertools as _;
 
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{Audit, AuditLoadError};
 use zizmor_config::Config;
+use zizmor_core::finding::{
+    Confidence, Persona, Severity,
+    location::{Routable as _, SymbolicLocation},
+};
 
 use crate::{
     audit::AuditError,
-    finding::{
-        Confidence, Finding, Fix, Persona, Severity,
-        location::{Routable as _, SymbolicLocation},
-    },
+    finding::{Finding, Fix},
     models::{
         self, StepCommon, action::CompositeStep, inputs::Capability, repo_ref::RepoRef,
         workflow::Step,
@@ -42,7 +43,7 @@ use crate::{
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
-pub struct TemplateInjection;
+pub(crate) struct TemplateInjection;
 
 audit_meta!(
     TemplateInjection,

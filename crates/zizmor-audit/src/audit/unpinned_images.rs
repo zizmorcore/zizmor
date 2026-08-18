@@ -1,15 +1,16 @@
 use crate::{
     audit::AuditError,
-    finding::{
-        Confidence, Finding, Persona, Severity,
-        location::{Locatable as _, SymbolicLocation},
-    },
+    finding::Finding,
     models::{
         AsDocument,
         action::DockerAction,
         workflow::{StepInner, matrix::Matrix},
     },
     state::AuditState,
+};
+use zizmor_core::finding::{
+    Confidence, Persona, Severity,
+    location::{Locatable as _, SymbolicLocation},
 };
 
 use github_actions_expressions::{Expr, SpannedExpr, literal::Literal};
@@ -26,9 +27,9 @@ use github_actions_models::{
 };
 use subfeature::Subfeature;
 
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{Audit, AuditLoadError};
 
-pub struct UnpinnedImages;
+pub(crate) struct UnpinnedImages;
 
 /// Represents some image reference, whether direct (i.e. literal) or
 /// indirect (i.e. an expression).

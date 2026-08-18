@@ -17,84 +17,6 @@ use crate::{
     state::AuditState,
 };
 
-pub mod adhoc_packages;
-pub mod anonymous_definition;
-pub mod archived_uses;
-pub mod artipacked;
-pub mod bot_conditions;
-pub mod cache_poisoning;
-pub mod concurrency_limits;
-pub mod dangerous_triggers;
-pub mod dependabot_cooldown;
-pub mod dependabot_execution;
-pub mod excessive_permissions;
-pub mod forbidden_uses;
-pub mod github_app;
-pub mod github_env;
-pub mod hardcoded_container_credentials;
-pub mod impostor_commit;
-pub mod insecure_commands;
-pub mod insecure_url_scheme;
-pub mod known_vulnerable_actions;
-pub mod misfeature;
-pub mod obfuscation;
-pub mod overprovisioned_secrets;
-pub mod ref_confusion;
-pub mod ref_version_mismatch;
-pub mod secrets_inherit;
-pub mod secrets_outside_env;
-pub mod self_hosted_runner;
-pub mod self_repository;
-pub mod stale_action_refs;
-pub mod superfluous_actions;
-pub mod template_injection;
-pub mod typosquat_uses;
-pub mod undocumented_permissions;
-pub mod unpinned_images;
-pub mod unpinned_tools;
-pub mod unpinned_uses;
-pub mod unredacted_secrets;
-pub mod unsound_condition;
-pub mod unsound_contains;
-pub mod unsound_ternary;
-pub mod use_trusted_publishing;
-
-/// A supertrait for all audits.
-///
-/// Workflow audits, action audits, and all future audit types
-/// must derive this trait, either manually or via the [`audit_meta`]
-/// macro.
-pub trait AuditCore {
-    fn ident() -> &'static str
-    where
-        Self: Sized;
-
-    fn desc() -> &'static str
-    where
-        Self: Sized;
-
-    fn url() -> &'static str
-    where
-        Self: Sized;
-
-    fn finding<'doc>() -> FindingBuilder<'doc>
-    where
-        Self: Sized,
-    {
-        FindingBuilder::new(Self::ident(), Self::desc(), Self::url())
-    }
-
-    fn err(error: impl Into<anyhow::Error>) -> AuditError
-    where
-        Self: Sized,
-    {
-        AuditError {
-            ident: Self::ident(),
-            source: error.into(),
-        }
-    }
-}
-
 /// A convenience macro for implementing [`AuditCore`] on a type.
 ///
 /// Example use:
@@ -127,7 +49,83 @@ macro_rules! audit_meta {
     };
 }
 
-pub(crate) use audit_meta;
+pub(crate) mod adhoc_packages;
+pub(crate) mod anonymous_definition;
+pub(crate) mod archived_uses;
+pub(crate) mod artipacked;
+pub(crate) mod bot_conditions;
+pub(crate) mod cache_poisoning;
+pub(crate) mod concurrency_limits;
+pub(crate) mod dangerous_triggers;
+pub(crate) mod dependabot_cooldown;
+pub(crate) mod dependabot_execution;
+pub(crate) mod excessive_permissions;
+pub(crate) mod forbidden_uses;
+pub(crate) mod github_app;
+pub(crate) mod github_env;
+pub(crate) mod hardcoded_container_credentials;
+pub(crate) mod impostor_commit;
+pub(crate) mod insecure_commands;
+pub(crate) mod insecure_url_scheme;
+pub(crate) mod known_vulnerable_actions;
+pub(crate) mod misfeature;
+pub(crate) mod obfuscation;
+pub(crate) mod overprovisioned_secrets;
+pub(crate) mod ref_confusion;
+pub(crate) mod ref_version_mismatch;
+pub(crate) mod secrets_inherit;
+pub(crate) mod secrets_outside_env;
+pub(crate) mod self_hosted_runner;
+pub(crate) mod self_repository;
+pub(crate) mod stale_action_refs;
+pub(crate) mod superfluous_actions;
+pub(crate) mod template_injection;
+pub(crate) mod typosquat_uses;
+pub(crate) mod undocumented_permissions;
+pub(crate) mod unpinned_images;
+pub(crate) mod unpinned_tools;
+pub(crate) mod unpinned_uses;
+pub(crate) mod unredacted_secrets;
+pub(crate) mod unsound_condition;
+pub(crate) mod unsound_contains;
+pub(crate) mod unsound_ternary;
+pub(crate) mod use_trusted_publishing;
+
+/// A supertrait for all audits.
+///
+/// Workflow audits, action audits, and all future audit types
+/// must derive this trait, either manually or via the `audit_meta`
+/// macro.
+pub trait AuditCore {
+    fn ident() -> &'static str
+    where
+        Self: Sized;
+
+    fn desc() -> &'static str
+    where
+        Self: Sized;
+
+    fn url() -> &'static str
+    where
+        Self: Sized;
+
+    fn finding<'doc>() -> FindingBuilder<'doc>
+    where
+        Self: Sized,
+    {
+        FindingBuilder::new(Self::ident(), Self::desc(), Self::url())
+    }
+
+    fn err(error: impl Into<anyhow::Error>) -> AuditError
+    where
+        Self: Sized,
+    {
+        AuditError {
+            ident: Self::ident(),
+            source: error.into(),
+        }
+    }
+}
 
 #[derive(Error, Debug)]
 pub enum AuditLoadError {

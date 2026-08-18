@@ -1,10 +1,11 @@
 use github_actions_models::dependabot::v2::AllowDeny;
 
 use crate::{
-    audit::{Audit, AuditError, audit_meta},
-    finding::{Fix, FixDisposition, location::Locatable as _},
+    audit::{Audit, AuditError},
+    finding::{Fix, FixDisposition},
 };
 use yamlpatch::{Op, Patch};
+use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
 audit_meta!(
     DependabotExecution,
@@ -12,7 +13,7 @@ audit_meta!(
     "external code execution in Dependabot updates"
 );
 
-pub struct DependabotExecution;
+pub(crate) struct DependabotExecution;
 
 impl DependabotExecution {
     /// Creates a fix that changes insecure-external-code-execution from allow to deny
@@ -52,8 +53,8 @@ impl Audit for DependabotExecution {
             if matches!(update.insecure_external_code_execution, AllowDeny::Allow) {
                 findings.push(
                     Self::finding()
-                        .confidence(crate::finding::Confidence::High)
-                        .severity(crate::finding::Severity::High)
+                        .confidence(Confidence::High)
+                        .severity(Severity::High)
                         .add_location(
                             update
                                 .location()

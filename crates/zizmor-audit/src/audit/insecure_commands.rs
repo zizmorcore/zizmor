@@ -6,18 +6,19 @@ use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::job;
 use yamlpatch::{Op, Patch};
 
-use super::{AuditLoadError, Job, audit_meta};
+use super::{AuditLoadError, Job};
 use crate::audit::{Audit, AuditError};
-use crate::finding::location::Locatable as _;
-use crate::finding::{
-    Confidence, Finding, Fix, FixDisposition, Persona, Severity, location::SymbolicLocation,
-};
+use crate::finding::{Finding, Fix, FixDisposition};
 use crate::models::workflow::StepInner;
 use crate::models::{AsDocument, workflow::Steps, workflow::Workflow};
 use crate::state::AuditState;
 use zizmor_config::Config;
+use zizmor_core::finding::{
+    Confidence, Persona, Severity,
+    location::{Locatable as _, SymbolicLocation},
+};
 
-pub struct InsecureCommands;
+pub(crate) struct InsecureCommands;
 
 audit_meta!(
     InsecureCommands,

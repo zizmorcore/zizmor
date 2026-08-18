@@ -10,18 +10,19 @@ use github_actions_models::{
     common::If,
     workflow::event::{BareEvent, OptionalBody},
 };
+use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
-use super::{Audit, AuditLoadError, AuditState, audit_meta};
+use super::{Audit, AuditLoadError, AuditState};
 use crate::{
     audit::AuditError,
-    finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
+    finding::{Fix, FixDisposition},
     models::workflow::{JobCommon as _, Workflow},
     utils::{self, ExtractedExpr},
 };
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
-pub struct BotConditions;
+pub(crate) struct BotConditions;
 
 audit_meta!(BotConditions, "bot-conditions", "spoofable bot actor check");
 

@@ -4,11 +4,10 @@ use anyhow::Context as _;
 use subfeature::Subfeature;
 use tree_sitter::StreamingIterator as _;
 
-use super::{Audit, AuditLoadError, audit_meta};
+use super::{Audit, AuditLoadError};
 use crate::audit::AuditError;
-use crate::finding::location::Locatable as _;
 use crate::{
-    finding::{Confidence, Finding, Severity},
+    finding::Finding,
     models::{
         StepBodyCommon, StepCommon,
         coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle},
@@ -16,6 +15,7 @@ use crate::{
     state::AuditState,
     utils,
 };
+use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
 const USES_MANUAL_CREDENTIAL: &str =
     "uses a manually-configured credential instead of Trusted Publishing";
@@ -143,7 +143,7 @@ const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) 
 const PWSH_COMMAND_QUERY: &str =
     "(command command_name: (_) @cmd command_elements: (_ (generic_token) @args)+) @span";
 
-pub struct UseTrustedPublishing {
+pub(crate) struct UseTrustedPublishing {
     bash_command_query: utils::SpannedQuery,
     pwsh_command_query: utils::SpannedQuery,
 }

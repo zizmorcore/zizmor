@@ -1,9 +1,10 @@
 use crate::{
-    audit::{Audit, AuditError, audit_meta},
-    finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
+    audit::{Audit, AuditError},
+    finding::{Fix, FixDisposition},
     models::dependabot,
 };
 use yamlpatch::{Op, Patch};
+use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
 audit_meta!(
     DependabotCooldown,
@@ -11,7 +12,7 @@ audit_meta!(
     "insufficient cooldown in Dependabot updates"
 );
 
-pub struct DependabotCooldown;
+pub(crate) struct DependabotCooldown;
 
 impl DependabotCooldown {
     /// Creates a fix that adds default-days to an existing cooldown block

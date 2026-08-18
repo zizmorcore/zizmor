@@ -3,6 +3,9 @@ use std::{str::FromStr, sync::LazyLock};
 use regex::Regex;
 use serde::Deserialize;
 
+/// Matches all variants of [`RepositoryUsesPattern`] except `*`.
+///
+/// TODO: Replace this with a real parser; this is ridiculous.
 static REPOSITORY_USES_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     #[allow(clippy::unwrap_used)]
     Regex::new(

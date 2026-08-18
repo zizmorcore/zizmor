@@ -14,7 +14,7 @@ use serde::{
     de::{self, DeserializeOwned},
 };
 use thiserror::Error;
-use zizmor_core::{finding::Severity, models::RepositoryUsesPattern};
+use zizmor_core::{finding::Severity, models::repository_uses_pattern::RepositoryUsesPattern};
 
 #[cfg(feature = "schema")]
 pub mod schema;

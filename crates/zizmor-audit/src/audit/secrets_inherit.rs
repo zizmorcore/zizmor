@@ -1,13 +1,11 @@
 use github_actions_models::workflow::job::Secrets;
 use subfeature::Subfeature;
 
-use super::{Audit, AuditLoadError, AuditState, audit_meta};
-use crate::{
-    audit::AuditError,
-    finding::{Confidence, location::Locatable as _},
-};
+use super::{Audit, AuditLoadError, AuditState};
+use crate::audit::AuditError;
+use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
-pub struct SecretsInherit;
+pub(crate) struct SecretsInherit;
 
 audit_meta!(
     SecretsInherit,
@@ -47,7 +45,7 @@ impl Audit for SecretsInherit {
                             .annotated("inherits all parent secrets"),
                     )
                     .confidence(Confidence::High)
-                    .severity(crate::finding::Severity::Medium)
+                    .severity(Severity::Medium)
                     .build(job)?,
             );
         }

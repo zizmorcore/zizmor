@@ -9,12 +9,12 @@ use github_actions_expressions::{
 };
 use github_actions_models::common::If;
 
-use super::{Audit, AuditLoadError, AuditState, audit_meta};
+use super::{Audit, AuditLoadError, AuditState};
 use crate::{
     audit::AuditError,
-    finding::{Confidence, Severity},
     utils::{self, ExtractedExpr},
 };
+use zizmor_core::finding::{Confidence, Severity};
 
 // TODO: Merge this with the list in `template_injection.rs`?
 // See also #674.
@@ -30,7 +30,7 @@ const USER_CONTROLLABLE_CONTEXTS: &[&str] = &[
     "inputs",
 ];
 
-pub struct UnsoundContains;
+pub(crate) struct UnsoundContains;
 
 audit_meta!(
     UnsoundContains,

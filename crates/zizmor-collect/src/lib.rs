@@ -382,6 +382,10 @@ impl InputGroup {
         }
     }
 
+    /// Discover a [`Config`] for a repository slug.
+    ///
+    /// This will look for a `.github/zizmor.yml` or `zizmor.yml`
+    /// in the repository's root directory.
     async fn remote_config(
         options: &CollectionOptions,
         client: &Client,
