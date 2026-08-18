@@ -319,7 +319,7 @@ impl Backend {
         let mut group = InputGroup::new(config, None);
         group.register_input(input)?;
         let mut input_registry = InputRegistry::new();
-        input_registry.groups.insert("lsp".into(), group);
+        input_registry.insert_group("lsp", group);
 
         let mut registry =
             FindingRegistry::new(&input_registry, None, None, self.options.persona, false);

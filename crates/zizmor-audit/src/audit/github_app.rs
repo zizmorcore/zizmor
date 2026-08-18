@@ -10,13 +10,11 @@ use zizmor_core::finding::{Confidence, Persona, Severity};
 use crate::{
     audit::{Audit, AuditError, AuditLoadError},
     finding::Finding,
-    models::{
-        StepBodyCommon, StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _,
-        workflow::Step,
-    },
+    models::{StepBodyCommon, StepCommon, action::CompositeStep, workflow::Step},
     state::AuditState,
-    utils::ExtractedExpr,
+    uses::RepositoryUsesExt as _,
 };
+use zizmor_core::utils::ExtractedExpr;
 
 /// Permissions that only affect organization access, not access within repositories.
 ///

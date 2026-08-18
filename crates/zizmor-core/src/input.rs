@@ -311,7 +311,7 @@ impl InputKey {
 
 /// An opaque identifier for a group of inputs.
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
-pub struct Group(pub String);
+pub struct Group(String);
 
 impl From<&str> for Group {
     fn from(value: &str) -> Self {

@@ -16,11 +16,9 @@ use crate::{
     audit::AuditError,
     finding::{Finding, Fix},
     github,
-    models::{
-        StepCommon, action::CompositeStep, repo_ref::RepoRef, uses::RepositoryUsesExt as _,
-        workflow::Step,
-    },
+    models::{StepCommon, action::CompositeStep, repo_ref::RepoRef, workflow::Step},
     state::AuditState,
+    uses::RepositoryUsesExt as _,
 };
 use yamlpatch::{Op, Patch};
 

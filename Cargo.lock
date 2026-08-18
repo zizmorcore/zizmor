@@ -4380,6 +4380,7 @@ version = "1.30.0-rc1"
 dependencies = [
  "anyhow",
  "async-trait",
+ "camino",
  "csv",
  "fst",
  "github-actions-expressions",
@@ -4486,9 +4487,6 @@ dependencies = [
  "thiserror 2.0.19",
  "tokio",
  "tracing",
- "tree-sitter",
- "tree-sitter-bash",
- "tree-sitter-powershell",
  "url",
  "yaml_serde",
  "yamlpath",

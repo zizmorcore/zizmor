@@ -263,8 +263,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         }
     }
 
-    let collection_mode_set =
-        zizmor_collect::CollectionModeSet(app.input.collect.iter().copied().collect());
+    let collection_mode_set = app.input.collect.iter().copied().collect();
 
     let min_severity = match app.audit.min_severity {
         Some(Threshold(None)) => {

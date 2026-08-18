@@ -11,6 +11,7 @@ license.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
+camino.workspace = true
 fst.workspace = true
 github-actions-expressions.workspace = true
 github-actions-models.workspace = true

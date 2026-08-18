@@ -15,12 +15,12 @@ use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType,
 use crate::models::workflow::{JobCommon as _, NormalJob, Step, Steps};
 use crate::models::{StepBodyCommon, StepCommon};
 use crate::state::AuditState;
-use crate::utils::ExtractedExpr;
 use zizmor_config::Config;
 use zizmor_core::finding::{
     Confidence, Severity,
     location::{Locatable as _, Routable as _},
 };
+use zizmor_core::utils::ExtractedExpr;
 
 use indexmap::IndexMap;
 use yamlpatch::{Op, Patch};

@@ -157,7 +157,13 @@ pub enum CollectionMode {
     PreCommit,
 }
 
-pub struct CollectionModeSet(pub HashSet<CollectionMode>);
+pub struct CollectionModeSet(HashSet<CollectionMode>);
+
+impl FromIterator<CollectionMode> for CollectionModeSet {
+    fn from_iter<T: IntoIterator<Item = CollectionMode>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
 
 impl CollectionModeSet {
     /// Does our collection mode respect `.gitignore` files?
@@ -258,11 +264,11 @@ fn local_key<P: AsRef<Utf8Path>>(
 /// A group of inputs collected from the same source.
 pub struct InputGroup {
     /// The configuration for this group.
-    pub config: Config,
+    config: Config,
     /// The group's root directory (as an absolute path), if applicable and inferable.
-    pub root: Option<Utf8PathBuf>,
+    root: Option<Utf8PathBuf>,
     /// The collected inputs.
-    pub inputs: BTreeMap<InputKey, AuditInput>,
+    inputs: BTreeMap<InputKey, AuditInput>,
 }
 
 impl InputGroup {
@@ -443,23 +449,23 @@ impl InputGroup {
             // The only way this could be wrong is if the user does something
             // bizarre like `.github/workflows/.pre-commit-{config,hooks}.yml`.
             (Some(".pre-commit-config"), Some("yml" | "yaml")) if !is_workflow_path => (
-                local_key(Group(path.as_str().into()), path, None, root),
+                local_key(Group::from(path.as_str()), path, None, root),
                 InputKind::PreCommitConfig,
             ),
             (Some(".pre-commit-hooks"), Some("yml" | "yaml")) if !is_workflow_path => (
-                local_key(Group(path.as_str().into()), path, None, root),
+                local_key(Group::from(path.as_str()), path, None, root),
                 InputKind::PreCommitHooks,
             ),
             (Some("dependabot"), Some("yml" | "yaml")) if !is_workflow_path => (
-                local_key(Group(path.as_str().into()), path, None, root),
+                local_key(Group::from(path.as_str()), path, None, root),
                 InputKind::Dependabot,
             ),
             (Some("action"), Some("yml" | "yaml")) if !is_workflow_path => (
-                local_key(Group(path.as_str().into()), path, None, root),
+                local_key(Group::from(path.as_str()), path, None, root),
                 InputKind::Action,
             ),
             (Some(_), Some("yml" | "yaml")) => (
-                local_key(Group(path.as_str().into()), path, None, root),
+                local_key(Group::from(path.as_str()), path, None, root),
                 InputKind::Workflow,
             ),
             _ => return Err(CollectionError::InvalidExtension),
@@ -522,7 +528,7 @@ impl InputGroup {
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
-                let key = local_key(Group(path.as_str().into()), entry, Some(path), root);
+                let key = local_key(Group::from(path.as_str()), entry, Some(path), root);
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
                     CollectionError::Inner(
                         CollectionError::Io(e).into(),
@@ -537,7 +543,7 @@ impl InputGroup {
                 && entry_is_file
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
-                let key = local_key(Group(path.as_str().into()), entry, Some(path), root);
+                let key = local_key(Group::from(path.as_str()), entry, Some(path), root);
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
                     CollectionError::Inner(
                         CollectionError::Io(e).into(),
@@ -555,7 +561,7 @@ impl InputGroup {
                     Some("dependabot.yml" | "dependabot.yaml")
                 )
             {
-                let key = local_key(Group(path.as_str().into()), entry, Some(path), root);
+                let key = local_key(Group::from(path.as_str()), entry, Some(path), root);
                 let contents = std::fs::read_to_string(entry).map_err(|e| {
                     CollectionError::Inner(
                         CollectionError::Io(e).into(),
@@ -571,7 +577,7 @@ impl InputGroup {
                     entry.file_name(),
                     Some(".pre-commit-config.yml" | ".pre-commit-config.yaml")
                 ) {
-                    let key = local_key(Group(path.as_str().into()), entry, Some(path), root);
+                    let key = local_key(Group::from(path.as_str()), entry, Some(path), root);
                     let contents = std::fs::read_to_string(entry).map_err(|e| {
                         CollectionError::Inner(
                             CollectionError::Io(e).into(),
@@ -584,7 +590,7 @@ impl InputGroup {
                     entry.file_name(),
                     Some(".pre-commit-hooks.yml" | ".pre-commit-hooks.yaml")
                 ) {
-                    let key = local_key(Group(path.as_str().into()), entry, Some(path), root);
+                    let key = local_key(Group::from(path.as_str()), entry, Some(path), root);
                     let contents = std::fs::read_to_string(entry).map_err(|e| {
                         CollectionError::Inner(
                             CollectionError::Io(e).into(),
@@ -823,7 +829,7 @@ pub struct InputRegistry {
     // iterate in a deterministic order. This saves us a lot of pain
     // while snapshot testing across multiple input files, and makes
     // the user experience more predictable.
-    pub groups: BTreeMap<Group, InputGroup>,
+    groups: BTreeMap<Group, InputGroup>,
 }
 
 impl InputRegistry {
@@ -843,6 +849,10 @@ impl InputRegistry {
         self.groups.values().all(InputGroup::is_empty)
     }
 
+    pub fn insert_group(&mut self, name: &str, group: InputGroup) {
+        self.groups.insert(name.into(), group);
+    }
+
     pub async fn register_group(
         &mut self,
         name: &str,
@@ -852,7 +862,7 @@ impl InputRegistry {
         // If the group has already been registered, then the user probably
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
-        if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.into())) {
+        if let btree_map::Entry::Vacant(e) = self.groups.entry(Group::from(name)) {
             e.insert(InputGroup::collect(name, options, gh_client).await?);
         }
 

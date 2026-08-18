@@ -38,10 +38,13 @@ use crate::{
         workflow::Step,
     },
     state::AuditState,
-    utils::{self, DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_fenced_expressions},
+    utils,
 };
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
+use zizmor_core::utils::{
+    DEFAULT_ENVIRONMENT_VARIABLES, ExtractedExpr, extract_fenced_expressions,
+};
 
 pub(crate) struct TemplateInjection;
 

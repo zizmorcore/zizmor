@@ -46,7 +46,8 @@ pub mod inputs;
 pub mod pre_commit;
 pub mod repo_ref;
 pub mod repository_uses_pattern;
-pub mod uses;
+#[cfg(test)]
+mod uses;
 pub mod version;
 pub mod workflow;
 

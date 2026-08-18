@@ -4,12 +4,14 @@ use subfeature::Subfeature;
 use crate::audit::{Audit, AuditError};
 use crate::finding::Finding;
 use crate::models::StepBodyCommon;
-use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::{StepCommon, action::CompositeStep, workflow::Step};
 use crate::state::AuditState;
-use crate::utils::ExtractedExpr;
+use crate::uses::RepositoryUsesExt as _;
 use zizmor_config::Config;
-use zizmor_core::finding::{Confidence, Severity};
+use zizmor_core::{
+    finding::{Confidence, Severity},
+    utils::ExtractedExpr,
+};
 
 use super::AuditLoadError;
 

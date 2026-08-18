@@ -5,9 +5,9 @@ use github_actions_models::workflow::job::{Step, UsesStep};
 use super::{Audit, AuditLoadError};
 use crate::audit::AuditError;
 use crate::finding::Finding;
-use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::workflow::Workflow;
 use crate::state::AuditState;
+use crate::uses::RepositoryUsesExt as _;
 use zizmor_config::Config;
 use zizmor_core::finding::{Confidence, Severity};
 

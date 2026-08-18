@@ -13,8 +13,9 @@ use crate::{
     audit::AuditError,
     finding::{Finding, Fix},
     github::{Client, ClientError},
-    models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _, version::Version},
+    models::{StepBodyCommon, StepCommon, version::Version},
     state::AuditState,
+    uses::RepositoryUsesExt as _,
     utils::split_patterns,
 };
 use yamlpatch::{Op, Patch};

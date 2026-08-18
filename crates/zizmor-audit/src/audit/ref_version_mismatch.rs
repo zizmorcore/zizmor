@@ -13,7 +13,8 @@ use crate::{
     audit::{Audit, AuditError, AuditLoadError, AuditState},
     finding::{Finding, Fix},
     github,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
+    models::{StepCommon, action::CompositeStep, workflow::Step},
+    uses::RepositoryUsesExt as _,
 };
 
 pub(crate) struct RefVersionMismatch {

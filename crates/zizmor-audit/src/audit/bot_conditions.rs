@@ -17,10 +17,10 @@ use crate::{
     audit::AuditError,
     finding::{Fix, FixDisposition},
     models::workflow::{JobCommon as _, Workflow},
-    utils::{self, ExtractedExpr},
 };
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
+use zizmor_core::utils::{self, ExtractedExpr};
 
 pub(crate) struct BotConditions;
 

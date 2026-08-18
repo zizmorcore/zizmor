@@ -7,11 +7,9 @@ use zizmor_core::finding::{Confidence, Persona, Severity};
 use crate::{
     audit::{Audit, AuditError, AuditLoadError},
     finding::Finding,
-    models::{
-        StepBodyCommon, StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _,
-        workflow::Step,
-    },
+    models::{StepBodyCommon, StepCommon, action::CompositeStep, workflow::Step},
     state::AuditState,
+    uses::RepositoryUsesExt as _,
     utils,
 };
 

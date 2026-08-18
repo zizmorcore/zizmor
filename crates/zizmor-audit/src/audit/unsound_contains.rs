@@ -10,11 +10,11 @@ use github_actions_expressions::{
 use github_actions_models::common::If;
 
 use super::{Audit, AuditLoadError, AuditState};
-use crate::{
-    audit::AuditError,
+use crate::audit::AuditError;
+use zizmor_core::{
+    finding::{Confidence, Severity},
     utils::{self, ExtractedExpr},
 };
-use zizmor_core::finding::{Confidence, Severity};
 
 // TODO: Merge this with the list in `template_injection.rs`?
 // See also #674.

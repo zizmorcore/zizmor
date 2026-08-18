@@ -12,8 +12,9 @@ use crate::{
     audit::AuditError,
     finding::Finding,
     github,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
+    models::{StepCommon, action::CompositeStep, workflow::Step},
     state::AuditState,
+    uses::RepositoryUsesExt as _,
 };
 
 pub(crate) struct StaleActionRefs {

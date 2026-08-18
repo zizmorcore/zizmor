@@ -9,12 +9,10 @@ use crate::audit::AuditError;
 use crate::finding::{Finding, Fix};
 use crate::github;
 use crate::models::repository_uses_pattern::RepositoryUsesPattern;
-use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::version::Version;
 use crate::models::workflow::ReusableWorkflowCallJob;
-use crate::models::{
-    AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step,
-};
+use crate::models::{AsDocument, StepCommon, action::CompositeStep, workflow::Step};
+use crate::uses::{RepositoryUsesExt as _, UsesExt as _};
 use zizmor_config::{Config, UsesPolicy};
 use zizmor_core::finding::{
     Confidence, Persona, Severity,

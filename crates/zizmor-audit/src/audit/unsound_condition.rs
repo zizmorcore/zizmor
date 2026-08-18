@@ -4,13 +4,13 @@ use crate::{
     audit::{Audit, AuditError},
     finding::{Fix, FixDisposition},
     models::AsDocument,
-    utils,
 };
 use yamlpatch::{Op, Patch};
 use zizmor_core::finding::{
     Confidence, Severity,
     location::{Locatable as _, SymbolicLocation},
 };
+use zizmor_core::utils;
 
 pub(crate) struct UnsoundCondition;
 
