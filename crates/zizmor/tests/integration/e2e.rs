@@ -5,7 +5,6 @@ use anyhow::Result;
 use crate::common::{NetworkMode, OutputMode, WorkspaceBuilder, input_under_test, zizmor};
 
 mod anchors;
-mod collect;
 mod crater;
 mod json_v1;
 mod parallel_steps;

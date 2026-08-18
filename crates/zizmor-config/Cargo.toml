@@ -12,7 +12,6 @@ license.workspace = true
 anyhow.workspace = true
 camino.workspace = true
 github-actions-models.workspace = true
-regex.workspace = true
 schemars = { workspace = true, optional = true }
 serde.workspace = true
 serde_json = { workspace = true, optional = true }

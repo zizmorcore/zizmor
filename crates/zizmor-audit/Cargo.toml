@@ -33,9 +33,11 @@ zizmor-config.workspace = true
 zizmor-core.workspace = true
 
 [dev-dependencies]
-insta.workspace = true
-tempfile.workspace = true
 tokio.workspace = true
+
+[package.metadata.cargo-shear]
+# Used by expansions of `zizmor_core::static_regex!`.
+ignored = ["regex"]
 
 [build-dependencies]
 csv.workspace = true

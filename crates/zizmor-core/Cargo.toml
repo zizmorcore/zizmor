@@ -41,7 +41,6 @@ yamlpath.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
-tempfile.workspace = true
 tokio.workspace = true
 
 [features]
