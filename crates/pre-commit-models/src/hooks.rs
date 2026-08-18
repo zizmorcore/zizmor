@@ -2,7 +2,7 @@
 //!
 //! See: <https://pre-commit.com/#new-hooks>
 
-use crate::common;
+use crate::common::{self, FilePattern};
 
 /// One or more hook definitions.
 #[derive(Debug, serde::Deserialize)]
@@ -28,10 +28,10 @@ pub struct HookDefinition {
     pub language: String,
 
     /// The pattern of files to run the hook on.
-    pub files: Option<String>,
+    pub files: Option<FilePattern>,
 
     /// Excludes files matches by `files` from the hook.
-    pub exclude: Option<String>,
+    pub exclude: Option<FilePattern>,
 
     /// Default list of file times to run the hook on (AND).
     pub types: Option<Vec<String>>,

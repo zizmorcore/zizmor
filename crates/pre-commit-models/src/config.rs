@@ -2,7 +2,7 @@
 //!
 //! See: <https://pre-commit.com/#plugins>
 
-use crate::common;
+use crate::common::{self, FilePattern};
 use indexmap::IndexMap;
 
 /// A single pre-commit configuration, containing one or more repositories,
@@ -31,12 +31,10 @@ pub struct Config {
     pub default_stages: Option<Vec<String>>,
 
     /// The global file include pattern.
-    #[serde(default)]
-    pub files: String,
+    pub files: Option<FilePattern>,
 
     /// The global file exclude pattern.
-    #[serde(default)]
-    pub exclude: String,
+    pub exclude: Option<FilePattern>,
 
     /// Whether to have pre-commit stop running hooks after the first
     /// failure.
@@ -111,10 +109,10 @@ pub struct Hook {
     pub language_version: Option<String>,
 
     /// Overrides the files pattern for the hook.
-    pub files: Option<String>,
+    pub files: Option<FilePattern>,
 
     /// Overrides the exclude pattern for the hook.
-    pub exclude: Option<String>,
+    pub exclude: Option<FilePattern>,
 
     /// Overrides the default file types to run on for the hook (AND).
     pub types: Option<Vec<String>>,

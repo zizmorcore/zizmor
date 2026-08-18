@@ -1,0 +1,19 @@
+---
+# Prek accepts regex strings and also supports glob mappings.
+files:
+  glob: "**/*.yaml"
+exclude:
+  glob:
+    - "**/snapshots/**"
+    - "vendor/**"
+repos:
+  - repo: https://github.com/example/hooks
+    rev: v1.0.0
+    hooks:
+      - id: example
+        files:
+          glob:
+            - "**/*.yaml"
+            - "**/*.yml"
+        exclude:
+          glob: "CHANGELOG.md"
