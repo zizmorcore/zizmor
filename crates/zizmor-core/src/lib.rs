@@ -1,5 +1,7 @@
 #![warn(clippy::all, clippy::dbg_macro)]
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! once {
     ($expression:expr) => {{
         static ONCE: std::sync::Once = std::sync::Once::new();
@@ -9,12 +11,16 @@ macro_rules! once {
     }};
 }
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! warn_once {
     ($($arg:tt)+) => ({
-        once!(tracing::warn!($($arg)+))
+        $crate::once!(tracing::warn!($($arg)+))
     });
 }
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! static_regex {
     ($ident:ident, $pattern:literal) => {
         static $ident: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {

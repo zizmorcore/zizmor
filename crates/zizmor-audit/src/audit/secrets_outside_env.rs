@@ -64,7 +64,7 @@ impl Audit for SecretsOutsideEnvironment {
         let mut findings = vec![];
         for (expr, span) in parse_fenced_expressions_from_routable(job) {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
-                warn_once!("couldn't parse expression: {expr}", expr = expr.as_bare());
+                zizmor_core::warn_once!("couldn't parse expression: {expr}", expr = expr.as_bare());
                 continue;
             };
 

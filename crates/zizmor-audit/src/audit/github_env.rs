@@ -17,7 +17,7 @@ use crate::utils;
 use zizmor_config::Config;
 use zizmor_core::finding::{Confidence, Severity, location::Locatable as _};
 
-static_regex!(
+zizmor_core::static_regex!(
     GITHUB_ENV_WRITE_CMD,
     r#"(?mi)^.+\s*>>?\s*"?%(?<destination>GITHUB_ENV|GITHUB_PATH)%"?.*$"#
 );

@@ -29,19 +29,6 @@ use zizmor_core::{
 
 use crate::finding_registry::FindingRegistry;
 
-macro_rules! once {
-    ($expression:expr) => {{
-        static ONCE: std::sync::Once = std::sync::Once::new();
-        ONCE.call_once(|| $expression)
-    }};
-}
-
-macro_rules! warn_once {
-    ($($arg:tt)+) => ({
-        once!(tracing::warn!($($arg)+))
-    });
-}
-
 mod finding_registry;
 #[cfg(feature = "lsp")]
 mod lsp;
@@ -371,7 +358,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             Span::current().pb_set_message(input.key().filename());
 
             if input.as_document().has_anchors() {
-                warn_once!(
+                zizmor_core::warn_once!(
                     "one or more inputs contains YAML anchors; see https://docs.zizmor.sh/usage/#yaml-anchors for details"
                 );
             }

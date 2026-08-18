@@ -26,7 +26,7 @@ audit_meta!(
     "action's hash pin has mismatched or missing version comment"
 );
 
-static_regex!(
+zizmor_core::static_regex!(
     VERSION_COMMENT_PATTERN,
     r#"(?x)                             # verbose mode
     ^                                   # start of string
