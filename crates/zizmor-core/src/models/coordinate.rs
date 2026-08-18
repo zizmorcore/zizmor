@@ -60,7 +60,7 @@ impl ActionCoordinate {
 
         // If our coordinate's `uses:` template doesn't match the step's `uses:`,
         // then no usage semantics are possible.
-        if !RepoRef::from(uses).matches_pattern(uses_pattern) {
+        if !uses_pattern.matches(&RepoRef::from(uses)) {
             return None;
         }
 

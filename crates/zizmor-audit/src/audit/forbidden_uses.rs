@@ -28,10 +28,10 @@ impl ForbiddenUses {
 
         match config {
             ForbiddenUsesConfigInner::Allow(allow) => {
-                !allow.iter().any(|pattern| repo.matches_pattern(pattern))
+                !allow.iter().any(|pattern| pattern.matches(&repo))
             }
             ForbiddenUsesConfigInner::Deny(deny) => {
-                deny.iter().any(|pattern| repo.matches_pattern(pattern))
+                deny.iter().any(|pattern| pattern.matches(&repo))
             }
         }
     }

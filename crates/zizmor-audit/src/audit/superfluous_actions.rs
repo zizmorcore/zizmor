@@ -165,7 +165,7 @@ impl SuperfluousActions {
 
         let mut findings = vec![];
         for (pattern, recommendation, persona, confidence) in SUPERFLUOUS_ACTIONS.iter() {
-            if RepoRef::from(uses).matches_pattern(pattern) {
+            if pattern.matches(&RepoRef::from(uses)) {
                 findings.push(
                     Self::finding()
                         .confidence(*confidence)

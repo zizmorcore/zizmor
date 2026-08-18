@@ -1,7 +1,10 @@
 use std::{str::FromStr, sync::LazyLock};
 
+use github_actions_models::common::RepositoryUses;
 use regex::Regex;
 use serde::Deserialize;
+
+use crate::models::repo_ref::{RepoRef, Slug};
 
 /// Matches all variants of [`RepositoryUsesPattern`] except `*`.
 ///
@@ -57,13 +60,20 @@ pub enum RepositoryUsesPattern {
 }
 
 impl RepositoryUsesPattern {
-    pub fn matches(
-        &self,
-        candidate_owner: &str,
-        candidate_repo: &str,
-        candidate_subpath: Option<&str>,
-        candidate_ref: &str,
-    ) -> bool {
+    pub fn matches<'doc>(&self, repo: &RepoRef<'doc>) -> bool {
+        match repo {
+            RepoRef::Uses(uses) => self.matches_uses(uses),
+            RepoRef::Url {
+                _url,
+                slug: Some(slug),
+                git_ref,
+            } => self.matches_slug(slug, git_ref),
+            // Our URL doesn't have a slug, so we can't meaningfully match it (yet).
+            _ => false,
+        }
+    }
+
+    fn matches_slug(&self, slug: &Slug<'_>, slug_git_ref: &str) -> bool {
         match self {
             Self::ExactWithRef {
                 owner,
@@ -71,30 +81,62 @@ impl RepositoryUsesPattern {
                 subpath,
                 git_ref,
             } => {
-                candidate_owner.eq_ignore_ascii_case(owner)
-                    && candidate_repo.eq_ignore_ascii_case(repo)
-                    && candidate_subpath == subpath.as_deref()
-                    && candidate_ref == git_ref
+                if subpath.is_some() {
+                    // Slugs never contain subpaths, so this will never match.
+                    false
+                } else {
+                    slug.owner().eq_ignore_ascii_case(owner)
+                        && slug.repo().eq_ignore_ascii_case(repo)
+                        && slug_git_ref == git_ref
+                }
+            }
+            Self::ExactPath { .. } => false,
+            // `owner/repo` and `owner/repo/*` behave the same for slugs.
+            Self::ExactRepo { owner, repo } | Self::InRepo { owner, repo } => {
+                slug.owner().eq_ignore_ascii_case(owner) && slug.repo().eq_ignore_ascii_case(repo)
+            }
+            Self::InOwner(owner) => slug.owner().eq_ignore_ascii_case(owner),
+            Self::Any => true,
+        }
+    }
+
+    fn matches_uses(&self, uses: &RepositoryUses) -> bool {
+        match self {
+            Self::ExactWithRef {
+                owner,
+                repo,
+                subpath,
+                git_ref,
+            } => {
+                uses.owner().eq_ignore_ascii_case(owner)
+                    && uses.repo().eq_ignore_ascii_case(repo)
+                    && uses.subpath() == subpath.as_deref()
+                    && uses.git_ref() == git_ref
             }
             Self::ExactPath {
                 owner,
                 repo,
                 subpath,
             } => {
-                candidate_owner.eq_ignore_ascii_case(owner)
-                    && candidate_repo.eq_ignore_ascii_case(repo)
-                    && candidate_subpath.is_some_and(|value| value == subpath)
+                // TODO: Normalize the subpath here.
+                // This is nontrivial, since we need to normalize
+                // both leading slashes *and* arbitrary ./.. components.
+                // Utf8Path gets us part of the way there, but is
+                // platform dependent (i.e. will do the wrong thing
+                // if the platform separator is not /).
+                uses.owner().eq_ignore_ascii_case(owner)
+                    && uses.repo().eq_ignore_ascii_case(repo)
+                    && uses.subpath().is_some_and(|s| s == subpath)
             }
             Self::ExactRepo { owner, repo } => {
-                candidate_owner.eq_ignore_ascii_case(owner)
-                    && candidate_repo.eq_ignore_ascii_case(repo)
-                    && candidate_subpath.is_none()
+                uses.owner().eq_ignore_ascii_case(owner)
+                    && uses.repo().eq_ignore_ascii_case(repo)
+                    && uses.subpath().is_none()
             }
             Self::InRepo { owner, repo } => {
-                candidate_owner.eq_ignore_ascii_case(owner)
-                    && candidate_repo.eq_ignore_ascii_case(repo)
+                uses.owner().eq_ignore_ascii_case(owner) && uses.repo().eq_ignore_ascii_case(repo)
             }
-            Self::InOwner(owner) => candidate_owner.eq_ignore_ascii_case(owner),
+            Self::InOwner(owner) => uses.owner().eq_ignore_ascii_case(owner),
             Self::Any => true,
         }
     }

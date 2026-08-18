@@ -80,21 +80,6 @@ pub enum RepoRef<'doc> {
 }
 
 impl<'doc> RepoRef<'doc> {
-    /// Returns whether this repository reference matches a configured pattern.
-    pub fn matches_pattern(&self, pattern: &RepositoryUsesPattern) -> bool {
-        match self {
-            Self::Uses(uses) => {
-                pattern.matches(uses.owner(), uses.repo(), uses.subpath(), uses.git_ref())
-            }
-            Self::Url {
-                slug: Some(slug),
-                git_ref,
-                ..
-            } => pattern.matches(slug.owner(), slug.repo(), None, git_ref),
-            Self::Url { slug: None, .. } => false,
-        }
-    }
-
     pub fn from_url(url: &'doc Url, git_ref: &'doc str) -> Self {
         // Opportunistically pull the slug out of the URL, if we know its shape.
         let slug = if url.host_str() == Some("github.com") {
@@ -177,7 +162,7 @@ impl<'doc> RepoRef<'doc> {
             return false;
         };
 
-        self.matches_pattern(&pat)
+        pat.matches(self)
     }
 }
 

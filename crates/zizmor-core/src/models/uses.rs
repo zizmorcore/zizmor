@@ -107,7 +107,7 @@ mod tests {
             let repo_ref = RepoRef::from_url(&url, git_ref);
             let pattern = RepositoryUsesPattern::from_str(pattern)?;
 
-            assert_eq!(repo_ref.matches_pattern(&pattern), matches);
+            assert_eq!(pattern.matches(&repo_ref), matches);
         }
 
         Ok(())
@@ -174,7 +174,7 @@ mod tests {
             let pattern = RepositoryUsesPattern::from_str(pattern)?;
 
             assert_eq!(
-                RepoRef::from(&uses).matches_pattern(&pattern),
+                pattern.matches(&RepoRef::from(&uses)),
                 matches,
                 "pattern: {pattern:?}, uses: {uses:?}, matches: {matches}"
             );

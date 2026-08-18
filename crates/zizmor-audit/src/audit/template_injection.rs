@@ -102,7 +102,7 @@ impl TemplateInjection {
         // the context capabilities FST.
         ACTION_INJECTION_SINKS
             .iter()
-            .find(|(pattern, _)| RepoRef::from(uses).matches_pattern(pattern))
+            .find(|(pattern, _)| pattern.matches(&RepoRef::from(uses)))
             .map(|(_, sinks)| sinks.as_slice())
             .unwrap_or(&[])
     }

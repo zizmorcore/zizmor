@@ -14,7 +14,10 @@ use serde::{
     de::{self, DeserializeOwned},
 };
 use thiserror::Error;
-use zizmor_core::{finding::Severity, models::repository_uses_pattern::RepositoryUsesPattern};
+use zizmor_core::{
+    finding::Severity,
+    models::{repo_ref::RepoRef, repository_uses_pattern::RepositoryUsesPattern},
+};
 
 #[cfg(feature = "schema")]
 pub mod schema;
@@ -345,12 +348,7 @@ impl UnpinnedUsesPolicies {
                 // Policies are ordered by specificity, so we can
                 // iterate and return eagerly.
                 for (uses_pattern, policy) in policies {
-                    if uses_pattern.matches(
-                        uses.owner(),
-                        uses.repo(),
-                        uses.subpath(),
-                        uses.git_ref(),
-                    ) {
+                    if uses_pattern.matches(&RepoRef::from(uses)) {
                         return (Some(uses_pattern), *policy);
                     }
                 }
