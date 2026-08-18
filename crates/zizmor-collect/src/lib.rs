@@ -227,15 +227,23 @@ fn local_key<P: AsRef<Utf8Path>>(
     root: Option<P>,
 ) -> InputKey {
     let verbatim_path = verbatim_path.as_ref();
+
+    // Happy path: we have a root directory and the input
+    // is relative to it once canonicalized.
     let best_path = if let Some(root) = root.as_ref()
         && let Ok(canonical) = verbatim_path.canonicalize_utf8()
         && let Ok(relative) = canonical.strip_prefix(root.as_ref())
     {
         relative.to_owned()
+    // Semi-happy path: we don't have a root directory,
+    // but we have a known prefix that we can strip from the
+    // input path.
     } else if let Some(prefix) = prefix.as_ref()
         && let Ok(relative) = verbatim_path.strip_prefix(prefix.as_ref())
     {
         relative.to_owned()
+    // Sad path: no root or known prefix, so we return the
+    // given path as-is and hope for the best.
     } else {
         verbatim_path.to_owned()
     };
@@ -244,7 +252,7 @@ fn local_key<P: AsRef<Utf8Path>>(
     } else {
         best_path.into()
     };
-    InputKey::local_with_best_identifier(group, verbatim_path, best_identifier)
+    InputKey::local(group, verbatim_path, best_identifier)
 }
 
 /// A group of inputs collected from the same source.

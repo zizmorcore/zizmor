@@ -324,7 +324,7 @@ runs:
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # some comment
 "#;
 
-        let key = InputKey::local("fakegroup".into(), "action.yml", None, None);
+        let key = InputKey::local("fakegroup".into(), "action.yml", "action.yml".into());
         let action = Action::from_string(action_content.to_string(), key).unwrap();
         let step = action.steps().unwrap().next().unwrap();
         let uses_location = step

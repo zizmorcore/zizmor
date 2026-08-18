@@ -317,7 +317,7 @@ jobs:
 
         let workflow = Workflow::from_string(
             workflow_yaml.into(),
-            InputKey::local("fakegroup".into(), "test.yml", None, None),
+            InputKey::local("fakegroup".into(), "test.yml", "test.yml".into()),
         )
         .unwrap();
 
@@ -988,7 +988,7 @@ jobs:
 
         let workflow = Workflow::from_string(
             workflow_yaml.into(),
-            InputKey::local("fakegroup".into(), "test.yml", None, None),
+            InputKey::local("fakegroup".into(), "test.yml", "test.yml".into()),
         )?;
 
         let job = {
@@ -1039,7 +1039,7 @@ jobs:
 
         let workflow = Workflow::from_string(
             workflow_yaml.into(),
-            InputKey::local("fakegroup".into(), "test.yml", None, None),
+            InputKey::local("fakegroup".into(), "test.yml", "test.yml".into()),
         )?;
 
         let job = {

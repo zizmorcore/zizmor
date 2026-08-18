@@ -673,7 +673,7 @@ runs:
 
         let action = AuditInput::from(Action::from_string(
             action.into(),
-            InputKey::local("fakegroup".into(), "fake", None, None),
+            InputKey::local("fakegroup".into(), "fake", "fake".into()),
         )?);
 
         let exprs = parse_fenced_expressions_from_routable(&action);
@@ -704,7 +704,7 @@ jobs:
 
         let workflow = AuditInput::from(Workflow::from_string(
             workflow.into(),
-            InputKey::local("fakegroup".into(), "fake", None, None),
+            InputKey::local("fakegroup".into(), "fake", "fake".into()),
         )?);
 
         let exprs = parse_fenced_expressions_from_routable(&workflow)
@@ -747,7 +747,7 @@ jobs:
 
         let workflow = AuditInput::from(Workflow::from_string(
             workflow_content.into(),
-            InputKey::local("fakegroup".into(), "fake", None, None),
+            InputKey::local("fakegroup".into(), "fake", "fake".into()),
         )?);
         let exprs = parse_fenced_expressions_from_routable(&workflow)
             .into_iter()

@@ -18,7 +18,6 @@ github-actions-models.workspace = true
 http.workspace = true
 http-cache-reqwest.workspace = true
 indexmap.workspace = true
-itertools.workspace = true
 jsonschema.workspace = true
 line-index.workspace = true
 pre-commit-models.workspace = true

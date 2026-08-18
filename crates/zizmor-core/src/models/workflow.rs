@@ -873,7 +873,7 @@ jobs:
 
         let workflow = Workflow::from_string(
             workflow.into(),
-            InputKey::local("fakegroup".into(), "dummy", None, None),
+            InputKey::local("fakegroup".into(), "dummy", "dummy".into()),
         )?;
 
         // `foo` unifies in favor of the more permissive capability,

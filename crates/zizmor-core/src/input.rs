@@ -1,7 +1,6 @@
 //! Input registry and associated types.
 
 use camino::{Utf8Path, Utf8PathBuf};
-use itertools::Itertools as _;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -169,45 +168,6 @@ impl LocalKey {
     pub fn path(&self) -> &Utf8Path {
         &self.verbatim_path
     }
-
-    /// Produce the "best" relative path for a given path.
-    ///
-    /// This path is the "best" in the sense that it's intended to be maximally
-    /// compatible with the assumptions that consumers make. Specifically, many
-    /// consumers (like GitHub's "Advanced Security") expect paths to be relative
-    /// to the root of the repository, even if the user supplied them to the tool
-    /// as absolute or relative to some other directory.
-    ///
-    /// NOTE: The path returned by this API is *not* guaranteed to be relative to
-    /// the current directory, if the current directory is not the same as the
-    /// repository root. As such, consumers of this API *must not* assume that they
-    /// can naively test these paths for existence, etc. without first resolving
-    /// them against the repository root.
-    fn best_relative_path<P: AsRef<Utf8Path>>(
-        given_path: P,
-        prefix: Option<P>,
-        root: Option<P>,
-    ) -> Utf8PathBuf {
-        // Happy path for callers that have already normalized their paths.
-        if let Some(root) = root
-            && let Ok(relative) = given_path.as_ref().strip_prefix(root.as_ref())
-        {
-            return relative.to_owned();
-        }
-
-        // Semi-happy path: we don't have a root directory,
-        // but we have a known prefix that we can strip from the
-        // input path.
-        if let Some(prefix) = prefix
-            && let Ok(stripped) = given_path.as_ref().strip_prefix(prefix.as_ref())
-        {
-            return stripped.to_owned();
-        }
-
-        // Sad path: no root or known prefix, so we return the
-        // given path as-is and hope for the best.
-        given_path.as_ref().to_owned()
-    }
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
@@ -261,49 +221,20 @@ impl std::fmt::Display for InputKey {
 }
 
 impl InputKey {
-    pub fn local_with_best_identifier(
+    /// Constructs a local InputKey from pre-collected path state.
+    pub fn local<P: AsRef<Utf8Path>>(
         group: Group,
-        verbatim_path: &Utf8Path,
+        verbatim_path: P,
         best_identifier: String,
     ) -> Self {
+        let verbatim_path = verbatim_path.as_ref();
+
         Self::Local(LocalKey {
             group,
             verbatim_path: verbatim_path.to_path_buf(),
             native_path: verbatim_path.components().collect(),
             best_identifier,
         })
-    }
-
-    /// Constructs a local InputKey.
-    ///
-    /// `prefix` and `root` are used to derive the input's
-    /// "best" relative path for output rendering purposes.
-    pub fn local<P: AsRef<Utf8Path>>(
-        group: Group,
-        verbatim_path: P,
-        prefix: Option<P>,
-        root: Option<P>,
-    ) -> Self {
-        let verbatim_path = verbatim_path.as_ref();
-
-        let best_identifier = {
-            let best_relative_path = LocalKey::best_relative_path(
-                verbatim_path,
-                prefix.as_ref().map(P::as_ref),
-                root.as_ref().map(P::as_ref),
-            );
-
-            if best_relative_path.is_relative() {
-                best_relative_path.components().join("/")
-            } else {
-                // Stupid edge case: if user supplied an absolute path and
-                // we couldn't make it relative, then there's no sane normalization
-                // we can perform. Just return it as-is.
-                best_relative_path.into()
-            }
-        };
-
-        Self::local_with_best_identifier(group, verbatim_path, best_identifier)
     }
 
     pub fn remote(slug: &InputSlug, path: String) -> Self {

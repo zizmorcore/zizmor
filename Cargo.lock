@@ -4472,7 +4472,6 @@ dependencies = [
  "http-cache-reqwest",
  "indexmap",
  "insta",
- "itertools 0.15.0",
  "jsonschema",
  "line-index",
  "pre-commit-models",

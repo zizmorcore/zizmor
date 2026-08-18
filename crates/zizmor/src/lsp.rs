@@ -264,17 +264,17 @@ impl Backend {
         let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
             AuditInput::from(Action::from_string(
                 params.text,
-                InputKey::local("lsp".into(), path, None, None),
+                InputKey::local("lsp".into(), path, path.to_string()),
             )?)
         } else if matches!(path.file_name(), Some("dependabot.yml" | "dependabot.yaml")) {
             AuditInput::from(Dependabot::from_string(
                 params.text,
-                InputKey::local("lsp".into(), path, None, None),
+                InputKey::local("lsp".into(), path, path.to_string()),
             )?)
         } else if matches!(path.extension(), Some("yml" | "yaml")) {
             AuditInput::from(Workflow::from_string(
                 params.text,
-                InputKey::local("lsp".into(), path, None, None),
+                InputKey::local("lsp".into(), path, path.to_string()),
             )?)
         } else {
             anyhow::bail!("asked to audit unexpected file: {path}");
