@@ -29,7 +29,7 @@ jobs:
       - name: Format
         run: cargo fmt --check
 
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Lint
         run: cargo clippy -- --deny warnings
@@ -46,7 +46,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
 
@@ -120,7 +120,7 @@ jobs:
           fi
           echo "Schema covers all $REGISTRY_COUNT audits"
 
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Verify committed schema is up-to-date
         run: |
