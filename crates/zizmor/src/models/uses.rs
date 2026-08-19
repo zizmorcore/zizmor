@@ -250,6 +250,9 @@ pub(crate) trait RepositoryUsesExt {
 
     /// See [`RepoRef::commit_ref`].
     fn commit_ref(&self) -> Option<&str>;
+
+    /// See [`RepoRef::symbolic_ref`].
+    fn symbolic_ref(&self) -> Option<&str>;
 }
 
 impl RepositoryUsesExt for RepositoryUses {
@@ -263,6 +266,10 @@ impl RepositoryUsesExt for RepositoryUses {
 
     fn commit_ref(&self) -> Option<&str> {
         RepoRef::from(self).commit_ref()
+    }
+
+    fn symbolic_ref(&self) -> Option<&str> {
+        RepoRef::from(self).symbolic_ref()
     }
 }
 

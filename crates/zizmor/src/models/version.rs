@@ -135,6 +135,10 @@ impl<'a> Version<'a> {
             patch,
         })
     }
+
+    pub(crate) fn from_comment(comment: &Comment<'a>) -> Option<Self> {
+        RawVersion::from_comment(comment).and_then(|rc| rc.as_version())
+    }
 }
 
 impl Ord for Version<'_> {
@@ -157,7 +161,55 @@ impl PartialEq for Version<'_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::models::version::VERSION_COMMENT_PATTERN;
+
     use super::Version;
+
+    #[test]
+    fn test_version_comment_pattern() {
+        let test_cases = vec![
+            ("# tag=v2.8.0", Some("v2.8.0")),
+            ("# tag=v6-beta", Some("v6-beta")),
+            ("# tag=v1.2.3-rc.1", Some("v1.2.3-rc.1")),
+            ("# tag=v1.2.3rc.1", Some("v1.2.3rc.1")),
+            ("# tag=v6-beta-2", Some("v6-beta-2")),
+            ("# tag=release-2024-01", Some("release-2024-01")),
+            ("# v2.8.0", Some("v2.8.0")),
+            ("# v6-beta", Some("v6-beta")),
+            ("# v1.2.3-rc.1", Some("v1.2.3-rc.1")),
+            ("# v1.2.3rc1", Some("v1.2.3rc1")),
+            ("# v6-beta-2", Some("v6-beta-2")),
+            ("# v1.0.0-rc-1", Some("v1.0.0-rc-1")),
+            ("# v2.0-preview-3", Some("v2.0-preview-3")),
+            ("# tag=2.8.0", Some("2.8.0")),
+            ("# version: 2.8.0", Some("2.8.0")),
+            ("# version: v1.2.3-rc.1", Some("v1.2.3-rc.1")),
+            ("# version: v1.2.3rc.1", Some("v1.2.3rc.1")),
+            ("# version: v6-beta-2", Some("v6-beta-2")),
+            ("# version: v1.0.0-rc-1", Some("v1.0.0-rc-1")),
+            ("# ver=1.0.0", Some("1.0.0")),
+            ("# visit the docs", None),
+            ("# some other comment", None),
+            ("# zizmor: ignore[ref-version-mismatch]", None),
+        ];
+
+        for (comment, expected) in test_cases {
+            // Test the pattern matching directly
+            match (VERSION_COMMENT_PATTERN.captures(comment), expected) {
+                (None, None) => (),
+                (None, Some(expected)) => {
+                    assert!(
+                        false,
+                        "Got no match in '{comment}', but expected {expected}"
+                    )
+                }
+                (Some(caps), None) => {
+                    assert!(false, "Got unexpected match: {caps:?}")
+                }
+                (Some(_), Some(_)) => (),
+            }
+        }
+    }
 
     #[test]
     fn parse_valid_versions() {

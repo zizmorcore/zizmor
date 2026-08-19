@@ -15,7 +15,6 @@ use crate::{
         StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, version::RawVersion,
         workflow::Step,
     },
-    utils::once::static_regex,
 };
 
 pub(crate) struct RefVersionMismatch {
@@ -26,22 +25,6 @@ audit_meta!(
     RefVersionMismatch,
     "ref-version-mismatch",
     "action's hash pin has mismatched or missing version comment"
-);
-
-static_regex!(
-    VERSION_COMMENT_PATTERN,
-    r#"(?x)                             # verbose mode
-    ^                                   # start of string
-    \#                                  # start of comment
-    \s*                                 # optional whitespace
-    (?:                                 # start non-capturing group for version prefix
-      (?:tag|version|ver)\s*[:=]\s*     # version prefix + `:` or `=`
-    )?                                  # end optional non-capturing group
-    (                                   # start capturing group for version
-      \S+                               # one or more non-whitespace characters
-    )                                   # end capturing group for version
-    $                                   # end of string
-    "#
 );
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -266,52 +249,6 @@ mod tests {
     use crate::{
         finding::location::Locatable as _, models::action::Action, registry::input::InputKey,
     };
-
-    #[test]
-    fn test_version_comment_pattern() {
-        let test_cases = vec![
-            ("# tag=v2.8.0", Some("v2.8.0")),
-            ("# tag=v6-beta", Some("v6-beta")),
-            ("# tag=v1.2.3-rc.1", Some("v1.2.3-rc.1")),
-            ("# tag=v1.2.3rc.1", Some("v1.2.3rc.1")),
-            ("# tag=v6-beta-2", Some("v6-beta-2")),
-            ("# tag=release-2024-01", Some("release-2024-01")),
-            ("# v2.8.0", Some("v2.8.0")),
-            ("# v6-beta", Some("v6-beta")),
-            ("# v1.2.3-rc.1", Some("v1.2.3-rc.1")),
-            ("# v1.2.3rc1", Some("v1.2.3rc1")),
-            ("# v6-beta-2", Some("v6-beta-2")),
-            ("# v1.0.0-rc-1", Some("v1.0.0-rc-1")),
-            ("# v2.0-preview-3", Some("v2.0-preview-3")),
-            ("# tag=2.8.0", Some("2.8.0")),
-            ("# version: 2.8.0", Some("2.8.0")),
-            ("# version: v1.2.3-rc.1", Some("v1.2.3-rc.1")),
-            ("# version: v1.2.3rc.1", Some("v1.2.3rc.1")),
-            ("# version: v6-beta-2", Some("v6-beta-2")),
-            ("# version: v1.0.0-rc-1", Some("v1.0.0-rc-1")),
-            ("# ver=1.0.0", Some("1.0.0")),
-            ("# visit the docs", None),
-            ("# some other comment", None),
-            ("# zizmor: ignore[ref-version-mismatch]", None),
-        ];
-
-        for (comment, expected) in test_cases {
-            // Test the pattern matching directly
-            match (VERSION_COMMENT_PATTERN.captures(comment), expected) {
-                (None, None) => (),
-                (None, Some(expected)) => {
-                    assert!(
-                        false,
-                        "Got no match in '{comment}', but expected {expected}"
-                    )
-                }
-                (Some(caps), None) => {
-                    assert!(false, "Got unexpected match: {caps:?}")
-                }
-                (Some(_), Some(_)) => (),
-            }
-        }
-    }
 
     #[test]
     fn test_comment_version_state_with_unrelated_comment() {

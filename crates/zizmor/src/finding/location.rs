@@ -3,7 +3,6 @@
 use std::borrow::Cow;
 use std::ops::Range;
 
-use crate::models::version::Version;
 use crate::registry::input::InputKey;
 use crate::{models::AsDocument, utils::once::static_regex};
 use line_index::{LineCol, TextSize};

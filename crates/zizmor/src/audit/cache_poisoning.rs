@@ -13,7 +13,10 @@ use crate::audit::{Audit, AuditError, audit_meta};
 use crate::config::Config;
 use crate::finding::location::{Locatable as _, Routable as _};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
-use crate::models::coordinate::{ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage};
+use crate::models::coordinate::{
+    ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage, VersionBound,
+};
+use crate::models::version::Version;
 use crate::models::workflow::{JobCommon as _, NormalJob, Step, Steps};
 use crate::models::{StepBodyCommon, StepCommon};
 use crate::state::AuditState;
@@ -102,12 +105,16 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/astral-sh/setup-uv/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "astral-sh/setup-uv".parse().unwrap(),
-            control: ControlExpr::field(
-                Toggle::OptIn,
-                "enable-cache",
-                ControlFieldType::Boolean,
-                true,
-            ),
+            control: ControlExpr::all([
+                // v10 and newer disable cache automatically.
+                ControlExpr::VersionBound(VersionBound::LessThan(Version::parse("v10").unwrap())),
+                ControlExpr::field(
+                    Toggle::OptIn,
+                    "enable-cache",
+                    ControlFieldType::Boolean,
+                    true,
+                ),
+            ]),
         },
         // https://github.com/Swatinem/rust-cache/blob/master/action.yml
         ActionCoordinate::Configurable {

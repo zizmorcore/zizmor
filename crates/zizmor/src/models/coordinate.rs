@@ -18,7 +18,11 @@ use std::ops::{BitAnd, BitOr, Not};
 use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
 use indexmap::IndexMap;
 
-use crate::{finding::location::Comment, models::version::Version, utils::ExtractedExpr};
+use crate::{
+    finding::location::Comment,
+    models::{uses::RepositoryUsesExt, version::Version},
+    utils::ExtractedExpr,
+};
 
 use super::{StepBodyCommon, StepCommon, uses::RepositoryUsesPattern};
 
@@ -193,15 +197,60 @@ impl BitOr for ControlEvaluation {
 }
 
 pub(crate) enum VersionBound<'a> {
+    #[allow(dead_code)]
     Exact(Version<'a>),
     LessThan(Version<'a>),
+    #[allow(dead_code)]
     GreaterThan(Version<'a>),
     // TODO: Not(Version)?
 }
 
 impl<'a> VersionBound<'a> {
-    pub(crate) fn eval(&self, uses: &RepositoryUses) -> ControlEvaluation {
-        todo!()
+    /// Evaluate a `uses:` clause (and its comments) against a version bound.
+    ///
+    /// This is currently offline to keep it fast. As a result, some evaluations
+    /// yield [`ControlEvaluation::Conditional`], e.g. `uses: foo/bar@<commit>` with no version
+    /// comment. In the future we could make it online.
+    pub(crate) fn eval(&self, uses: &RepositoryUses, comments: &[Comment]) -> ControlEvaluation {
+        let version = if let Some(sym_ref) = uses.symbolic_ref() {
+            // We have a tag (or branch) reference, which we'll try and treat as a version.
+            Version::parse(sym_ref).ok()
+        } else {
+            // We have a commit reference, which means we need to try and discover the version
+            // in the comments.
+            comments
+                .iter()
+                .find_map(|comment| Version::from_comment(comment))
+        };
+
+        let Some(ref version) = version else {
+            // No detectable version; treat as conditional.
+            return ControlEvaluation::Conditional;
+        };
+
+        match self {
+            VersionBound::Exact(control) => {
+                if version == control {
+                    ControlEvaluation::Satisfied
+                } else {
+                    ControlEvaluation::NotSatisfied
+                }
+            }
+            VersionBound::LessThan(control) => {
+                if version < control {
+                    ControlEvaluation::Satisfied
+                } else {
+                    ControlEvaluation::NotSatisfied
+                }
+            }
+            VersionBound::GreaterThan(control) => {
+                if version > control {
+                    ControlEvaluation::Satisfied
+                } else {
+                    ControlEvaluation::NotSatisfied
+                }
+            }
+        }
     }
 }
 
@@ -214,7 +263,7 @@ impl<'a> VersionBound<'a> {
 /// four-valued: control fields can be default-satisfied, explicitly satisfied,
 /// not satisfied, or conditionally satisfied.
 pub(crate) enum ControlExpr<'a> {
-    /// A single bound on the action's version.
+    /// A bound on the action's version.
     VersionBound(VersionBound<'a>),
     /// A single control field.
     Field {
@@ -269,7 +318,7 @@ impl<'a> ControlExpr<'a> {
         with: &IndexMap<String, EnvValue>,
     ) -> ControlEvaluation {
         match self {
-            Self::VersionBound(vb) => todo!(),
+            Self::VersionBound(vb) => vb.eval(uses, comments),
             Self::Field {
                 toggle,
                 field_name,
@@ -388,7 +437,7 @@ mod tests {
         let optout_control =
             ControlExpr::field(Toggle::OptOut, "set-me", ControlFieldType::FreeString, true);
 
-        let uses = RepositoryUses::parse("foo/bar").unwrap();
+        let uses = RepositoryUses::parse("foo/bar@doesnotmatter").unwrap();
         let with_enabled = IndexMap::from([("set-me".into(), EnvValue::String("anything".into()))]);
         let with_disabled = IndexMap::from([("set-me".into(), EnvValue::String("".into()))]);
 
