@@ -41,6 +41,24 @@ static_regex!(
     "#
 );
 
+// Ratchet pins actions with comments like `# ratchet:actions/checkout@v4.2.2`.
+// See https://github.com/sethvargo/ratchet for details.
+static_regex!(
+    RATCHET_COMMENT_PATTERN,
+    r#"(?x)                             # verbose mode
+    ^                                   # start of string
+    \#                                  # start of comment
+    \s*                                 # optional whitespace
+    ratchet:                            # ratchet prefix
+    [^@]+                               # action name (owner/repo[@path]), anything up to @
+    @                                   # separator
+    (                                   # start capturing group for version
+      \S+                               # one or more non-whitespace characters
+    )                                   # end capturing group for version
+    $                                   # end of string
+    "#
+);
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum CommentVersionState<'doc> {
     Missing,
@@ -51,7 +69,14 @@ enum CommentVersionState<'doc> {
 impl RefVersionMismatch {
     fn extract_version_from_comments<'doc>(comments: &'doc [Comment<'doc>]) -> Option<&'doc str> {
         for comment in comments {
-            if let Some(captures) = VERSION_COMMENT_PATTERN.captures(comment.as_ref())
+            let comment_str = comment.as_ref();
+            // Try the ratchet format first: `# ratchet:owner/action@version`
+            if let Some(captures) = RATCHET_COMMENT_PATTERN.captures(comment_str)
+                && let Some(version_match) = captures.get(1)
+            {
+                return Some(version_match.as_str());
+            }
+            if let Some(captures) = VERSION_COMMENT_PATTERN.captures(comment_str)
                 && let Some(version_match) = captures.get(1)
             {
                 return Some(version_match.as_str());
@@ -306,6 +331,34 @@ mod tests {
                 }
                 (Some(caps), None) => {
                     assert!(false, "Got unexpected match: {caps:?}")
+                }
+                (Some(_), Some(_)) => (),
+            }
+        }
+    }
+
+    #[test]
+    fn test_ratchet_comment_pattern() {
+        let test_cases = vec![
+            ("# ratchet:actions/checkout@v4", Some("v4")),
+            ("# ratchet:actions/checkout@v4.2.2", Some("v4.2.2")),
+            ("# ratchet:actions/setup-node@v3.8.2", Some("v3.8.2")),
+            ("# ratchet:owner/repo/path@v1.0.0", Some("v1.0.0")),
+            ("# ratchet:actions/checkout@4.2.2", Some("4.2.2")),
+            // These should NOT match the ratchet pattern
+            ("# v4.2.2", None),
+            ("# actions/checkout@v4.2.2", None),
+            ("# some other comment", None),
+        ];
+
+        for (comment, expected) in test_cases {
+            match (RATCHET_COMMENT_PATTERN.captures(comment), expected) {
+                (None, None) => (),
+                (None, Some(expected)) => {
+                    panic!("Got no match in '{comment}', but expected {expected}")
+                }
+                (Some(caps), None) => {
+                    panic!("Got unexpected match: {caps:?}")
                 }
                 (Some(_), Some(_)) => (),
             }
