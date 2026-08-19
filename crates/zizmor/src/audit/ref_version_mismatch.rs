@@ -11,7 +11,10 @@ use crate::{
         location::{Comment, Feature, Location, Routable as _},
     },
     github,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
+    models::{
+        StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, version::RawVersion,
+        workflow::Step,
+    },
     utils::once::static_regex,
 };
 
@@ -51,10 +54,8 @@ enum CommentVersionState<'doc> {
 impl RefVersionMismatch {
     fn extract_version_from_comments<'doc>(comments: &'doc [Comment<'doc>]) -> Option<&'doc str> {
         for comment in comments {
-            if let Some(captures) = VERSION_COMMENT_PATTERN.captures(comment.as_ref())
-                && let Some(version_match) = captures.get(1)
-            {
-                return Some(version_match.as_str());
+            if let Some(version) = RawVersion::from_comment(comment) {
+                return Some(version.as_raw());
             }
         }
         None

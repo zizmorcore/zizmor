@@ -5,7 +5,62 @@
 //! [semantic versioning](https://semver.org/), as GitHub Actions
 //! has no structured versioning scheme.
 
-use crate::utils::once::static_regex;
+use crate::{finding::location::Comment, utils::once::static_regex};
+
+static_regex!(
+    VERSION_COMMENT_PATTERN,
+    r#"(?x)                             # verbose mode
+    ^                                   # start of string
+    \#                                  # start of comment
+    \s*                                 # optional whitespace
+    (?:                                 # start non-capturing group for version prefix
+      (?:tag|version|ver)\s*[:=]\s*     # version prefix + `:` or `=`
+    )?                                  # end optional non-capturing group
+    (                                   # start capturing group for version
+      \S+                               # one or more non-whitespace characters
+    )                                   # end capturing group for version
+    $                                   # end of string
+    "#
+);
+
+/// A "raw" version.
+///
+/// This represents an arbitrary string that we *think* is a version
+/// (for context-sensitive reasons, e.g. being in a comment that looks
+/// like a version), but that we haven't validated at all as actually being
+/// semver-shaped.
+pub(crate) struct RawVersion<'a> {
+    raw: &'a str,
+}
+
+impl<'a> From<&'a str> for RawVersion<'a> {
+    fn from(raw: &'a str) -> Self {
+        RawVersion { raw }
+    }
+}
+
+impl<'a> RawVersion<'a> {
+    pub(crate) fn from_comment(comment: &Comment<'a>) -> Option<Self> {
+        let comment = comment.as_raw();
+        if let Some(captures) = VERSION_COMMENT_PATTERN.captures(comment)
+            && let Some(version_match) = captures.get(1)
+        {
+            Some(version_match.as_str().into())
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn as_raw(&self) -> &'a str {
+        self.raw
+    }
+
+    pub(crate) fn as_version(&self) -> Option<Version<'a>> {
+        // TODO: Handle "versions" like `name/v1.2.3`.
+        // These are somewhat common in GitHub Actions.
+        Version::parse(self.raw).ok()
+    }
+}
 
 static_regex!(
     VERSION_PATTERN,

@@ -15,10 +15,10 @@
 
 use std::ops::{BitAnd, BitOr, Not};
 
-use github_actions_models::common::{EnvValue, Uses, expr::LoE};
+use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
 use indexmap::IndexMap;
 
-use crate::utils::ExtractedExpr;
+use crate::{finding::location::Comment, models::version::Version, utils::ExtractedExpr};
 
 use super::{StepBodyCommon, StepCommon, uses::RepositoryUsesPattern};
 
@@ -27,7 +27,7 @@ pub(crate) enum ActionCoordinate {
         /// The `uses:` pattern of the coordinate
         uses_pattern: RepositoryUsesPattern,
         /// The expression of fields that controls the coordinate
-        control: ControlExpr,
+        control: ControlExpr<'static>,
     },
     NotConfigurable(RepositoryUsesPattern),
 }
@@ -63,6 +63,12 @@ impl ActionCoordinate {
             return None;
         }
 
+        let step_location = step.location();
+        let uses_location = step_location
+            .with_keys(["uses".into()])
+            .concretize(step.document())
+            .ok()?;
+
         match self {
             Self::Configurable {
                 uses_pattern: _,
@@ -71,7 +77,7 @@ impl ActionCoordinate {
                 let LoE::Literal(with) = with else {
                     return Some(Usage::ConditionalOptIn);
                 };
-                match control.eval(with) {
+                match control.eval(uses, &uses_location.concrete.comments, with) {
                     ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
                     ControlEvaluation::Satisfied => Some(Usage::DirectOptIn),
                     ControlEvaluation::NotSatisfied => None,
@@ -186,6 +192,19 @@ impl BitOr for ControlEvaluation {
     }
 }
 
+pub(crate) enum VersionBound<'a> {
+    Exact(Version<'a>),
+    LessThan(Version<'a>),
+    GreaterThan(Version<'a>),
+    // TODO: Not(Version)?
+}
+
+impl<'a> VersionBound<'a> {
+    pub(crate) fn eval(&self, uses: &RepositoryUses) -> ControlEvaluation {
+        todo!()
+    }
+}
+
 /// An "expression" of control fields.
 ///
 /// This allows us to express basic quantified logic, such as
@@ -194,9 +213,11 @@ impl BitOr for ControlEvaluation {
 /// This is made slightly more complicated by the fact that our logic is
 /// four-valued: control fields can be default-satisfied, explicitly satisfied,
 /// not satisfied, or conditionally satisfied.
-pub(crate) enum ControlExpr {
+pub(crate) enum ControlExpr<'a> {
+    /// A single bound on the action's version.
+    VersionBound(VersionBound<'a>),
     /// A single control field.
-    Single {
+    Field {
         /// What kind of toggle the input is.
         toggle: Toggle,
         /// The field that controls the action's behavior.
@@ -206,22 +227,22 @@ pub(crate) enum ControlExpr {
         /// Whether this control is satisfied by default, if not present.
         satisfied_by_default: bool,
     },
-    /// Universal quantification: all of the fields must be satisfied.
+    /// Universal quantification: all of the constraints must be satisfied.
     All(Vec<Self>),
-    /// Existential quantification: any of the fields must be satisfied.
+    /// Existential quantification: any of the constraints must be satisfied.
     Any(Vec<Self>),
     /// Negation: the "opposite" of the expression's satisfaction.
     Not(Box<Self>),
 }
 
-impl ControlExpr {
-    pub(crate) fn single(
+impl<'a> ControlExpr<'a> {
+    pub(crate) fn field(
         toggle: Toggle,
         field_name: &'static str,
         field_type: ControlFieldType,
         enabled_by_default: bool,
     ) -> Self {
-        Self::Single {
+        Self::Field {
             toggle,
             field_name,
             field_type,
@@ -241,9 +262,15 @@ impl ControlExpr {
         Self::Not(Box::new(expr))
     }
 
-    pub(crate) fn eval(&self, with: &IndexMap<String, EnvValue>) -> ControlEvaluation {
+    pub(crate) fn eval(
+        &self,
+        uses: &RepositoryUses,
+        comments: &[Comment],
+        with: &IndexMap<String, EnvValue>,
+    ) -> ControlEvaluation {
         match self {
-            Self::Single {
+            Self::VersionBound(vb) => todo!(),
+            Self::Field {
                 toggle,
                 field_name,
                 field_type,
@@ -316,13 +343,13 @@ impl ControlExpr {
             }
             Self::All(exprs) => exprs
                 .iter()
-                .map(|expr| expr.eval(with))
+                .map(|expr| expr.eval(uses, comments, with))
                 .fold(ControlEvaluation::Satisfied, |acc, expr| acc & expr),
             Self::Any(exprs) => exprs
                 .iter()
-                .map(|expr| expr.eval(with))
+                .map(|expr| expr.eval(uses, comments, with))
                 .fold(ControlEvaluation::NotSatisfied, |acc, expr| acc | expr),
-            Self::Not(expr) => !expr.eval(with),
+            Self::Not(expr) => !expr.eval(uses, comments, with),
         }
     }
 }
@@ -339,7 +366,7 @@ pub(crate) enum Usage {
 mod tests {
     use std::str::FromStr as _;
 
-    use github_actions_models::common::EnvValue;
+    use github_actions_models::common::{EnvValue, RepositoryUses};
     use indexmap::IndexMap;
 
     use super::ActionCoordinate;
@@ -357,27 +384,28 @@ mod tests {
     #[test]
     fn test_freestring_control() {
         let optin_control =
-            ControlExpr::single(Toggle::OptIn, "set-me", ControlFieldType::FreeString, false);
+            ControlExpr::field(Toggle::OptIn, "set-me", ControlFieldType::FreeString, false);
         let optout_control =
-            ControlExpr::single(Toggle::OptOut, "set-me", ControlFieldType::FreeString, true);
+            ControlExpr::field(Toggle::OptOut, "set-me", ControlFieldType::FreeString, true);
 
+        let uses = RepositoryUses::parse("foo/bar").unwrap();
         let with_enabled = IndexMap::from([("set-me".into(), EnvValue::String("anything".into()))]);
         let with_disabled = IndexMap::from([("set-me".into(), EnvValue::String("".into()))]);
 
         assert!(matches!(
-            optin_control.eval(&with_enabled),
+            optin_control.eval(&uses, &[], &with_enabled),
             ControlEvaluation::Satisfied
         ));
         assert!(matches!(
-            optin_control.eval(&with_disabled),
+            optin_control.eval(&uses, &[], &with_disabled),
             ControlEvaluation::NotSatisfied
         ));
         assert!(matches!(
-            optout_control.eval(&with_enabled),
+            optout_control.eval(&uses, &[], &with_enabled),
             ControlEvaluation::NotSatisfied
         ));
         assert!(matches!(
-            optout_control.eval(&with_disabled),
+            optout_control.eval(&uses, &[], &with_disabled),
             ControlEvaluation::Satisfied
         ));
     }
@@ -449,7 +477,7 @@ mod tests {
         // missing the needed control.
         let coord = ActionCoordinate::Configurable {
             uses_pattern: RepositoryUsesPattern::from_str("foo/bar").unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "set-me", ControlFieldType::Boolean, false),
+            control: ControlExpr::field(Toggle::OptIn, "set-me", ControlFieldType::Boolean, false),
         };
         let step = &steps[0];
         assert_eq!(coord.usage(step), None);
@@ -465,7 +493,7 @@ mod tests {
         // Coordinate `uses:` matches and is enabled by default.
         let coord = ActionCoordinate::Configurable {
             uses_pattern: RepositoryUsesPattern::from_str("foo/bar").unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "set-me", ControlFieldType::Boolean, true),
+            control: ControlExpr::field(Toggle::OptIn, "set-me", ControlFieldType::Boolean, true),
         };
         let step = &steps[0];
         assert_eq!(coord.usage(step), Some(Usage::DefaultActionBehaviour));
@@ -482,7 +510,7 @@ mod tests {
         // the default.
         let coord = ActionCoordinate::Configurable {
             uses_pattern: RepositoryUsesPattern::from_str("foo/bar").unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptOut,
                 "disable-cache",
                 ControlFieldType::Boolean,

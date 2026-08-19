@@ -42,7 +42,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/actions/cache/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/cache".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptOut,
                 "lookup-only",
                 ControlFieldType::Boolean,
@@ -52,7 +52,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/actions/setup-java/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-java".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptIn,
                 "cache",
                 ControlFieldType::FreeString,
@@ -62,13 +62,13 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/actions/setup-go/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-go".parse().unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
+            control: ControlExpr::field(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
         },
         // https://github.com/actions/setup-node/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-node".parse().unwrap(),
             control: ControlExpr::any([
-                ControlExpr::single(
+                ControlExpr::field(
                     Toggle::OptIn,
                     "cache",
                     // https://github.com/actions/setup-node/blob/65d868f8d4/src/cache-utils.ts#L101-L111
@@ -76,7 +76,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                     false,
                 ),
                 // NOTE: Added with `setup-node@v5`.
-                ControlExpr::single(
+                ControlExpr::field(
                     Toggle::OptIn,
                     "package-manager-cache",
                     ControlFieldType::Boolean,
@@ -87,7 +87,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/actions/setup-python/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-python".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptIn,
                 "cache",
                 ControlFieldType::FreeString,
@@ -97,12 +97,12 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/actions/setup-dotnet/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-dotnet".parse().unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::Boolean, false),
+            control: ControlExpr::field(Toggle::OptIn, "cache", ControlFieldType::Boolean, false),
         },
         // https://github.com/astral-sh/setup-uv/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "astral-sh/setup-uv".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptIn,
                 "enable-cache",
                 ControlFieldType::Boolean,
@@ -112,7 +112,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/Swatinem/rust-cache/blob/master/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "Swatinem/rust-cache".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptOut,
                 "lookup-only",
                 ControlFieldType::Boolean,
@@ -122,7 +122,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/ruby/setup-ruby/blob/master/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "ruby/setup-ruby".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptIn,
                 "bundler-cache",
                 ControlFieldType::Boolean,
@@ -132,17 +132,12 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/PyO3/maturin-action/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "PyO3/maturin-action".parse().unwrap(),
-            control: ControlExpr::single(
-                Toggle::OptIn,
-                "sccache",
-                ControlFieldType::Boolean,
-                false,
-            ),
+            control: ControlExpr::field(Toggle::OptIn, "sccache", ControlFieldType::Boolean, false),
         },
         // https://github.com/mlugg/setup-zig/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "mlugg/setup-zig".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptIn,
                 "use-cache",
                 ControlFieldType::Boolean,
@@ -152,7 +147,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/oven-sh/setup-bun/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "oven-sh/setup-bun".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptOut,
                 "no-cache",
                 ControlFieldType::Boolean,
@@ -162,7 +157,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/DeterminateSystems/magic-nix-cache-action/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "DeterminateSystems/magic-nix-cache-action".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptIn,
                 "use-gha-cache",
                 ControlFieldType::Boolean,
@@ -172,7 +167,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/graalvm/setup-graalvm/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "graalvm/setup-graalvm".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptIn,
                 "cache",
                 ControlFieldType::FreeString,
@@ -182,7 +177,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/gradle/actions/blob/main/setup-gradle/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "gradle/actions/setup-gradle".parse().unwrap(),
-            control: ControlExpr::single(
+            control: ControlExpr::field(
                 Toggle::OptOut,
                 "cache-disabled",
                 ControlFieldType::Boolean,
@@ -193,13 +188,13 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         ActionCoordinate::Configurable {
             uses_pattern: "docker/setup-buildx-action".parse().unwrap(),
             control: ControlExpr::all([
-                ControlExpr::single(
+                ControlExpr::field(
                     Toggle::OptIn,
                     "cache-binary",
                     ControlFieldType::Boolean,
                     true,
                 ),
-                ControlExpr::single(
+                ControlExpr::field(
                     Toggle::OptIn,
                     "version",
                     ControlFieldType::FreeString,
@@ -210,7 +205,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/actions-rust-lang/setup-rust-toolchain/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions-rust-lang/setup-rust-toolchain".parse().unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
+            control: ControlExpr::field(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
         },
         // https://github.com/Mozilla-Actions/sccache-action/blob/main/action.yml
         ActionCoordinate::NotConfigurable("Mozilla-Actions/sccache-action".parse().unwrap()),
@@ -219,12 +214,12 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/jdx/mise-action/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "jdx/mise-action".parse().unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
+            control: ControlExpr::field(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
         },
         // https://github.com/ramsey/composer-install/blob/v3/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "ramsey/composer-install".parse().unwrap(),
-            control: ControlExpr::Single {
+            control: ControlExpr::Field {
                 toggle: Toggle::OptOut,
                 field_name: "ignore-cache",
                 field_type: ControlFieldType::Exact(&["yes", "true", "1"]),
@@ -253,7 +248,7 @@ static KNOWN_PUBLISHER_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(
         // Container registries
         ActionCoordinate::Configurable {
             uses_pattern: "docker/build-push-action".parse().unwrap(),
-            control: ControlExpr::single(Toggle::OptIn, "push", ControlFieldType::Boolean, true),
+            control: ControlExpr::field(Toggle::OptIn, "push", ControlFieldType::Boolean, true),
         },
         ActionCoordinate::NotConfigurable("redhat-actions/push-to-registry".parse().unwrap()),
         // Cloud + Edge providers
@@ -377,7 +372,7 @@ struct CacheControlField<'a> {
 impl<'a> CacheControlField<'a> {
     fn extract(coord: &'a ActionCoordinate, step: &'a impl StepCommon<'a>) -> Option<Self> {
         if let ActionCoordinate::Configurable { control, .. } = coord
-            && let ControlExpr::Single {
+            && let ControlExpr::Field {
                 toggle,
                 field_name,
                 field_type: ControlFieldType::Boolean,
@@ -500,7 +495,7 @@ impl CachePoisoning {
         step: &Step<'doc>,
     ) -> Option<Fix<'doc>> {
         match control {
-            ControlExpr::Single {
+            ControlExpr::Field {
                 toggle,
                 field_name,
                 field_type,
@@ -541,8 +536,11 @@ impl CachePoisoning {
                     }],
                 })
             }
-            // For complex control expressions (All/Any/Not), don't provide automatic fixes for now
-            ControlExpr::All(_) | ControlExpr::Any(_) | ControlExpr::Not(_) => None,
+            // For version bounds and complex control expressions (All/Any/Not), don't provide automatic fixes for now
+            ControlExpr::VersionBound(_)
+            | ControlExpr::All(_)
+            | ControlExpr::Any(_)
+            | ControlExpr::Not(_) => None,
         }
     }
 
