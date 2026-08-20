@@ -162,7 +162,7 @@ impl BitAnd for ControlEvaluation {
             (Self::NotSatisfied, Self::Satisfied) => Self::NotSatisfied,
             (Self::NotSatisfied, Self::NotSatisfied) => Self::NotSatisfied,
             (Self::NotSatisfied, Self::Conditional) => Self::NotSatisfied,
-            (Self::Conditional, Self::DefaultSatisfied) => Self::Satisfied,
+            (Self::Conditional, Self::DefaultSatisfied) => Self::Conditional,
             (Self::Conditional, Self::Satisfied) => Self::Conditional,
             (Self::Conditional, Self::NotSatisfied) => Self::NotSatisfied,
             (Self::Conditional, Self::Conditional) => Self::Conditional,
@@ -231,21 +231,21 @@ impl<'a> VersionBound<'a> {
         match self {
             VersionBound::Exact(control) => {
                 if version == control {
-                    ControlEvaluation::Satisfied
+                    ControlEvaluation::DefaultSatisfied
                 } else {
                     ControlEvaluation::NotSatisfied
                 }
             }
             VersionBound::LessThan(control) => {
                 if version < control {
-                    ControlEvaluation::Satisfied
+                    ControlEvaluation::DefaultSatisfied
                 } else {
                     ControlEvaluation::NotSatisfied
                 }
             }
             VersionBound::GreaterThan(control) => {
                 if version > control {
-                    ControlEvaluation::Satisfied
+                    ControlEvaluation::DefaultSatisfied
                 } else {
                     ControlEvaluation::NotSatisfied
                 }
@@ -393,7 +393,7 @@ impl<'a> ControlExpr<'a> {
             Self::All(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(uses, comments, with))
-                .fold(ControlEvaluation::Satisfied, |acc, expr| acc & expr),
+                .fold(ControlEvaluation::DefaultSatisfied, |acc, expr| acc & expr),
             Self::Any(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(uses, comments, with))
