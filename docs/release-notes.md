@@ -46,6 +46,10 @@ of `zizmor`.
 
     Many thanks to @dmbuil for proposing and implementing this improvement!
 
+* Fixed a bug where `zizmor` would silently drop the other members of an
+  inline (flow) mapping when a fix replaced one of its values. These fixes are
+  now reported as failed and the input is left unchanged (#1579)
+
 ## 1.29.0
 
 ### New Features 🌈

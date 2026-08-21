@@ -362,7 +362,8 @@ fn apply_single_patch(
             let feature = route_to_feature_pretty(&patch.route, document)?;
 
             // Get the replacement content
-            let replacement = apply_value_replacement(&feature, document, value, true)?;
+            let replacement =
+                apply_value_replacement(&feature, document, value, true, &patch.route)?;
 
             // Extract the current content to calculate spans
             let current_content = document.extract(&feature);
@@ -1010,6 +1011,7 @@ fn apply_value_replacement(
     doc: &yamlpath::Document,
     value: &yaml_serde::Value,
     support_multiline_literals: bool,
+    route: &yamlpath::Route<'_>,
 ) -> Result<String, Error> {
     // Extract the current content to see what we're replacing
     let current_content_with_ws = doc.extract_with_leading_whitespace(feature);
@@ -1033,6 +1035,7 @@ fn apply_value_replacement(
             end_byte,
             current_content_with_ws,
             value,
+            route,
         );
     }
 
@@ -1126,12 +1129,29 @@ fn handle_flow_mapping_value_replacement(
     _end_byte: usize,
     current_content: &str,
     value: &yaml_serde::Value,
+    route: &yamlpath::Route<'_>,
 ) -> Result<String, Error> {
     let val_str = serialize_yaml_value(value)?;
     let val_str = val_str.trim();
 
     // Parse the flow mapping content to understand the structure
     let trimmed = current_content.trim();
+
+    // TODO: Remove this limitation.
+    // Everything below rebuilds the mapping around a single member, so it's
+    // only correct when the mapping has exactly one. Against a larger mapping
+    // it drops every other member, so reject rather than emit an incorrect
+    // patch. A failure to parse is also a rejection: we can't confirm the
+    // member count, and guessing is what produced the bad patch in the first
+    // place.
+    match yaml_serde::from_str::<yaml_serde::Mapping>(trimmed) {
+        Ok(mapping) if mapping.len() <= 1 => (),
+        _ => {
+            return Err(Error::InvalidOperation(format!(
+                "replace operation is not permitted against multi-key flow mapping route: {route:?}"
+            )));
+        }
+    }
 
     // Case 1: { key: } - has colon, empty value
     if let Some(colon_pos) = trimmed.find(':') {

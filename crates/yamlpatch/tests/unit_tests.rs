@@ -4322,3 +4322,74 @@ outer:
     --- END PATCH ---
     ");
 }
+
+/// `Op::Replace` rebuilds a flow mapping around a single member, so against a
+/// larger mapping it would drop the others.
+///
+/// This is a backstop test; at some point this should be supported.
+#[test]
+#[should_panic = "replace operation is not permitted against multi-key flow mapping"]
+fn test_replace_rejects_multi_key_flow_mapping() {
+    let document = yamlpath::Document::new("foo: { a: 1, b: 2 }\n").unwrap();
+
+    let operations = vec![Patch {
+        route: route!("foo", "b"),
+        operation: Op::Replace(yaml_serde::Value::String("newvalue".to_string())),
+    }];
+
+    let _result = apply_yaml_patches(&document, &operations).unwrap();
+}
+
+/// A flow mapping that doesn't parse on its own — here because the alias has
+/// no anchor once the fragment is detached from its document — can't have its
+/// members counted, so it's rejected too rather than guessed at.
+///
+/// This is a backstop test; at some point this should be supported.
+#[test]
+#[should_panic = "replace operation is not permitted against multi-key flow mapping"]
+fn test_replace_rejects_unparsable_flow_mapping() {
+    let original = r#"
+anchors:
+  base: &x 1
+foo: { a: *x, b: 2 }
+"#;
+
+    let operations = vec![Patch {
+        route: route!("foo", "b"),
+        operation: Op::Replace(yaml_serde::Value::String("newvalue".to_string())),
+    }];
+
+    let _result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+}
+
+/// `Op::MergeInto` lowers to `Op::Replace` for keys that are already present,
+/// so it reaches the same rejection. Before it did, this silently produced
+/// `with: { fetch-depth: false }`.
+///
+/// This is a backstop test; at some point this should be supported.
+#[test]
+#[should_panic = "replace operation is not permitted against multi-key flow mapping"]
+fn test_merge_into_rejects_multi_key_flow_mapping() {
+    let original = r#"
+jobs:
+  test:
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, persist-credentials: true }
+"#;
+
+    let operations = vec![Patch {
+        route: route!("jobs", "test", "steps", 0),
+        operation: Op::MergeInto {
+            key: "with".to_string(),
+            updates: indexmap::IndexMap::from_iter([(
+                "persist-credentials".to_string(),
+                yaml_serde::Value::Bool(false),
+            )]),
+        },
+    }];
+
+    let _result =
+        apply_yaml_patches(&yamlpath::Document::new(original).unwrap(), &operations).unwrap();
+}
