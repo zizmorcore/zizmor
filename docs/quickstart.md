@@ -38,7 +38,7 @@ Here are some different ways you can run `zizmor` locally:
         workflow definitions.
 
     When given one or more local directories, `zizmor` will treat each as a
-    repository and attempt to workflows and other auditable inputs within it.
+    repository and attempt to find workflows and other auditable inputs within it.
 
     ```bash
     # repo-a/ contains .github/workflows/{ci,tests}.yml
