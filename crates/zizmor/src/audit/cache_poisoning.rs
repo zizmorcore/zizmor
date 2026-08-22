@@ -660,6 +660,8 @@ impl CachePoisoning {
                 locations
             }
             Usage::Enabled(origins) => {
+                // We need to check if any of the origins point at or within the `with:` clause.
+                // TODO: Rename? Maybe `usage_originates_from_with_clause`?
                 let has_explicit_origin = origins.iter().any(|origin| {
                     matches!(
                         origin,
