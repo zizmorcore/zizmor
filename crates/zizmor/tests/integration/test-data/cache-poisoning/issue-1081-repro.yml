@@ -19,9 +19,6 @@ jobs:
         with:
           enable-cache: true
 
-      # TRUE POSITIVE: action version is unknown
-      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1
-
   issue-1081-true-negative:
     name: issue-1081-true-negative
     runs-on: ubuntu-latest

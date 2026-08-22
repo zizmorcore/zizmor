@@ -627,6 +627,34 @@ fn test_issue_1940() -> anyhow::Result<()> {
     Ok(())
 }
 
+// Bug #2320: setup-uv disables caching intelligently in v10+.
+//
+// See: <https://github.com/zizmorcore/zizmor/issues/2320>
+#[test]
+fn test_issue_2320() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+    zizmor()
+        .input(input_under_test("cache-poisoning/issue-2320-repro.yml"))
+        .run()?,
+    @"
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:24:9
+       |
+     5 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
+    ...
+    24 |       - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action version may enable caching
+       |
+       = note: audit confidence → Low
+
+    2 findings (1 ignored): 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
 #[test]
 fn test_trigger_heuristics_tag_only() -> anyhow::Result<()> {
     insta::assert_snapshot!(
