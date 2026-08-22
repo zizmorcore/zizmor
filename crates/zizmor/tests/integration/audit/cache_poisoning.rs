@@ -50,25 +50,24 @@ fn test_caching_opt_in_boolean_toggle() -> anyhow::Result<()> {
                 "cache-poisoning/caching-opt-in-boolean-toggle.yml"
             ))
             .run()?,
-        @r#"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:19:9
        |
-     1 |   on: release
-       |   ----------- generally used when publishing artifacts generated at runtime
+     1 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
     ...
-    19 |           uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    20 | /         with:
-    21 | |           dotnet-version: "5.0.x"
-    22 | |           cache: true
-       | |_____________________- enables caching explicitly here
+    19 |         uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    ...
+    22 |           cache: true
+       |           ----------- enables caching explicitly here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
     4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
-    "#,
+    ",
     );
 
     Ok(())
@@ -82,25 +81,23 @@ fn test_caching_opt_in_expression() -> anyhow::Result<()> {
                 "cache-poisoning/caching-opt-in-expression.yml"
             ))
             .run()?,
-        @r#"
+        @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:19:9
        |
-     1 |   on: release
-       |   ----------- generally used when publishing artifacts generated at runtime
+     1 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
     ...
-    19 |           uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    20 | /         with:
-    21 | |           python-version: "3.12"
-    22 | |           enable-cache: ${{ github.ref == 'refs/heads/main' }}
-       | |______________________________________________________________- may enable caching here
+    19 |         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action version may enable caching
+    ...
+    22 |           enable-cache: ${{ github.ref == 'refs/heads/main' }}
+       |           ---------------------------------------------------- may enable caching here
        |
        = note: audit confidence → Low
-       = note: this finding has an auto-fix
 
-    3 findings (1 ignored, 1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
-    "#,
+    3 findings (1 ignored, 1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    ",
     );
 
     Ok(())
@@ -118,16 +115,14 @@ fn test_caching_opt_in_multi_value_toggle() -> anyhow::Result<()> {
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:18:9
        |
-     1 |   on: release
-       |   ----------- generally used when publishing artifacts generated at runtime
+     1 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
     ...
-    18 |           uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    19 | /         with:
-    20 | |           distribution: "zulu"
-    21 | |           cache: "gradle"
-    22 | |           java-version: "17"
-       | |____________________________- enables caching explicitly here
+    18 |         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    ...
+    21 |           cache: "gradle"
+       |           --------------- enables caching explicitly here
        |
        = note: audit confidence → Low
 
@@ -203,16 +198,14 @@ fn test_caching_opt_in_boolish_toggle() -> anyhow::Result<()> {
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:17:9
        |
-     4 |   on: release
-       |   ----------- generally used when publishing artifacts generated at runtime
+     4 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
     ...
-    17 |           uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    18 | /         with:
-    19 | |           target: ${{ matrix.platform.target }}
-    20 | |           args: --release --out dist
-    21 | |           sccache: "true"
-       | |__________________________- enables caching explicitly here
+    17 |         uses: PyO3/maturin-action@ea5bac0f1ccd0ab11c805e2b804bfcb65dac2eab # v1
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    ...
+    21 |           sccache: "true"
+       |           --------------- enables caching explicitly here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -286,12 +279,9 @@ fn test_issue_343() -> anyhow::Result<()> {
     ...
     34 |           uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    35 | /         with:
-    36 | |           go-version: stable
-    37 | |           cache: true
-    38 | |
-    39 | |       # Finding because setup enables cache explicitly
-       | |______________________________________________________- enables caching explicitly here
+    ...
+    37 |             cache: true
+       |             ----------- enables caching explicitly here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -307,10 +297,9 @@ fn test_issue_343() -> anyhow::Result<()> {
     ...
     41 |           uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    42 | /         with:
-    43 | |           go-version: stable
-    44 | |           cache: "true"
-       | |________________________- enables caching explicitly here
+    ...
+    44 |             cache: "true"
+       |             ------------- enables caching explicitly here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -410,15 +399,16 @@ fn test_issue_642() -> anyhow::Result<()> {
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:15:9
        |
-    15 |           uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    16 | /         with:
-    17 | |           cache-binary: true
-    18 | |           version: latest
-       | |_________________________- enables caching explicitly here
+    15 |         uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    16 |         with:
+    17 |           cache-binary: true
+       |           ------------------ enables caching explicitly here
+    18 |           version: latest
+       |           --------------- enables caching explicitly here
     ...
-    21 |           uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355
-       |           ----------------------------------------------------------------------- runtime artifacts usually published here
+    21 |         uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355
+       |         ----------------------------------------------------------------------- runtime artifacts usually published here
        |
        = note: audit confidence → Low
 
@@ -449,24 +439,33 @@ fn test_issue_1081() -> anyhow::Result<()> {
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
        |
        = note: audit confidence → Low
-       = note: this finding has an auto-fix
 
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:18:9
        |
-     5 |   on: release
-       |   ----------- generally used when publishing artifacts generated at runtime
+     5 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
     ...
-    18 |         - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    19 | /         with:
-    20 | |           enable-cache: true
-       | |____________________________- enables caching explicitly here
+    18 |       - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    19 |         with:
+    20 |           enable-cache: true
+       |           ------------------ enables caching explicitly here
        |
        = note: audit confidence → Low
-       = note: this finding has an auto-fix
 
-    3 findings (1 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:23:9
+       |
+     5 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
+    ...
+    23 |       - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action version may enable caching
+       |
+       = note: audit confidence → Low
+
+    4 findings (1 suppressed): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -497,14 +496,14 @@ fn test_issue_1152() -> anyhow::Result<()> {
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:20:9
        |
-     5 |   on: release
-       |   ----------- generally used when publishing artifacts generated at runtime
+     5 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
     ...
-    20 |           uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    21 | /         with:
-    22 | |           package-manager-cache: true
-       | |_____________________________________- enables caching explicitly here
+    20 |         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    21 |         with:
+    22 |           package-manager-cache: true
+       |           --------------------------- enables caching explicitly here
        |
        = note: audit confidence → Low
 
@@ -565,15 +564,14 @@ fn test_ramsey_composer_install_action() -> anyhow::Result<()> {
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:15:9
        |
-     1 |   on: release
-       |   ----------- generally used when publishing artifacts generated at runtime
+     1 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
     ...
-    15 |         - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    16 | /         with:
-    17 | |           # NOT OK: caching explicitly enabled
-    18 | |           ignore-cache: false
-       | |_____________________________- enables caching explicitly here
+    15 |       - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    ...
+    18 |           ignore-cache: false
+       |           ------------------- enables caching explicitly here
        |
        = note: audit confidence → Low
 
@@ -649,12 +647,9 @@ fn test_trigger_heuristics_tag_only() -> anyhow::Result<()> {
     ...
     16 |         - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    17 | /         with:
-    18 | |           # this is the opposite of #1940: caching is explicitly enabled here,
-    19 | |           # but *only* for tag events, which we consider unsafe becaue we assume that
-    20 | |           # tag events correspond to releases.
-    21 | |           sccache: ${{ startsWith(github.ref, 'refs/tags/') }}
-       | |______________________________________________________________- enables caching explicitly here
+    ...
+    21 |             sccache: ${{ startsWith(github.ref, 'refs/tags/') }}
+       |             ---------------------------------------------------- enables caching explicitly here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -672,12 +667,9 @@ fn test_trigger_heuristics_tag_only() -> anyhow::Result<()> {
     ...
     22 |         - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    23 | /         with:
-    24 | |           # this is the opposite of #2050: caching is explicitly enabled here for
-    25 | |           # pushes to tag refs, which we consider unsafe because we assume that tag
-    26 | |           # pushes correspond to releases.
-    27 | |           sccache: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-       | |__________________________________________________________________________________- enables caching explicitly here
+    ...
+    27 |             sccache: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+       |             ----------------------------------------------------------------------- enables caching explicitly here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -726,12 +718,9 @@ fn test_trigger_heuristics_tag_and_branch() -> anyhow::Result<()> {
     ...
     17 |         - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    18 | /         with:
-    19 | |           # we would consider this safe *if* there was only a tag and/or release trigger
-    20 | |           # for this workflow, but since there's also a branch trigger that looks like
-    21 | |           # a release we can't assert that all release events will also be tag events.
-    22 | |           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
-       | |_______________________________________________________________- may enable caching here
+    ...
+    22 |             sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+       |             ----------------------------------------------------- may enable caching here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -750,11 +739,9 @@ fn test_trigger_heuristics_tag_and_branch() -> anyhow::Result<()> {
     ...
     23 |         - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
-    24 | /         with:
-    25 | |           # same as above: we would consider this safe if there wasn't also a branch
-    26 | |           # trigger that looks like a release.
-    27 | |           sccache: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}
-       | |_____________________________________________________________________________________- may enable caching here
+    ...
+    27 |             sccache: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}
+       |             -------------------------------------------------------------------------- may enable caching here
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix

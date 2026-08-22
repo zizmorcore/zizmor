@@ -20,7 +20,7 @@ use indexmap::IndexMap;
 
 use crate::{
     finding::location::Comment,
-    models::{uses::RepositoryUsesExt, version::Version},
+    models::{uses::RepositoryUsesExt as _, version::Version},
     utils::ExtractedExpr,
 };
 
@@ -79,17 +79,17 @@ impl ActionCoordinate {
                 control,
             } => {
                 let LoE::Literal(with) = with else {
-                    return Some(Usage::ConditionalOptIn);
+                    return Some(Usage::conditional([ControlOrigin::WithExpression]));
                 };
-                match control.eval(uses, &uses_location.concrete.comments, with) {
-                    ControlEvaluation::DefaultSatisfied => Some(Usage::DefaultActionBehaviour),
-                    ControlEvaluation::Satisfied => Some(Usage::DirectOptIn),
-                    ControlEvaluation::NotSatisfied => None,
-                    ControlEvaluation::Conditional => Some(Usage::ConditionalOptIn),
+                let evaluation = control.eval(uses, &uses_location.concrete.comments, with);
+                match evaluation.state {
+                    ControlState::Satisfied => Some(Usage::enabled(evaluation.origins)),
+                    ControlState::NotSatisfied => None,
+                    ControlState::Conditional => Some(Usage::conditional(evaluation.origins)),
                 }
             }
             // The mere presence of this `uses:` implies the expected usage semantics.
-            Self::NotConfigurable(_) => Some(Usage::Always),
+            Self::NotConfigurable(_) => Some(Usage::always()),
         }
     }
 }
@@ -117,30 +117,87 @@ pub(crate) enum ControlFieldType {
     Exact(&'static [&'static str]),
 }
 
-/// The result of evaluating a control expression.
-#[derive(Copy, Clone, PartialEq)]
-pub(crate) enum ControlEvaluation {
-    /// The control expression is satisfied by default.
-    DefaultSatisfied,
+/// The logical result of evaluating a control expression.
+#[derive(Copy, Clone, Debug, PartialEq)]
+enum ControlState {
     /// The control expression is satisfied.
     Satisfied,
     /// The control expression is not satisfied.
     NotSatisfied,
-    /// The control expression is conditionally satisfied,
-    /// i.e. depends on an actions expression or similar.
+    /// The result depends on an Actions expression or another value that can't
+    /// be determined statically.
     Conditional,
+}
+
+/// The part of a step that determined a control expression's result.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub(crate) enum ControlOrigin {
+    /// A missing input whose action-defined default determined the result.
+    Default { field: &'static str },
+    /// An explicitly configured action input.
+    Input { field: &'static str },
+    /// The action reference in `uses:`, such as its version.
+    UsesRef,
+    /// An expression that supplies the entire `with:` mapping.
+    WithExpression,
+}
+
+/// The result of evaluating a control expression, including the evidence that
+/// produced that result.
+#[derive(Clone, Debug, PartialEq)]
+struct ControlEvaluation {
+    state: ControlState,
+    origins: Vec<ControlOrigin>,
+}
+
+impl ControlEvaluation {
+    fn new(state: ControlState, origin: ControlOrigin) -> Self {
+        Self {
+            state,
+            origins: vec![origin],
+        }
+    }
+
+    fn without_origins(state: ControlState) -> Self {
+        Self {
+            state,
+            origins: vec![],
+        }
+    }
+
+    fn decisive_origins(
+        state: ControlState,
+        evaluations: impl IntoIterator<Item = Self>,
+    ) -> Vec<ControlOrigin> {
+        let mut origins = vec![];
+
+        for evaluation in evaluations {
+            if evaluation.state != state {
+                continue;
+            }
+
+            for origin in evaluation.origins {
+                if !origins.contains(&origin) {
+                    origins.push(origin);
+                }
+            }
+        }
+
+        origins
+    }
 }
 
 impl Not for ControlEvaluation {
     type Output = Self;
 
-    fn not(self) -> Self::Output {
-        match self {
-            Self::DefaultSatisfied => Self::NotSatisfied,
-            Self::Satisfied => Self::NotSatisfied,
-            Self::NotSatisfied => Self::Satisfied,
-            Self::Conditional => Self::Conditional,
-        }
+    fn not(mut self) -> Self::Output {
+        self.state = match self.state {
+            ControlState::Satisfied => ControlState::NotSatisfied,
+            ControlState::NotSatisfied => ControlState::Satisfied,
+            ControlState::Conditional => ControlState::Conditional,
+        };
+
+        self
     }
 }
 
@@ -148,24 +205,19 @@ impl BitAnd for ControlEvaluation {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        // NOTE: This could be done less literally, but I find it easier to read.
-        match (self, rhs) {
-            (Self::DefaultSatisfied, Self::DefaultSatisfied) => Self::DefaultSatisfied,
-            (Self::DefaultSatisfied, Self::Satisfied) => Self::Satisfied,
-            (Self::DefaultSatisfied, Self::NotSatisfied) => Self::NotSatisfied,
-            (Self::DefaultSatisfied, Self::Conditional) => Self::Conditional,
-            (Self::Satisfied, Self::DefaultSatisfied) => Self::Satisfied,
-            (Self::Satisfied, Self::Satisfied) => Self::Satisfied,
-            (Self::Satisfied, Self::NotSatisfied) => Self::NotSatisfied,
-            (Self::Satisfied, Self::Conditional) => Self::Conditional,
-            (Self::NotSatisfied, Self::DefaultSatisfied) => Self::NotSatisfied,
-            (Self::NotSatisfied, Self::Satisfied) => Self::NotSatisfied,
-            (Self::NotSatisfied, Self::NotSatisfied) => Self::NotSatisfied,
-            (Self::NotSatisfied, Self::Conditional) => Self::NotSatisfied,
-            (Self::Conditional, Self::DefaultSatisfied) => Self::Conditional,
-            (Self::Conditional, Self::Satisfied) => Self::Conditional,
-            (Self::Conditional, Self::NotSatisfied) => Self::NotSatisfied,
-            (Self::Conditional, Self::Conditional) => Self::Conditional,
+        let state = match (self.state, rhs.state) {
+            (ControlState::NotSatisfied, _) | (_, ControlState::NotSatisfied) => {
+                ControlState::NotSatisfied
+            }
+            (ControlState::Conditional, _) | (_, ControlState::Conditional) => {
+                ControlState::Conditional
+            }
+            (ControlState::Satisfied, ControlState::Satisfied) => ControlState::Satisfied,
+        };
+
+        Self {
+            state,
+            origins: Self::decisive_origins(state, [self, rhs]),
         }
     }
 }
@@ -174,24 +226,17 @@ impl BitOr for ControlEvaluation {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        // TODO: Does this mapping make sense?
-        match (self, rhs) {
-            (Self::DefaultSatisfied, Self::DefaultSatisfied) => Self::DefaultSatisfied,
-            (Self::DefaultSatisfied, Self::Satisfied) => Self::Satisfied,
-            (Self::DefaultSatisfied, Self::NotSatisfied) => Self::DefaultSatisfied,
-            (Self::DefaultSatisfied, Self::Conditional) => Self::DefaultSatisfied,
-            (Self::Satisfied, Self::DefaultSatisfied) => Self::Satisfied,
-            (Self::Satisfied, Self::Satisfied) => Self::Satisfied,
-            (Self::Satisfied, Self::NotSatisfied) => Self::Satisfied,
-            (Self::Satisfied, Self::Conditional) => Self::Satisfied,
-            (Self::NotSatisfied, Self::DefaultSatisfied) => Self::DefaultSatisfied,
-            (Self::NotSatisfied, Self::Satisfied) => Self::Satisfied,
-            (Self::NotSatisfied, Self::NotSatisfied) => Self::NotSatisfied,
-            (Self::NotSatisfied, Self::Conditional) => Self::Conditional,
-            (Self::Conditional, Self::DefaultSatisfied) => Self::DefaultSatisfied,
-            (Self::Conditional, Self::Satisfied) => Self::Satisfied,
-            (Self::Conditional, Self::NotSatisfied) => Self::Conditional,
-            (Self::Conditional, Self::Conditional) => Self::Conditional,
+        let state = match (self.state, rhs.state) {
+            (ControlState::Satisfied, _) | (_, ControlState::Satisfied) => ControlState::Satisfied,
+            (ControlState::Conditional, _) | (_, ControlState::Conditional) => {
+                ControlState::Conditional
+            }
+            (ControlState::NotSatisfied, ControlState::NotSatisfied) => ControlState::NotSatisfied,
+        };
+
+        Self {
+            state,
+            origins: Self::decisive_origins(state, [self, rhs]),
         }
     }
 }
@@ -209,48 +254,48 @@ impl<'a> VersionBound<'a> {
     /// Evaluate a `uses:` clause (and its comments) against a version bound.
     ///
     /// This is currently offline to keep it fast. As a result, some evaluations
-    /// yield [`ControlEvaluation::Conditional`], e.g. `uses: foo/bar@<commit>` with no version
-    /// comment. In the future we could make it online.
-    pub(crate) fn eval(&self, uses: &RepositoryUses, comments: &[Comment]) -> ControlEvaluation {
+    /// are conditional, e.g. `uses: foo/bar@<commit>` with no version comment.
+    /// In the future we could make it online.
+    fn eval(&self, uses: &RepositoryUses, comments: &[Comment]) -> ControlEvaluation {
         let version = if let Some(sym_ref) = uses.symbolic_ref() {
             // We have a tag (or branch) reference, which we'll try and treat as a version.
             Version::parse(sym_ref).ok()
         } else {
             // We have a commit reference, which means we need to try and discover the version
             // in the comments.
-            comments
-                .iter()
-                .find_map(|comment| Version::from_comment(comment))
+            comments.iter().find_map(Version::from_comment)
         };
 
         let Some(ref version) = version else {
             // No detectable version; treat as conditional.
-            return ControlEvaluation::Conditional;
+            return ControlEvaluation::new(ControlState::Conditional, ControlOrigin::UsesRef);
         };
 
-        match self {
+        let state = match self {
             VersionBound::Exact(control) => {
                 if version == control {
-                    ControlEvaluation::DefaultSatisfied
+                    ControlState::Satisfied
                 } else {
-                    ControlEvaluation::NotSatisfied
+                    ControlState::NotSatisfied
                 }
             }
             VersionBound::LessThan(control) => {
                 if version < control {
-                    ControlEvaluation::DefaultSatisfied
+                    ControlState::Satisfied
                 } else {
-                    ControlEvaluation::NotSatisfied
+                    ControlState::NotSatisfied
                 }
             }
             VersionBound::GreaterThan(control) => {
                 if version > control {
-                    ControlEvaluation::DefaultSatisfied
+                    ControlState::Satisfied
                 } else {
-                    ControlEvaluation::NotSatisfied
+                    ControlState::NotSatisfied
                 }
             }
-        }
+        };
+
+        ControlEvaluation::new(state, ControlOrigin::UsesRef)
     }
 }
 
@@ -259,9 +304,8 @@ impl<'a> VersionBound<'a> {
 /// This allows us to express basic quantified logic, such as
 /// "all/any of these fields must be satisfied".
 ///
-/// This is made slightly more complicated by the fact that our logic is
-/// four-valued: control fields can be default-satisfied, explicitly satisfied,
-/// not satisfied, or conditionally satisfied.
+/// Evaluations also retain the origins that determined their logical result,
+/// allowing consumers to distinguish inputs, defaults, and `uses:` constraints.
 pub(crate) enum ControlExpr<'a> {
     /// A bound on the action's version.
     VersionBound(VersionBound<'a>),
@@ -311,7 +355,7 @@ impl<'a> ControlExpr<'a> {
         Self::Not(Box::new(expr))
     }
 
-    pub(crate) fn eval(
+    fn eval(
         &self,
         uses: &RepositoryUses,
         comments: &[Comment],
@@ -326,89 +370,140 @@ impl<'a> ControlExpr<'a> {
                 satisfied_by_default: enabled_by_default,
             } => {
                 // If the controlling field is not present, the default dictates the semantics.
-                if let Some(field_value) = with.get(*field_name) {
-                    match field_type {
+                let (state, origin) = if let Some(field_value) = with.get(*field_name) {
+                    let state = match field_type {
                         // We expect a boolean control.
                         ControlFieldType::Boolean => match field_value.to_string().as_str() {
                             "true" => match toggle {
-                                Toggle::OptIn => ControlEvaluation::Satisfied,
-                                Toggle::OptOut => ControlEvaluation::NotSatisfied,
+                                Toggle::OptIn => ControlState::Satisfied,
+                                Toggle::OptOut => ControlState::NotSatisfied,
                             },
                             "false" => match toggle {
-                                Toggle::OptIn => ControlEvaluation::NotSatisfied,
-                                Toggle::OptOut => ControlEvaluation::Satisfied,
+                                Toggle::OptIn => ControlState::NotSatisfied,
+                                Toggle::OptOut => ControlState::Satisfied,
                             },
                             other => match ExtractedExpr::from_fenced(other) {
                                 // We have something like `foo: ${{ expr }}`,
                                 // which could evaluate either way.
-                                Some(_) => ControlEvaluation::Conditional,
+                                Some(_) => ControlState::Conditional,
                                 // We have something like `foo: bar`, but we
                                 // were expecting a boolean. Assume pessimistically
                                 // that the action coerces any non-`false` value to `true`.
                                 None => match toggle {
-                                    Toggle::OptIn => ControlEvaluation::Satisfied,
-                                    Toggle::OptOut => ControlEvaluation::NotSatisfied,
+                                    Toggle::OptIn => ControlState::Satisfied,
+                                    Toggle::OptOut => ControlState::NotSatisfied,
                                 },
                             },
                         },
                         // We expect a "free" string control, i.e. any value.
                         // Evaluate just the toggle.
-                        ControlFieldType::FreeString => {
-                            match field_value.is_empty() {
-                                true => match toggle {
-                                    Toggle::OptIn => ControlEvaluation::NotSatisfied,
-                                    Toggle::OptOut => ControlEvaluation::Satisfied,
-                                },
-                                false => match toggle {
-                                    Toggle::OptIn => ControlEvaluation::Satisfied,
-                                    Toggle::OptOut => ControlEvaluation::NotSatisfied,
-                                },
-                            }
-                            // match toggle {
-                            //     Toggle::OptIn => ControlEvaluation::Satisfied,
-                            //     Toggle::OptOut => ControlEvaluation::NotSatisfied,
-                            // }
-                        }
+                        ControlFieldType::FreeString => match field_value.is_empty() {
+                            true => match toggle {
+                                Toggle::OptIn => ControlState::NotSatisfied,
+                                Toggle::OptOut => ControlState::Satisfied,
+                            },
+                            false => match toggle {
+                                Toggle::OptIn => ControlState::Satisfied,
+                                Toggle::OptOut => ControlState::NotSatisfied,
+                            },
+                        },
                         // We expect a "fixed" string control, i.e. one of a set of values.
                         ControlFieldType::Exact(items) => {
                             if items.contains(&field_value.to_string().as_str()) {
                                 match toggle {
-                                    Toggle::OptIn => ControlEvaluation::Satisfied,
-                                    Toggle::OptOut => ControlEvaluation::NotSatisfied,
+                                    Toggle::OptIn => ControlState::Satisfied,
+                                    Toggle::OptOut => ControlState::NotSatisfied,
                                 }
                             } else {
                                 match toggle {
-                                    Toggle::OptIn => ControlEvaluation::NotSatisfied,
-                                    Toggle::OptOut => ControlEvaluation::Satisfied,
+                                    Toggle::OptIn => ControlState::NotSatisfied,
+                                    Toggle::OptOut => ControlState::Satisfied,
                                 }
                             }
                         }
-                    }
+                    };
+
+                    (state, ControlOrigin::Input { field: field_name })
                 } else if *enabled_by_default {
-                    ControlEvaluation::DefaultSatisfied
+                    (
+                        ControlState::Satisfied,
+                        ControlOrigin::Default { field: field_name },
+                    )
                 } else {
-                    ControlEvaluation::NotSatisfied
-                }
+                    (
+                        ControlState::NotSatisfied,
+                        ControlOrigin::Default { field: field_name },
+                    )
+                };
+
+                ControlEvaluation::new(state, origin)
             }
             Self::All(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(uses, comments, with))
-                .fold(ControlEvaluation::DefaultSatisfied, |acc, expr| acc & expr),
+                .fold(
+                    ControlEvaluation::without_origins(ControlState::Satisfied),
+                    |acc, expr| acc & expr,
+                ),
             Self::Any(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(uses, comments, with))
-                .fold(ControlEvaluation::NotSatisfied, |acc, expr| acc | expr),
+                .fold(
+                    ControlEvaluation::without_origins(ControlState::NotSatisfied),
+                    |acc, expr| acc | expr,
+                ),
             Self::Not(expr) => !expr.eval(uses, comments, with),
         }
     }
 }
 
-#[derive(PartialEq, Debug)]
-pub(crate) enum Usage {
-    ConditionalOptIn,
-    DirectOptIn,
-    DefaultActionBehaviour,
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub(crate) enum UsageState {
+    Enabled,
+    Conditional,
     Always,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Usage {
+    state: UsageState,
+    origins: Vec<ControlOrigin>,
+}
+
+impl Usage {
+    fn enabled(origins: impl IntoIterator<Item = ControlOrigin>) -> Self {
+        Self {
+            state: UsageState::Enabled,
+            origins: origins.into_iter().collect(),
+        }
+    }
+
+    fn conditional(origins: impl IntoIterator<Item = ControlOrigin>) -> Self {
+        Self {
+            state: UsageState::Conditional,
+            origins: origins.into_iter().collect(),
+        }
+    }
+
+    fn always() -> Self {
+        Self {
+            state: UsageState::Always,
+            origins: vec![ControlOrigin::UsesRef],
+        }
+    }
+
+    pub(crate) fn state(&self) -> UsageState {
+        self.state
+    }
+
+    pub(crate) fn origins(&self) -> &[ControlOrigin] {
+        &self.origins
+    }
+
+    pub(crate) fn into_enabled(mut self) -> Self {
+        self.state = UsageState::Enabled;
+        self
+    }
 }
 
 #[cfg(test)]
@@ -418,11 +513,14 @@ mod tests {
     use github_actions_models::common::{EnvValue, RepositoryUses};
     use indexmap::IndexMap;
 
-    use super::ActionCoordinate;
+    use super::{
+        ActionCoordinate, ControlEvaluation, ControlExpr, ControlFieldType, ControlOrigin,
+        ControlState, Toggle, Usage, VersionBound,
+    };
     use crate::{
         models::{
-            coordinate::{ControlEvaluation, ControlExpr, ControlFieldType, Toggle, Usage},
             uses::RepositoryUsesPattern,
+            version::Version,
             workflow::{Job, Workflow},
         },
         registry::input::InputKey,
@@ -441,22 +539,82 @@ mod tests {
         let with_enabled = IndexMap::from([("set-me".into(), EnvValue::String("anything".into()))]);
         let with_disabled = IndexMap::from([("set-me".into(), EnvValue::String("".into()))]);
 
-        assert!(matches!(
+        assert_eq!(
             optin_control.eval(&uses, &[], &with_enabled),
-            ControlEvaluation::Satisfied
-        ));
-        assert!(matches!(
+            ControlEvaluation::new(
+                ControlState::Satisfied,
+                ControlOrigin::Input { field: "set-me" }
+            )
+        );
+        assert_eq!(
             optin_control.eval(&uses, &[], &with_disabled),
-            ControlEvaluation::NotSatisfied
-        ));
-        assert!(matches!(
+            ControlEvaluation::new(
+                ControlState::NotSatisfied,
+                ControlOrigin::Input { field: "set-me" }
+            )
+        );
+        assert_eq!(
             optout_control.eval(&uses, &[], &with_enabled),
-            ControlEvaluation::NotSatisfied
-        ));
-        assert!(matches!(
+            ControlEvaluation::new(
+                ControlState::NotSatisfied,
+                ControlOrigin::Input { field: "set-me" }
+            )
+        );
+        assert_eq!(
             optout_control.eval(&uses, &[], &with_disabled),
-            ControlEvaluation::Satisfied
-        ));
+            ControlEvaluation::new(
+                ControlState::Satisfied,
+                ControlOrigin::Input { field: "set-me" }
+            )
+        );
+    }
+
+    #[test]
+    fn test_version_bound_provenance() {
+        let control = ControlExpr::all([
+            ControlExpr::VersionBound(VersionBound::LessThan(Version::parse("v10").unwrap())),
+            ControlExpr::field(
+                Toggle::OptIn,
+                "enable-cache",
+                ControlFieldType::Boolean,
+                true,
+            ),
+        ]);
+
+        let v6 = RepositoryUses::parse("foo/bar@v6.5.0").unwrap();
+        assert_eq!(
+            control.eval(&v6, &[], &IndexMap::new()),
+            ControlEvaluation {
+                state: ControlState::Satisfied,
+                origins: vec![
+                    ControlOrigin::UsesRef,
+                    ControlOrigin::Default {
+                        field: "enable-cache"
+                    },
+                ],
+            }
+        );
+
+        let explicit = IndexMap::from([("enable-cache".into(), EnvValue::Boolean(true))]);
+        assert_eq!(
+            control.eval(&v6, &[], &explicit),
+            ControlEvaluation {
+                state: ControlState::Satisfied,
+                origins: vec![
+                    ControlOrigin::UsesRef,
+                    ControlOrigin::Input {
+                        field: "enable-cache"
+                    },
+                ],
+            }
+        );
+
+        let unknown =
+            RepositoryUses::parse("foo/bar@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1").unwrap();
+        assert_eq!(
+            control.eval(&unknown, &[], &IndexMap::new()),
+            ControlEvaluation::new(ControlState::Conditional, ControlOrigin::UsesRef)
+        );
     }
 
     #[test]
@@ -519,7 +677,7 @@ mod tests {
 
         // Trivial cases: coordinate is not configurable and matches the `uses:`.
         for step in &[&steps[0], &steps[1]] {
-            assert_eq!(coord.usage(*step), Some(Usage::Always));
+            assert_eq!(coord.usage(*step), Some(Usage::always()));
         }
 
         // Coordinate `uses:` matches but is not enabled by default and is
@@ -533,7 +691,10 @@ mod tests {
 
         // Coordinate `uses:` matches and is explicitly toggled on.
         let step = &steps[4];
-        assert_eq!(coord.usage(step), Some(Usage::DirectOptIn));
+        assert_eq!(
+            coord.usage(step),
+            Some(Usage::enabled([ControlOrigin::Input { field: "set-me" }]))
+        );
 
         // Coordinate `uses:` matches but is explicitly toggled off.
         let step = &steps[5];
@@ -545,11 +706,17 @@ mod tests {
             control: ControlExpr::field(Toggle::OptIn, "set-me", ControlFieldType::Boolean, true),
         };
         let step = &steps[0];
-        assert_eq!(coord.usage(step), Some(Usage::DefaultActionBehaviour));
+        assert_eq!(
+            coord.usage(step),
+            Some(Usage::enabled([ControlOrigin::Default { field: "set-me" }]))
+        );
 
         // Coordinate `uses:` matches and is explicitly toggled on.
         let step = &steps[4];
-        assert_eq!(coord.usage(step), Some(Usage::DirectOptIn));
+        assert_eq!(
+            coord.usage(step),
+            Some(Usage::enabled([ControlOrigin::Input { field: "set-me" }]))
+        );
 
         // Coordinate `uses:` matches but is explicitly toggled off, despite default enablement.
         let step = &steps[5];
@@ -575,10 +742,18 @@ mod tests {
 
         // Coordinate `uses:` matches and the opt-out inverts the match, clearing it.
         let step = &steps[7];
-        assert_eq!(coord.usage(step), Some(Usage::DirectOptIn));
+        assert_eq!(
+            coord.usage(step),
+            Some(Usage::enabled([ControlOrigin::Input {
+                field: "disable-cache"
+            }]))
+        );
 
         // Coordinate `uses:` matches but `with:` is an expression.
         let step = &steps[8];
-        assert_eq!(coord.usage(step), Some(Usage::ConditionalOptIn));
+        assert_eq!(
+            coord.usage(step),
+            Some(Usage::conditional([ControlOrigin::WithExpression]))
+        );
     }
 }

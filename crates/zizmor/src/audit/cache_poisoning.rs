@@ -14,7 +14,8 @@ use crate::config::Config;
 use crate::finding::location::{Locatable as _, Routable as _};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
 use crate::models::coordinate::{
-    ActionCoordinate, ControlExpr, ControlFieldType, Toggle, Usage, VersionBound,
+    ActionCoordinate, ControlExpr, ControlFieldType, ControlOrigin, Toggle, Usage, UsageState,
+    VersionBound,
 };
 use crate::models::version::Version;
 use crate::models::workflow::{JobCommon as _, NormalJob, Step, Steps};
@@ -583,7 +584,7 @@ impl CachePoisoning {
 
             if cache_enabled {
                 // Caching is enabled; upgrade the confidence.
-                Some(Usage::DirectOptIn)
+                Some(cache_usage.into_enabled())
             } else {
                 // Caching is disabled; rule out this usage.
                 None
@@ -603,7 +604,7 @@ impl CachePoisoning {
             return Ok(None);
         };
 
-        let cache_usage = if matches!(cache_usage, Usage::ConditionalOptIn) {
+        let cache_usage = if matches!(cache_usage.state(), UsageState::Conditional) {
             self.conditional_cache_usage_heuristics(coord, step, scenario, cache_usage)
         } else {
             Some(cache_usage)
@@ -613,26 +614,71 @@ impl CachePoisoning {
             return Ok(None);
         };
 
-        let locations = match cache_usage {
-            Usage::ConditionalOptIn => vec![
-                step.location().primary().with_keys(["uses".into()]),
-                step.location()
-                    .with_keys(["with".into()])
-                    .annotated("may enable caching here"),
-            ],
-            Usage::DirectOptIn => vec![
-                step.location().primary().with_keys(["uses".into()]),
-                step.location()
-                    .with_keys(["with".into()])
-                    .annotated("enables caching explicitly here"),
-            ],
-            Usage::DefaultActionBehaviour => vec![
-                step.location()
-                    .primary()
-                    .with_keys(["uses".into()])
-                    .annotated("enables caching by default"),
-            ],
-            Usage::Always => vec![
+        let locations = match cache_usage.state() {
+            UsageState::Conditional => {
+                let version_is_conditional =
+                    cache_usage.origins().contains(&ControlOrigin::UsesRef);
+                let mut uses_location = step.location().primary().with_keys(["uses".into()]);
+                if version_is_conditional {
+                    uses_location = uses_location.annotated("action version may enable caching");
+                }
+
+                let mut locations = vec![uses_location];
+                for origin in cache_usage.origins() {
+                    match origin {
+                        ControlOrigin::Input { field } => locations.push(
+                            step.location()
+                                .with_keys(["with".into(), (*field).into()])
+                                .annotated("may enable caching here"),
+                        ),
+                        ControlOrigin::WithExpression => locations.push(
+                            step.location()
+                                .with_keys(["with".into()])
+                                .annotated("may enable caching here"),
+                        ),
+                        ControlOrigin::Default { .. } | ControlOrigin::UsesRef => {}
+                    }
+                }
+
+                locations
+            }
+            UsageState::Enabled => {
+                let has_explicit_origin = cache_usage.origins().iter().any(|origin| {
+                    matches!(
+                        origin,
+                        ControlOrigin::Input { .. } | ControlOrigin::WithExpression
+                    )
+                });
+
+                if !has_explicit_origin {
+                    vec![
+                        step.location()
+                            .primary()
+                            .with_keys(["uses".into()])
+                            .annotated("enables caching by default"),
+                    ]
+                } else {
+                    let mut locations = vec![step.location().primary().with_keys(["uses".into()])];
+                    for origin in cache_usage.origins() {
+                        match origin {
+                            ControlOrigin::Input { field } => locations.push(
+                                step.location()
+                                    .with_keys(["with".into(), (*field).into()])
+                                    .annotated("enables caching explicitly here"),
+                            ),
+                            ControlOrigin::WithExpression => locations.push(
+                                step.location()
+                                    .with_keys(["with".into()])
+                                    .annotated("enables caching explicitly here"),
+                            ),
+                            ControlOrigin::Default { .. } | ControlOrigin::UsesRef => {}
+                        }
+                    }
+
+                    locations
+                }
+            }
+            UsageState::Always => vec![
                 step.location()
                     .primary()
                     .with_keys(["uses".into()])
