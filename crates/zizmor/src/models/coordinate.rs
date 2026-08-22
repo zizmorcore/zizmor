@@ -133,12 +133,23 @@ enum ControlState {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) enum ControlOrigin {
     /// A missing input whose action-defined default determined the result.
+    ///
+    /// For example, an action that has a default of `cache: true`, where usage
+    /// of the action does not override `cache`.
     Default { field: &'static str },
     /// An explicitly configured action input.
+    ///
+    /// For example, a user explicitly setting `cache: true`.
     Input { field: &'static str },
-    /// The action reference in `uses:`, such as its version.
+    /// The `uses:` clause itself.
+    ///
+    /// For example, if we know that `actions/foo@v4` and earlier enable caching
+    /// unconditionally, then we way that the `uses:` clause determines the overall
+    /// result.
     UsesRef,
     /// An expression that supplies the entire `with:` mapping.
+    ///
+    /// This happens if the entire `with:` clause is opaque, e.g. `with: ${{ expr }}`.
     WithExpression,
 }
 
