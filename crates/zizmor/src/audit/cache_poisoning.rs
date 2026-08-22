@@ -105,15 +105,26 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
         // https://github.com/astral-sh/setup-uv/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "astral-sh/setup-uv".parse().unwrap(),
-            control: ControlExpr::all([
-                // v10 and newer disable cache automatically.
-                ControlExpr::VersionBound(VersionBound::LessThan(Version::parse("v10").unwrap())),
+            // Caching is enabled when explicitly requested at any version, or
+            // by default before v10 unless explicitly disabled.
+            control: ControlExpr::any([
                 ControlExpr::field(
                     Toggle::OptIn,
                     "enable-cache",
                     ControlFieldType::Boolean,
-                    true,
+                    false,
                 ),
+                ControlExpr::all([
+                    ControlExpr::VersionBound(VersionBound::LessThan(
+                        Version::parse("v10").unwrap(),
+                    )),
+                    ControlExpr::field(
+                        Toggle::OptIn,
+                        "enable-cache",
+                        ControlFieldType::Boolean,
+                        true,
+                    ),
+                ]),
             ]),
         },
         // https://github.com/Swatinem/rust-cache/blob/master/action.yml

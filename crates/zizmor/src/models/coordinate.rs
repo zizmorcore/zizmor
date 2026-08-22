@@ -456,14 +456,22 @@ mod tests {
 
     #[test]
     fn test_version_bound_provenance() {
-        let control = ControlExpr::all([
-            ControlExpr::VersionBound(VersionBound::LessThan(Version::parse("v10").unwrap())),
+        let control = ControlExpr::any([
             ControlExpr::field(
                 Toggle::OptIn,
                 "enable-cache",
                 ControlFieldType::Boolean,
-                true,
+                false,
             ),
+            ControlExpr::all([
+                ControlExpr::VersionBound(VersionBound::LessThan(Version::parse("v10").unwrap())),
+                ControlExpr::field(
+                    Toggle::OptIn,
+                    "enable-cache",
+                    ControlFieldType::Boolean,
+                    true,
+                ),
+            ]),
         ]);
 
         let v6 = RepositoryUses::parse("foo/bar@v6.5.0").unwrap();
@@ -481,12 +489,30 @@ mod tests {
         assert_eq!(
             control.eval(&v6, &[], &explicit),
             ControlEvaluation::Satisfied(vec![
-                ControlOrigin::UsesRef,
                 ControlOrigin::Input {
                     field: "enable-cache"
                 },
+                ControlOrigin::UsesRef,
             ])
         );
+
+        let v10 = RepositoryUses::parse("foo/bar@v10.0.0").unwrap();
+        assert_eq!(
+            control.eval(&v10, &[], &explicit),
+            ControlEvaluation::Satisfied(vec![ControlOrigin::Input {
+                field: "enable-cache"
+            }])
+        );
+        assert!(matches!(
+            control.eval(&v10, &[], &IndexMap::new()),
+            ControlEvaluation::NotSatisfied(_)
+        ));
+
+        let disabled = IndexMap::from([("enable-cache".into(), EnvValue::Boolean(false))]);
+        assert!(matches!(
+            control.eval(&v6, &[], &disabled),
+            ControlEvaluation::NotSatisfied(_)
+        ));
 
         let unknown =
             RepositoryUses::parse("foo/bar@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1").unwrap();

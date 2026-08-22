@@ -454,18 +454,7 @@ fn test_issue_1081() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
-      --> @@INPUT@@:23:9
-       |
-     5 | on: release
-       | ----------- generally used when publishing artifacts generated at runtime
-    ...
-    23 |       - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action version may enable caching
-       |
-       = note: audit confidence → Low
-
-    4 findings (1 suppressed): 0 informational, 0 low, 0 medium, 3 high
+    3 findings (1 suppressed): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 
@@ -638,6 +627,20 @@ fn test_issue_2320() -> anyhow::Result<()> {
         .run()?,
     @"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:19:9
+       |
+     5 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
+    ...
+    19 |       - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    20 |         with:
+    21 |           enable-cache: true
+       |           ------------------ enables caching explicitly here
+       |
+       = note: audit confidence → Low
+
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:24:9
        |
      5 | on: release
@@ -648,7 +651,7 @@ fn test_issue_2320() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    2 findings (1 ignored): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (1 ignored): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 
