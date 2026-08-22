@@ -660,44 +660,59 @@ impl CachePoisoning {
                 locations
             }
             Usage::Enabled(origins) => {
-                // We need to check if any of the origins point at or within the `with:` clause.
-                // TODO: Rename? Maybe `usage_originates_from_with_clause`?
                 let has_explicit_origin = origins.iter().any(|origin| {
                     matches!(
                         origin,
                         ControlOrigin::Input { .. } | ControlOrigin::WithExpression
                     )
                 });
+                let default_fields = origins
+                    .iter()
+                    .filter_map(|origin| match origin {
+                        ControlOrigin::Default { field } => Some(format!("`{field}`")),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>();
 
-                if !has_explicit_origin {
-                    vec![
-                        // TODO: use a subfeature here. We'll need to plumb the `&'doc Uses` here,
-                        // maybe by having `Usage` wrap it as part of `ActionCoordinate::usage`?
-                        step.location()
-                            .primary()
-                            .with_keys(["uses".into()])
-                            .annotated("enables caching by default"),
-                    ]
+                let default_annotation = if default_fields.is_empty() {
+                    (!has_explicit_origin).then(|| "enables caching by default".to_string())
                 } else {
-                    let mut locations = vec![step.location().primary().with_keys(["uses".into()])];
-                    for origin in origins {
-                        match origin {
-                            ControlOrigin::Input { field } => locations.push(
-                                step.location()
-                                    .with_keys(["with".into(), (*field).into()])
-                                    .annotated("enables caching explicitly here"),
-                            ),
-                            ControlOrigin::WithExpression => locations.push(
-                                step.location()
-                                    .with_keys(["with".into()])
-                                    .annotated("enables caching explicitly here"),
-                            ),
-                            ControlOrigin::Default { .. } | ControlOrigin::UsesRef => {}
-                        }
-                    }
+                    let version_qualifier = if origins.contains(&ControlOrigin::UsesRef) {
+                        " for this action version"
+                    } else {
+                        ""
+                    };
+                    Some(format!(
+                        "omitting {} enables caching{version_qualifier}",
+                        default_fields.join(" and ")
+                    ))
+                };
 
-                    locations
+                // TODO: use a subfeature here. We'll need to plumb the `&'doc Uses` here,
+                // maybe by having `Usage` wrap it as part of `ActionCoordinate::usage`?
+                let mut uses_location = step.location().primary().with_keys(["uses".into()]);
+                if let Some(annotation) = default_annotation {
+                    uses_location = uses_location.annotated(annotation);
                 }
+
+                let mut locations = vec![uses_location];
+                for origin in origins {
+                    match origin {
+                        ControlOrigin::Input { field } => locations.push(
+                            step.location()
+                                .with_keys(["with".into(), (*field).into()])
+                                .annotated("enables caching explicitly here"),
+                        ),
+                        ControlOrigin::WithExpression => locations.push(
+                            step.location()
+                                .with_keys(["with".into()])
+                                .annotated("enables caching explicitly here"),
+                        ),
+                        ControlOrigin::Default { .. } | ControlOrigin::UsesRef => {}
+                    }
+                }
+
+                locations
             }
             Usage::Always => vec![
                 step.location()

@@ -30,7 +30,7 @@ fn test_caching_enabled_by_default() -> anyhow::Result<()> {
        | ----------- generally used when publishing artifacts generated at runtime
     ...
     21 |         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `lookup-only` enables caching
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -174,7 +174,7 @@ fn test_workflow_tag_trigger() -> anyhow::Result<()> {
        | |____________- generally used when publishing artifacts generated at runtime
     ...
     23 |           uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `lookup-only` enables caching
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -228,7 +228,7 @@ fn test_publisher_step() -> anyhow::Result<()> {
       --> @@INPUT@@:23:9
        |
     23 |         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `lookup-only` enables caching
     ...
     30 |         uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974 # zizmor: ignore[superfluous-actions]
        |         -------------------------------------------------------------------------- runtime artifacts usually published here
@@ -263,7 +263,7 @@ fn test_issue_343() -> anyhow::Result<()> {
        | |________________- generally used when publishing artifacts generated at runtime
     ...
     28 |           uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `cache` enables caching
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -360,7 +360,7 @@ fn test_workflow_release_branch_trigger() -> anyhow::Result<()> {
        | |________________________- generally used when publishing artifacts generated at runtime
     ...
     22 |           uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `lookup-only` enables caching
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -436,7 +436,7 @@ fn test_issue_1081() -> anyhow::Result<()> {
        | ----------- generally used when publishing artifacts generated at runtime
     ...
     15 |       - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `enable-cache` enables caching for this action version
        |
        = note: audit confidence → Low
 
@@ -492,7 +492,7 @@ fn test_issue_1152() -> anyhow::Result<()> {
        | ----------- generally used when publishing artifacts generated at runtime
     ...
     16 |         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `package-manager-cache` enables caching
        |
        = note: audit confidence → Low
 
@@ -517,7 +517,7 @@ fn test_issue_1152() -> anyhow::Result<()> {
        | ----------- generally used when publishing artifacts generated at runtime
     ...
     42 |       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `package-manager-cache` enables caching
        |
        = note: audit confidence → Low
 
@@ -560,7 +560,7 @@ fn test_ramsey_composer_install_action() -> anyhow::Result<()> {
        | ----------- generally used when publishing artifacts generated at runtime
     ...
     13 |       - uses: ramsey/composer-install@3cf229dc2919194e9e36783941438d17239e8520 # 3.1.1
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `ignore-cache` enables caching
        |
        = note: audit confidence → Low
 
@@ -607,7 +607,7 @@ fn test_workflow_release_trigger_object() -> anyhow::Result<()> {
        | |__________- generally used when publishing artifacts generated at runtime
     ...
     23 |           uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ enables caching by default
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `lookup-only` enables caching
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
