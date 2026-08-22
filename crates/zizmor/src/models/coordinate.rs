@@ -16,7 +16,7 @@
 use std::ops::{BitAnd, BitOr, Not};
 
 use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet, indexset};
 
 use crate::{
     finding::location::Comment,
@@ -80,7 +80,9 @@ impl ActionCoordinate {
                 control,
             } => {
                 let LoE::Literal(with) = with else {
-                    return Some(Usage::Conditional(vec![ControlOrigin::WithExpression]));
+                    return Some(Usage::Conditional(indexset! {
+                        ControlOrigin::WithExpression
+                    }));
                 };
                 match control.eval(uses, &uses_location.concrete.comments, with) {
                     ControlEvaluation::Satisfied(origins) => Some(Usage::Enabled(origins)),
@@ -118,7 +120,7 @@ pub(crate) enum ControlFieldType {
 }
 
 /// The part of a step that determined a control expression's result.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) enum ControlOrigin {
     /// A missing input whose action-defined default determined the result.
     ///
@@ -146,24 +148,12 @@ pub(crate) enum ControlOrigin {
 #[derive(Clone, Debug, PartialEq)]
 enum ControlEvaluation {
     /// The control expression is satisfied.
-    Satisfied(Vec<ControlOrigin>),
+    Satisfied(IndexSet<ControlOrigin>),
     /// The control expression is not satisfied.
-    NotSatisfied(Vec<ControlOrigin>),
+    NotSatisfied(IndexSet<ControlOrigin>),
     /// The result depends on an Actions expression or another value that can't
     /// be determined statically.
-    Conditional(Vec<ControlOrigin>),
-}
-
-impl ControlEvaluation {
-    fn merge_origins(mut lhs: Vec<ControlOrigin>, rhs: Vec<ControlOrigin>) -> Vec<ControlOrigin> {
-        for origin in rhs {
-            if !lhs.contains(&origin) {
-                lhs.push(origin);
-            }
-        }
-
-        lhs
-    }
+    Conditional(IndexSet<ControlOrigin>),
 }
 
 impl Not for ControlEvaluation {
@@ -183,19 +173,22 @@ impl BitAnd for ControlEvaluation {
 
     fn bitand(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Self::NotSatisfied(lhs), Self::NotSatisfied(rhs)) => {
-                Self::NotSatisfied(Self::merge_origins(lhs, rhs))
+            (Self::NotSatisfied(mut lhs), Self::NotSatisfied(rhs)) => {
+                lhs.extend(rhs);
+                Self::NotSatisfied(lhs)
             }
             (Self::NotSatisfied(origins), _) | (_, Self::NotSatisfied(origins)) => {
                 Self::NotSatisfied(origins)
             }
-            (Self::Conditional(lhs), Self::Conditional(rhs)) => {
-                Self::Conditional(Self::merge_origins(lhs, rhs))
+            (Self::Conditional(mut lhs), Self::Conditional(rhs)) => {
+                lhs.extend(rhs);
+                Self::Conditional(lhs)
             }
             (Self::Conditional(origins), Self::Satisfied(_))
             | (Self::Satisfied(_), Self::Conditional(origins)) => Self::Conditional(origins),
-            (Self::Satisfied(lhs), Self::Satisfied(rhs)) => {
-                Self::Satisfied(Self::merge_origins(lhs, rhs))
+            (Self::Satisfied(mut lhs), Self::Satisfied(rhs)) => {
+                lhs.extend(rhs);
+                Self::Satisfied(lhs)
             }
         }
     }
@@ -206,19 +199,22 @@ impl BitOr for ControlEvaluation {
 
     fn bitor(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Self::Satisfied(lhs), Self::Satisfied(rhs)) => {
-                Self::Satisfied(Self::merge_origins(lhs, rhs))
+            (Self::Satisfied(mut lhs), Self::Satisfied(rhs)) => {
+                lhs.extend(rhs);
+                Self::Satisfied(lhs)
             }
             (Self::Satisfied(origins), _) | (_, Self::Satisfied(origins)) => {
                 Self::Satisfied(origins)
             }
-            (Self::Conditional(lhs), Self::Conditional(rhs)) => {
-                Self::Conditional(Self::merge_origins(lhs, rhs))
+            (Self::Conditional(mut lhs), Self::Conditional(rhs)) => {
+                lhs.extend(rhs);
+                Self::Conditional(lhs)
             }
             (Self::Conditional(origins), Self::NotSatisfied(_))
             | (Self::NotSatisfied(_), Self::Conditional(origins)) => Self::Conditional(origins),
-            (Self::NotSatisfied(lhs), Self::NotSatisfied(rhs)) => {
-                Self::NotSatisfied(Self::merge_origins(lhs, rhs))
+            (Self::NotSatisfied(mut lhs), Self::NotSatisfied(rhs)) => {
+                lhs.extend(rhs);
+                Self::NotSatisfied(lhs)
             }
         }
     }
@@ -251,7 +247,7 @@ impl<'a> VersionBound<'a> {
 
         let Some(ref version) = version else {
             // No detectable version; treat as conditional.
-            return ControlEvaluation::Conditional(vec![ControlOrigin::UsesRef]);
+            return ControlEvaluation::Conditional(indexset! { ControlOrigin::UsesRef });
         };
 
         let satisfied = match self {
@@ -261,9 +257,9 @@ impl<'a> VersionBound<'a> {
         };
 
         if satisfied {
-            ControlEvaluation::Satisfied(vec![ControlOrigin::UsesRef])
+            ControlEvaluation::Satisfied(indexset! { ControlOrigin::UsesRef })
         } else {
-            ControlEvaluation::NotSatisfied(vec![ControlOrigin::UsesRef])
+            ControlEvaluation::NotSatisfied(indexset! { ControlOrigin::UsesRef })
         }
     }
 }
@@ -371,7 +367,7 @@ impl<'a> ControlExpr<'a> {
                         }
                     };
 
-                    let origins = vec![ControlOrigin::Input { field: field_name }];
+                    let origins = indexset! { ControlOrigin::Input { field: field_name } };
                     match (control_value, toggle) {
                         (None, _) => ControlEvaluation::Conditional(origins),
                         (Some(true), Toggle::OptIn) | (Some(false), Toggle::OptOut) => {
@@ -382,23 +378,29 @@ impl<'a> ControlExpr<'a> {
                         }
                     }
                 } else if *enabled_by_default {
-                    ControlEvaluation::Satisfied(vec![ControlOrigin::Default { field: field_name }])
+                    ControlEvaluation::Satisfied(indexset! {
+                        ControlOrigin::Default { field: field_name }
+                    })
                 } else {
-                    ControlEvaluation::NotSatisfied(vec![ControlOrigin::Default {
-                        field: field_name,
-                    }])
+                    ControlEvaluation::NotSatisfied(indexset! {
+                        ControlOrigin::Default { field: field_name }
+                    })
                 }
             }
             Self::All(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(uses, comments, with))
-                .fold(ControlEvaluation::Satisfied(vec![]), |acc, expr| acc & expr),
+                .fold(
+                    ControlEvaluation::Satisfied(IndexSet::new()),
+                    |acc, expr| acc & expr,
+                ),
             Self::Any(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(uses, comments, with))
-                .fold(ControlEvaluation::NotSatisfied(vec![]), |acc, expr| {
-                    acc | expr
-                }),
+                .fold(
+                    ControlEvaluation::NotSatisfied(IndexSet::new()),
+                    |acc, expr| acc | expr,
+                ),
             Self::Not(expr) => !expr.eval(uses, comments, with),
         }
     }
@@ -406,8 +408,8 @@ impl<'a> ControlExpr<'a> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Usage {
-    Enabled(Vec<ControlOrigin>),
-    Conditional(Vec<ControlOrigin>),
+    Enabled(IndexSet<ControlOrigin>),
+    Conditional(IndexSet<ControlOrigin>),
     Always,
 }
 
@@ -416,7 +418,7 @@ mod tests {
     use std::str::FromStr as _;
 
     use github_actions_models::common::{EnvValue, RepositoryUses};
-    use indexmap::IndexMap;
+    use indexmap::{IndexMap, indexset};
 
     use super::{
         ActionCoordinate, ControlEvaluation, ControlExpr, ControlFieldType, ControlOrigin, Toggle,
@@ -446,19 +448,27 @@ mod tests {
 
         assert_eq!(
             optin_control.eval(&uses, &[], &with_enabled),
-            ControlEvaluation::Satisfied(vec![ControlOrigin::Input { field: "set-me" }])
+            ControlEvaluation::Satisfied(indexset! {
+                ControlOrigin::Input { field: "set-me" }
+            })
         );
         assert_eq!(
             optin_control.eval(&uses, &[], &with_disabled),
-            ControlEvaluation::NotSatisfied(vec![ControlOrigin::Input { field: "set-me" }])
+            ControlEvaluation::NotSatisfied(indexset! {
+                ControlOrigin::Input { field: "set-me" }
+            })
         );
         assert_eq!(
             optout_control.eval(&uses, &[], &with_enabled),
-            ControlEvaluation::NotSatisfied(vec![ControlOrigin::Input { field: "set-me" }])
+            ControlEvaluation::NotSatisfied(indexset! {
+                ControlOrigin::Input { field: "set-me" }
+            })
         );
         assert_eq!(
             optout_control.eval(&uses, &[], &with_disabled),
-            ControlEvaluation::Satisfied(vec![ControlOrigin::Input { field: "set-me" }])
+            ControlEvaluation::Satisfied(indexset! {
+                ControlOrigin::Input { field: "set-me" }
+            })
         );
     }
 
@@ -475,15 +485,21 @@ mod tests {
         for (value, expected) in [
             (
                 EnvValue::String("yes".into()),
-                ControlEvaluation::Satisfied(vec![ControlOrigin::Input { field: "set-me" }]),
+                ControlEvaluation::Satisfied(indexset! {
+                    ControlOrigin::Input { field: "set-me" }
+                }),
             ),
             (
                 EnvValue::String("no".into()),
-                ControlEvaluation::NotSatisfied(vec![ControlOrigin::Input { field: "set-me" }]),
+                ControlEvaluation::NotSatisfied(indexset! {
+                    ControlOrigin::Input { field: "set-me" }
+                }),
             ),
             (
                 EnvValue::String("${{ expression }}".into()),
-                ControlEvaluation::Conditional(vec![ControlOrigin::Input { field: "set-me" }]),
+                ControlEvaluation::Conditional(indexset! {
+                    ControlOrigin::Input { field: "set-me" }
+                }),
             ),
         ] {
             let with = IndexMap::from([("set-me".into(), value)]);
@@ -514,31 +530,33 @@ mod tests {
         let v6 = RepositoryUses::parse("foo/bar@v6.5.0").unwrap();
         assert_eq!(
             control.eval(&v6, &[], &IndexMap::new()),
-            ControlEvaluation::Satisfied(vec![
+            ControlEvaluation::Satisfied(indexset! {
                 ControlOrigin::UsesRef,
                 ControlOrigin::Default {
                     field: "enable-cache"
                 },
-            ])
+            })
         );
 
         let explicit = IndexMap::from([("enable-cache".into(), EnvValue::Boolean(true))]);
         assert_eq!(
             control.eval(&v6, &[], &explicit),
-            ControlEvaluation::Satisfied(vec![
+            ControlEvaluation::Satisfied(indexset! {
                 ControlOrigin::Input {
                     field: "enable-cache"
                 },
                 ControlOrigin::UsesRef,
-            ])
+            })
         );
 
         let v10 = RepositoryUses::parse("foo/bar@v10.0.0").unwrap();
         assert_eq!(
             control.eval(&v10, &[], &explicit),
-            ControlEvaluation::Satisfied(vec![ControlOrigin::Input {
-                field: "enable-cache"
-            }])
+            ControlEvaluation::Satisfied(indexset! {
+                ControlOrigin::Input {
+                    field: "enable-cache"
+                }
+            })
         );
         assert!(matches!(
             control.eval(&v10, &[], &IndexMap::new()),
@@ -552,12 +570,12 @@ mod tests {
         ));
         assert_eq!(
             control.eval(&v6, &[], &automatic),
-            ControlEvaluation::Satisfied(vec![
+            ControlEvaluation::Satisfied(indexset! {
                 ControlOrigin::UsesRef,
                 ControlOrigin::Input {
                     field: "enable-cache"
                 },
-            ])
+            })
         );
 
         let disabled = IndexMap::from([("enable-cache".into(), EnvValue::Boolean(false))]);
@@ -570,7 +588,7 @@ mod tests {
             RepositoryUses::parse("foo/bar@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1").unwrap();
         assert_eq!(
             control.eval(&unknown, &[], &IndexMap::new()),
-            ControlEvaluation::Conditional(vec![ControlOrigin::UsesRef])
+            ControlEvaluation::Conditional(indexset! { ControlOrigin::UsesRef })
         );
     }
 
@@ -650,9 +668,9 @@ mod tests {
         let step = &steps[4];
         assert_eq!(
             coord.usage(step),
-            Some(Usage::Enabled(vec![ControlOrigin::Input {
-                field: "set-me"
-            }]))
+            Some(Usage::Enabled(indexset! {
+                ControlOrigin::Input { field: "set-me" }
+            }))
         );
 
         // Coordinate `uses:` matches but is explicitly toggled off.
@@ -667,18 +685,18 @@ mod tests {
         let step = &steps[0];
         assert_eq!(
             coord.usage(step),
-            Some(Usage::Enabled(vec![ControlOrigin::Default {
-                field: "set-me"
-            }]))
+            Some(Usage::Enabled(indexset! {
+                ControlOrigin::Default { field: "set-me" }
+            }))
         );
 
         // Coordinate `uses:` matches and is explicitly toggled on.
         let step = &steps[4];
         assert_eq!(
             coord.usage(step),
-            Some(Usage::Enabled(vec![ControlOrigin::Input {
-                field: "set-me"
-            }]))
+            Some(Usage::Enabled(indexset! {
+                ControlOrigin::Input { field: "set-me" }
+            }))
         );
 
         // Coordinate `uses:` matches but is explicitly toggled off, despite default enablement.
@@ -707,16 +725,20 @@ mod tests {
         let step = &steps[7];
         assert_eq!(
             coord.usage(step),
-            Some(Usage::Enabled(vec![ControlOrigin::Input {
-                field: "disable-cache"
-            }]))
+            Some(Usage::Enabled(indexset! {
+                ControlOrigin::Input {
+                    field: "disable-cache"
+                }
+            }))
         );
 
         // Coordinate `uses:` matches but `with:` is an expression.
         let step = &steps[8];
         assert_eq!(
             coord.usage(step),
-            Some(Usage::Conditional(vec![ControlOrigin::WithExpression]))
+            Some(Usage::Conditional(indexset! {
+                ControlOrigin::WithExpression
+            }))
         );
     }
 }
