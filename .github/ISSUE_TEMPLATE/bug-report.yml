@@ -19,12 +19,11 @@ body:
     attributes:
       label: Pre-submission checks
       description: |
-        By submitting this issue, you affirm that you've satisfied the
-        following conditions.
+        By submitting this issue, you affirm that you've satisfied the following conditions.
       options:
         - label: >-
-            I am **not** filing a feature request. These should be filed via
-            the feature request form instead.
+            I am **not** filing a request for a new feature.
+            These should be filed via the feature request form instead.
           required: true
         - label: >-
             I have checked the [Troubleshooting Guide](https://docs.zizmor.sh/troubleshooting)
@@ -92,6 +91,12 @@ body:
   - type: textarea
     attributes:
       label: Additional context
-      description: Add any other additional context about the problem here.
-      placeholder: |
-        Any additional context you want to share.
+      description: |
+        Any additional context, screenshots, or other material about the bug report.
+
+  - type: checkboxes
+    attributes:
+      label: Participation
+      options:
+        - label: I am willing to submit a pull request for this report.
+          required: false
