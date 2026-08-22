@@ -20,6 +20,11 @@ jobs:
         with:
           enable-cache: true
 
+        # TRUE POSITIVE: caching conditionally (opaquely) enabled
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          enable-cache: ${{ matrix.os == 'ubuntu-latest' }}
+
       # TRUE POSITIVE: no version comment, so we assume < v10
       - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d
 
@@ -38,7 +43,7 @@ jobs:
         with:
           enable-cache: false
 
-      # # TRUE NEGATIVE: like above, but with a version comment and automatically disabled
-      # - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
-      #   with:
-      #     enable-cache: auto
+      # TRUE NEGATIVE: like above, but with a version comment and automatically disabled
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          enable-cache: auto

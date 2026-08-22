@@ -359,7 +359,14 @@ impl<'a> ControlExpr<'a> {
                         ControlFieldType::FreeString => Some(!field_value.is_empty()),
                         // We expect a "fixed" string control, i.e. one of a set of values.
                         ControlFieldType::Exact(items) => {
-                            Some(items.contains(&field_value.to_string().as_str()))
+                            let value = field_value.to_string();
+                            if ExtractedExpr::from_fenced(&value).is_some() {
+                                // Like `ControlFieldType::Boolean`, this could
+                                // evaluate any way.
+                                None
+                            } else {
+                                Some(items.contains(&value.as_str()))
+                            }
                         }
                     };
 
@@ -455,12 +462,41 @@ mod tests {
     }
 
     #[test]
+    fn test_exact_control() {
+        let control = ControlExpr::field(
+            Toggle::OptIn,
+            "set-me",
+            ControlFieldType::Exact(&["yes"]),
+            false,
+        );
+        let uses = RepositoryUses::parse("foo/bar@doesnotmatter").unwrap();
+
+        for (value, expected) in [
+            (
+                EnvValue::String("yes".into()),
+                ControlEvaluation::Satisfied(vec![ControlOrigin::Input { field: "set-me" }]),
+            ),
+            (
+                EnvValue::String("no".into()),
+                ControlEvaluation::NotSatisfied(vec![ControlOrigin::Input { field: "set-me" }]),
+            ),
+            (
+                EnvValue::String("${{ expression }}".into()),
+                ControlEvaluation::Conditional(vec![ControlOrigin::Input { field: "set-me" }]),
+            ),
+        ] {
+            let with = IndexMap::from([("set-me".into(), value)]);
+            assert_eq!(control.eval(&uses, &[], &with), expected);
+        }
+    }
+
+    #[test]
     fn test_version_bound_provenance() {
         let control = ControlExpr::any([
             ControlExpr::field(
                 Toggle::OptIn,
                 "enable-cache",
-                ControlFieldType::Boolean,
+                ControlFieldType::Exact(&["true"]),
                 false,
             ),
             ControlExpr::all([
@@ -507,6 +543,21 @@ mod tests {
             control.eval(&v10, &[], &IndexMap::new()),
             ControlEvaluation::NotSatisfied(_)
         ));
+
+        let automatic = IndexMap::from([("enable-cache".into(), EnvValue::String("auto".into()))]);
+        assert!(matches!(
+            control.eval(&v10, &[], &automatic),
+            ControlEvaluation::NotSatisfied(_)
+        ));
+        assert_eq!(
+            control.eval(&v6, &[], &automatic),
+            ControlEvaluation::Satisfied(vec![
+                ControlOrigin::UsesRef,
+                ControlOrigin::Input {
+                    field: "enable-cache"
+                },
+            ])
+        );
 
         let disabled = IndexMap::from([("enable-cache".into(), EnvValue::Boolean(false))]);
         assert!(matches!(

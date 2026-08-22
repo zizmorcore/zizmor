@@ -454,7 +454,21 @@ fn test_issue_1081() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    3 findings (1 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:23:9
+       |
+     5 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
+    ...
+    23 |       - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    24 |         with:
+    25 |           enable-cache: auto
+       |           ------------------ enables caching explicitly here
+       |
+       = note: audit confidence → Low
+
+    4 findings (1 suppressed): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -646,12 +660,26 @@ fn test_issue_2320() -> anyhow::Result<()> {
      5 | on: release
        | ----------- generally used when publishing artifacts generated at runtime
     ...
-    24 |       - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d
+    24 |       - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    25 |         with:
+    26 |           enable-cache: ${{ matrix.os == 'ubuntu-latest' }}
+       |           ------------------------------------------------- may enable caching here
+       |
+       = note: audit confidence → Low
+
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:29:9
+       |
+     5 | on: release
+       | ----------- generally used when publishing artifacts generated at runtime
+    ...
+    29 |       - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action version may enable caching
        |
        = note: audit confidence → Low
 
-    3 findings (1 ignored): 0 informational, 0 low, 0 medium, 2 high
+    4 findings (1 ignored): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 

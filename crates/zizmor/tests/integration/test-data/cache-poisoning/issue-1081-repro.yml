@@ -19,6 +19,11 @@ jobs:
         with:
           enable-cache: true
 
+      # TRUE POSITIVE: enable-cache explicitly set to auto, and version is <10
+      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+        with:
+          enable-cache: auto
+
   issue-1081-true-negative:
     name: issue-1081-true-negative
     runs-on: ubuntu-latest
