@@ -79,17 +79,16 @@ impl ActionCoordinate {
                 control,
             } => {
                 let LoE::Literal(with) = with else {
-                    return Some(Usage::conditional([ControlOrigin::WithExpression]));
+                    return Some(Usage::Conditional(vec![ControlOrigin::WithExpression]));
                 };
-                let evaluation = control.eval(uses, &uses_location.concrete.comments, with);
-                match evaluation.state {
-                    ControlState::Satisfied => Some(Usage::enabled(evaluation.origins)),
-                    ControlState::NotSatisfied => None,
-                    ControlState::Conditional => Some(Usage::conditional(evaluation.origins)),
+                match control.eval(uses, &uses_location.concrete.comments, with) {
+                    ControlEvaluation::Satisfied(origins) => Some(Usage::Enabled(origins)),
+                    ControlEvaluation::NotSatisfied(_) => None,
+                    ControlEvaluation::Conditional(origins) => Some(Usage::Conditional(origins)),
                 }
             }
             // The mere presence of this `uses:` implies the expected usage semantics.
-            Self::NotConfigurable(_) => Some(Usage::always()),
+            Self::NotConfigurable(_) => Some(Usage::Always),
         }
     }
 }
@@ -117,18 +116,6 @@ pub(crate) enum ControlFieldType {
     Exact(&'static [&'static str]),
 }
 
-/// The logical result of evaluating a control expression.
-#[derive(Copy, Clone, Debug, PartialEq)]
-enum ControlState {
-    /// The control expression is satisfied.
-    Satisfied,
-    /// The control expression is not satisfied.
-    NotSatisfied,
-    /// The result depends on an Actions expression or another value that can't
-    /// be determined statically.
-    Conditional,
-}
-
 /// The part of a step that determined a control expression's result.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) enum ControlOrigin {
@@ -153,62 +140,40 @@ pub(crate) enum ControlOrigin {
     WithExpression,
 }
 
-/// The result of evaluating a control expression, including the evidence that
-/// produced that result.
+/// The logical result of evaluating a control expression, together with the
+/// evidence that produced that result.
 #[derive(Clone, Debug, PartialEq)]
-struct ControlEvaluation {
-    state: ControlState,
-    origins: Vec<ControlOrigin>,
+enum ControlEvaluation {
+    /// The control expression is satisfied.
+    Satisfied(Vec<ControlOrigin>),
+    /// The control expression is not satisfied.
+    NotSatisfied(Vec<ControlOrigin>),
+    /// The result depends on an Actions expression or another value that can't
+    /// be determined statically.
+    Conditional(Vec<ControlOrigin>),
 }
 
 impl ControlEvaluation {
-    fn new(state: ControlState, origin: ControlOrigin) -> Self {
-        Self {
-            state,
-            origins: vec![origin],
-        }
-    }
-
-    fn without_origins(state: ControlState) -> Self {
-        Self {
-            state,
-            origins: vec![],
-        }
-    }
-
-    fn decisive_origins(
-        state: ControlState,
-        evaluations: impl IntoIterator<Item = Self>,
-    ) -> Vec<ControlOrigin> {
-        let mut origins = vec![];
-
-        for evaluation in evaluations {
-            if evaluation.state != state {
-                continue;
-            }
-
-            for origin in evaluation.origins {
-                if !origins.contains(&origin) {
-                    origins.push(origin);
-                }
+    fn merge_origins(mut lhs: Vec<ControlOrigin>, rhs: Vec<ControlOrigin>) -> Vec<ControlOrigin> {
+        for origin in rhs {
+            if !lhs.contains(&origin) {
+                lhs.push(origin);
             }
         }
 
-        origins
+        lhs
     }
 }
 
 impl Not for ControlEvaluation {
     type Output = Self;
 
-    fn not(mut self) -> Self::Output {
-        self.state = match self.state {
-            ControlState::Satisfied => ControlState::NotSatisfied,
-            ControlState::NotSatisfied => ControlState::Satisfied,
-            ControlState::Conditional => ControlState::Conditional,
-        };
-
-        self
+    fn not(self) -> Self::Output {
+        match self {
+            Self::Satisfied(origins) => Self::NotSatisfied(origins),
+            Self::NotSatisfied(origins) => Self::Satisfied(origins),
+            Self::Conditional(origins) => Self::Conditional(origins),
+        }
     }
 }
 
@@ -216,19 +181,21 @@ impl BitAnd for ControlEvaluation {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        let state = match (self.state, rhs.state) {
-            (ControlState::NotSatisfied, _) | (_, ControlState::NotSatisfied) => {
-                ControlState::NotSatisfied
+        match (self, rhs) {
+            (Self::NotSatisfied(lhs), Self::NotSatisfied(rhs)) => {
+                Self::NotSatisfied(Self::merge_origins(lhs, rhs))
             }
-            (ControlState::Conditional, _) | (_, ControlState::Conditional) => {
-                ControlState::Conditional
+            (Self::NotSatisfied(origins), _) | (_, Self::NotSatisfied(origins)) => {
+                Self::NotSatisfied(origins)
             }
-            (ControlState::Satisfied, ControlState::Satisfied) => ControlState::Satisfied,
-        };
-
-        Self {
-            state,
-            origins: Self::decisive_origins(state, [self, rhs]),
+            (Self::Conditional(lhs), Self::Conditional(rhs)) => {
+                Self::Conditional(Self::merge_origins(lhs, rhs))
+            }
+            (Self::Conditional(origins), Self::Satisfied(_))
+            | (Self::Satisfied(_), Self::Conditional(origins)) => Self::Conditional(origins),
+            (Self::Satisfied(lhs), Self::Satisfied(rhs)) => {
+                Self::Satisfied(Self::merge_origins(lhs, rhs))
+            }
         }
     }
 }
@@ -237,17 +204,21 @@ impl BitOr for ControlEvaluation {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        let state = match (self.state, rhs.state) {
-            (ControlState::Satisfied, _) | (_, ControlState::Satisfied) => ControlState::Satisfied,
-            (ControlState::Conditional, _) | (_, ControlState::Conditional) => {
-                ControlState::Conditional
+        match (self, rhs) {
+            (Self::Satisfied(lhs), Self::Satisfied(rhs)) => {
+                Self::Satisfied(Self::merge_origins(lhs, rhs))
             }
-            (ControlState::NotSatisfied, ControlState::NotSatisfied) => ControlState::NotSatisfied,
-        };
-
-        Self {
-            state,
-            origins: Self::decisive_origins(state, [self, rhs]),
+            (Self::Satisfied(origins), _) | (_, Self::Satisfied(origins)) => {
+                Self::Satisfied(origins)
+            }
+            (Self::Conditional(lhs), Self::Conditional(rhs)) => {
+                Self::Conditional(Self::merge_origins(lhs, rhs))
+            }
+            (Self::Conditional(origins), Self::NotSatisfied(_))
+            | (Self::NotSatisfied(_), Self::Conditional(origins)) => Self::Conditional(origins),
+            (Self::NotSatisfied(lhs), Self::NotSatisfied(rhs)) => {
+                Self::NotSatisfied(Self::merge_origins(lhs, rhs))
+            }
         }
     }
 }
@@ -279,34 +250,20 @@ impl<'a> VersionBound<'a> {
 
         let Some(ref version) = version else {
             // No detectable version; treat as conditional.
-            return ControlEvaluation::new(ControlState::Conditional, ControlOrigin::UsesRef);
+            return ControlEvaluation::Conditional(vec![ControlOrigin::UsesRef]);
         };
 
-        let state = match self {
-            VersionBound::Exact(control) => {
-                if version == control {
-                    ControlState::Satisfied
-                } else {
-                    ControlState::NotSatisfied
-                }
-            }
-            VersionBound::LessThan(control) => {
-                if version < control {
-                    ControlState::Satisfied
-                } else {
-                    ControlState::NotSatisfied
-                }
-            }
-            VersionBound::GreaterThan(control) => {
-                if version > control {
-                    ControlState::Satisfied
-                } else {
-                    ControlState::NotSatisfied
-                }
-            }
+        let satisfied = match self {
+            VersionBound::Exact(control) => version == control,
+            VersionBound::LessThan(control) => version < control,
+            VersionBound::GreaterThan(control) => version > control,
         };
 
-        ControlEvaluation::new(state, ControlOrigin::UsesRef)
+        if satisfied {
+            ControlEvaluation::Satisfied(vec![ControlOrigin::UsesRef])
+        } else {
+            ControlEvaluation::NotSatisfied(vec![ControlOrigin::UsesRef])
+        }
     }
 }
 
@@ -381,140 +338,69 @@ impl<'a> ControlExpr<'a> {
                 satisfied_by_default: enabled_by_default,
             } => {
                 // If the controlling field is not present, the default dictates the semantics.
-                let (state, origin) = if let Some(field_value) = with.get(*field_name) {
-                    let state = match field_type {
+                if let Some(field_value) = with.get(*field_name) {
+                    let control_value = match field_type {
                         // We expect a boolean control.
                         ControlFieldType::Boolean => match field_value.to_string().as_str() {
-                            "true" => match toggle {
-                                Toggle::OptIn => ControlState::Satisfied,
-                                Toggle::OptOut => ControlState::NotSatisfied,
-                            },
-                            "false" => match toggle {
-                                Toggle::OptIn => ControlState::NotSatisfied,
-                                Toggle::OptOut => ControlState::Satisfied,
-                            },
+                            "true" => Some(true),
+                            "false" => Some(false),
                             other => match ExtractedExpr::from_fenced(other) {
                                 // We have something like `foo: ${{ expr }}`,
                                 // which could evaluate either way.
-                                Some(_) => ControlState::Conditional,
+                                Some(_) => None,
                                 // We have something like `foo: bar`, but we
                                 // were expecting a boolean. Assume pessimistically
                                 // that the action coerces any non-`false` value to `true`.
-                                None => match toggle {
-                                    Toggle::OptIn => ControlState::Satisfied,
-                                    Toggle::OptOut => ControlState::NotSatisfied,
-                                },
+                                None => Some(true),
                             },
                         },
                         // We expect a "free" string control, i.e. any value.
                         // Evaluate just the toggle.
-                        ControlFieldType::FreeString => match field_value.is_empty() {
-                            true => match toggle {
-                                Toggle::OptIn => ControlState::NotSatisfied,
-                                Toggle::OptOut => ControlState::Satisfied,
-                            },
-                            false => match toggle {
-                                Toggle::OptIn => ControlState::Satisfied,
-                                Toggle::OptOut => ControlState::NotSatisfied,
-                            },
-                        },
+                        ControlFieldType::FreeString => Some(!field_value.is_empty()),
                         // We expect a "fixed" string control, i.e. one of a set of values.
                         ControlFieldType::Exact(items) => {
-                            if items.contains(&field_value.to_string().as_str()) {
-                                match toggle {
-                                    Toggle::OptIn => ControlState::Satisfied,
-                                    Toggle::OptOut => ControlState::NotSatisfied,
-                                }
-                            } else {
-                                match toggle {
-                                    Toggle::OptIn => ControlState::NotSatisfied,
-                                    Toggle::OptOut => ControlState::Satisfied,
-                                }
-                            }
+                            Some(items.contains(&field_value.to_string().as_str()))
                         }
                     };
 
-                    (state, ControlOrigin::Input { field: field_name })
+                    let origins = vec![ControlOrigin::Input { field: field_name }];
+                    match (control_value, toggle) {
+                        (None, _) => ControlEvaluation::Conditional(origins),
+                        (Some(true), Toggle::OptIn) | (Some(false), Toggle::OptOut) => {
+                            ControlEvaluation::Satisfied(origins)
+                        }
+                        (Some(false), Toggle::OptIn) | (Some(true), Toggle::OptOut) => {
+                            ControlEvaluation::NotSatisfied(origins)
+                        }
+                    }
                 } else if *enabled_by_default {
-                    (
-                        ControlState::Satisfied,
-                        ControlOrigin::Default { field: field_name },
-                    )
+                    ControlEvaluation::Satisfied(vec![ControlOrigin::Default { field: field_name }])
                 } else {
-                    (
-                        ControlState::NotSatisfied,
-                        ControlOrigin::Default { field: field_name },
-                    )
-                };
-
-                ControlEvaluation::new(state, origin)
+                    ControlEvaluation::NotSatisfied(vec![ControlOrigin::Default {
+                        field: field_name,
+                    }])
+                }
             }
             Self::All(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(uses, comments, with))
-                .fold(
-                    ControlEvaluation::without_origins(ControlState::Satisfied),
-                    |acc, expr| acc & expr,
-                ),
+                .fold(ControlEvaluation::Satisfied(vec![]), |acc, expr| acc & expr),
             Self::Any(exprs) => exprs
                 .iter()
                 .map(|expr| expr.eval(uses, comments, with))
-                .fold(
-                    ControlEvaluation::without_origins(ControlState::NotSatisfied),
-                    |acc, expr| acc | expr,
-                ),
+                .fold(ControlEvaluation::NotSatisfied(vec![]), |acc, expr| {
+                    acc | expr
+                }),
             Self::Not(expr) => !expr.eval(uses, comments, with),
         }
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub(crate) enum UsageState {
-    Enabled,
-    Conditional,
-    Always,
-}
-
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Usage {
-    state: UsageState,
-    origins: Vec<ControlOrigin>,
-}
-
-impl Usage {
-    fn enabled(origins: impl IntoIterator<Item = ControlOrigin>) -> Self {
-        Self {
-            state: UsageState::Enabled,
-            origins: origins.into_iter().collect(),
-        }
-    }
-
-    fn conditional(origins: impl IntoIterator<Item = ControlOrigin>) -> Self {
-        Self {
-            state: UsageState::Conditional,
-            origins: origins.into_iter().collect(),
-        }
-    }
-
-    fn always() -> Self {
-        Self {
-            state: UsageState::Always,
-            origins: vec![ControlOrigin::UsesRef],
-        }
-    }
-
-    pub(crate) fn state(&self) -> UsageState {
-        self.state
-    }
-
-    pub(crate) fn origins(&self) -> &[ControlOrigin] {
-        &self.origins
-    }
-
-    pub(crate) fn into_enabled(mut self) -> Self {
-        self.state = UsageState::Enabled;
-        self
-    }
+pub(crate) enum Usage {
+    Enabled(Vec<ControlOrigin>),
+    Conditional(Vec<ControlOrigin>),
+    Always,
 }
 
 #[cfg(test)]
@@ -525,8 +411,8 @@ mod tests {
     use indexmap::IndexMap;
 
     use super::{
-        ActionCoordinate, ControlEvaluation, ControlExpr, ControlFieldType, ControlOrigin,
-        ControlState, Toggle, Usage, VersionBound,
+        ActionCoordinate, ControlEvaluation, ControlExpr, ControlFieldType, ControlOrigin, Toggle,
+        Usage, VersionBound,
     };
     use crate::{
         models::{
@@ -552,31 +438,19 @@ mod tests {
 
         assert_eq!(
             optin_control.eval(&uses, &[], &with_enabled),
-            ControlEvaluation::new(
-                ControlState::Satisfied,
-                ControlOrigin::Input { field: "set-me" }
-            )
+            ControlEvaluation::Satisfied(vec![ControlOrigin::Input { field: "set-me" }])
         );
         assert_eq!(
             optin_control.eval(&uses, &[], &with_disabled),
-            ControlEvaluation::new(
-                ControlState::NotSatisfied,
-                ControlOrigin::Input { field: "set-me" }
-            )
+            ControlEvaluation::NotSatisfied(vec![ControlOrigin::Input { field: "set-me" }])
         );
         assert_eq!(
             optout_control.eval(&uses, &[], &with_enabled),
-            ControlEvaluation::new(
-                ControlState::NotSatisfied,
-                ControlOrigin::Input { field: "set-me" }
-            )
+            ControlEvaluation::NotSatisfied(vec![ControlOrigin::Input { field: "set-me" }])
         );
         assert_eq!(
             optout_control.eval(&uses, &[], &with_disabled),
-            ControlEvaluation::new(
-                ControlState::Satisfied,
-                ControlOrigin::Input { field: "set-me" }
-            )
+            ControlEvaluation::Satisfied(vec![ControlOrigin::Input { field: "set-me" }])
         );
     }
 
@@ -595,36 +469,30 @@ mod tests {
         let v6 = RepositoryUses::parse("foo/bar@v6.5.0").unwrap();
         assert_eq!(
             control.eval(&v6, &[], &IndexMap::new()),
-            ControlEvaluation {
-                state: ControlState::Satisfied,
-                origins: vec![
-                    ControlOrigin::UsesRef,
-                    ControlOrigin::Default {
-                        field: "enable-cache"
-                    },
-                ],
-            }
+            ControlEvaluation::Satisfied(vec![
+                ControlOrigin::UsesRef,
+                ControlOrigin::Default {
+                    field: "enable-cache"
+                },
+            ])
         );
 
         let explicit = IndexMap::from([("enable-cache".into(), EnvValue::Boolean(true))]);
         assert_eq!(
             control.eval(&v6, &[], &explicit),
-            ControlEvaluation {
-                state: ControlState::Satisfied,
-                origins: vec![
-                    ControlOrigin::UsesRef,
-                    ControlOrigin::Input {
-                        field: "enable-cache"
-                    },
-                ],
-            }
+            ControlEvaluation::Satisfied(vec![
+                ControlOrigin::UsesRef,
+                ControlOrigin::Input {
+                    field: "enable-cache"
+                },
+            ])
         );
 
         let unknown =
             RepositoryUses::parse("foo/bar@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1").unwrap();
         assert_eq!(
             control.eval(&unknown, &[], &IndexMap::new()),
-            ControlEvaluation::new(ControlState::Conditional, ControlOrigin::UsesRef)
+            ControlEvaluation::Conditional(vec![ControlOrigin::UsesRef])
         );
     }
 
@@ -688,7 +556,7 @@ mod tests {
 
         // Trivial cases: coordinate is not configurable and matches the `uses:`.
         for step in &[&steps[0], &steps[1]] {
-            assert_eq!(coord.usage(*step), Some(Usage::always()));
+            assert_eq!(coord.usage(*step), Some(Usage::Always));
         }
 
         // Coordinate `uses:` matches but is not enabled by default and is
@@ -704,7 +572,9 @@ mod tests {
         let step = &steps[4];
         assert_eq!(
             coord.usage(step),
-            Some(Usage::enabled([ControlOrigin::Input { field: "set-me" }]))
+            Some(Usage::Enabled(vec![ControlOrigin::Input {
+                field: "set-me"
+            }]))
         );
 
         // Coordinate `uses:` matches but is explicitly toggled off.
@@ -719,14 +589,18 @@ mod tests {
         let step = &steps[0];
         assert_eq!(
             coord.usage(step),
-            Some(Usage::enabled([ControlOrigin::Default { field: "set-me" }]))
+            Some(Usage::Enabled(vec![ControlOrigin::Default {
+                field: "set-me"
+            }]))
         );
 
         // Coordinate `uses:` matches and is explicitly toggled on.
         let step = &steps[4];
         assert_eq!(
             coord.usage(step),
-            Some(Usage::enabled([ControlOrigin::Input { field: "set-me" }]))
+            Some(Usage::Enabled(vec![ControlOrigin::Input {
+                field: "set-me"
+            }]))
         );
 
         // Coordinate `uses:` matches but is explicitly toggled off, despite default enablement.
@@ -755,7 +629,7 @@ mod tests {
         let step = &steps[7];
         assert_eq!(
             coord.usage(step),
-            Some(Usage::enabled([ControlOrigin::Input {
+            Some(Usage::Enabled(vec![ControlOrigin::Input {
                 field: "disable-cache"
             }]))
         );
@@ -764,7 +638,7 @@ mod tests {
         let step = &steps[8];
         assert_eq!(
             coord.usage(step),
-            Some(Usage::conditional([ControlOrigin::WithExpression]))
+            Some(Usage::Conditional(vec![ControlOrigin::WithExpression]))
         );
     }
 }

@@ -14,8 +14,7 @@ use crate::config::Config;
 use crate::finding::location::{Locatable as _, Routable as _};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Severity};
 use crate::models::coordinate::{
-    ActionCoordinate, ControlExpr, ControlFieldType, ControlOrigin, Toggle, Usage, UsageState,
-    VersionBound,
+    ActionCoordinate, ControlExpr, ControlFieldType, ControlOrigin, Toggle, Usage, VersionBound,
 };
 use crate::models::version::Version;
 use crate::models::workflow::{JobCommon as _, NormalJob, Step, Steps};
@@ -552,7 +551,7 @@ impl CachePoisoning {
         }
     }
 
-    /// Apply heuristics to a `Usage::ConditionalOptIn` to attempt to refine it into
+    /// Apply heuristics to a [`Usage::Conditional`] to attempt to refine it into
     /// a more precise usage.
     ///
     /// Returns `None` if the heuristics determine that caching is effectively disabled.
@@ -584,7 +583,10 @@ impl CachePoisoning {
 
             if cache_enabled {
                 // Caching is enabled; upgrade the confidence.
-                Some(cache_usage.into_enabled())
+                Some(match cache_usage {
+                    Usage::Conditional(origins) => Usage::Enabled(origins),
+                    usage => usage,
+                })
             } else {
                 // Caching is disabled; rule out this usage.
                 None
@@ -604,7 +606,7 @@ impl CachePoisoning {
             return Ok(None);
         };
 
-        let cache_usage = if matches!(cache_usage.state(), UsageState::Conditional) {
+        let cache_usage = if matches!(&cache_usage, Usage::Conditional(_)) {
             self.conditional_cache_usage_heuristics(coord, step, scenario, cache_usage)
         } else {
             Some(cache_usage)
@@ -614,17 +616,16 @@ impl CachePoisoning {
             return Ok(None);
         };
 
-        let locations = match cache_usage.state() {
-            UsageState::Conditional => {
-                let version_is_conditional =
-                    cache_usage.origins().contains(&ControlOrigin::UsesRef);
+        let locations = match &cache_usage {
+            Usage::Conditional(origins) => {
+                let version_is_conditional = origins.contains(&ControlOrigin::UsesRef);
                 let mut uses_location = step.location().primary().with_keys(["uses".into()]);
                 if version_is_conditional {
                     uses_location = uses_location.annotated("action version may enable caching");
                 }
 
                 let mut locations = vec![uses_location];
-                for origin in cache_usage.origins() {
+                for origin in origins {
                     match origin {
                         ControlOrigin::Input { field } => locations.push(
                             step.location()
@@ -642,8 +643,8 @@ impl CachePoisoning {
 
                 locations
             }
-            UsageState::Enabled => {
-                let has_explicit_origin = cache_usage.origins().iter().any(|origin| {
+            Usage::Enabled(origins) => {
+                let has_explicit_origin = origins.iter().any(|origin| {
                     matches!(
                         origin,
                         ControlOrigin::Input { .. } | ControlOrigin::WithExpression
@@ -659,7 +660,7 @@ impl CachePoisoning {
                     ]
                 } else {
                     let mut locations = vec![step.location().primary().with_keys(["uses".into()])];
-                    for origin in cache_usage.origins() {
+                    for origin in origins {
                         match origin {
                             ControlOrigin::Input { field } => locations.push(
                                 step.location()
@@ -678,7 +679,7 @@ impl CachePoisoning {
                     locations
                 }
             }
-            UsageState::Always => vec![
+            Usage::Always => vec![
                 step.location()
                     .primary()
                     .with_keys(["uses".into()])
