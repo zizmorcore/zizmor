@@ -305,7 +305,7 @@ static_regex!(IGNORE_EXPR, r"# zizmor: ignore\[(.+)\](?:\s+.*)?$");
 #[serde(transparent)]
 pub(crate) struct Comment<'doc>(&'doc str);
 
-impl Comment<'_> {
+impl<'doc> Comment<'doc> {
     pub(crate) fn is_meaningful(&self) -> bool {
         let content = self.0.strip_prefix('#').unwrap_or(self.0).trim();
         !content.is_empty()
@@ -323,10 +323,8 @@ impl Comment<'_> {
             .split(",")
             .any(|r| r.trim() == rule_id)
     }
-}
 
-impl<'a> AsRef<str> for Comment<'a> {
-    fn as_ref(&self) -> &'a str {
+    pub(crate) fn as_raw(&self) -> &'doc str {
         self.0
     }
 }

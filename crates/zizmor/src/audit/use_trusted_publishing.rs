@@ -38,7 +38,7 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
                 ActionCoordinate::Configurable {
                     uses_pattern: "pypa/gh-action-pypi-publish".parse().unwrap(),
                     control: ControlExpr::all([
-                        ControlExpr::single(
+                        ControlExpr::field(
                             Toggle::OptIn,
                             "password",
                             ControlFieldType::FreeString,
@@ -50,13 +50,13 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
                         // If we used `any` we'd end up accidentally satisfying
                         // when the user only sets one of the control fields.
                         ControlExpr::all([
-                            ControlExpr::single(
+                            ControlExpr::field(
                                 Toggle::OptIn,
                                 "repository-url",
                                 ControlFieldType::Exact(KNOWN_PYTHON_TP_INDICES),
                                 true,
                             ),
-                            ControlExpr::single(
+                            ControlExpr::field(
                                 Toggle::OptIn,
                                 "repository_url",
                                 ControlFieldType::Exact(KNOWN_PYTHON_TP_INDICES),
@@ -84,7 +84,7 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
             (
                 ActionCoordinate::Configurable {
                     uses_pattern: "rubygems/release-gem".parse().unwrap(),
-                    control: ControlExpr::not(ControlExpr::single(
+                    control: ControlExpr::not(ControlExpr::field(
                         Toggle::OptIn,
                         "setup-trusted-publisher",
                         ControlFieldType::Boolean,
@@ -97,13 +97,13 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
                 ActionCoordinate::Configurable {
                     uses_pattern: "rubygems/configure-rubygems-credentials".parse().unwrap(),
                     control: ControlExpr::all([
-                        ControlExpr::single(
+                        ControlExpr::field(
                             Toggle::OptIn,
                             "api-token",
                             ControlFieldType::FreeString,
                             false,
                         ),
-                        ControlExpr::single(
+                        ControlExpr::field(
                             Toggle::OptIn,
                             "gem-server",
                             ControlFieldType::Exact(KNOWN_RUBY_TP_INDICES),
@@ -119,14 +119,14 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
                 ActionCoordinate::Configurable {
                     uses_pattern: "actions/setup-node".parse().unwrap(),
                     control: ControlExpr::all([
-                        ControlExpr::single(
+                        ControlExpr::field(
                             Toggle::OptIn,
                             "registry-url",
                             ControlFieldType::Exact(KNOWN_NPMJS_TP_INDICES),
                             true,
                         ),
                         // Detect when always-auth is enabled (indicating manual token usage)
-                        ControlExpr::single(
+                        ControlExpr::field(
                             Toggle::OptIn,
                             "always-auth",
                             ControlFieldType::Boolean,

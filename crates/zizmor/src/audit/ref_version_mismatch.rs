@@ -11,8 +11,10 @@ use crate::{
         location::{Comment, Feature, Location, Routable as _},
     },
     github,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
-    utils::once::static_regex,
+    models::{
+        StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, version::RawVersion,
+        workflow::Step,
+    },
 };
 
 pub(crate) struct RefVersionMismatch {
@@ -25,22 +27,6 @@ audit_meta!(
     "action's hash pin has mismatched or missing version comment"
 );
 
-static_regex!(
-    VERSION_COMMENT_PATTERN,
-    r#"(?x)                             # verbose mode
-    ^                                   # start of string
-    \#                                  # start of comment
-    \s*                                 # optional whitespace
-    (?:                                 # start non-capturing group for version prefix
-      (?:tag|version|ver)\s*[:=]\s*     # version prefix + `:` or `=`
-    )?                                  # end optional non-capturing group
-    (                                   # start capturing group for version
-      \S+                               # one or more non-whitespace characters
-    )                                   # end capturing group for version
-    $                                   # end of string
-    "#
-);
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum CommentVersionState<'doc> {
     Missing,
@@ -51,10 +37,8 @@ enum CommentVersionState<'doc> {
 impl RefVersionMismatch {
     fn extract_version_from_comments<'doc>(comments: &'doc [Comment<'doc>]) -> Option<&'doc str> {
         for comment in comments {
-            if let Some(captures) = VERSION_COMMENT_PATTERN.captures(comment.as_ref())
-                && let Some(version_match) = captures.get(1)
-            {
-                return Some(version_match.as_str());
+            if let Some(version) = RawVersion::from_comment(comment) {
+                return Some(version.as_raw());
             }
         }
         None
@@ -265,52 +249,6 @@ mod tests {
     use crate::{
         finding::location::Locatable as _, models::action::Action, registry::input::InputKey,
     };
-
-    #[test]
-    fn test_version_comment_pattern() {
-        let test_cases = vec![
-            ("# tag=v2.8.0", Some("v2.8.0")),
-            ("# tag=v6-beta", Some("v6-beta")),
-            ("# tag=v1.2.3-rc.1", Some("v1.2.3-rc.1")),
-            ("# tag=v1.2.3rc.1", Some("v1.2.3rc.1")),
-            ("# tag=v6-beta-2", Some("v6-beta-2")),
-            ("# tag=release-2024-01", Some("release-2024-01")),
-            ("# v2.8.0", Some("v2.8.0")),
-            ("# v6-beta", Some("v6-beta")),
-            ("# v1.2.3-rc.1", Some("v1.2.3-rc.1")),
-            ("# v1.2.3rc1", Some("v1.2.3rc1")),
-            ("# v6-beta-2", Some("v6-beta-2")),
-            ("# v1.0.0-rc-1", Some("v1.0.0-rc-1")),
-            ("# v2.0-preview-3", Some("v2.0-preview-3")),
-            ("# tag=2.8.0", Some("2.8.0")),
-            ("# version: 2.8.0", Some("2.8.0")),
-            ("# version: v1.2.3-rc.1", Some("v1.2.3-rc.1")),
-            ("# version: v1.2.3rc.1", Some("v1.2.3rc.1")),
-            ("# version: v6-beta-2", Some("v6-beta-2")),
-            ("# version: v1.0.0-rc-1", Some("v1.0.0-rc-1")),
-            ("# ver=1.0.0", Some("1.0.0")),
-            ("# visit the docs", None),
-            ("# some other comment", None),
-            ("# zizmor: ignore[ref-version-mismatch]", None),
-        ];
-
-        for (comment, expected) in test_cases {
-            // Test the pattern matching directly
-            match (VERSION_COMMENT_PATTERN.captures(comment), expected) {
-                (None, None) => (),
-                (None, Some(expected)) => {
-                    assert!(
-                        false,
-                        "Got no match in '{comment}', but expected {expected}"
-                    )
-                }
-                (Some(caps), None) => {
-                    assert!(false, "Got unexpected match: {caps:?}")
-                }
-                (Some(_), Some(_)) => (),
-            }
-        }
-    }
 
     #[test]
     fn test_comment_version_state_with_unrelated_comment() {

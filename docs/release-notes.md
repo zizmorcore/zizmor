@@ -30,6 +30,8 @@ of `zizmor`.
 
 * The [ref-confusion] audit now supports pre-commit config inputs (#2274)
 
+* The [cache-poisoning] audit now produces more detailed and more precise diagnostics (#2330)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
@@ -45,6 +47,9 @@ of `zizmor`.
   replace operations (#2295)
 
     Many thanks to @dmbuil for proposing and implementing this improvement!
+
+* Fixed a bug where the [cache-poisoning] audit would incorrectly flag
+  newer @astral-sh/setup-uv versions that disable caching behavior automatically (#2330)
 
 ## 1.29.0
 

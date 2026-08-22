@@ -1,0 +1,49 @@
+# repro case for https://github.com/zizmorcore/zizmor/issues/2320
+
+name: issue-2320
+
+on: release
+
+permissions: {}
+
+concurrency:
+  group: issue-2320
+  cancel-in-progress: true
+
+jobs:
+  issue-2320-true-positive:
+    name: issue-2320-true-positive
+    runs-on: ubuntu-latest
+    steps:
+      # TRUE POSITIVE: caching explicitly enabled
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          enable-cache: true
+
+        # TRUE POSITIVE: caching conditionally (opaquely) enabled
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          enable-cache: ${{ matrix.os == 'ubuntu-latest' }}
+
+      # TRUE POSITIVE: no version comment, so we assume < v10
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d
+
+  issue-2320-true-negative:
+    name: issue-2320-true-negative
+    runs-on: ubuntu-latest
+    steps:
+      # TRUE NEGATIVE: cache disabled by default on release for v10+
+      - uses: astral-sh/setup-uv@v10.0.0 # zizmor: ignore[unpinned-uses]
+
+      # TRUE NEGATIVE: like above, but with a version comment
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+
+      # TRUE NEGATIVE: like above, but with a version comment and explicitly disabled
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          enable-cache: false
+
+      # TRUE NEGATIVE: like above, but with a version comment and automatically disabled
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          enable-cache: auto
