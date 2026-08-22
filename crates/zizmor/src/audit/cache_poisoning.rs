@@ -669,6 +669,8 @@ impl CachePoisoning {
 
                 if !has_explicit_origin {
                     vec![
+                        // TODO: use a subfeature here. We'll need to plumb the `&'doc Uses` here,
+                        // maybe by having `Usage` wrap it as part of `ActionCoordinate::usage`?
                         step.location()
                             .primary()
                             .with_keys(["uses".into()])

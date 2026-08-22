@@ -53,6 +53,7 @@ impl ActionCoordinate {
     pub(crate) fn usage<'doc>(&self, step: &impl StepCommon<'doc>) -> Option<Usage> {
         let uses_pattern = self.uses_pattern();
 
+        // Only `uses:` clauses are analyzed at the moment.
         let Some(StepBodyCommon::Uses {
             uses: Uses::Repository(uses),
             with,
