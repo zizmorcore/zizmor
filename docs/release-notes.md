@@ -34,6 +34,10 @@ of `zizmor`.
 
 * The [cache-poisoning] audit now handles and exposes auto-fixes in a more general manner (#2332)
 
+* zizmor now recognizes @sethvargo/ratchet version comments when evaluating ref pinning (#2319)
+
+    Many thanks to @njgudman for proposing and implementing this enhancement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
