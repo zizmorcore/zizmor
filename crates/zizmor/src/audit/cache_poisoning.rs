@@ -36,37 +36,57 @@ static REF_TYPE_TAG_PUSH_GUARD: LazyLock<Expr> = LazyLock::new(|| {
         .inner
 });
 
-enum CacheFixStrategy {
-    /// Infer a fix. At the moment, the only inferrable fixes are for [`ActionCoordinate`]s
-    /// that only have a single top-level control field.
-    Infer,
-    /// Disable caching by setting a boolean action input explicitly.
-    SetBooleanInput {
-        field_name: &'static str,
-        field_value: bool,
-    },
+/// Disable caching by setting a boolean action input explicitly.
+struct CacheFix {
+    field_name: &'static str,
+    field_value: bool,
 }
 
 struct CacheAwareAction {
     coordinate: ActionCoordinate,
-    fix_strategy: Option<CacheFixStrategy>,
+    fix: Option<CacheFix>,
 }
 
 impl From<ActionCoordinate> for CacheAwareAction {
     fn from(coordinate: ActionCoordinate) -> Self {
-        let fix_strategy = if matches!(&coordinate, ActionCoordinate::Configurable { .. }) {
-            // For now, we only consider a fix inferrable if the coordinate has a single
-            // top-level control field, i.e. is not logically qualified at all.
-            Some(CacheFixStrategy::Infer)
-        } else {
-            // No automatic fix is available for this action.
-            None
+        let fix = match &coordinate {
+            ActionCoordinate::NotConfigurable(_) => {
+                // For non-configurable actions, we can't provide automatic fixes
+                // No automatic fix is available for this action.
+                None
+            }
+            // Infer a fix. At the moment, the only inferrable fixes are for [`ActionCoordinate`]s
+            // that only have a single top-level control field.
+            ActionCoordinate::Configurable {
+                control:
+                    ControlExpr::Field {
+                        toggle,
+                        field_name,
+                        field_type: ControlFieldType::Boolean,
+                        ..
+                    },
+                ..
+            } => {
+                // For now, we only consider a fix inferrable if the coordinate has a single
+                // top-level control field, i.e. is not logically qualified at all.
+                Some(CacheFix {
+                    field_name,
+                    field_value: matches!(toggle, Toggle::OptOut),
+                })
+            }
+            ActionCoordinate::Configurable {
+                control: ControlExpr::Field { .. },
+                ..
+            } => {
+                // String control fields are action-specific and we can't reliably know
+                // what value disables caching (e.g., setup-node expects '' not 'false')
+                None
+            }
+            // For version bounds and complex control expressions (All/Any/Not), don't provide automatic fixes for now
+            ActionCoordinate::Configurable { .. } => None,
         };
 
-        Self {
-            coordinate,
-            fix_strategy,
-        }
+        Self { coordinate, fix }
     }
 }
 
@@ -173,7 +193,7 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
                     ]),
                 ]),
             },
-            fix_strategy: Some(CacheFixStrategy::SetBooleanInput {
+            fix: Some(CacheFix {
                 field_name: "enable-cache",
                 field_value: false,
             }),
@@ -558,39 +578,10 @@ impl CachePoisoning {
         action: &CacheAwareAction,
         step: &Step<'doc>,
     ) -> Option<Fix<'doc>> {
-        let (field_name, field_value) = match action.fix_strategy.as_ref()? {
-            CacheFixStrategy::Infer => match &action.coordinate {
-                ActionCoordinate::NotConfigurable(_) => {
-                    // For non-configurable actions, we can't provide automatic fixes
-                    return None;
-                }
-                ActionCoordinate::Configurable { control, .. } => match control {
-                    ControlExpr::Field {
-                        toggle,
-                        field_name,
-                        field_type,
-                        ..
-                    } => match (toggle, field_type) {
-                        (Toggle::OptOut, ControlFieldType::Boolean) => (*field_name, true),
-                        (Toggle::OptIn, ControlFieldType::Boolean) => (*field_name, false),
-                        // String control fields are action-specific and we can't reliably know
-                        // what value disables caching (e.g., setup-node expects '' not 'false')
-                        (Toggle::OptIn, _) | (Toggle::OptOut, _) => {
-                            return None;
-                        }
-                    },
-                    // For version bounds and complex control expressions (All/Any/Not), don't provide automatic fixes for now
-                    ControlExpr::VersionBound(_)
-                    | ControlExpr::All(_)
-                    | ControlExpr::Any(_)
-                    | ControlExpr::Not(_) => return None,
-                },
-            },
-            CacheFixStrategy::SetBooleanInput {
-                field_name,
-                field_value,
-            } => (*field_name, *field_value),
-        };
+        let CacheFix {
+            field_name,
+            field_value,
+        } = action.fix.as_ref()?;
 
         Some(Fix {
             title: format!("Set {field_name}: {field_value} to disable caching"),
@@ -602,7 +593,7 @@ impl CachePoisoning {
                     key: "with".to_string(),
                     updates: IndexMap::from([(
                         field_name.to_string(),
-                        yaml_serde::Value::Bool(field_value),
+                        yaml_serde::Value::Bool(*field_value),
                     )]),
                 },
             }],
