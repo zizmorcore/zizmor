@@ -49,6 +49,9 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would reject a `dependabot.yml` containing
   a `goproxy-server` registry definition (#2300)
 
+* Fixed a bug where `zizmor` would reject pre-commit configurations containing
+  `prek`-specific glob patterns in `files` or `exclude` (#2308)
+
 * Fixed a handful of unsound patch bugs when performing YAML add and/or
   replace operations (#2295)
 
