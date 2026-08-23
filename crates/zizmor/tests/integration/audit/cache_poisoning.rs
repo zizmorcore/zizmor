@@ -95,8 +95,9 @@ fn test_caching_opt_in_expression() -> anyhow::Result<()> {
        |           ---------------------------------------------------- may enable caching here
        |
        = note: audit confidence → Low
+       = note: this finding has an auto-fix
 
-    3 findings (1 ignored, 1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (1 ignored, 1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     ",
     );
 
@@ -439,6 +440,7 @@ fn test_issue_1081() -> anyhow::Result<()> {
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ omitting `enable-cache` enables caching for this action version
        |
        = note: audit confidence → Low
+       = note: this finding has an auto-fix
 
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:18:9
@@ -453,6 +455,7 @@ fn test_issue_1081() -> anyhow::Result<()> {
        |           ------------------ enables caching explicitly here
        |
        = note: audit confidence → Low
+       = note: this finding has an auto-fix
 
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:23:9
@@ -467,8 +470,9 @@ fn test_issue_1081() -> anyhow::Result<()> {
        |           ------------------ enables caching explicitly here
        |
        = note: audit confidence → Low
+       = note: this finding has an auto-fix
 
-    4 findings (1 suppressed): 0 informational, 0 low, 0 medium, 3 high
+    4 findings (1 suppressed, 3 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -653,6 +657,7 @@ fn test_issue_2320() -> anyhow::Result<()> {
        |           ------------------ enables caching explicitly here
        |
        = note: audit confidence → Low
+       = note: this finding has an auto-fix
 
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:24:9
@@ -667,6 +672,7 @@ fn test_issue_2320() -> anyhow::Result<()> {
        |           ------------------------------------------------- may enable caching here
        |
        = note: audit confidence → Low
+       = note: this finding has an auto-fix
 
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:29:9
@@ -678,8 +684,9 @@ fn test_issue_2320() -> anyhow::Result<()> {
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action version may enable caching
        |
        = note: audit confidence → Low
+       = note: this finding has an auto-fix
 
-    4 findings (1 ignored): 0 informational, 0 low, 0 medium, 3 high
+    4 findings (1 ignored, 3 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -885,6 +892,61 @@ jobs:
     -          cache: true
     +          cache: false
            - uses: softprops/action-gh-release@v1
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_setup_uv_compound_control() -> anyhow::Result<()> {
+    let workflow_content = r#"
+name: Test Workflow
+on: release
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+        with:
+          enable-cache: true
+      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+        with:
+          enable-cache: auto
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          enable-cache: ${{ github.ref == 'refs/heads/main' }}
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/cache-poisoning.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/cache-poisoning.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -9,10 +9,12 @@
+           - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+    +        with:
+    +          enable-cache: false
+           - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+             with:
+    -          enable-cache: true
+    +          enable-cache: false
+           - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+             with:
+    -          enable-cache: auto
+    +          enable-cache: false
+           - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+             with:
+    -          enable-cache: ${{ github.ref == 'refs/heads/main' }}
+    +          enable-cache: false
     "
     );
 
