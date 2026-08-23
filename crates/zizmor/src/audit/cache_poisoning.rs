@@ -50,13 +50,8 @@ struct CacheAwareAction {
 impl From<ActionCoordinate> for CacheAwareAction {
     fn from(coordinate: ActionCoordinate) -> Self {
         let fix = match &coordinate {
-            ActionCoordinate::NotConfigurable(_) => {
-                // For non-configurable actions, we can't provide automatic fixes
-                // No automatic fix is available for this action.
-                None
-            }
             // Infer a fix. At the moment, the only inferrable fixes are for [`ActionCoordinate`]s
-            // that only have a single top-level control field.
+            // that only have a single top-level boolean control field.
             ActionCoordinate::Configurable {
                 control:
                     ControlExpr::Field {
@@ -66,24 +61,19 @@ impl From<ActionCoordinate> for CacheAwareAction {
                         ..
                     },
                 ..
-            } => {
-                // For now, we only consider a fix inferrable if the coordinate has a single
-                // top-level control field, i.e. is not logically qualified at all.
-                Some(CacheFix {
-                    field_name,
-                    field_value: matches!(toggle, Toggle::OptOut),
-                })
-            }
-            ActionCoordinate::Configurable {
-                control: ControlExpr::Field { .. },
-                ..
-            } => {
-                // String control fields are action-specific and we can't reliably know
-                // what value disables caching (e.g., setup-node expects '' not 'false')
+            } => Some(CacheFix {
+                field_name,
+                field_value: matches!(toggle, Toggle::OptOut),
+            }),
+            _ => {
+                // We can't infer fixes for other coordinates at the moment.
+                //
+                // TODO: We may be able to infer fixes for string control fields.
+                //
+                // Version bounds and compelx control expressions (All/Any/Not)
+                // are probably not easy for us to infer in the future.
                 None
             }
-            // For version bounds and complex control expressions (All/Any/Not), don't provide automatic fixes for now
-            ActionCoordinate::Configurable { .. } => None,
         };
 
         Self { coordinate, fix }
