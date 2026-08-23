@@ -32,6 +32,8 @@ of `zizmor`.
 
 * The [cache-poisoning] audit now produces more detailed and more precise diagnostics (#2330)
 
+* The [cache-poisoning] audit now handles and exposes auto-fixes in a more general manner (#2332)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
