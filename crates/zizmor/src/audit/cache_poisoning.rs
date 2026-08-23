@@ -555,83 +555,58 @@ impl CachePoisoning {
         action: &CacheAwareAction,
         step: &Step<'doc>,
     ) -> Option<Fix<'doc>> {
-        match action.fix_strategy.as_ref()? {
+        let (field_name, field_value) = match action.fix_strategy.as_ref()? {
             CacheFixStrategy::Infer => match &action.coordinate {
-                ActionCoordinate::NotConfigurable(_pattern) => {
+                ActionCoordinate::NotConfigurable(_) => {
                     // For non-configurable actions, we can't provide automatic fixes
-                    None
+                    return None;
                 }
-                ActionCoordinate::Configurable { control, .. } => {
-                    self.create_configurable_action_fix(control, step)
-                }
+                ActionCoordinate::Configurable { control, .. } => match control {
+                    ControlExpr::Field {
+                        toggle,
+                        field_name,
+                        field_type,
+                        ..
+                    } => match (toggle, field_type) {
+                        (Toggle::OptOut, ControlFieldType::Boolean) => (*field_name, true),
+                        (Toggle::OptIn, ControlFieldType::Boolean) => (*field_name, false),
+                        // String control fields are action-specific and we can't reliably know
+                        // what value disables caching (e.g., setup-node expects '' not 'false')
+                        (Toggle::OptIn, _) | (Toggle::OptOut, _) => {
+                            return None;
+                        }
+                    },
+                    // For version bounds and complex control expressions (All/Any/Not), don't provide automatic fixes for now
+                    ControlExpr::VersionBound(_)
+                    | ControlExpr::All(_)
+                    | ControlExpr::Any(_)
+                    | ControlExpr::Not(_) => return None,
+                },
             },
             CacheFixStrategy::SetBooleanInput {
                 field_name,
                 field_value,
-            } => Some(Self::create_input_fix(
-                step,
-                field_name,
-                yaml_serde::Value::Bool(*field_value),
-                format!("Set {field_name}: {field_value} to disable caching"),
-            )),
-        }
+            } => (*field_name, *field_value),
+        };
+
+        Some(Self::create_input_fix(step, field_name, field_value))
     }
 
-    fn create_input_fix<'doc>(
-        step: &Step<'doc>,
-        field_name: &str,
-        field_value: yaml_serde::Value,
-        title: String,
-    ) -> Fix<'doc> {
+    fn create_input_fix<'doc>(step: &Step<'doc>, field_name: &str, field_value: bool) -> Fix<'doc> {
         Fix {
-            title,
+            title: format!("Set {field_name}: {field_value} to disable caching"),
             key: step.location().key,
             disposition: FixDisposition::default(),
             patches: vec![Patch {
                 route: step.route(),
                 operation: Op::MergeInto {
                     key: "with".to_string(),
-                    updates: IndexMap::from([(field_name.to_string(), field_value)]),
+                    updates: IndexMap::from([(
+                        field_name.to_string(),
+                        yaml_serde::Value::Bool(field_value),
+                    )]),
                 },
             }],
-        }
-    }
-
-    fn create_configurable_action_fix<'doc>(
-        &self,
-        control: &ControlExpr,
-        step: &Step<'doc>,
-    ) -> Option<Fix<'doc>> {
-        match control {
-            ControlExpr::Field {
-                toggle,
-                field_name,
-                field_type,
-                ..
-            } => {
-                let (field_value, title) = match (toggle, field_type) {
-                    (Toggle::OptOut, ControlFieldType::Boolean) => (
-                        yaml_serde::Value::Bool(true),
-                        format!("Set {field_name}: true to disable caching"),
-                    ),
-                    (Toggle::OptIn, ControlFieldType::Boolean) => (
-                        yaml_serde::Value::Bool(false),
-                        format!("Set {field_name}: false to disable caching"),
-                    ),
-                    // String control fields are action-specific and we can't reliably know
-                    // what value disables caching (e.g., setup-node expects '' not 'false')
-                    (Toggle::OptIn, _) | (Toggle::OptOut, _) => {
-                        return None;
-                    }
-                };
-
-                Some(Self::create_input_fix(step, field_name, field_value, title))
-            }
-            // For version bounds and complex control expressions (All/Any/Not), don't provide automatic fixes for now
-            ControlExpr::VersionBound(_)
-            | ControlExpr::All(_)
-            | ControlExpr::Any(_)
-            | ControlExpr::Not(_) => None,
         }
     }
 
