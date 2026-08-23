@@ -36,11 +36,55 @@ static REF_TYPE_TAG_PUSH_GUARD: LazyLock<Expr> = LazyLock::new(|| {
         .inner
 });
 
+/// Disable caching by setting a boolean action input explicitly.
+struct CacheFix {
+    field_name: &'static str,
+    field_value: bool,
+}
+
+struct CacheAwareAction {
+    coordinate: ActionCoordinate,
+    fix: Option<CacheFix>,
+}
+
+impl From<ActionCoordinate> for CacheAwareAction {
+    fn from(coordinate: ActionCoordinate) -> Self {
+        let fix = match &coordinate {
+            // Infer a fix. At the moment, the only inferrable fixes are for [`ActionCoordinate`]s
+            // that only have a single top-level boolean control field.
+            ActionCoordinate::Configurable {
+                control:
+                    ControlExpr::Field {
+                        toggle,
+                        field_name,
+                        field_type: ControlFieldType::Boolean,
+                        ..
+                    },
+                ..
+            } => Some(CacheFix {
+                field_name,
+                field_value: matches!(toggle, Toggle::OptOut),
+            }),
+            _ => {
+                // We can't infer fixes for other coordinates at the moment.
+                //
+                // TODO: We may be able to infer fixes for string control fields.
+                //
+                // Version bounds and compelx control expressions (All/Any/Not)
+                // are probably not easy for us to infer in the future.
+                None
+            }
+        };
+
+        Self { coordinate, fix }
+    }
+}
+
 /// The list of known cache-aware actions
 /// In the future we can easily retrieve this list from the static API,
 /// since it should be easily serializable
 #[allow(clippy::unwrap_used)]
-static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::new(|| {
+static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::new(|| {
     vec![
         // https://github.com/actions/cache/blob/main/action.yml
         ActionCoordinate::Configurable {
@@ -51,7 +95,8 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 ControlFieldType::Boolean,
                 true,
             ),
-        },
+        }
+        .into(),
         // https://github.com/actions/setup-java/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-java".parse().unwrap(),
@@ -61,12 +106,14 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 ControlFieldType::FreeString,
                 false,
             ),
-        },
+        }
+        .into(),
         // https://github.com/actions/setup-go/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-go".parse().unwrap(),
             control: ControlExpr::field(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
-        },
+        }
+        .into(),
         // https://github.com/actions/setup-node/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-node".parse().unwrap(),
@@ -86,7 +133,8 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                     true,
                 ),
             ]),
-        },
+        }
+        .into(),
         // https://github.com/actions/setup-python/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-python".parse().unwrap(),
@@ -96,41 +144,49 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 ControlFieldType::FreeString,
                 false,
             ),
-        },
+        }
+        .into(),
         // https://github.com/actions/setup-dotnet/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions/setup-dotnet".parse().unwrap(),
             control: ControlExpr::field(Toggle::OptIn, "cache", ControlFieldType::Boolean, false),
-        },
+        }
+        .into(),
         // https://github.com/astral-sh/setup-uv/blob/main/action.yml
-        ActionCoordinate::Configurable {
-            uses_pattern: "astral-sh/setup-uv".parse().unwrap(),
-            control: ControlExpr::any([
-                // Regardless of the version, setting `enable-cache: true`
-                // always explicitly enables the cache.
-                ControlExpr::field(
-                    Toggle::OptIn,
-                    "enable-cache",
-                    ControlFieldType::Exact(&["true"]),
-                    false,
-                ),
-                // For setup-uv below v10, any boolishly true `enable-cache`
-                // (including `enable-cache: auto`) is considered to enable the cache.
-                // This is slightly imprecise since `auto` actually disables the cache
-                // on self-hosted runners, but we don't have a good static way to
-                // detect those at the moment.
-                ControlExpr::all([
-                    ControlExpr::VersionBound(VersionBound::LessThan(
-                        Version::parse("v10").unwrap(),
-                    )),
+        CacheAwareAction {
+            coordinate: ActionCoordinate::Configurable {
+                uses_pattern: "astral-sh/setup-uv".parse().unwrap(),
+                control: ControlExpr::any([
+                    // Regardless of the version, setting `enable-cache: true`
+                    // always explicitly enables the cache.
                     ControlExpr::field(
                         Toggle::OptIn,
                         "enable-cache",
-                        ControlFieldType::Boolean,
-                        true,
+                        ControlFieldType::Exact(&["true"]),
+                        false,
                     ),
+                    // For setup-uv below v10, any boolishly true `enable-cache`
+                    // (including `enable-cache: auto`) is considered to enable the cache.
+                    // This is slightly imprecise since `auto` actually disables the cache
+                    // on self-hosted runners, but we don't have a good static way to
+                    // detect those at the moment.
+                    ControlExpr::all([
+                        ControlExpr::VersionBound(VersionBound::LessThan(
+                            Version::parse("v10").unwrap(),
+                        )),
+                        ControlExpr::field(
+                            Toggle::OptIn,
+                            "enable-cache",
+                            ControlFieldType::Boolean,
+                            true,
+                        ),
+                    ]),
                 ]),
-            ]),
+            },
+            fix: Some(CacheFix {
+                field_name: "enable-cache",
+                field_value: false,
+            }),
         },
         // https://github.com/Swatinem/rust-cache/blob/master/action.yml
         ActionCoordinate::Configurable {
@@ -141,7 +197,8 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 ControlFieldType::Boolean,
                 true,
             ),
-        },
+        }
+        .into(),
         // https://github.com/ruby/setup-ruby/blob/master/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "ruby/setup-ruby".parse().unwrap(),
@@ -151,12 +208,14 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 ControlFieldType::Boolean,
                 false,
             ),
-        },
+        }
+        .into(),
         // https://github.com/PyO3/maturin-action/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "PyO3/maturin-action".parse().unwrap(),
             control: ControlExpr::field(Toggle::OptIn, "sccache", ControlFieldType::Boolean, false),
-        },
+        }
+        .into(),
         // https://github.com/mlugg/setup-zig/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "mlugg/setup-zig".parse().unwrap(),
@@ -166,7 +225,8 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 ControlFieldType::Boolean,
                 true,
             ),
-        },
+        }
+        .into(),
         // https://github.com/oven-sh/setup-bun/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "oven-sh/setup-bun".parse().unwrap(),
@@ -176,7 +236,8 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 ControlFieldType::Boolean,
                 true,
             ),
-        },
+        }
+        .into(),
         // https://github.com/DeterminateSystems/magic-nix-cache-action/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "DeterminateSystems/magic-nix-cache-action".parse().unwrap(),
@@ -186,7 +247,8 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 ControlFieldType::Boolean,
                 true,
             ),
-        },
+        }
+        .into(),
         // https://github.com/graalvm/setup-graalvm/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "graalvm/setup-graalvm".parse().unwrap(),
@@ -196,7 +258,8 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 ControlFieldType::FreeString,
                 false,
             ),
-        },
+        }
+        .into(),
         // https://github.com/gradle/actions/blob/main/setup-gradle/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "gradle/actions/setup-gradle".parse().unwrap(),
@@ -206,7 +269,8 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 ControlFieldType::Boolean,
                 true,
             ),
-        },
+        }
+        .into(),
         // https://github.com/docker/setup-buildx-action/blob/master/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "docker/setup-buildx-action".parse().unwrap(),
@@ -224,21 +288,24 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                     false,
                 ),
             ]),
-        },
+        }
+        .into(),
         // https://github.com/actions-rust-lang/setup-rust-toolchain/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "actions-rust-lang/setup-rust-toolchain".parse().unwrap(),
             control: ControlExpr::field(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
-        },
+        }
+        .into(),
         // https://github.com/Mozilla-Actions/sccache-action/blob/main/action.yml
-        ActionCoordinate::NotConfigurable("Mozilla-Actions/sccache-action".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("Mozilla-Actions/sccache-action".parse().unwrap()).into(),
         // https://github.com/nix-community/cache-nix-action/blob/main/action.yml
-        ActionCoordinate::NotConfigurable("nix-community/cache-nix-action".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("nix-community/cache-nix-action".parse().unwrap()).into(),
         // https://github.com/jdx/mise-action/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "jdx/mise-action".parse().unwrap(),
             control: ControlExpr::field(Toggle::OptIn, "cache", ControlFieldType::Boolean, true),
-        },
+        }
+        .into(),
         // https://github.com/ramsey/composer-install/blob/v3/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "ramsey/composer-install".parse().unwrap(),
@@ -248,9 +315,11 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock::ne
                 field_type: ControlFieldType::Exact(&["yes", "true", "1"]),
                 satisfied_by_default: true,
             },
-        },
+        }
+        .into(),
         // https://github.com/awalsh128/cache-apt-pkgs-action/blob/master/action.yml
-        ActionCoordinate::NotConfigurable("awalsh128/cache-apt-pkgs-action".parse().unwrap()),
+        ActionCoordinate::NotConfigurable("awalsh128/cache-apt-pkgs-action".parse().unwrap())
+            .into(),
     ]
 });
 
@@ -488,83 +557,37 @@ impl CachePoisoning {
     fn evaluate_cache_usage<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
-    ) -> Option<(&'static ActionCoordinate, Usage)> {
+    ) -> Option<(&'static CacheAwareAction, Usage)> {
         KNOWN_CACHE_AWARE_ACTIONS
             .iter()
-            .find_map(|coord| coord.usage(step).map(|usage| (coord, usage)))
+            .find_map(|action| action.coordinate.usage(step).map(|usage| (action, usage)))
     }
 
     fn create_cache_disable_fix<'doc>(
         &self,
-        coord: &ActionCoordinate,
+        action: &CacheAwareAction,
         step: &Step<'doc>,
     ) -> Option<Fix<'doc>> {
-        match coord {
-            ActionCoordinate::NotConfigurable(_pattern) => {
-                // For non-configurable actions, we can't provide automatic fixes
-                None
-            }
-            ActionCoordinate::Configurable {
-                uses_pattern,
-                control,
-            } => self.create_configurable_action_fix(uses_pattern, control, step),
-        }
-    }
+        let CacheFix {
+            field_name,
+            field_value,
+        } = action.fix.as_ref()?;
 
-    fn create_configurable_action_fix<'doc>(
-        &self,
-        _uses_pattern: &crate::models::uses::RepositoryUsesPattern,
-        control: &ControlExpr,
-        step: &Step<'doc>,
-    ) -> Option<Fix<'doc>> {
-        match control {
-            ControlExpr::Field {
-                toggle,
-                field_name,
-                field_type,
-                ..
-            } => {
-                let (field_value, title, _description) = match (toggle, field_type) {
-                    (Toggle::OptOut, ControlFieldType::Boolean) => (
-                        yaml_serde::Value::Bool(true),
-                        format!("Set {field_name}: true to disable caching"),
-                        format!(
-                            "Set '{field_name}' to 'true' to disable cache writes in this publishing workflow."
-                        ),
-                    ),
-                    (Toggle::OptIn, ControlFieldType::Boolean) => (
-                        yaml_serde::Value::Bool(false),
-                        format!("Set {field_name}: false to disable caching"),
-                        format!(
-                            "Set '{field_name}' to 'false' to disable caching in this publishing workflow."
-                        ),
-                    ),
-                    // String control fields are action-specific and we can't reliably know
-                    // what value disables caching (e.g., setup-node expects '' not 'false')
-                    (Toggle::OptIn, _) | (Toggle::OptOut, _) => {
-                        return None;
-                    }
-                };
-
-                Some(Fix {
-                    title,
-                    key: step.location().key,
-                    disposition: FixDisposition::default(),
-                    patches: vec![Patch {
-                        route: step.route(),
-                        operation: Op::MergeInto {
-                            key: "with".to_string(),
-                            updates: IndexMap::from([(field_name.to_string(), field_value)]),
-                        },
-                    }],
-                })
-            }
-            // For version bounds and complex control expressions (All/Any/Not), don't provide automatic fixes for now
-            ControlExpr::VersionBound(_)
-            | ControlExpr::All(_)
-            | ControlExpr::Any(_)
-            | ControlExpr::Not(_) => None,
-        }
+        Some(Fix {
+            title: format!("Set {field_name}: {field_value} to disable caching"),
+            key: step.location().key,
+            disposition: FixDisposition::default(),
+            patches: vec![Patch {
+                route: step.route(),
+                operation: Op::MergeInto {
+                    key: "with".to_string(),
+                    updates: IndexMap::from([(
+                        field_name.to_string(),
+                        yaml_serde::Value::Bool(*field_value),
+                    )]),
+                },
+            }],
+        })
     }
 
     /// Apply heuristics to a [`Usage::Conditional`] to attempt to refine it into
@@ -618,9 +641,10 @@ impl CachePoisoning {
         step: &Step<'doc>,
         scenario: &PublishingScenario<'doc>,
     ) -> Result<Option<Finding<'doc>>, AuditError> {
-        let Some((coord, cache_usage)) = self.evaluate_cache_usage(step) else {
+        let Some((action, cache_usage)) = self.evaluate_cache_usage(step) else {
             return Ok(None);
         };
+        let coord = &action.coordinate;
 
         let cache_usage = if matches!(&cache_usage, Usage::Conditional(_)) {
             self.conditional_cache_usage_heuristics(coord, step, scenario, cache_usage)
@@ -752,7 +776,7 @@ impl CachePoisoning {
         finding_builder = finding_builder.add_location(step.location().hidden());
 
         // Add fix if available
-        if let Some(fix) = self.create_cache_disable_fix(coord, step) {
+        if let Some(fix) = self.create_cache_disable_fix(action, step) {
             finding_builder = finding_builder.fix(fix);
         }
 
