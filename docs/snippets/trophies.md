@@ -788,6 +788,14 @@
         - dependabot/dependabot-core#13531
 
 
+-   ![](https://github.com/DependencyTrack.png?size=40){ width="40" loading=lazy align=left } DependencyTrack
+
+    ---
+
+    ??? example "Examples"
+        - DependencyTrack/dependency-track#7008
+
+
 -   ![](https://github.com/developmentseed.png?size=40){ width="40" loading=lazy align=left } developmentseed
 
     ---
@@ -1780,6 +1788,14 @@
         - langfuse/langfuse-python#1623
 
 
+-   ![](https://github.com/LedgerHQ.png?size=40){ width="40" loading=lazy align=left } LedgerHQ
+
+    ---
+
+    ??? example "Examples"
+        - LedgerHQ/ledger-live#20757
+
+
 -   ![](https://github.com/lemon24.png?size=40){ width="40" loading=lazy align=left } lemon24
 
     ---
@@ -1949,6 +1965,14 @@
 
     ??? example "Examples"
         - meltano/meltano#9972
+
+
+-   ![](https://github.com/meta-pytorch.png?size=40){ width="40" loading=lazy align=left } meta-pytorch
+
+    ---
+
+    ??? example "Examples"
+        - meta-pytorch/attention-gym#324
 
 
 -   ![](https://github.com/metabrainz.png?size=40){ width="40" loading=lazy align=left } metabrainz
@@ -2189,6 +2213,14 @@
         - NetApp/harvest#3247
 
 
+-   ![](https://github.com/neuvector.png?size=40){ width="40" loading=lazy align=left } neuvector
+
+    ---
+
+    ??? example "Examples"
+        - neuvector/neuvector#2719
+
+
 -   ![](https://github.com/nextcloud.png?size=40){ width="40" loading=lazy align=left } nextcloud
 
     ---
@@ -2301,6 +2333,14 @@
 
     ??? example "Examples"
         - onyx-dot-app/onyx#6344
+
+
+-   ![](https://github.com/open-circle.png?size=40){ width="40" loading=lazy align=left } open-circle
+
+    ---
+
+    ??? example "Examples"
+        - open-circle/valibot#1589
 
 
 -   ![](https://github.com/open-edge-platform.png?size=40){ width="40" loading=lazy align=left } open-edge-platform
@@ -2434,6 +2474,14 @@
         - oxigraph/oxigraph#1728
 
 
+-   ![](https://github.com/pablosnt.png?size=40){ width="40" loading=lazy align=left } pablosnt
+
+    ---
+
+    ??? example "Examples"
+        - pablosnt/rekono#299
+
+
 -   ![](https://github.com/pallets.png?size=40){ width="40" loading=lazy align=left } pallets
 
     ---
@@ -2514,6 +2562,14 @@
 
     ??? example "Examples"
         - pnpm/pnpm#11608
+
+
+-   ![](https://github.com/podman-container-tools.png?size=40){ width="40" loading=lazy align=left } podman-container-tools
+
+    ---
+
+    ??? example "Examples"
+        - podman-container-tools/skopeo#2952
 
 
 -   ![](https://github.com/PowerDNS.png?size=40){ width="40" loading=lazy align=left } PowerDNS
@@ -2892,6 +2948,7 @@
     ---
 
     ??? example "Examples"
+        - reubeno/brush#1289
         - reubeno/brush#534
         - reubeno/brush#535
 
@@ -2976,6 +3033,14 @@
     ??? example "Examples"
         - rubysec/bundler-audit#424
         - rubysec/ruby-advisory-db#1064
+
+
+-   ![](https://github.com/runtimeverification.png?size=40){ width="40" loading=lazy align=left } runtimeverification
+
+    ---
+
+    ??? example "Examples"
+        - runtimeverification/evm-semantics#2878
 
 
 -   ![](https://github.com/rust-bitcoin.png?size=40){ width="40" loading=lazy align=left } rust-bitcoin
@@ -3075,6 +3140,14 @@
 
     ??? example "Examples"
         - savonrb/savon@1cb9ad4311e7ed1f59dbdb0b48ad677016a0a875
+
+
+-   ![](https://github.com/SBoudrias.png?size=40){ width="40" loading=lazy align=left } SBoudrias
+
+    ---
+
+    ??? example "Examples"
+        - SBoudrias/Inquirer.js#2232
 
 
 -   ![](https://github.com/scientific-python.png?size=40){ width="40" loading=lazy align=left } scientific-python
@@ -3276,6 +3349,14 @@
 
     ??? example "Examples"
         - stx-labs/clarinet#2281
+
+
+-   ![](https://github.com/sunpy.png?size=40){ width="40" loading=lazy align=left } sunpy
+
+    ---
+
+    ??? example "Examples"
+        - sunpy/sunpy#8745
 
 
 -   ![](https://github.com/super-linter.png?size=40){ width="40" loading=lazy align=left } super-linter
@@ -3489,6 +3570,14 @@
         - triggerdotdev/trigger.dev#3506
 
 
+-   ![](https://github.com/trinodb.png?size=40){ width="40" loading=lazy align=left } trinodb
+
+    ---
+
+    ??? example "Examples"
+        - trinodb/trino#30556
+
+
 -   ![](https://github.com/TritonVM.png?size=40){ width="40" loading=lazy align=left } TritonVM
 
     ---
@@ -3611,6 +3700,14 @@
 
     ??? example "Examples"
         - ViaVersion/ViaVersion#4315
+
+
+-   ![](https://github.com/ViewComponent.png?size=40){ width="40" loading=lazy align=left } ViewComponent
+
+    ---
+
+    ??? example "Examples"
+        - ViewComponent/view_component#2678
 
 
 -   ![](https://github.com/vitejs.png?size=40){ width="40" loading=lazy align=left } vitejs

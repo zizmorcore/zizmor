@@ -177,6 +177,7 @@ deltachat/deltachat-core-rust#6539
 deltachat/deltachat-desktop#6307
 deltachat/deltachat-desktop#6308
 dependabot/dependabot-core#13531
+DependencyTrack/dependency-track#7008
 developmentseed/titiler#1354
 Diaoul/subliminal#1190
 digitalbazaar/pyld#211
@@ -371,6 +372,7 @@ labd/nextjs-basic-auth-middleware#44
 langfuse/langfuse#13048
 langfuse/langfuse-js#783
 langfuse/langfuse-python#1623
+LedgerHQ/ledger-live#20757
 lemon24/reader@01bbe67e5722e373c62a108c3685c443042ee901
 libexpat/libexpat#1308
 libssh2/libssh2#1609
@@ -402,6 +404,7 @@ mbta/api#1048
 mccutchen/go-httpbin#252
 medic/cht-core#10559
 meltano/meltano#9972
+meta-pytorch/attention-gym#324
 metabrainz/listenbrainz-server#3778
 metabrainz/musicbrainz-server#3777
 MeteorDevelopment/meteor-client#5091
@@ -444,6 +447,7 @@ nedbat/coveragepy@675c2f8c6c36771c85929ac9e1190b13e0269344
 neocmakelsp/neocmakelsp#216
 neovim/neovim#38230
 NetApp/harvest#3247
+neuvector/neuvector#2719
 nextcloud/.github#477
 nextcloud/news#3560
 nextcloud/user_saml#947
@@ -467,6 +471,7 @@ onnx/onnxmltools#763
 onnx/optimizer#300
 onnx/tensorflow-onnx#2456
 onyx-dot-app/onyx#6344
+open-circle/valibot#1589
 open-edge-platform/geti#162
 open-edge-platform/geti-sdk#603
 open-policy-agent/opa#8356
@@ -493,6 +498,7 @@ oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
 oxc-project/oxc-resolver#373
 oxigraph/oxigraph#1728
+pablosnt/rekono#299
 pallets/click#3304
 pallets/flask#5945
 pallets/werkzeug#3150
@@ -505,6 +511,7 @@ philips-software/amp-devcontainer#830
 php/pie#634
 PlasmaPy/PlasmaPy#2975
 pnpm/pnpm#11608
+podman-container-tools/skopeo#2952
 PowerDNS/pdns#15600
 powersync-ja/powersync.dart#416
 praetorian-inc/noseyparker#228
@@ -582,6 +589,7 @@ RediSearch/RediSearch#10654
 redux-saga/redux-saga#2771
 renovatebot/github-action#1025
 renovatebot/renovate#42346
+reubeno/brush#1289
 reubeno/brush#534
 reubeno/brush#535
 rkyv/rkyv#611
@@ -596,6 +604,7 @@ rubygems/rubygems#8702
 rubygems/rubygems.org#5350
 rubysec/bundler-audit#424
 rubysec/ruby-advisory-db#1064
+runtimeverification/evm-semantics#2878
 rust-bitcoin/rust-bitcoin#5234
 rust-lang/bors#732
 rust-lang/compiler-builtins#1113
@@ -618,6 +627,7 @@ SAP/ai-sdk-js#1822
 SAP/cloud-sdk-js#6564
 sass/dart-sass#2792
 savonrb/savon@1cb9ad4311e7ed1f59dbdb0b48ad677016a0a875
+SBoudrias/Inquirer.js#2232
 scientific-python/repo-review#257
 scikit-build/scikit-build-core#983
 scikit-image/scikit-image#7662
@@ -658,6 +668,7 @@ stravalib/stravalib#648
 stravalib/stravalib#649
 strawberry-graphql/strawberry#4097
 stx-labs/clarinet#2281
+sunpy/sunpy#8745
 super-linter/super-linter#7241
 Swatinem/rust-cache#262
 symfony/symfony#64325
@@ -701,6 +712,7 @@ trifectatechfoundation/sudo-rs#1488
 trifectatechfoundation/sudo-rs#1490
 trifectatechfoundation/teach-rs#162
 triggerdotdev/trigger.dev#3506
+trinodb/trino#30556
 TritonVM/triton-vm@670907d4bfe9b70d160c78403cd0ad1fb16757e8
 tstyche/tstyche@477b8b9c52f59c141918e1c164ad59644d64f81f
 TypeCellOS/BlockNote#2764
@@ -720,6 +732,7 @@ updatecli/updatecli#7865
 urllib3/urllib3#3528
 uutils/coreutils#6973
 ViaVersion/ViaVersion#4315
+ViewComponent/view_component#2678
 vitejs/vite#22442
 vitejs/vite-ecosystem-ci#469
 vitejs/vite-plugin-basic-ssl#113
