@@ -37,7 +37,8 @@ static REF_TYPE_TAG_PUSH_GUARD: LazyLock<Expr> = LazyLock::new(|| {
 });
 
 enum CacheFixStrategy {
-    /// Infer a fix from a simple top-level control field.
+    /// Infer a fix. At the moment, the only inferrable fixes are for [`ActionCoordinate`]s
+    /// that only have a single top-level control field.
     Infer,
     /// Disable caching by setting a boolean action input explicitly.
     SetBooleanInput {
@@ -54,6 +55,8 @@ struct CacheAwareAction {
 impl From<ActionCoordinate> for CacheAwareAction {
     fn from(coordinate: ActionCoordinate) -> Self {
         let fix_strategy = if matches!(&coordinate, ActionCoordinate::Configurable { .. }) {
+            // For now, we only consider a fix inferrable if the coordinate has a single
+            // top-level control field, i.e. is not logically qualified at all.
             Some(CacheFixStrategy::Infer)
         } else {
             // No automatic fix is available for this action.
