@@ -561,10 +561,9 @@ impl CachePoisoning {
                     // For non-configurable actions, we can't provide automatic fixes
                     None
                 }
-                ActionCoordinate::Configurable {
-                    uses_pattern,
-                    control,
-                } => self.create_configurable_action_fix(uses_pattern, control, step),
+                ActionCoordinate::Configurable { control, .. } => {
+                    self.create_configurable_action_fix(control, step)
+                }
             },
             CacheFixStrategy::SetBooleanInput {
                 field_name,
@@ -600,7 +599,6 @@ impl CachePoisoning {
 
     fn create_configurable_action_fix<'doc>(
         &self,
-        _uses_pattern: &crate::models::uses::RepositoryUsesPattern,
         control: &ControlExpr,
         step: &Step<'doc>,
     ) -> Option<Fix<'doc>> {
@@ -611,20 +609,14 @@ impl CachePoisoning {
                 field_type,
                 ..
             } => {
-                let (field_value, title, _description) = match (toggle, field_type) {
+                let (field_value, title) = match (toggle, field_type) {
                     (Toggle::OptOut, ControlFieldType::Boolean) => (
                         yaml_serde::Value::Bool(true),
                         format!("Set {field_name}: true to disable caching"),
-                        format!(
-                            "Set '{field_name}' to 'true' to disable cache writes in this publishing workflow."
-                        ),
                     ),
                     (Toggle::OptIn, ControlFieldType::Boolean) => (
                         yaml_serde::Value::Bool(false),
                         format!("Set {field_name}: false to disable caching"),
-                        format!(
-                            "Set '{field_name}' to 'false' to disable caching in this publishing workflow."
-                        ),
                     ),
                     // String control fields are action-specific and we can't reliably know
                     // what value disables caching (e.g., setup-node expects '' not 'false')
