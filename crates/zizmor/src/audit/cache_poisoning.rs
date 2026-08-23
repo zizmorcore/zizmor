@@ -589,11 +589,7 @@ impl CachePoisoning {
             } => (*field_name, *field_value),
         };
 
-        Some(Self::create_input_fix(step, field_name, field_value))
-    }
-
-    fn create_input_fix<'doc>(step: &Step<'doc>, field_name: &str, field_value: bool) -> Fix<'doc> {
-        Fix {
+        Some(Fix {
             title: format!("Set {field_name}: {field_value} to disable caching"),
             key: step.location().key,
             disposition: FixDisposition::default(),
@@ -607,7 +603,7 @@ impl CachePoisoning {
                     )]),
                 },
             }],
-        }
+        })
     }
 
     /// Apply heuristics to a [`Usage::Conditional`] to attempt to refine it into
