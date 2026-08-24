@@ -72,7 +72,10 @@ impl UnpinnedUses {
         // Resolve the commit back to its longest tag; pinning to the full
         // version avoids any later `ref-version-mismatch` findings when the
         // major tag is mutated by the upstream.
-        let longest_tag = match client.longest_tag_for_commit(&uses.into(), &commit).await {
+        let longest_tag = match client
+            .longest_tag_for_commit(&uses.into(), &commit.commit())
+            .await
+        {
             Ok(Some(tag)) => Cow::Owned(tag.name),
             // Our original tag -> commit lookup succeeded, but this reverse lookup
             // failed, which makes no sense. Just fall back to what we know.
@@ -89,13 +92,15 @@ impl UnpinnedUses {
         // 1. `uses: foo/bar@ref` -> `uses: foo/bar@hashhashhash`
         // 2. A `# <ref>` comment following the `uses:` clause.
         Some(Fix {
-            title: format!("pin {action}@{ref} to {commit}", ref = uses.git_ref()),
+            title: format!("pin {action}@{ref} to {commit}", ref = uses.git_ref(), commit = commit.commit()),
             key: parent.location().key,
             disposition: Default::default(),
             patches: vec![
                 Patch {
                     route: parent.route().with_key("uses"),
-                    operation: Op::Replace(format!("{action}@{commit}").into()),
+                    operation: Op::Replace(
+                        format!("{action}@{commit}", commit = commit.commit()).into(),
+                    ),
                 },
                 Patch {
                     route: parent.route().with_key("uses"),

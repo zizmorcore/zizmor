@@ -246,6 +246,35 @@ struct RemoteHead {
     oid: String,
 }
 
+/// A branch ("head") or tag reference.
+pub(crate) enum Ref {
+    Branch(Branch),
+    Tag(Tag),
+}
+
+impl Ref {
+    pub(crate) fn kind(&self) -> &'static str {
+        match self {
+            Ref::Branch(_) => "branch",
+            Ref::Tag(_) => "tag",
+        }
+    }
+
+    pub(crate) fn name(&self) -> &str {
+        match self {
+            Ref::Branch(branch) => &branch.name,
+            Ref::Tag(tag) => &tag.name,
+        }
+    }
+
+    pub(crate) fn commit(&self) -> &str {
+        match self {
+            Ref::Branch(branch) => &branch.commit.sha,
+            Ref::Tag(tag) => &tag.commit.sha,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
@@ -530,12 +559,13 @@ impl Client {
             .any(|tag_ref| tag_ref.name == tag))
     }
 
+    // TODO: Rename to `lookup_ref`.
     #[instrument(skip(self))]
     pub(crate) async fn commit_for_ref(
         &self,
         slug: &Slug<'_>,
         git_ref: &str,
-    ) -> Result<Option<String>, ClientError> {
+    ) -> Result<Option<Ref>, ClientError> {
         let branches = self.list_branches_internal(slug).await?;
         let tags = self.list_tags_internal(slug).await?;
 
@@ -544,13 +574,13 @@ impl Client {
         // GitHub Actions resolves branches before tags.
         for branch in branches {
             if branch.name == git_ref {
-                return Ok(Some(branch.commit.sha));
+                return Ok(Some(Ref::Branch(branch)));
             }
         }
 
         for tag in tags {
             if tag.name == git_ref {
-                return Ok(Some(tag.commit.sha));
+                return Ok(Some(Ref::Tag(tag)));
             }
         }
 
