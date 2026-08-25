@@ -255,22 +255,22 @@ pub(crate) enum Ref {
 impl Ref {
     pub(crate) fn kind(&self) -> &'static str {
         match self {
-            Ref::Branch(_) => "branch",
-            Ref::Tag(_) => "tag",
+            Self::Branch(_) => "branch",
+            Self::Tag(_) => "tag",
         }
     }
 
     pub(crate) fn name(&self) -> &str {
         match self {
-            Ref::Branch(branch) => &branch.name,
-            Ref::Tag(tag) => &tag.name,
+            Self::Branch(branch) => &branch.name,
+            Self::Tag(tag) => &tag.name,
         }
     }
 
     pub(crate) fn commit(&self) -> &str {
         match self {
-            Ref::Branch(branch) => &branch.commit.sha,
-            Ref::Tag(tag) => &tag.commit.sha,
+            Self::Branch(branch) => &branch.commit.sha,
+            Self::Tag(tag) => &tag.commit.sha,
         }
     }
 }
