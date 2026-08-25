@@ -153,7 +153,7 @@ impl RefVersionMismatch {
 
         let commit_for_ref = self
             .client
-            .commit_for_ref(&uses.into(), version_from_comment)
+            .lookup_ref(&uses.into(), version_from_comment)
             .await
             .map_err(Self::err)?;
 

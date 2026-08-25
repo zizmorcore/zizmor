@@ -62,7 +62,7 @@ impl KnownVulnerableActions {
             version if !repo_ref.ref_is_commit() => {
                 let Some(commit_ref) = self
                     .client
-                    .commit_for_ref(&slug, version)
+                    .lookup_ref(&slug, version)
                     .await
                     .map_err(Self::err)?
                 else {
@@ -182,13 +182,13 @@ impl KnownVulnerableActions {
 
                 let target_ref = match self
                     .client
-                    .commit_for_ref(&uses.into(), &prefixed_version)
+                    .lookup_ref(&uses.into(), &prefixed_version)
                     .await
                 {
                     Ok(Some(commit_ref)) => Some(commit_ref),
                     Ok(None) | Err(_) => self
                         .client
-                        .commit_for_ref(&uses.into(), &bare_version)
+                        .lookup_ref(&uses.into(), &bare_version)
                         .await
                         .map_err(Self::err)?,
                 }

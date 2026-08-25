@@ -53,7 +53,7 @@ impl UnpinnedUses {
             return None;
         }
 
-        let commit = match client.commit_for_ref(&uses.into(), uses.git_ref()).await {
+        let commit = match client.lookup_ref(&uses.into(), uses.git_ref()).await {
             Ok(Some(commit)) => commit,
             Ok(None) => {
                 tracing::warn!("no commit matching {uses}");

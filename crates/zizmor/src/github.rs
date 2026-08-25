@@ -559,9 +559,15 @@ impl Client {
             .any(|tag_ref| tag_ref.name == tag))
     }
 
-    // TODO: Rename to `lookup_ref`.
+    /// Look up a Git reference, returning it if it exists.
+    ///
+    /// This returns a [`Ref`], which contains (1) the _kind_ of reference,
+    /// and (2) the inner referent, i.e. the commit that the reference points to.
+    ///
+    /// Note that this API uses GitHub's own precedence rule for tags versus branches;
+    /// branches are always given precedence over tags with the same name.
     #[instrument(skip(self))]
-    pub(crate) async fn commit_for_ref(
+    pub(crate) async fn lookup_ref(
         &self,
         slug: &Slug<'_>,
         git_ref: &str,
