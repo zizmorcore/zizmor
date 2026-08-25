@@ -12,9 +12,51 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  whops:
-    name: whops
+  # OK : decommissioned gh runners are not self-hosted
+  decommissioned-runner:
+    name: decommissioned-runner
+    runs-on: ubuntu-20.04
+
+    steps:
+      - run: echo "hello from a deprecated runner"
+
+  # OK : classic sentinel label
+  sentinel-label:
+    name: sentinel-label
     runs-on: [self-hosted, my-ubuntu-box]
 
     steps:
       - run: echo "hello from a self-hosted runner"
+
+  # NOT OK : self-hosted runner was included through config
+  well-known-self-hosted-runner:
+    name: well-known-self-hosted-runner
+    runs-on: ubuntu-xxx
+
+    steps:
+      - run: echo "hello from ubuntu-xxx"
+
+  # OK : Github Larger Runners Group was included through config
+  well-known-runner-group:
+    name: well-known-self-hosted-runner
+    runs-on:
+      group: ubuntu-large-runners
+
+    steps:
+      - run: echo "hello from ubuntu-xxx"
+
+  # OK : same expressions as issue-22-repro
+  expressions-1:
+    name: expressions
+    runs-on: ${{ github.repository_owner == 'python' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}
+
+    steps:
+      - run: echo "hello from runner
+
+  # OK : flags with low confidence, one of the leafs is a function
+  expressions-2:
+    name: expressions
+    runs-on: ${{ github.repository_owner == 'my-org' && fromJSON('["self-hosted","my-linux"]') || 'ubuntu-26.04' }}
+
+    steps:
+      - run: echo "hello from runner"

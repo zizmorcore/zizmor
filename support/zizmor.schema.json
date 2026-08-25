@@ -322,7 +322,7 @@
           "$ref": "#/definitions/SecretsOutsideEnvRuleConfig"
         },
         "self-hosted-runner": {
-          "$ref": "#/definitions/BaseRuleConfig"
+          "$ref": "#/definitions/SelfHostedRunnerRuleConfig"
         },
         "self-repository": {
           "$ref": "#/definitions/BaseRuleConfig"
@@ -392,6 +392,70 @@
           "anyOf": [
             {
               "$ref": "#/definitions/SecretsOutsideEnvConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disable": {
+          "type": "boolean",
+          "default": false
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkflowRule"
+          }
+        },
+        "remap": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RemapConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "SelfHostedRunnerConfig": {
+      "description": "Configuration for the `self-hosted-runner` audit.",
+      "type": "object",
+      "properties": {
+        "exclude-groups": {
+          "description": "Any Runner Groups the user wants to avoid being flagged,\nusually Runner Groups for Github Large Runners",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "include-runners": {
+          "description": "Additional runner labels the user want to flag as self-hosted",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "include-runners",
+        "exclude-groups"
+      ]
+    },
+    "SelfHostedRunnerRuleConfig": {
+      "description": "Configuration for the `self-hosted-runner` audit.",
+      "type": "object",
+      "properties": {
+        "config": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SelfHostedRunnerConfig"
             },
             {
               "type": "null"

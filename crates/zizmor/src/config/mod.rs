@@ -18,6 +18,7 @@ use thiserror::Error;
 #[cfg(feature = "schema")]
 pub mod schema;
 
+use crate::audit::self_hosted_runner::SelfHostedRunner;
 use crate::{
     App, CollectionOptions,
     audit::{
@@ -263,6 +264,18 @@ impl Deref for ForbiddenUsesConfig {
     }
 }
 
+/// Configuration for the `self-hosted-runner` audit.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub(crate) struct SelfHostedRunnerConfig {
+    /// Additional runner labels the user want to flag as self-hosted
+    pub(crate) include_runners: HashSet<String>,
+    /// Any Runner Groups the user wants to avoid being flagged,
+    /// usually Runner Groups for Github Large Runners
+    pub(crate) exclude_groups: HashSet<String>,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
@@ -492,6 +505,7 @@ pub(crate) struct Config {
     pub(crate) secrets_outside_env_policy: SecretsOutsideEnvPolicy,
     pub(crate) unpinned_uses_policies: UnpinnedUsesPolicies,
     pub(crate) known_vulnerable_actions_config: KnownVulnerableActionsConfig,
+    pub(crate) self_hosted_runner_config: SelfHostedRunnerConfig,
 }
 
 impl Config {
@@ -525,6 +539,10 @@ impl Config {
             .rule_config::<KnownVulnerableActionsConfig>(KnownVulnerableActions::ident())?
             .unwrap_or_default();
 
+        let self_hosted_runner_config = raw
+            .rule_config::<SelfHostedRunnerConfig>(SelfHostedRunner::ident())?
+            .unwrap_or_default();
+
         Ok(Self {
             raw,
             dependabot_cooldown_config,
@@ -532,6 +550,7 @@ impl Config {
             secrets_outside_env_policy,
             unpinned_uses_policies,
             known_vulnerable_actions_config,
+            self_hosted_runner_config,
         })
     }
 

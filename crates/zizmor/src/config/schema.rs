@@ -13,7 +13,7 @@ use schemars::JsonSchema;
 
 use super::{
     DependabotCooldownConfig, ForbiddenUsesConfig, KnownVulnerableActionsConfig, RemapConfig,
-    SecretsOutsideEnvConfig, UnpinnedUsesConfig, WorkflowRule,
+    SecretsOutsideEnvConfig, SelfHostedRunnerConfig, UnpinnedUsesConfig, WorkflowRule,
 };
 
 /// Base configuration for all audit rules.
@@ -50,6 +50,17 @@ struct ForbiddenUsesRuleConfig {
 
     #[serde(default)]
     config: Option<ForbiddenUsesConfig>,
+}
+
+/// Configuration for the `self-hosted-runner` audit.
+#[derive(Clone, Debug, Default, JsonSchema)]
+#[serde(deny_unknown_fields)]
+struct SelfHostedRunnerRuleConfig {
+    #[serde(flatten)]
+    base: BaseRuleConfig,
+
+    #[serde(default)]
+    config: Option<SelfHostedRunnerConfig>,
 }
 
 /// Configuration for the `secrets-outside-env` audit.
@@ -115,7 +126,6 @@ define_audit_rules! {
     use_trusted_publishing,
     template_injection,
     hardcoded_container_credentials,
-    self_hosted_runner,
     undocumented_permissions,
     insecure_commands,
     github_env,
@@ -144,6 +154,7 @@ define_audit_rules! {
 
     [DependabotCooldownRuleConfig] dependabot_cooldown,
     [ForbiddenUsesRuleConfig] forbidden_uses,
+    [SelfHostedRunnerRuleConfig] self_hosted_runner,
     [SecretsOutsideEnvRuleConfig] secrets_outside_env,
     [UnpinnedUsesRuleConfig] unpinned_uses,
     [KnownVulnerableActionsRuleConfig] known_vulnerable_actions,
