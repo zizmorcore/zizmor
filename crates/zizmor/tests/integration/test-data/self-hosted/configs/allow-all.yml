@@ -1,0 +1,7 @@
+rules:
+  self-hosted-runner:
+    config:
+      include-runners:
+        - ubuntu-xxx
+      exclude-groups:
+        - ubuntu-large-runners
