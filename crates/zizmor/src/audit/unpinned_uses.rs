@@ -53,8 +53,8 @@ impl UnpinnedUses {
             return None;
         }
 
-        let commit = match client.lookup_ref(&uses.into(), uses.git_ref()).await {
-            Ok(Some(commit)) => commit,
+        let git_ref = match client.lookup_ref(&uses.into(), uses.git_ref()).await {
+            Ok(Some(git_ref)) => git_ref,
             Ok(None) => {
                 tracing::warn!("no commit matching {uses}");
                 return None;
@@ -73,7 +73,7 @@ impl UnpinnedUses {
         // version avoids any later `ref-version-mismatch` findings when the
         // major tag is mutated by the upstream.
         let longest_tag = match client
-            .longest_tag_for_commit(&uses.into(), commit.commit())
+            .longest_tag_for_commit(&uses.into(), git_ref.commit())
             .await
         {
             Ok(Some(tag)) => Cow::Owned(tag.name),
@@ -92,14 +92,14 @@ impl UnpinnedUses {
         // 1. `uses: foo/bar@ref` -> `uses: foo/bar@hashhashhash`
         // 2. A `# <ref>` comment following the `uses:` clause.
         Some(Fix {
-            title: format!("pin {action}@{ref} to {commit}", ref = uses.git_ref(), commit = commit.commit()),
+            title: format!("pin {action}@{ref} to {commit}", ref = uses.git_ref(), commit = git_ref.commit()),
             key: parent.location().key,
             disposition: Default::default(),
             patches: vec![
                 Patch {
                     route: parent.route().with_key("uses"),
                     operation: Op::Replace(
-                        format!("{action}@{commit}", commit = commit.commit()).into(),
+                        format!("{action}@{commit}", commit = git_ref.commit()).into(),
                     ),
                 },
                 Patch {

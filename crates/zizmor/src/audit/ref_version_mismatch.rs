@@ -151,14 +151,14 @@ impl RefVersionMismatch {
             }
         };
 
-        let commit_for_ref = self
+        let git_ref = self
             .client
             .lookup_ref(&uses.into(), version_from_comment)
             .await
             .map_err(Self::err)?;
 
         // If the ref matches, there's nothing to do.
-        if commit_for_ref.as_ref().map(|r| r.commit()) == Some(commit_sha) {
+        if git_ref.as_ref().map(|r| r.commit()) == Some(commit_sha) {
             return Ok(findings);
         }
 
@@ -167,7 +167,7 @@ impl RefVersionMismatch {
             version_from_comment,
         );
 
-        let comment_location = match commit_for_ref {
+        let comment_location = match git_ref {
             Some(commit_for_ref) => Location::new(
                 uses_location.symbolic.clone().primary().annotated(format!(
                     "{kind} points to commit {short_commit}",
