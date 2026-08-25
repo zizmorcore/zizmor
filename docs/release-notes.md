@@ -60,6 +60,9 @@ of `zizmor`.
 * Fixed a bug where the [cache-poisoning] audit would incorrectly flag
   newer @astral-sh/setup-uv versions that disable caching behavior automatically (#2330)
 
+* Fixed a bug where the [ref-version-mismatch] audit would produce a misleading
+  diagnostic when an action has overlapping branch and tag names (#2337)
+
 ## 1.29.0
 
 ### New Features 🌈
