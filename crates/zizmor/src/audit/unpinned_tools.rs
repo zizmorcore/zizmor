@@ -29,6 +29,15 @@ static KNOWN_UNPINNED_TOOLS_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock:
                 true,
             ),
         })
+        .chain([ActionCoordinate::Configurable {
+            uses_pattern: "extractions/setup-just".parse().unwrap(),
+            control: ControlExpr::field(
+                Toggle::OptIn,
+                "just-version",
+                ControlFieldType::Exact(&["*"]),
+                true,
+            ),
+        }])
         .collect()
 });
 
@@ -63,88 +72,82 @@ impl UnpinnedTools {
         };
 
         let finding = match usage {
-            Usage::Enabled(origins)
-                if origins.contains(&ControlOrigin::Default { field: "version" }) =>
-            {
-                Some(
-                    Self::finding()
-                        .confidence(Confidence::High)
-                        .severity(Severity::Medium)
-                        .add_location(
-                            step.location()
-                                .primary()
-                                .with_keys(["uses".into()])
-                                .subfeature(Subfeature::new(0, uses.raw()))
-                                .annotated("action implicitly uses an unpinned latest version"),
-                        ),
-                )
+            Usage::Enabled(origins) => {
+                if let Some(field) = origins.iter().find_map(|origin| match origin {
+                    ControlOrigin::Default { field } => Some(*field),
+                    _ => None,
+                }) {
+                    Some(
+                        Self::finding()
+                            .confidence(Confidence::High)
+                            .severity(Severity::Medium)
+                            .add_location(
+                                step.location()
+                                    .primary()
+                                    .with_keys(["uses".into()])
+                                    .subfeature(Subfeature::new(0, uses.raw()))
+                                    .annotated(format!(
+                                        "omitting `{field}` implicitly selects an unpinned tool version"
+                                    )),
+                            ),
+                    )
+                } else {
+                    origins
+                        .iter()
+                        .find_map(|origin| match origin {
+                            ControlOrigin::Input { field } => Some(*field),
+                            _ => None,
+                        })
+                        .map(|field| {
+                            Self::finding()
+                                .confidence(Confidence::High)
+                                .severity(Severity::Medium)
+                                .add_location(
+                                    step.location()
+                                        .with_keys(["uses".into()])
+                                        .subfeature(Subfeature::new(0, uses.raw()))
+                                        .annotated("this action"),
+                                )
+                                .add_location(
+                                    step.location()
+                                        .primary()
+                                        .with_keys(["with".into(), field.into()])
+                                        .annotated(format!("selects an unpinned tool version")),
+                                )
+                        })
+                }
             }
-            Usage::Enabled(origins)
-                if origins.contains(&ControlOrigin::Input { field: "version" }) =>
-            {
-                Some(
-                    Self::finding()
-                        .confidence(Confidence::High)
-                        .severity(Severity::Medium)
-                        .add_location(
-                            step.location()
-                                .with_keys(["uses".into()])
-                                .subfeature(Subfeature::new(0, uses.raw()))
-                                .annotated("this action"),
-                        )
-                        .add_location(
-                            step.location()
-                                .primary()
-                                .with_keys(["with".into(), "version".into()])
-                                .annotated("specifies `version: latest` which is unpinned"),
-                        ),
-                )
+            Usage::Conditional(origins) => {
+                if let Some(field) = origins.iter().find_map(|origin| match origin {
+                    ControlOrigin::Input { field } => Some(*field),
+                    _ => None,
+                }) {
+                    Some(
+                        Self::finding()
+                            .confidence(Confidence::Low)
+                            .severity(Severity::Medium)
+                            .add_location(
+                                step.location()
+                                    .with_keys(["uses".into()])
+                                    .subfeature(Subfeature::new(0, uses.raw()))
+                                    .annotated("this action"),
+                            )
+                            .add_location(
+                                step.location()
+                                    .primary()
+                                    .with_keys(["with".into(), field.into()])
+                                    .annotated(format!(
+                                        "`{field}` is dynamic, so the tool version may be unpinned"
+                                    )),
+                            ),
+                    )
+                } else {
+                    // We don't emit a finding if the entire `with` block
+                    // is an expression, since the `obfuscation` audit covers that.
+                    None
+                }
             }
-            Usage::Conditional(origins)
-                if origins.contains(&ControlOrigin::Input { field: "version" }) =>
-            {
-                Some(
-                    Self::finding()
-                        .confidence(Confidence::Low)
-                        .severity(Severity::Medium)
-                        .add_location(
-                            step.location()
-                                .with_keys(["uses".into()])
-                                .subfeature(Subfeature::new(0, uses.raw()))
-                                .annotated("this action"),
-                        )
-                        .add_location(
-                            step.location()
-                                .primary()
-                                .with_keys(["with".into(), "version".into()])
-                                .annotated(
-                                    "specifies `version` dynamically, which may be unpinned",
-                                ),
-                        ),
-                )
-            }
-            Usage::Conditional(origins) if origins.contains(&ControlOrigin::WithExpression) => {
-                Some(
-                    Self::finding()
-                        .confidence(Confidence::Low)
-                        .severity(Severity::Medium)
-                        .add_location(
-                            step.location()
-                                .with_keys(["uses".into()])
-                                .subfeature(Subfeature::new(0, uses.raw()))
-                                .annotated("this action"),
-                        )
-                        .add_location(
-                            step.location()
-                                .primary()
-                                .with_keys(["with".into()])
-                                .annotated(
-                                    "specifies `with` dynamically, so `version` may be unpinned",
-                                ),
-                        ),
-                )
-            }
-            Usage::Enabled(_) | Usage::Conditional(_) | Usage::Always => None,
+            Usage::Always => None,
         };
 
         if let Some(finding) = finding {
