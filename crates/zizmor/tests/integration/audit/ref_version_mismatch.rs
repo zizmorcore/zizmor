@@ -26,7 +26,7 @@ fn test_ref_version_mismatch() -> Result<()> {
       --> @@INPUT@@:25:77
        |
     25 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.1
-       |         -----------------------------------------------------------------   ^^^^^^ points to commit 5e21ff4d9bc1
+       |         -----------------------------------------------------------------   ^^^^^^ tag points to commit 5e21ff4d9bc1
        |         |
        |         is pointed to by tag v3.8.2
        |
@@ -94,7 +94,7 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
       --> @@INPUT@@:25:77
        |
     25 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.1
-       |         -----------------------------------------------------------------   ^^^^^^ points to commit 5e21ff4d9bc1
+       |         -----------------------------------------------------------------   ^^^^^^ tag points to commit 5e21ff4d9bc1
        |         |
        |         is pointed to by tag v3.8.2
        |
@@ -242,6 +242,37 @@ fn test_issue_2165() -> Result<()> {
             .input(input_under_test("ref-version-mismatch/issue-2165-repro.yml"))
             .run()?,
         @"No findings to report. Good job! (1 ignored, 1 suppressed)"
+    );
+
+    Ok(())
+}
+
+/// Bug #2321: comment diagnostic didn't specify the kind of reference,
+/// leading to a confusing "v1 does not match v1" render.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/2321>
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_issue_2321() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(NetworkMode::AssertOnline)
+            .input(input_under_test("ref-version-mismatch/issue-2321-repro.yml"))
+            .run()?,
+        @"
+    warning[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
+      --> @@INPUT@@:14:87
+       |
+    14 |         uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+       |         ---------------------------------------------------------------------------   ^^ branch points to commit 4d27395796ac
+       |         |
+       |         is pointed to by tag v1
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
+    "
     );
 
     Ok(())

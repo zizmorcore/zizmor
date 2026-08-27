@@ -246,6 +246,35 @@ struct RemoteHead {
     oid: String,
 }
 
+/// A branch ("head") or tag reference.
+pub(crate) enum Ref {
+    Branch(Branch),
+    Tag(Tag),
+}
+
+impl Ref {
+    pub(crate) fn kind(&self) -> &'static str {
+        match self {
+            Self::Branch(_) => "branch",
+            Self::Tag(_) => "tag",
+        }
+    }
+
+    pub(crate) fn name(&self) -> &str {
+        match self {
+            Self::Branch(branch) => &branch.name,
+            Self::Tag(tag) => &tag.name,
+        }
+    }
+
+    pub(crate) fn commit(&self) -> &str {
+        match self {
+            Self::Branch(branch) => &branch.commit.sha,
+            Self::Tag(tag) => &tag.commit.sha,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct Client {
     api_base: String,
@@ -530,12 +559,19 @@ impl Client {
             .any(|tag_ref| tag_ref.name == tag))
     }
 
+    /// Look up a Git reference, returning it if it exists.
+    ///
+    /// This returns a [`Ref`], which contains (1) the _kind_ of reference,
+    /// and (2) the inner referent, i.e. the commit that the reference points to.
+    ///
+    /// Note that this API uses GitHub's own precedence rule for tags versus branches;
+    /// branches are always given precedence over tags with the same name.
     #[instrument(skip(self))]
-    pub(crate) async fn commit_for_ref(
+    pub(crate) async fn lookup_ref(
         &self,
         slug: &Slug<'_>,
         git_ref: &str,
-    ) -> Result<Option<String>, ClientError> {
+    ) -> Result<Option<Ref>, ClientError> {
         let branches = self.list_branches_internal(slug).await?;
         let tags = self.list_tags_internal(slug).await?;
 
@@ -544,13 +580,13 @@ impl Client {
         // GitHub Actions resolves branches before tags.
         for branch in branches {
             if branch.name == git_ref {
-                return Ok(Some(branch.commit.sha));
+                return Ok(Some(Ref::Branch(branch)));
             }
         }
 
         for tag in tags {
             if tag.name == git_ref {
-                return Ok(Some(tag.commit.sha));
+                return Ok(Some(Ref::Tag(tag)));
             }
         }
 

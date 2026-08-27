@@ -62,7 +62,7 @@ impl KnownVulnerableActions {
             version if !repo_ref.ref_is_commit() => {
                 let Some(commit_ref) = self
                     .client
-                    .commit_for_ref(&slug, version)
+                    .lookup_ref(&slug, version)
                     .await
                     .map_err(Self::err)?
                 else {
@@ -73,7 +73,7 @@ impl KnownVulnerableActions {
 
                 match self
                     .client
-                    .longest_tag_for_commit(&slug, &commit_ref)
+                    .longest_tag_for_commit(&slug, commit_ref.commit())
                     .await
                     .map_err(Self::err)?
                 {
@@ -180,18 +180,17 @@ impl KnownVulnerableActions {
                 // We try the prefixed version first, since we expect it
                 // to be more common.
 
-                let (target_ref, target_commit) = match self
+                let target_ref = match self
                     .client
-                    .commit_for_ref(&uses.into(), &prefixed_version)
+                    .lookup_ref(&uses.into(), &prefixed_version)
                     .await
                 {
-                    Ok(Some(commit)) => Some((&prefixed_version, commit)),
+                    Ok(Some(commit_ref)) => Some(commit_ref),
                     Ok(None) | Err(_) => self
                         .client
-                        .commit_for_ref(&uses.into(), &bare_version)
+                        .lookup_ref(&uses.into(), &bare_version)
                         .await
-                        .map_err(Self::err)?
-                        .map(|commit| (&bare_version, commit)),
+                        .map_err(Self::err)?,
                 }
                 .ok_or_else(|| {
                     Self::err(anyhow!(
@@ -201,10 +200,16 @@ impl KnownVulnerableActions {
                     ))
                 })?;
 
-                let new_uses_value = format!("{uses_slug}@{target_commit}");
+                let new_uses_value = format!(
+                    "{uses_slug}@{target_commit}",
+                    target_commit = target_ref.commit()
+                );
 
                 Ok(Fix {
-                    title: format!("upgrade {uses_slug} to {target_ref}"),
+                    title: format!(
+                        "upgrade {uses_slug} to {target_ref}",
+                        target_ref = target_ref.name()
+                    ),
                     key: step.location().key,
                     disposition: Default::default(),
                     patches: vec![
@@ -215,7 +220,8 @@ impl KnownVulnerableActions {
                         Patch {
                             route: step.route().with_key("uses"),
                             operation: Op::ReplaceComment {
-                                new: format!("# {target_ref}").into(),
+                                new: format!("# {target_ref}", target_ref = target_ref.name())
+                                    .into(),
                             },
                         },
                     ],
