@@ -111,45 +111,35 @@ impl Artipacked {
                 continue;
             };
 
-            let is_checkout = uses.matches("actions/checkout");
-            let is_upload = uses.matches("actions/upload-artifact");
-            if !is_checkout && !is_upload {
-                continue;
-            }
-
-            let with = match with {
-                LoE::Literal(with) => with,
-                // Emit a blanket pedantic finding if a checkout's `with:` block cannot be
-                // analyzed. Other actions do not use `persist-credentials`.
-                LoE::Expr(_) => {
-                    if !is_checkout {
+            if uses.matches("actions/checkout") {
+                let with = match with {
+                    LoE::Literal(with) => with,
+                    // Emit a blanket pedantic finding if the checkout's `with:` block cannot
+                    // be analyzed.
+                    LoE::Expr(_) => {
+                        findings.push(
+                            Self::finding()
+                                .severity(Severity::Informational)
+                                .confidence(Confidence::High)
+                                .persona(Persona::Pedantic)
+                                .add_location(
+                                    step.location()
+                                        .with_keys(["uses".into()])
+                                        .subfeature(Subfeature::new(0, uses.raw()))
+                                        .annotated("this checkout"),
+                                )
+                                .add_location(
+                                    step.location()
+                                        .primary()
+                                        .with_keys(["with".into()])
+                                        .annotated("may not set persist-credentials: false"),
+                                )
+                                .build(&step)?,
+                        );
                         continue;
                     }
+                };
 
-                    findings.push(
-                        Self::finding()
-                            .severity(Severity::Informational)
-                            .confidence(Confidence::High)
-                            .persona(Persona::Pedantic)
-                            .add_location(
-                                step.location()
-                                    .with_keys(["uses".into()])
-                                    .subfeature(Subfeature::new(0, uses.raw()))
-                                    .annotated("this checkout"),
-                            )
-                            .add_location(
-                                step.location()
-                                    .primary()
-                                    .with_keys(["with".into()])
-                                    .annotated("may not set persist-credentials: false"),
-                            )
-                            .build(&step)?,
-                    );
-                    continue;
-                }
-            };
-
-            if is_checkout {
                 let is_v6_or_higher = self
                     .is_checkout_v6_or_higher(uses)
                     .await
@@ -170,7 +160,11 @@ impl Artipacked {
                     }
                     _ => vulnerable_checkouts.push((step, Persona::default(), is_v6_or_higher)),
                 }
-            } else if is_upload {
+            } else if uses.matches("actions/upload-artifact") {
+                let LoE::Literal(with) = with else {
+                    continue;
+                };
+
                 let Some(EnvValue::String(path)) = with.get("path") else {
                     continue;
                 };
