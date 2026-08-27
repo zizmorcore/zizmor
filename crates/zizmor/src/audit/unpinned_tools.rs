@@ -112,41 +112,36 @@ impl UnpinnedTools {
                                     step.location()
                                         .primary()
                                         .with_keys(["with".into(), field.into()])
-                                        .annotated(format!("selects an unpinned tool version")),
+                                        .annotated("selects an unpinned tool version".to_string()),
                                 )
                         })
                 }
             }
-            Usage::Conditional(origins) => {
-                if let Some(field) = origins.iter().find_map(|origin| match origin {
+            Usage::Conditional(origins) => origins
+                .iter()
+                .find_map(|origin| match origin {
                     ControlOrigin::Input { field } => Some(*field),
                     _ => None,
-                }) {
-                    Some(
-                        Self::finding()
-                            .confidence(Confidence::Low)
-                            .severity(Severity::Medium)
-                            .add_location(
-                                step.location()
-                                    .with_keys(["uses".into()])
-                                    .subfeature(Subfeature::new(0, uses.raw()))
-                                    .annotated("this action"),
-                            )
-                            .add_location(
-                                step.location()
-                                    .primary()
-                                    .with_keys(["with".into(), field.into()])
-                                    .annotated(format!(
-                                        "`{field}` is dynamic, so the tool version may be unpinned"
-                                    )),
-                            ),
-                    )
-                } else {
-                    // We don't emit a finding if the entire `with` block
-                    // is an expression, since the `obfuscation` audit covers that.
-                    None
-                }
-            }
+                })
+                .map(|field| {
+                    Self::finding()
+                        .confidence(Confidence::Low)
+                        .severity(Severity::Medium)
+                        .add_location(
+                            step.location()
+                                .with_keys(["uses".into()])
+                                .subfeature(Subfeature::new(0, uses.raw()))
+                                .annotated("this action"),
+                        )
+                        .add_location(
+                            step.location()
+                                .primary()
+                                .with_keys(["with".into(), field.into()])
+                                .annotated(format!(
+                                    "`{field}` is dynamic, so the tool version may be unpinned"
+                                )),
+                        )
+                }),
             Usage::Always => None,
         };
 
