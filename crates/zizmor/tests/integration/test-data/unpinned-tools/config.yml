@@ -1,7 +1,0 @@
-rules:
-  artipacked:
-    disable: true
-  concurrency-limits:
-    disable: true
-  obfuscation:
-    disable: true

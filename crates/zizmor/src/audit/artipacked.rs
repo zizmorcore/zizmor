@@ -111,10 +111,21 @@ impl Artipacked {
                 continue;
             };
 
+            let is_checkout = uses.matches("actions/checkout");
+            let is_upload = uses.matches("actions/upload-artifact");
+            if !is_checkout && !is_upload {
+                continue;
+            }
+
             let with = match with {
                 LoE::Literal(with) => with,
-                // Emit blanket pedantic finding if the `with:` block cannot be analyzed
+                // Emit a blanket pedantic finding if a checkout's `with:` block cannot be
+                // analyzed. Other actions do not use `persist-credentials`.
                 LoE::Expr(_) => {
+                    if !is_checkout {
+                        continue;
+                    }
+
                     findings.push(
                         Self::finding()
                             .severity(Severity::Informational)
@@ -138,7 +149,7 @@ impl Artipacked {
                 }
             };
 
-            if uses.matches("actions/checkout") {
+            if is_checkout {
                 let is_v6_or_higher = self
                     .is_checkout_v6_or_higher(uses)
                     .await
@@ -159,7 +170,7 @@ impl Artipacked {
                     }
                     _ => vulnerable_checkouts.push((step, Persona::default(), is_v6_or_higher)),
                 }
-            } else if uses.matches("actions/upload-artifact") {
+            } else if is_upload {
                 let Some(EnvValue::String(path)) = with.get("path") else {
                     continue;
                 };
