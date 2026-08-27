@@ -5,7 +5,6 @@ use github_actions_models::common::{
     expr::{ExplicitExpr, LoE},
 };
 use itertools::Itertools as _;
-use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
@@ -114,28 +113,9 @@ impl Artipacked {
             if uses.matches("actions/checkout") {
                 let with = match with {
                     LoE::Literal(with) => with,
-                    // Emit a blanket pedantic finding if the checkout's `with:` block cannot
-                    // be analyzed.
                     LoE::Expr(_) => {
-                        findings.push(
-                            Self::finding()
-                                .severity(Severity::Informational)
-                                .confidence(Confidence::High)
-                                .persona(Persona::Pedantic)
-                                .add_location(
-                                    step.location()
-                                        .with_keys(["uses".into()])
-                                        .subfeature(Subfeature::new(0, uses.raw()))
-                                        .annotated("this checkout"),
-                                )
-                                .add_location(
-                                    step.location()
-                                        .primary()
-                                        .with_keys(["with".into()])
-                                        .annotated("may not set persist-credentials: false"),
-                                )
-                                .build(&step)?,
-                        );
+                        // We don't emit a finding if the entire `with` block
+                        // is an expression, since the `obfuscation` audit covers that.
                         continue;
                     }
                 };

@@ -18,7 +18,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |               ----------------------------------------------------------------- this action
     18 |         with:
     19 |           version: latest
-       |           ^^^^^^^^^^^^^^^ `version` selects an unpinned tool version
+       |           ^^^^^^^^^^^^^^^ selects an unpinned tool version
        |
        = note: audit confidence → High
 
@@ -37,7 +37,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |               ---------------------------------------------------------------------- this action
     22 |         with:
     23 |           version: latest
-       |           ^^^^^^^^^^^^^^^ `version` selects an unpinned tool version
+       |           ^^^^^^^^^^^^^^^ selects an unpinned tool version
        |
        = note: audit confidence → High
 
