@@ -58,6 +58,28 @@ fn test_regular_persona() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test]
+fn test_with_expression() -> anyhow::Result<()> {
+    insta::assert_snapshot!(zizmor()
+        .config(input_under_test("unpinned-tools/config.yml"))
+        .input(input_under_test("unpinned-tools/with-expression.yml"))
+        .run()?, @"
+    warning[unpinned-tools]: action installs an unpinned external tool
+      --> @@INPUT@@:13:9
+       |
+    12 |       - uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+       |               ----------------------------------------------------------------- this action
+    13 |         with: ${{ inputs.trivy-options }}
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ specifies `with` dynamically, so `version` may be unpinned
+       |
+       = note: audit confidence → Low
+
+    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    ");
+
+    Ok(())
+}
+
 /// Regression test for #2059: steps gated with a statically-false `if:`
 /// condition should not be audited, since they cannot execute.
 #[test]
