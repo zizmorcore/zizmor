@@ -38,7 +38,7 @@ on:
 permissions: {}
 
 env:
-  ZIZMOR_IMAGE: ghcr.io/zizmorcore/zizmor
+  ZIZMOR_IMAGE: ghcr.io/njgudman/zizmor
 
 jobs:
   build:
