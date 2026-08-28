@@ -48,7 +48,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        |               ----------------------------------------------------------------- this action
     25 |         with:
     26 |           version: ${{ inputs.trivy-version }}
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `version` is dynamic, so the tool version may be unpinned
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ tool version may be unpinned
        |
        = note: audit confidence → Low
 
@@ -89,7 +89,7 @@ fn test_setup_just() -> anyhow::Result<()> {
        |               --------------------------------------------------------------- this action
     21 |         with:
     22 |           just-version: ${{ inputs.just-version }}
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `just-version` is dynamic, so the tool version may be unpinned
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ tool version may be unpinned
        |
        = note: audit confidence → Low
 

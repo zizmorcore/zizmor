@@ -137,9 +137,7 @@ impl UnpinnedTools {
                             step.location()
                                 .primary()
                                 .with_keys(["with".into(), field.into()])
-                                .annotated(format!(
-                                    "`{field}` is dynamic, so the tool version may be unpinned"
-                                )),
+                                .annotated(format!("tool version may be unpinned")),
                         )
                 }),
             Usage::Always => None,
