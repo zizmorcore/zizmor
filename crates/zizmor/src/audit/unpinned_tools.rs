@@ -29,15 +29,26 @@ static KNOWN_UNPINNED_TOOLS_ACTIONS: LazyLock<Vec<ActionCoordinate>> = LazyLock:
                 true,
             ),
         })
-        .chain([ActionCoordinate::Configurable {
-            uses_pattern: "extractions/setup-just".parse().unwrap(),
-            control: ControlExpr::field(
-                Toggle::OptIn,
-                "just-version",
-                ControlFieldType::Exact(&["*"]),
-                true,
-            ),
-        }])
+        .chain([
+            ActionCoordinate::Configurable {
+                uses_pattern: "extractions/setup-just".parse().unwrap(),
+                control: ControlExpr::field(
+                    Toggle::OptIn,
+                    "just-version",
+                    ControlFieldType::Exact(&["*"]),
+                    true,
+                ),
+            },
+            ActionCoordinate::Configurable {
+                uses_pattern: "extractions/setup-crate".parse().unwrap(),
+                control: ControlExpr::field(
+                    Toggle::OptIn,
+                    "version",
+                    ControlFieldType::Exact(&["*"]),
+                    true,
+                ),
+            },
+        ])
         .collect()
 });
 
