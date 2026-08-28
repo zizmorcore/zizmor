@@ -620,6 +620,7 @@
     ---
 
     ??? example "Examples"
+        - containers/conmon#687
         - containers/podman#27642
 
 
@@ -1594,6 +1595,15 @@
         - j178/prek#947
 
 
+-   ![](https://github.com/jaredwray.png?size=40){ width="40" loading=lazy align=left } jaredwray
+
+    ---
+
+    ??? example "Examples"
+        - jaredwray/cacheable#1701
+        - jaredwray/keyv#2056
+
+
 -   ![](https://github.com/jazzband.png?size=40){ width="40" loading=lazy align=left } jazzband
 
     ---
@@ -2399,6 +2409,14 @@
         - openpubkey/opkssh#247
 
 
+-   ![](https://github.com/operaton.png?size=40){ width="40" loading=lazy align=left } operaton
+
+    ---
+
+    ??? example "Examples"
+        - operaton/operaton#3538
+
+
 -   ![](https://github.com/opf.png?size=40){ width="40" loading=lazy align=left } opf
 
     ---
@@ -2569,6 +2587,7 @@
     ---
 
     ??? example "Examples"
+        - podman-container-tools/buildah#7052
         - podman-container-tools/skopeo#2952
 
 
@@ -2858,6 +2877,14 @@
 
     ??? example "Examples"
         - quarkslab/quokka#46
+
+
+-   ![](https://github.com/quarto-dev.png?size=40){ width="40" loading=lazy align=left } quarto-dev
+
+    ---
+
+    ??? example "Examples"
+        - quarto-dev/quarto-web#2157
 
 
 -   ![](https://github.com/quay.png?size=40){ width="40" loading=lazy align=left } quay
@@ -3341,6 +3368,21 @@
 
     ??? example "Examples"
         - strawberry-graphql/strawberry#4097
+
+
+-   ![](https://github.com/stripe.png?size=40){ width="40" loading=lazy align=left } stripe
+
+    ---
+
+    ??? example "Examples"
+        - stripe/stripe-dotnet#3432
+        - stripe/stripe-go#2416
+        - stripe/stripe-java#2276
+        - stripe/stripe-mock#1643
+        - stripe/stripe-node#2824
+        - stripe/stripe-php#2133
+        - stripe/stripe-python#1891
+        - stripe/stripe-ruby#1943
 
 
 -   ![](https://github.com/stx-labs.png?size=40){ width="40" loading=lazy align=left } stx-labs
