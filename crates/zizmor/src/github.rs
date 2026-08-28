@@ -667,11 +667,8 @@ impl Client {
         subpath: Option<&str>,
         commit: &str,
     ) -> Result<Option<Tag>, ClientError> {
-        // Annoying: GitHub doesn't provide a rev-parse or similar API to
-        // perform the commit -> tag lookup, so we download every tag and
-        // do it for them.
-        // This could be optimized in various ways, not least of which
-        // is not pulling every tag eagerly before scanning them.
+        // This was once slow, but is now fast (enough) since we use
+        // a raw Git `ls-refs` under the hood.
         let tags = self.list_tags(slug).await?;
 
         Ok(best_tag_for_commit(tags, subpath, commit))
@@ -1008,36 +1005,55 @@ pub(crate) struct Tag {
 
 /// Pick the tag that best describes `commit` for the action at `subpath`.
 ///
-/// Repositories that publish several actions from subdirectories tag each one under its own
-/// prefix, so a single commit can carry `save/v1.0.0`, `restore/v1.0.0` and
-/// `allowlist-check/v1.0.0` at once. Picking purely by length would hand every action in such a
-/// repository whichever sibling has the longest name, so tags naming the action being used are
-/// preferred, and tags naming *some other* action are only used when nothing better exists.
+/// This involves two heuristics:
+///
+/// 1. The tag that most closely matches the "intent" of the action reference.
+///    This is complicated because GitHub allows a single repository to host multiple
+///    actions, and some repositories choose to version their actions fully independently
+///    while *also* allowing them to overlap (in the sense that a single commit may
+///    be pointed to by several tags, e.g. `foo/v1` and `bar/v1` might both point to
+///    `abcd...`).
+///
+///    We handle this with a *very* naive prefix match: we look for a tag that
+///    matches `{subpath}/...` or `{leaf}/...`, where `{leaf}` is the last
+///    directory in the subpath.
+///
+/// 2. The longest tag. Many repositories (inadvisedly) attempt to imitate SemVer
+///    by publishing several tags, which then get moved around to imitate version bumps.
+///    For example, `v4` and `v4.0.0` might both point to `abcd...`, but `v4` will eventually
+///    be moved whereas `v4.0.0` will (hopefully) remain fixed. This kind of mutable reference
+///    is bad, but people do it, and we don't want to resolve to a likely mutable reference
+///    if we can avoid it
+///
+///    We handle this by selecting the longest tag for a commit.
+///
+/// Put together, we prefer the longest tag that has a matching prefix,
+/// followed by a tag that has a matching prefix, followed by any longest tag.
 fn best_tag_for_commit(tags: Vec<Tag>, subpath: Option<&str>, commit: &str) -> Option<Tag> {
-    let candidates = tags.into_iter().filter(|t| t.commit.sha == commit);
+    // Heuristic: `owner/repo/stash/save` might be released as either `save/vX.Y.Z`
+    // or `stash/save/vX.Y.Z`.
+    let preferred_prefixes = subpath.map(|subpath| {
+        let leaf = subpath.rsplit_once('/').map_or(subpath, |(_, leaf)| leaf);
+        [subpath, leaf]
+    });
 
-    // Heuristic: there can be multiple tags for a commit, so we pick
-    // the longest one. This isn't super sound, but it gets us from
-    // `sha -> v1.2.3` instead of `sha -> v1`.
-    let longest = |tags: Vec<Tag>| tags.into_iter().max_by_key(|t| t.name.len());
+    tags.into_iter()
+        .filter(|tag| tag.commit.sha == commit)
+        .max_by_key(|tag| {
+            let is_preferred = match preferred_prefixes.as_ref() {
+                Some(prefixes) => prefixes.iter().any(|prefix| {
+                    tag.name
+                        .strip_prefix(prefix)
+                        .is_some_and(|suffix| suffix.starts_with('/'))
+                }),
+                // An action at the repository root is described by an unprefixed tag.
+                None => !tag.name.contains('/'),
+            };
 
-    let (preferred, rest): (Vec<_>, Vec<_>) = match subpath {
-        // `owner/repo/stash/save` is released as `save/vX.Y.Z` or `stash/save/vX.Y.Z`.
-        Some(subpath) => {
-            let prefixes = [
-                format!("{subpath}/"),
-                format!(
-                    "{leaf}/",
-                    leaf = subpath.rsplit('/').next().unwrap_or(subpath)
-                ),
-            ];
-            candidates.partition(|t| prefixes.iter().any(|p| t.name.starts_with(p.as_str())))
-        }
-        // An action at the repository root is described by an unprefixed tag.
-        None => candidates.partition(|t| !t.name.contains('/')),
-    };
-
-    longest(preferred).or_else(|| longest(rest))
+            // Prefer a tag for this action, then use length to choose its most
+            // specific version (`v1.2.3` rather than `v1`).
+            (is_preferred, tag.name.len())
+        })
 }
 
 /// A single commit, as returned by GitHub's commits endpoints.
@@ -1144,7 +1160,9 @@ mod tests {
         for (subpath, expected) in [
             // The action's own tag wins over a longer-named sibling's.
             (Some("stash/save"), "save/v1.0.0"),
+            (Some("save"), "save/v1.0.0"),
             (Some("stash/restore"), "restore/v1.0.0"),
+            (Some("restore"), "restore/v1.0.0"),
             (Some("allowlist-check"), "allowlist-check/v1.0.0"),
         ] {
             assert_eq!(
