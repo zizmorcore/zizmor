@@ -42,6 +42,10 @@ of `zizmor`.
 
 * The [unpinned-tools] audit now detects usages of @extractions/setup-just (#2339)
 
+* The [unpinned-tools] audit now detects usages of @extractions/setup-crate (#2340)
+
+* The [archived-uses] audit now detects several more archived repositories (#2340)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
