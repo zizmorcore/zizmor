@@ -38,6 +38,10 @@ of `zizmor`.
 
     Many thanks to @njgudman for proposing and implementing this enhancement!
 
+* The [unpinned-tools] audit now produced more detailed and more precise diagnostics (#2339)
+
+* The [unpinned-tools] audit now detects usages of @extractions/setup-just (#2339)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
@@ -62,6 +66,9 @@ of `zizmor`.
 
 * Fixed a bug where the [ref-version-mismatch] audit would produce a misleading
   diagnostic when an action has overlapping branch and tag names (#2337)
+
+* Fixed a bug where the [artipacked] audit would incorrectly flag the `#!yaml with:`
+  clauses of unrelated actions (#2339)
 
 ## 1.29.0
 
