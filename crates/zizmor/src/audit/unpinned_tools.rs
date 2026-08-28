@@ -72,11 +72,13 @@ impl UnpinnedTools {
         };
 
         let finding = match usage {
+            // The action is definitely installing an unpinned tool, because...
             Usage::Enabled(origins) => {
                 if let Some(field) = origins.iter().find_map(|origin| match origin {
                     ControlOrigin::Default { field } => Some(*field),
                     _ => None,
                 }) {
+                    // (a) the user didn't set any input, and the default is unpinned.
                     Some(
                         Self::finding()
                             .confidence(Confidence::High)
@@ -92,6 +94,8 @@ impl UnpinnedTools {
                             ),
                     )
                 } else {
+                    // (b) The user explicitly set the field to enable unpinning,
+                    // e.g. `version: latest`.
                     origins
                         .iter()
                         .find_map(|origin| match origin {
@@ -117,6 +121,12 @@ impl UnpinnedTools {
                         })
                 }
             }
+            // The action *might* be installing an unpinned tool, but we don't
+            // know for sure because the input that controls pinning is
+            // opaque (e.g. `version: ${{ expr }}`).
+            // TODO: we could probably pierce some expressions here, e.g. `matrix`
+            // and `input` evaluations. The coordinate API could also potentially
+            // do that for us.
             Usage::Conditional(origins) => origins
                 .iter()
                 .find_map(|origin| match origin {
@@ -140,6 +150,9 @@ impl UnpinnedTools {
                                 .annotated("tool version may be unpinned".to_string()),
                         )
                 }),
+            // TODO: We don't have any of these at the moment, but in the future
+            // we might detect actions that always install an unpinned version
+            // no matter what.
             Usage::Always => None,
         };
 
