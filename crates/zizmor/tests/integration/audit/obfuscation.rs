@@ -247,14 +247,14 @@ fn test_issue_1769() -> Result<()> {
     info[obfuscation]: obfuscated usage of GitHub Actions features
       --> @@INPUT@@:19:9
        |
-    18 |       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # zizmor: ignore[artipacked]
+    18 |       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
        |         --------------------------------------------------------------- this action
     19 |         with: ${{ fromJson(steps.setup.outputs.options) }}
        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of an expression for `with:` prevents analysis
        |
        = note: audit confidence → High
 
-    2 findings (1 suppressed): 1 informational, 0 low, 0 medium, 0 high
+    1 finding: 1 informational, 0 low, 0 medium, 0 high
     "
     );
 

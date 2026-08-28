@@ -5,7 +5,6 @@ use github_actions_models::common::{
     expr::{ExplicitExpr, LoE},
 };
 use itertools::Itertools as _;
-use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
@@ -111,34 +110,16 @@ impl Artipacked {
                 continue;
             };
 
-            let with = match with {
-                LoE::Literal(with) => with,
-                // Emit blanket pedantic finding if the `with:` block cannot be analyzed
-                LoE::Expr(_) => {
-                    findings.push(
-                        Self::finding()
-                            .severity(Severity::Informational)
-                            .confidence(Confidence::High)
-                            .persona(Persona::Pedantic)
-                            .add_location(
-                                step.location()
-                                    .with_keys(["uses".into()])
-                                    .subfeature(Subfeature::new(0, uses.raw()))
-                                    .annotated("this checkout"),
-                            )
-                            .add_location(
-                                step.location()
-                                    .primary()
-                                    .with_keys(["with".into()])
-                                    .annotated("may not set persist-credentials: false"),
-                            )
-                            .build(&step)?,
-                    );
-                    continue;
-                }
-            };
-
             if uses.matches("actions/checkout") {
+                let with = match with {
+                    LoE::Literal(with) => with,
+                    LoE::Expr(_) => {
+                        // We don't emit a finding if the entire `with` block
+                        // is an expression, since the `obfuscation` audit covers that.
+                        continue;
+                    }
+                };
+
                 let is_v6_or_higher = self
                     .is_checkout_v6_or_higher(uses)
                     .await
@@ -160,6 +141,10 @@ impl Artipacked {
                     _ => vulnerable_checkouts.push((step, Persona::default(), is_v6_or_higher)),
                 }
             } else if uses.matches("actions/upload-artifact") {
+                let LoE::Literal(with) = with else {
+                    continue;
+                };
+
                 let Some(EnvValue::String(path)) = with.get("path") else {
                     continue;
                 };
