@@ -74,6 +74,11 @@ of `zizmor`.
 * Fixed a bug where the [artipacked] audit would incorrectly flag the `#!yaml with:`
   clauses of unrelated actions (#2339)
 
+* Fixed a class of bugs where zizmor would incorrectly match an action's commit to a sibling
+  action's tag (#2247)
+
+    Many thanks to @potiuk for proposing and implementing this improvement!
+
 ## 1.29.0
 
 ### New Features 🌈

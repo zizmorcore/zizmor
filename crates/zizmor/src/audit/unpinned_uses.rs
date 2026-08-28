@@ -73,7 +73,7 @@ impl UnpinnedUses {
         // version avoids any later `ref-version-mismatch` findings when the
         // major tag is mutated by the upstream.
         let longest_tag = match client
-            .longest_tag_for_commit(&uses.into(), git_ref.commit())
+            .longest_tag_for_commit(&uses.into(), uses.subpath(), git_ref.commit())
             .await
         {
             Ok(Some(tag)) => Cow::Owned(tag.name),
