@@ -144,6 +144,7 @@ composer/packagist#1711
 composer/semver#176
 conda/conda-lock#814
 containerd/nerdctl#4909
+containers/conmon#687
 containers/podman#27642
 CopilotKit/CopilotKit#4820
 cortex/ripasso#411
@@ -339,6 +340,8 @@ iorate/ublacklist#828
 irbis-sh/zen-desktop#684
 ispc/ispc#3589
 j178/prek#947
+jaredwray/cacheable#1701
+jaredwray/keyv#2056
 jazzband/pip-tools#2327
 jdx/fnox#480
 jdx/hk#925
@@ -486,6 +489,7 @@ open-telemetry/opentelemetry-js-contrib#3533
 openbao/openbao#924
 openpubkey/opkssh#198
 openpubkey/opkssh#247
+operaton/operaton#3538
 opf/openproject#23067
 Orange-OpenSource/hurl#3574
 orion-rs/orion#441
@@ -511,6 +515,7 @@ philips-software/amp-devcontainer#830
 php/pie#634
 PlasmaPy/PlasmaPy#2975
 pnpm/pnpm#11608
+podman-container-tools/buildah#7052
 podman-container-tools/skopeo#2952
 PowerDNS/pdns#15600
 powersync-ja/powersync.dart#416
@@ -576,6 +581,7 @@ python/mypy#18413
 pyvista/pyvista#7006
 PyVRP/PyVRP#670
 quarkslab/quokka#46
+quarto-dev/quarto-web#2157
 quay/quay#5887
 rails/rails-html-sanitizer#220
 raineorshine/npm-check-updates#1946
@@ -667,6 +673,14 @@ stravalib/stravalib#645
 stravalib/stravalib#648
 stravalib/stravalib#649
 strawberry-graphql/strawberry#4097
+stripe/stripe-dotnet#3432
+stripe/stripe-go#2416
+stripe/stripe-java#2276
+stripe/stripe-mock#1643
+stripe/stripe-node#2824
+stripe/stripe-php#2133
+stripe/stripe-python#1891
+stripe/stripe-ruby#1943
 stx-labs/clarinet#2281
 sunpy/sunpy#8745
 super-linter/super-linter#7241
