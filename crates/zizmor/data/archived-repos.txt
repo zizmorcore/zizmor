@@ -53,6 +53,8 @@ dnephin/pre-commit-golang
 dulvui/godot-android-export
 elstudio/actions-settings
 expo/expo-preview-action
+extractions/setup-mdbook
+extractions/setup-powerpack
 fabasoad/setup-zizmor-action
 facebook/pysa-action
 fregante/release-with-changelog
