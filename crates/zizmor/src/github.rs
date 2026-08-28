@@ -1134,18 +1134,17 @@ mod tests {
         models::repo_ref::Slug,
     };
 
-    fn tags(names: &[(&str, &str)]) -> Vec<Tag> {
-        names
-            .iter()
-            .map(|(name, sha)| Tag {
-                name: (*name).into(),
-                commit: Commit { sha: (*sha).into() },
-            })
-            .collect()
-    }
-
     #[test]
     fn test_best_tag_for_commit() {
+        fn tags(names: &[(&str, &str)]) -> Vec<Tag> {
+            names
+                .iter()
+                .map(|(name, sha)| Tag {
+                    name: (*name).into(),
+                    commit: Commit { sha: (*sha).into() },
+                })
+                .collect()
+        }
         // A monorepo of actions, where every action is tagged under its own prefix
         // and all of them happen to share a commit.
         let monorepo = [
