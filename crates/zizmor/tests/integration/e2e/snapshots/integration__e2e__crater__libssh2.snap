@@ -15,9 +15,9 @@ warning[ref-version-mismatch]: action's hash pin has mismatched or missing versi
    --> .github/workflows/ci.yml:658:87
     |
 658 |       - uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # v6
-    |         ---------------------------------------------------------------------------   ^^ tag points to commit 3f0a3f9f988f
-    |         |
-    |         is pointed to by tag v6.0.0
+    |               ---------------------------------------------------------------------   ^^ tag points to commit 3f0a3f9f988f
+    |               |
+    |               is pointed to by tag v6.0.0
     |
     = note: audit confidence → High
     = note: this finding has an auto-fix

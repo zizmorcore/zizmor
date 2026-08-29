@@ -26,9 +26,9 @@ fn test_ref_version_mismatch() -> Result<()> {
       --> @@INPUT@@:25:77
        |
     25 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.1
-       |         -----------------------------------------------------------------   ^^^^^^ tag points to commit 5e21ff4d9bc1
-       |         |
-       |         is pointed to by tag v3.8.2
+       |               -----------------------------------------------------------   ^^^^^^ tag points to commit 5e21ff4d9bc1
+       |               |
+       |               is pointed to by tag v3.8.2
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -37,9 +37,9 @@ fn test_ref_version_mismatch() -> Result<()> {
       --> @@INPUT@@:28:77
        |
     28 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v300000.8.1
-       |         -----------------------------------------------------------------   ^^^^^^^^^^^ points to unknown ref
-       |         |
-       |         is pointed to by tag v3.8.2
+       |               -----------------------------------------------------------   ^^^^^^^^^^^ points to unknown ref
+       |               |
+       |               is pointed to by tag v3.8.2
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -72,20 +72,20 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
        = note: this finding has an auto-fix
 
     help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-      --> @@INPUT@@:16:9
+      --> @@INPUT@@:16:15
        |
     16 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
        |
        = note: audit confidence → High
        = tip: add version comment '# v3.8.2'
        = note: this finding has an auto-fix
 
     help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-      --> @@INPUT@@:19:9
+      --> @@INPUT@@:19:15
        |
     19 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # some comment
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment does not contain a version
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment does not contain a version
        |
        = note: audit confidence → High
        = tip: rewrite comment to include '# v3.8.2'
@@ -94,9 +94,9 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
       --> @@INPUT@@:25:77
        |
     25 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.1
-       |         -----------------------------------------------------------------   ^^^^^^ tag points to commit 5e21ff4d9bc1
-       |         |
-       |         is pointed to by tag v3.8.2
+       |               -----------------------------------------------------------   ^^^^^^ tag points to commit 5e21ff4d9bc1
+       |               |
+       |               is pointed to by tag v3.8.2
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -105,9 +105,9 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
       --> @@INPUT@@:28:77
        |
     28 |       - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v300000.8.1
-       |         -----------------------------------------------------------------   ^^^^^^^^^^^ points to unknown ref
-       |         |
-       |         is pointed to by tag v3.8.2
+       |               -----------------------------------------------------------   ^^^^^^^^^^^ points to unknown ref
+       |               |
+       |               is pointed to by tag v3.8.2
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -160,9 +160,9 @@ fn test_issue_1853() -> Result<()> {
       --> @@INPUT@@:14:75
        |
     14 |         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v9.9.9
-       |         ---------------------------------------------------------------   ^^^^^^ points to unknown ref
-       |         |
-       |         is pointed to by tag v6.4.0
+       |               ---------------------------------------------------------   ^^^^^^ points to unknown ref
+       |               |
+       |               is pointed to by tag v6.4.0
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -264,14 +264,44 @@ fn test_issue_2321() -> Result<()> {
       --> @@INPUT@@:14:87
        |
     14 |         uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
-       |         ---------------------------------------------------------------------------   ^^ branch points to commit 4d27395796ac
-       |         |
-       |         is pointed to by tag v1
+       |               ---------------------------------------------------------------------   ^^ branch points to commit 4d27395796ac
+       |               |
+       |               is pointed to by tag v1
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
     2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
+
+/// Bug #2324: ref-version-mismatch should support reusable workflow calls.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/2324>
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_issue_2324() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(NetworkMode::AssertOnline)
+            .input(input_under_test("ref-version-mismatch/issue-2324-repro.yml"))
+            .run()?,
+        @"
+    warning[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
+      --> @@INPUT@@:11:104
+       |
+    11 |     uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.16.0
+       |           ------------------------------------------------------------------------------------------   ^^^^^^^ tag points to commit a492c6d04fd3
+       |           |
+       |           is pointed to by tag v1.17.0
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    1 findings (1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -585,6 +615,47 @@ jobs:
            - name: Setup Go
     -        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v9.9.9
     +        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_reusable_workflow() -> anyhow::Result<()> {
+    use crate::common::WorkspaceBuilder;
+
+    let workflow_content = r#"
+name: reusable
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  job1:
+    name: job1
+    uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.16.0
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all", "--persona=pedantic"])
+                .offline(NetworkMode::AssertOnline)
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -11,2 +11,2 @@
+         name: job1
+    -    uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.16.0
+    +    uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.17.0
     "
     );
 
