@@ -1,0 +1,11 @@
+name: stale-reusable-workflow
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  job1:
+    name: job1
+    uses: docker/github-builder/.github/workflows/build.yml@db901a807ad41eba1d740f7f2fdc7007a05b4a20
