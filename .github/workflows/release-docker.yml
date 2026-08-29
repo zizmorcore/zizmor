@@ -18,6 +18,13 @@ on:
         description: |
           Whether to tag the image as `latest`
 
+      dry-run:
+        type: boolean
+        required: false
+        default: false
+        description: |
+          Build the image without pushing it to GHCR.
+
   workflow_dispatch:
     inputs:
       release-version:
@@ -35,148 +42,39 @@ on:
         description: |
           Whether to tag the image as `latest`
 
-permissions: {}
+      dry-run:
+        type: boolean
+        required: false
+        default: true
+        description: |
+          Build the image without pushing it to GHCR.
 
-env:
-  ZIZMOR_IMAGE: ghcr.io/zizmorcore/zizmor
+permissions: {}
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        image:
-          - runner: ubuntu-latest
-            platform: linux/amd64
-            platform-pair: linux-amd64
-          - runner: ubuntu-24.04-arm
-            platform: linux/arm64
-            platform-pair: linux-arm64
-
-    name: Build and publish Docker image (${{ matrix.image.runner }})
-
-    runs-on: ${{ matrix.image.runner }}
-
-    environment:
-      name: docker
+    name: Build and publish Docker image
 
     permissions:
       contents: read
+      id-token: write
       packages: write
 
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-        with:
-          cache-binary: false
-
-      - name: Extract Docker metadata
-        id: docker-metadata
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: "${{ env.ZIZMOR_IMAGE }}"
-
-      - name: Login to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        if: github.repository_owner == 'zizmorcore'
-        with:
-          registry: ghcr.io
-          username: "${{ github.repository_owner }}"
-          password: "${{ secrets.GITHUB_TOKEN }}"
-
-      - name: Build and push by digest
-        id: build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          platforms: ${{ matrix.image.platform }}
-          labels: ${{ steps.docker-metadata.outputs.labels }}
-          outputs: type=image,"name=${{ env.ZIZMOR_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
-          build-args: |
-            ZIZMOR_VERSION=${{ inputs.release-version }}
-
-      - name: Export digest
-        run: |
-          mkdir -p "${RUNNER_TEMP}/digests"
-          digest="${DIGEST}"
-          touch "${RUNNER_TEMP}/digests/${digest#sha256:}"
-        env:
-          DIGEST: ${{ steps.build.outputs.digest }}
-        shell: bash
-
-      - name: Upload digest
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: digests-${{ matrix.image.platform-pair }}
-          path: ${{ runner.temp }}/digests/*
-          if-no-files-found: error
-          retention-days: 1
-
-  merge:
-    name: Merge image builds
-    needs: build
-    runs-on: ubuntu-latest
-
-    environment:
-      name: docker
-
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Download digests
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          path: ${{ runner.temp }}/digests
-          pattern: digests-*
-          merge-multiple: true
-
-      - name: Login to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        if: github.repository_owner == 'zizmorcore'
-        with:
-          registry: ghcr.io
+    uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.17.0
+    with:
+      output: image
+      push: ${{ !inputs.dry-run }}
+      platforms: linux/amd64,linux/arm64
+      meta-images: ghcr.io/zizmorcore/zizmor
+      meta-tags: |
+        type=raw,value=${{ inputs.release-version }}
+        type=raw,value=latest,enable=${{ inputs.latest }}
+      build-args: |
+        ZIZMOR_VERSION=${{ inputs.release-version }}
+      set-meta-labels: true
+      set-meta-annotations: true
+    secrets:
+      registry-auths: |
+        - registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-        with:
-          cache-binary: false
-
-      - name: Extract Docker metadata
-        id: docker-metadata
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        env:
-          DOCKER_METADATA_ANNOTATIONS_LEVELS: index
-        with:
-          images: "${{ env.ZIZMOR_IMAGE }}"
-          tags: |
-            type=raw,value=${{ inputs.release-version }}
-            type=raw,value=latest,enable=${{ inputs.latest }}
-
-      - name: Create manifest list and push
-        working-directory: ${{ runner.temp }}/digests
-        # NOTE: annotation technique adapted from Ruff's build-docker.yml,
-        # see: https://github.com/astral-sh/ruff/blob/6e34f74c16/.github/workflows/build-docker.yml
-        run: |
-          readarray -t lines <<< "$DOCKER_METADATA_OUTPUT_ANNOTATIONS"
-          annotations=()
-          for line in "${lines[@]}"; do
-            annotations+=(--annotation "$line")
-          done
-
-          docker buildx imagetools create \
-            "${annotations[@]}" \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf "${ZIZMOR_IMAGE}@sha256:%s " *)
-
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect "${ZIZMOR_IMAGE}:${VERSION}"
-        env:
-          VERSION: ${{ steps.docker-metadata.outputs.version }}

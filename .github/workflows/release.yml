@@ -117,6 +117,7 @@ jobs:
 
     permissions:
       contents: read
+      id-token: write # for signing Docker image attestations
       packages: write
 
     uses: ./.github/workflows/release-docker.yml
