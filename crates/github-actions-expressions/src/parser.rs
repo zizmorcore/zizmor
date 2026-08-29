@@ -16,6 +16,9 @@ use crate::{
 /// The result of parsing a single grammar production.
 type PResult<'src> = Result<SpannedExpr<'src>, Error>;
 
+/// GitHub's maximum expression depth.
+const RECURSION_BUDGET: usize = 50;
+
 /// Parse a complete GitHub Actions expression. The whole input must be
 /// consumed (modulo whitespace).
 pub(crate) fn parse(src: &str) -> Result<SpannedExpr<'_>, Error> {
@@ -23,13 +26,14 @@ pub(crate) fn parse(src: &str) -> Result<SpannedExpr<'_>, Error> {
         src,
         tokens: lexer::lex(src)?,
         pos: 0,
+        budget: RECURSION_BUDGET,
     };
 
     if parser.peek().is_none() {
         return Err(parser.error_here("empty expression"));
     }
 
-    let expr = parser.parse_expr(0)?;
+    let expr = parser.recurse(|parser| parser.parse_expr(0))?;
 
     if parser.peek().is_some() {
         return Err(parser.error_here("unexpected trailing input"));
@@ -43,6 +47,7 @@ struct Parser<'src> {
     src: &'src str,
     tokens: Vec<Token<'src>>,
     pos: usize,
+    budget: usize,
 }
 
 /// Map an operator token to its [`BinOp`] and binding power (higher binds
@@ -62,6 +67,29 @@ fn binop(tok: Tok<'_>) -> Option<(BinOp, u8)> {
 }
 
 impl<'src> Parser<'src> {
+    /// Consume one unit of recursion budget.
+    fn descend(&mut self) -> Result<(), Error> {
+        if self.budget == 0 {
+            return Err(Error::Depth);
+        }
+
+        self.budget -= 1;
+        Ok(())
+    }
+
+    /// Parse a recursive production, failing if the expression is nested too
+    /// deeply. The budget is restored afterward so it measures depth rather
+    /// than the total number of productions parsed.
+    fn recurse<T>(
+        &mut self,
+        parse: impl FnOnce(&mut Self) -> Result<T, Error>,
+    ) -> Result<T, Error> {
+        self.descend()?;
+        let result = parse(self);
+        self.budget += 1;
+        result
+    }
+
     /// The token at the cursor, if any.
     fn peek(&self) -> Option<Token<'src>> {
         self.tokens.get(self.pos).copied()
@@ -121,7 +149,7 @@ impl<'src> Parser<'src> {
                 break;
             }
             self.pos += 1;
-            let rhs = self.parse_expr(bp + 1)?;
+            let rhs = self.recurse(|parser| parser.parse_expr(bp + 1))?;
             lhs = self.spanned(
                 lhs.origin.span.start,
                 rhs.origin.span.end,
@@ -143,7 +171,7 @@ impl<'src> Parser<'src> {
             return self.parse_postfix();
         };
 
-        let inner = self.parse_unary()?;
+        let inner = self.recurse(Self::parse_unary)?;
         Ok(self.spanned(
             bang.start,
             inner.origin.span.end,
@@ -208,7 +236,7 @@ impl<'src> Parser<'src> {
         let inner = if matches!(self.peek_tok(), Some(Tok::Star)) {
             self.parse_star()
         } else {
-            self.parse_expr(0)?
+            self.recurse(|parser| parser.parse_expr(0))?
         };
 
         let close = self.expect(|t| matches!(t, Tok::RBracket), "expected `]`")?;
@@ -240,7 +268,7 @@ impl<'src> Parser<'src> {
             Tok::Str => Literal::String(self.string_value(token)),
             Tok::LParen => {
                 self.pos += 1;
-                let inner = self.parse_expr(0)?;
+                let inner = self.recurse(|parser| parser.parse_expr(0))?;
                 let close = self.expect(|t| matches!(t, Tok::RParen), "expected `)`")?;
                 // A grouping has no AST node; re-span the inner expression over
                 // the parens so every span stays a balanced slice of the source.
@@ -277,7 +305,7 @@ impl<'src> Parser<'src> {
                 break close;
             }
 
-            args.push(self.parse_expr(0)?);
+            args.push(self.recurse(|parser| parser.parse_expr(0))?);
 
             if let Some(close) = self.eat(|t| matches!(t, Tok::RParen)) {
                 break close;
@@ -298,6 +326,41 @@ impl<'src> Parser<'src> {
             Cow::Owned(inner.replace("''", "'"))
         } else {
             Cow::Borrowed(inner)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RECURSION_BUDGET, parse};
+    use crate::Error;
+
+    #[test]
+    fn test_recursion_budget() {
+        let at_limit = format!("{}false", "!".repeat(RECURSION_BUDGET - 1));
+        assert!(parse(&at_limit).is_ok());
+
+        let depth = RECURSION_BUDGET;
+        let cases = [
+            format!("{}false", "!".repeat(depth)),
+            format!("{}false{}", "(".repeat(depth), ")".repeat(depth)),
+            format!("{}false{}", "toJSON(".repeat(depth), ")".repeat(depth)),
+            format!("{}false{}", "foo[".repeat(depth), "]".repeat(depth)),
+        ];
+
+        for case in cases {
+            assert!(matches!(parse(&case), Err(Error::Depth)));
+        }
+
+        // Iterative productions do not consume recursion budget.
+        let iterative_depth = RECURSION_BUDGET + 1;
+        let cases = [
+            format!("foo{}", ".member".repeat(iterative_depth)),
+            format!("foo{}", "[0]".repeat(iterative_depth)),
+        ];
+
+        for case in cases {
+            assert!(parse(&case).is_ok());
         }
     }
 }

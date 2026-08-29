@@ -85,6 +85,8 @@ of `zizmor`.
 
     Many thanks to @potiuk for proposing and implementing this improvement!
 
+* Fixed a bug where zizmor would crash on deeply nested GitHub Actions expressions (#2349)
+
 ## 1.29.0
 
 ### New Features 🌈

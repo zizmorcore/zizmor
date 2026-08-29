@@ -76,8 +76,8 @@ fn to_evaluation(result: &TestResult) -> Result<Evaluation, String> {
 /// Entire test suite groups to skip.
 static SKIPPED_GROUPS: LazyLock<HashSet<(&str, &str)>> = LazyLock::new(|| {
     HashSet::from_iter([
-        // We don't enforce recursion limits at the moment.
-        // TODO: Do so?
+        // GitHub also applies its depth limit to iterative postfix chains,
+        // while we only limit recursive parser productions.
         ("syntax-errors.json", "depth-errors"),
         // We don't enforce memory limits at the moment.
         // It's not clear whether we should, since GitHub's TypeScript implementation
