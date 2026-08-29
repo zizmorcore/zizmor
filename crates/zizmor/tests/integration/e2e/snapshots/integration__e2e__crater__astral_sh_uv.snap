@@ -112,20 +112,20 @@ help[template-injection]: code injection via template expansion
     = note: audit confidence → High
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/build-docker.yml:116:9
+   --> .github/workflows/build-docker.yml:116:15
     |
 116 |       - uses: depot/setup-action@b0b1ea4f69e92ebf5dea3f8713a1b0c37b2126a5
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v1.6.0'
     = note: this finding has an auto-fix
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/build-docker.yml:245:9
+   --> .github/workflows/build-docker.yml:245:15
     |
 245 |       - uses: depot/setup-action@b0b1ea4f69e92ebf5dea3f8713a1b0c37b2126a5
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v1.6.0'
@@ -763,10 +763,10 @@ info[anonymous-definition]: workflow or action definition without a name
    = tip: use 'name: ...' to give this job a name
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-  --> .github/workflows/publish-mirror.yml:24:9
+  --> .github/workflows/publish-mirror.yml:24:15
    |
 24 |         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
    |
    = note: audit confidence → High
    = tip: add version comment '# v4.3.0'
@@ -1044,100 +1044,100 @@ info[anonymous-definition]: workflow or action definition without a name
     = tip: use 'name: ...' to give this job a name
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-  --> .github/workflows/release.yml:62:9
+  --> .github/workflows/release.yml:62:15
    |
 62 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
    |
    = note: audit confidence → High
    = tip: add version comment '# v4.2.2'
    = note: this finding has an auto-fix
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/release.yml:127:9
+   --> .github/workflows/release.yml:127:15
     |
 127 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v4.2.2'
     = note: this finding has an auto-fix
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/release.yml:132:9
+   --> .github/workflows/release.yml:132:15
     |
 132 |         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v4.3.0'
     = note: this finding has an auto-fix
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/release.yml:139:9
+   --> .github/workflows/release.yml:139:15
     |
 139 |         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v4.3.0'
     = note: this finding has an auto-fix
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/release.yml:178:9
+   --> .github/workflows/release.yml:178:15
     |
 178 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v4.2.2'
     = note: this finding has an auto-fix
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/release.yml:183:9
+   --> .github/workflows/release.yml:183:15
     |
 183 |         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v4.3.0'
     = note: this finding has an auto-fix
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/release.yml:190:9
+   --> .github/workflows/release.yml:190:15
     |
 190 |         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v4.3.0'
     = note: this finding has an auto-fix
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/release.yml:257:9
+   --> .github/workflows/release.yml:257:15
     |
 257 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v4.2.2'
     = note: this finding has an auto-fix
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/release.yml:263:9
+   --> .github/workflows/release.yml:263:15
     |
 263 |         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v4.3.0'
     = note: this finding has an auto-fix
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/release.yml:273:9
+   --> .github/workflows/release.yml:273:15
     |
 273 |         uses: actions/attest-build-provenance@00014ed6ed5efc5b1ab7f7f34a39eb55d41aa4f8
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v3.1.0'
@@ -1375,10 +1375,10 @@ help[anonymous-definition]: workflow or action definition without a name
      = tip: use 'name: ...' to give this workflow a name
 
 help[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
-   --> .github/workflows/test-integration.yml:852:9
+   --> .github/workflows/test-integration.yml:852:16
     |
 852 |         uses: "google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db"
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing version comment
     |
     = note: audit confidence → High
     = tip: add version comment '# v3.0.1'

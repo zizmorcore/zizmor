@@ -1,0 +1,11 @@
+name: ISSUE-2324-REPRO
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  job1:
+    name: job1
+    uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.16.0

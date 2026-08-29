@@ -142,7 +142,13 @@ impl RefVersionMismatch {
                     .confidence(Confidence::High)
                     .persona(Persona::Pedantic)
                     .add_location(parent_location.hidden())
-                    .add_location(uses_location.symbolic.primary().annotated(annotation))
+                    .add_location(
+                        uses_location
+                            .symbolic
+                            .primary()
+                            .subfeature(Subfeature::new(0, uses.raw()))
+                            .annotated(annotation),
+                    )
                     .tip(tip);
 
                 if matches!(comment_version_state, CommentVersionState::Missing) {
@@ -203,6 +209,7 @@ impl RefVersionMismatch {
             builder = builder.add_location(parent_location.hidden()).add_location(
                 uses_location
                     .symbolic
+                    .subfeature(Subfeature::new(0, uses.raw()))
                     .annotated(format!("is pointed to by tag {tag}", tag = suggestion.name)),
             );
             // Add auto-fix to update the version comment to match the pinned hash
