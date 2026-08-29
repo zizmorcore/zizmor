@@ -49,6 +49,9 @@ of `zizmor`.
 * The [ref-version-mismatch] audit now supports `#!yaml uses:` that reference
   reusable workflows (#2344)
 
+* The [stale-action-refs] audit now supports `#!yaml uses:` that reference
+  reusable workflows (#2345)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
