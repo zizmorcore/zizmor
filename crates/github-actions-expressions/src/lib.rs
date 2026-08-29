@@ -26,6 +26,9 @@ pub enum Error {
     /// The expression failed to parse according to the grammar.
     #[error(transparent)]
     Syntax(#[from] SyntaxError),
+    /// The expression exceeds the parser's maximum recursion depth.
+    #[error("expression exceeds maximum recursion depth")]
+    Depth,
     /// The expression contains an invalid function call.
     #[error("Invalid function call")]
     Call(#[from] call::Error),
