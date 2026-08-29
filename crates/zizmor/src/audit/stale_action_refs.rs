@@ -9,9 +9,14 @@ use crate::{
     Persona,
     audit::AuditError,
     config::Config,
-    finding::{Confidence, Finding, Severity},
+    finding::{Confidence, Finding, Severity, location::Locatable},
     github,
-    models::{StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _, workflow::Step},
+    models::{
+        AsDocument, StepCommon,
+        action::CompositeStep,
+        uses::RepositoryUsesExt as _,
+        workflow::{ReusableWorkflowCallJob, Step},
+    },
     state::AuditState,
 };
 
@@ -38,33 +43,43 @@ impl StaleActionRefs {
         Ok(tag.is_none())
     }
 
-    async fn process_step<'doc>(
+    async fn process_uses<'a, 'doc, S>(
         &self,
-        step: &impl StepCommon<'doc>,
-    ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        let mut findings = vec![];
-
-        let Some(Uses::Repository(uses)) = step.uses() else {
-            return Ok(findings);
-        };
-
+        uses: &'doc RepositoryUses,
+        parent: &'a S,
+    ) -> Result<Option<Finding<'doc>>, AuditError>
+    where
+        S: Locatable<'doc> + AsDocument<'a, 'doc>,
+    {
         if self.is_stale_action_ref(uses).await? {
-            findings.push(
+            Ok(Some(
                 Self::finding()
                     .confidence(Confidence::High)
                     .severity(Severity::Low)
                     .persona(Persona::Pedantic)
                     .add_location(
-                        step.location()
+                        parent
+                            .location()
                             .primary()
                             .with_keys(["uses".into()])
                             .subfeature(Subfeature::new(0, uses.raw())),
                     )
-                    .build(step)?,
-            );
+                    .build(parent)?,
+            ))
+        } else {
+            Ok(None)
         }
+    }
 
-        Ok(findings)
+    async fn process_step<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+    ) -> Result<Option<Finding<'doc>>, AuditError> {
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(None);
+        };
+
+        self.process_uses(uses, step).await
     }
 }
 
@@ -92,7 +107,7 @@ impl Audit for StaleActionRefs {
         step: &Step<'w>,
         _config: &Config,
     ) -> Result<Vec<Finding<'w>>, AuditError> {
-        self.process_step(step).await
+        Ok(self.process_step(step).await?.into_iter().collect())
     }
 
     async fn audit_composite_step<'a>(
@@ -100,6 +115,18 @@ impl Audit for StaleActionRefs {
         step: &CompositeStep<'a>,
         _config: &Config,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
-        self.process_step(step).await
+        Ok(self.process_step(step).await?.into_iter().collect())
+    }
+
+    async fn audit_reusable_job<'doc>(
+        &self,
+        job: &ReusableWorkflowCallJob<'doc>,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let Uses::Repository(uses) = &job.uses else {
+            return Ok(vec![]);
+        };
+
+        Ok(self.process_uses(uses, job).await?.into_iter().collect())
     }
 }

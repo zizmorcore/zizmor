@@ -24,3 +24,28 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_reusable_workflow() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("stale-action-refs/stale-reusable-workflow.yml"))
+            .offline(NetworkMode::AssertOnline)
+            .args(["--persona=pedantic"])
+            .run()?,
+        @"
+    help[stale-action-refs]: commit hash does not point to a Git tag
+      --> @@INPUT@@:11:11
+       |
+    11 |     uses: docker/github-builder/.github/workflows/build.yml@db901a807ad41eba1d740f7f2fdc7007a05b4a20
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this job
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
