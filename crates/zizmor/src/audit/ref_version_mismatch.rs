@@ -222,12 +222,12 @@ impl RefVersionMismatch {
     async fn process_step<'doc, S: StepCommon<'doc>>(
         &self,
         step: &S,
-    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+    ) -> Result<Option<Finding<'doc>>, AuditError> {
         let Some(Uses::Repository(uses)) = step.uses() else {
-            return Ok(vec![]);
+            return Ok(None);
         };
 
-        Ok(self.process_uses(uses, step).await?.into_iter().collect())
+        self.process_uses(uses, step).await
     }
 }
 
@@ -252,7 +252,7 @@ impl Audit for RefVersionMismatch {
         step: &Step<'doc>,
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step).await
+        Ok(self.process_step(step).await?.into_iter().collect())
     }
 
     async fn audit_composite_step<'doc>(
@@ -260,7 +260,7 @@ impl Audit for RefVersionMismatch {
         step: &CompositeStep<'doc>,
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step).await
+        Ok(self.process_step(step).await?.into_iter().collect())
     }
 
     async fn audit_reusable_job<'doc>(
