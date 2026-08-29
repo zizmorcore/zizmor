@@ -38,13 +38,16 @@ of `zizmor`.
 
     Many thanks to @njgudman for proposing and implementing this enhancement!
 
-* The [unpinned-tools] audit now produced more detailed and more precise diagnostics (#2339)
+* The [unpinned-tools] audit now produces more detailed and more precise diagnostics (#2339)
 
 * The [unpinned-tools] audit now detects usages of @extractions/setup-just (#2339)
 
 * The [unpinned-tools] audit now detects usages of @extractions/setup-crate (#2340)
 
 * The [archived-uses] audit now detects several more archived repositories (#2340)
+
+* The [ref-version-mismatch] audit now supports `#!yaml uses:` that reference
+  reusable workflows (#2344)
 
 ### Bug Fixes 🐛
 
