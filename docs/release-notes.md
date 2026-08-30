@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.30.0
+
 ### New Features 🌈
 
 * **New audit**: [self-repository] detects usages of the old "workspace-relative"

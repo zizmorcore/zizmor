@@ -13,7 +13,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.30.0-rc2"
+version = "1.30.0"
 edition = "2024"
 rust-version = "1.97.0"
 readme = "README.md"
@@ -21,14 +21,14 @@ homepage = "https://docs.zizmor.sh"
 license = "MIT"
 
 [workspace.dependencies]
-github-actions-expressions = { path = "crates/github-actions-expressions", version = "1.30.0-rc2" }
-github-actions-models = { path = "crates/github-actions-models", version = "1.30.0-rc2" }
-pre-commit-models = { path = "crates/pre-commit-models", version = "1.30.0-rc2" }
-subfeature = { path = "crates/subfeature", version = "1.30.0-rc2" }
-tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.30.0-rc2" }
-yamlpatch = { path = "crates/yamlpatch", version = "1.30.0-rc2" }
-yamlpath = { path = "crates/yamlpath", version = "1.30.0-rc2" }
-zizmor-sarif = { path = "crates/zizmor-sarif", version = "1.30.0-rc2" }
+github-actions-expressions = { path = "crates/github-actions-expressions", version = "1.30.0" }
+github-actions-models = { path = "crates/github-actions-models", version = "1.30.0" }
+pre-commit-models = { path = "crates/pre-commit-models", version = "1.30.0" }
+subfeature = { path = "crates/subfeature", version = "1.30.0" }
+tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.30.0" }
+yamlpatch = { path = "crates/yamlpatch", version = "1.30.0" }
+yamlpath = { path = "crates/yamlpath", version = "1.30.0" }
+zizmor-sarif = { path = "crates/zizmor-sarif", version = "1.30.0" }
 
 annotate-snippets = "0.12.16"
 anstream = "1.0.0"
