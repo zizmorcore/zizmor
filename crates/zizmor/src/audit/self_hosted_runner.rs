@@ -16,9 +16,6 @@ use crate::{
     audit::AuditError,
     finding::{Confidence, Persona, Severity},
 };
-use std::collections::HashSet;
-use std::ops::Deref as _;
-use std::sync::LazyLock;
 
 pub(crate) struct SelfHostedRunner;
 
@@ -27,15 +24,6 @@ audit_meta!(
     "self-hosted-runner",
     "runs on a self-hosted runner"
 );
-
-// https://docs.github.com/en/actions/reference/runners/github-hosted-runners
-static KNOWN_GITHUB_HOSTED_RUNNERS: LazyLock<HashSet<String>> = LazyLock::new(|| {
-    include_str!("../../data/github-hosted-runners.txt")
-        .lines()
-        .filter(|line| !line.is_empty())
-        .map(|runner| runner.trim().to_string())
-        .collect::<HashSet<_>>()
-});
 
 #[async_trait::async_trait]
 impl Audit for SelfHostedRunner {
@@ -51,12 +39,11 @@ impl Audit for SelfHostedRunner {
         job: &NormalJob<'doc>,
         config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        let well_known_runners = KNOWN_GITHUB_HOSTED_RUNNERS.deref();
         let included_runners = &config.self_hosted_runner_config.deny_runners;
         let excluded_groups = &config.self_hosted_runner_config.allow_groups;
 
         let self_hosted_runners = job
-            .runners(well_known_runners, included_runners, excluded_groups)
+            .runners(included_runners, excluded_groups)
             .filter(|runner| match runner {
                 Runner::SelfHosted { .. } => true,
                 Runner::Indeterminate {
@@ -76,8 +63,7 @@ impl Audit for SelfHostedRunner {
                     evidence,
                     from_matrix,
                 } => match evidence {
-                    RunnerEvidence::ClassicSentinel
-                    | RunnerEvidence::ExplicitlyFlagged => {
+                    RunnerEvidence::ClassicSentinel | RunnerEvidence::ExplicitlyFlagged => {
                         let finding_builder = Self::finding()
                             .confidence(Confidence::High)
                             .severity(Severity::Medium)

@@ -7,6 +7,17 @@ use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::job::RunsOn;
 use std::collections::HashSet;
 use std::ops::Deref as _;
+use std::sync::LazyLock;
+
+/// The list of well-known Github runners
+/// See https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+static KNOWN_GITHUB_HOSTED_RUNNERS: LazyLock<HashSet<String>> = LazyLock::new(|| {
+    include_str!("../../../data/github-hosted-runners.txt")
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|runner| runner.trim().to_string())
+        .collect::<HashSet<_>>()
+});
 
 /// The evidence that backs a self-hosted-runner finding
 pub(crate) enum RunnerEvidence {
@@ -53,7 +64,6 @@ pub(crate) struct JobRunners<'doc> {
 impl<'doc> JobRunners<'doc> {
     pub(crate) fn new(
         job: &NormalJob<'doc>,
-        well_know_runners: &HashSet<String>,
         included_runners: &HashSet<String>,
         excluded_groups: &HashSet<String>,
     ) -> Self {
@@ -75,13 +85,7 @@ impl<'doc> JobRunners<'doc> {
                 } else {
                     for label in labels.iter() {
                         // Evaluate all other scenarios
-                        runners.push(Self::evaluate_runner(
-                            label,
-                            job,
-                            well_know_runners,
-                            included_runners,
-                            false,
-                        ))
+                        runners.push(Self::evaluate_runner(label, job, included_runners, false))
                     }
                 }
             }
@@ -119,12 +123,7 @@ impl<'doc> JobRunners<'doc> {
                         .leaf_expressions()
                         .into_iter()
                         .flat_map(|leaf| {
-                            Self::expand_runner_expression(
-                                leaf,
-                                job,
-                                well_know_runners,
-                                included_runners,
-                            )
+                            Self::expand_runner_expression(leaf, job, included_runners)
                         })
                         .for_each(|runner| {
                             runners.push(runner);
@@ -154,7 +153,6 @@ impl<'doc> JobRunners<'doc> {
     fn evaluate_runner(
         label: &str,
         job: &NormalJob<'doc>,
-        well_known_runners: &HashSet<String>,
         included_runners: &HashSet<String>,
         from_matrix: bool,
     ) -> Runner<'doc> {
@@ -172,7 +170,8 @@ impl<'doc> JobRunners<'doc> {
         }
 
         // Trivial scenario
-        if well_known_runners
+        if KNOWN_GITHUB_HOSTED_RUNNERS
+            .deref()
             .iter()
             .find(|runner| label.eq_ignore_ascii_case(runner))
             .is_some()
@@ -188,7 +187,6 @@ impl<'doc> JobRunners<'doc> {
     fn expand_runner_expression(
         parsed: &SpannedExpr,
         job: &NormalJob<'doc>,
-        well_know_runners: &HashSet<String>,
         included_runners: &HashSet<String>,
     ) -> Vec<Runner<'doc>> {
         match &parsed.inner {
@@ -197,7 +195,6 @@ impl<'doc> JobRunners<'doc> {
                 vec![Self::evaluate_runner(
                     lit.as_str().deref(),
                     job,
-                    well_know_runners,
                     included_runners,
                     false,
                 )]
@@ -256,13 +253,7 @@ impl<'doc> JobRunners<'doc> {
                     .iter()
                     .map(|(is_static, value)| {
                         if *is_static {
-                            Self::evaluate_runner(
-                                value,
-                                job,
-                                well_know_runners,
-                                included_runners,
-                                true,
-                            )
+                            Self::evaluate_runner(value, job, included_runners, true)
                         } else {
                             Runner::Indeterminate {
                                 location: job.location(),
@@ -291,7 +282,7 @@ impl<'doc> JobRunners<'doc> {
         }
     }
 
-    /// Simpler helper to dedup functionality
+    /// Simple helper to dedup functionality
     fn evaluate_self_hosted_evidence(input: &str, included_runners: &HashSet<String>) -> bool {
         let self_hosting_sentinel = input.to_lowercase().contains("self-hosted");
         let included_by_config = included_runners.iter().any(|runner| input.contains(runner));

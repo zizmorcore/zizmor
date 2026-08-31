@@ -19,7 +19,7 @@ use terminal_link::Link;
 pub(crate) mod matrix;
 pub(crate) mod runners;
 
-use crate::models::workflow::runners::{Runner, JobRunners};
+use crate::models::workflow::runners::{JobRunners, Runner};
 use crate::{
     InputKey,
     finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
@@ -323,11 +323,10 @@ impl<'doc> NormalJob<'doc> {
     /// expressions. See [`Runner`].
     pub(crate) fn runners(
         &self,
-        well_know_runners: &HashSet<String>,
         included_runners: &HashSet<String>,
         excluded_groups: &HashSet<String>,
     ) -> impl Iterator<Item = Runner<'doc>> {
-        JobRunners::new(self, well_know_runners, included_runners, excluded_groups).iter()
+        JobRunners::new(self, included_runners, excluded_groups).iter()
     }
 }
 
