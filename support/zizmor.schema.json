@@ -425,7 +425,7 @@
       "description": "Configuration for the `self-hosted-runner` audit.",
       "type": "object",
       "properties": {
-        "exclude-groups": {
+        "allow-groups": {
           "description": "Any Runner Groups the user wants to avoid being flagged,\nusually Runner Groups for Github Large Runners",
           "type": "array",
           "items": {
@@ -433,8 +433,8 @@
           },
           "uniqueItems": true
         },
-        "include-runners": {
-          "description": "Additional runner labels the user want to flag as self-hosted",
+        "deny-runners": {
+          "description": "Additional runner labels the user want to declare as self-hosted\nand should be flagged by the audit",
           "type": "array",
           "items": {
             "type": "string"
@@ -444,8 +444,8 @@
       },
       "additionalProperties": false,
       "required": [
-        "include-runners",
-        "exclude-groups"
+        "deny-runners",
+        "allow-groups"
       ]
     },
     "SelfHostedRunnerRuleConfig": {

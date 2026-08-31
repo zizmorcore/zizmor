@@ -269,11 +269,12 @@ impl Deref for ForbiddenUsesConfig {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub(crate) struct SelfHostedRunnerConfig {
-    /// Additional runner labels the user want to flag as self-hosted
-    pub(crate) include_runners: HashSet<String>,
+    /// Additional runner labels the user want to declare as self-hosted
+    /// and should be flagged by the audit
+    pub(crate) deny_runners: HashSet<String>,
     /// Any Runner Groups the user wants to avoid being flagged,
     /// usually Runner Groups for Github Large Runners
-    pub(crate) exclude_groups: HashSet<String>,
+    pub(crate) allow_groups: HashSet<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

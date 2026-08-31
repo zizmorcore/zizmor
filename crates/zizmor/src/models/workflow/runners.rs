@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::ops::Deref as _;
 
 /// The evidence that backs a self-hosted-runner finding
-pub(crate) enum SelfHostingEvidence {
+pub(crate) enum RunnerEvidence {
     /// For classic registration methods like Runner binary self-registration
     /// and legacy ARC : both forces the "self-hosted" label
     ClassicSentinel,
@@ -22,7 +22,7 @@ pub(crate) enum SelfHostingEvidence {
 }
 
 /// The representation of an Actions Runner
-pub(crate) enum GithubActionsRunner<'doc> {
+pub(crate) enum Runner<'doc> {
     /// Loaded from static data
     GithubOwned,
     /// Runners provided as a service
@@ -30,7 +30,7 @@ pub(crate) enum GithubActionsRunner<'doc> {
     /// Self-explained
     SelfHosted {
         location: SymbolicLocation<'doc>,
-        evidence: SelfHostingEvidence,
+        evidence: RunnerEvidence,
         from_matrix: bool,
     },
     Indeterminate {
@@ -47,7 +47,7 @@ pub(crate) enum GithubActionsRunner<'doc> {
 
 /// Helper wrapping all runners evaluated for a Job
 pub(crate) struct JobRunners<'doc> {
-    runners: Vec<GithubActionsRunner<'doc>>,
+    runners: Vec<Runner<'doc>>,
 }
 
 impl<'doc> JobRunners<'doc> {
@@ -67,9 +67,9 @@ impl<'doc> JobRunners<'doc> {
                     .iter()
                     .any(|label| label.eq_ignore_ascii_case("self-hosted"))
                 {
-                    runners.push(GithubActionsRunner::SelfHosted {
+                    runners.push(Runner::SelfHosted {
                         location: job.location(),
-                        evidence: SelfHostingEvidence::ClassicSentinel,
+                        evidence: RunnerEvidence::ClassicSentinel,
                         from_matrix: false,
                     });
                 } else {
@@ -100,11 +100,11 @@ impl<'doc> JobRunners<'doc> {
                         .find(|gh_group| runner_group.eq_ignore_ascii_case(gh_group))
                         .is_some()
                     {
-                        runners.push(GithubActionsRunner::GithubOwned)
+                        runners.push(Runner::GithubOwned)
                     } else {
-                        runners.push(GithubActionsRunner::SelfHosted {
+                        runners.push(Runner::SelfHosted {
                             location: job.location(),
-                            evidence: SelfHostingEvidence::RunnerGroup,
+                            evidence: RunnerEvidence::RunnerGroup,
                             from_matrix: false,
                         })
                     };
@@ -133,7 +133,7 @@ impl<'doc> JobRunners<'doc> {
                     let maybe_self_hosted =
                         Self::evaluate_self_hosted_evidence(exp.as_bare(), included_runners);
 
-                    runners.push(GithubActionsRunner::Indeterminate {
+                    runners.push(Runner::Indeterminate {
                         location: job.location(),
                         self_hosted_evidence: maybe_self_hosted,
                         from_matrix: false,
@@ -146,7 +146,7 @@ impl<'doc> JobRunners<'doc> {
     }
 
     /// Return an iterator over the inner collection
-    pub(crate) fn iter(self) -> impl Iterator<Item = GithubActionsRunner<'doc>> {
+    pub(crate) fn iter(self) -> impl Iterator<Item = Runner<'doc>> {
         self.runners.into_iter()
     }
 
@@ -157,16 +157,16 @@ impl<'doc> JobRunners<'doc> {
         well_known_runners: &HashSet<String>,
         included_runners: &HashSet<String>,
         from_matrix: bool,
-    ) -> GithubActionsRunner<'doc> {
+    ) -> Runner<'doc> {
         // Allows users to flag new ARC-based self-hosted runners
         if included_runners
             .iter()
             .find(|runner| label.eq_ignore_ascii_case(runner))
             .is_some()
         {
-            return GithubActionsRunner::SelfHosted {
+            return Runner::SelfHosted {
                 location: job.location(),
-                evidence: SelfHostingEvidence::ExplicitlyFlagged,
+                evidence: RunnerEvidence::ExplicitlyFlagged,
                 from_matrix,
             };
         }
@@ -177,11 +177,11 @@ impl<'doc> JobRunners<'doc> {
             .find(|runner| label.eq_ignore_ascii_case(runner))
             .is_some()
         {
-            return GithubActionsRunner::GithubOwned;
+            return Runner::GithubOwned;
         }
 
         // Fallback is handled as a third party
-        GithubActionsRunner::ThirdParty
+        Runner::ThirdParty
     }
 
     /// Expands expressions for a runs-on: ${{ expression }}
@@ -190,7 +190,7 @@ impl<'doc> JobRunners<'doc> {
         job: &NormalJob<'doc>,
         well_know_runners: &HashSet<String>,
         included_runners: &HashSet<String>,
-    ) -> Vec<GithubActionsRunner<'doc>> {
+    ) -> Vec<Runner<'doc>> {
         match &parsed.inner {
             // as literal, we evaluate almost as we do with LoE<RunsOn::Literal>
             Expr::Literal(lit) => {
@@ -205,7 +205,7 @@ impl<'doc> JobRunners<'doc> {
             // we evaluate only matrix expansion
             Expr::Context(context) if context.child_of("matrix") => {
                 let Some(matrix) = job.matrix() else {
-                    return vec![GithubActionsRunner::Indeterminate {
+                    return vec![Runner::Indeterminate {
                         location: job.location(),
                         self_hosted_evidence: false,
                         from_matrix: false,
@@ -229,9 +229,9 @@ impl<'doc> JobRunners<'doc> {
                     .filter(|(is_static, _)| *is_static)
                     .any(|(_, value)| value.eq_ignore_ascii_case("self-hosted"))
                 {
-                    return vec![GithubActionsRunner::SelfHosted {
+                    return vec![Runner::SelfHosted {
                         location: job.location(),
-                        evidence: SelfHostingEvidence::ClassicSentinel,
+                        evidence: RunnerEvidence::ClassicSentinel,
                         from_matrix: true,
                     }];
                 }
@@ -243,7 +243,7 @@ impl<'doc> JobRunners<'doc> {
                     .filter(|(is_static, _)| *is_static)
                     .any(|(_, value)| Self::evaluate_self_hosted_evidence(value, included_runners))
                 {
-                    return vec![GithubActionsRunner::Indeterminate {
+                    return vec![Runner::Indeterminate {
                         location: job.location(),
                         self_hosted_evidence: true,
                         from_matrix: true,
@@ -264,7 +264,7 @@ impl<'doc> JobRunners<'doc> {
                                 true,
                             )
                         } else {
-                            GithubActionsRunner::Indeterminate {
+                            Runner::Indeterminate {
                                 location: job.location(),
                                 self_hosted_evidence: false,
                                 from_matrix: true,
@@ -281,7 +281,7 @@ impl<'doc> JobRunners<'doc> {
                 let maybe_self_hosted =
                     Self::evaluate_self_hosted_evidence(raw_expression, included_runners);
 
-                let indeterminate_runner = GithubActionsRunner::Indeterminate {
+                let indeterminate_runner = Runner::Indeterminate {
                     location: job.location(),
                     self_hosted_evidence: maybe_self_hosted,
                     from_matrix: false,

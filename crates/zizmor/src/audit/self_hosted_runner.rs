@@ -9,7 +9,7 @@ use super::{Audit, AuditLoadError, audit_meta};
 use crate::config::Config;
 use crate::finding::Finding;
 use crate::finding::location::Locatable as _;
-use crate::models::workflow::runners::{GithubActionsRunner, SelfHostingEvidence};
+use crate::models::workflow::runners::{Runner, RunnerEvidence};
 use crate::models::workflow::{JobCommon as _, NormalJob};
 use crate::{
     AuditState,
@@ -52,14 +52,14 @@ impl Audit for SelfHostedRunner {
         config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let well_known_runners = KNOWN_GITHUB_HOSTED_RUNNERS.deref();
-        let included_runners = &config.self_hosted_runner_config.include_runners;
-        let excluded_groups = &config.self_hosted_runner_config.exclude_groups;
+        let included_runners = &config.self_hosted_runner_config.deny_runners;
+        let excluded_groups = &config.self_hosted_runner_config.allow_groups;
 
         let self_hosted_runners = job
-            .github_actions_runners(well_known_runners, included_runners, excluded_groups)
+            .runners(well_known_runners, included_runners, excluded_groups)
             .filter(|runner| match runner {
-                GithubActionsRunner::SelfHosted { .. } => true,
-                GithubActionsRunner::Indeterminate {
+                Runner::SelfHosted { .. } => true,
+                Runner::Indeterminate {
                     self_hosted_evidence,
                     ..
                 } => *self_hosted_evidence,
@@ -71,13 +71,13 @@ impl Audit for SelfHostedRunner {
 
         for runner in self_hosted_runners {
             match runner {
-                GithubActionsRunner::SelfHosted {
+                Runner::SelfHosted {
                     location,
                     evidence,
                     from_matrix,
                 } => match evidence {
-                    SelfHostingEvidence::ClassicSentinel
-                    | SelfHostingEvidence::ExplicitlyFlagged => {
+                    RunnerEvidence::ClassicSentinel
+                    | RunnerEvidence::ExplicitlyFlagged => {
                         let finding_builder = Self::finding()
                             .confidence(Confidence::High)
                             .severity(Severity::Medium)
@@ -103,7 +103,7 @@ impl Audit for SelfHostedRunner {
                             findings.push(finding_builder.build(job.parent())?);
                         };
                     }
-                    SelfHostingEvidence::RunnerGroup => findings.push(
+                    RunnerEvidence::RunnerGroup => findings.push(
                         Self::finding()
                             .confidence(Confidence::High)
                             .severity(Severity::Medium)
@@ -117,7 +117,7 @@ impl Audit for SelfHostedRunner {
                             .build(job.parent())?,
                     ),
                 },
-                GithubActionsRunner::Indeterminate {
+                Runner::Indeterminate {
                     location,
                     from_matrix,
                     ..

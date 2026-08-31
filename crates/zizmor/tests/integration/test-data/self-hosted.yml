@@ -20,7 +20,7 @@ jobs:
     steps:
       - run: echo "hello from a deprecated runner"
 
-  # OK : classic sentinel label
+  # NOT OK : classic sentinel label detected
   sentinel-label:
     name: sentinel-label
     runs-on: [self-hosted, my-ubuntu-box]
@@ -28,7 +28,7 @@ jobs:
     steps:
       - run: echo "hello from a self-hosted runner"
 
-  # NOT OK : self-hosted runner was included through config
+  # NOT OK : self-hosted runner label was included through config
   well-known-self-hosted-runner:
     name: well-known-self-hosted-runner
     runs-on: ubuntu-xxx
@@ -36,7 +36,7 @@ jobs:
     steps:
       - run: echo "hello from ubuntu-xxx"
 
-  # OK : Github Larger Runners Group was included through config
+  # OK : Github Larger   Runners Group was included through config
   well-known-runner-group:
     name: well-known-self-hosted-runner
     runs-on:
