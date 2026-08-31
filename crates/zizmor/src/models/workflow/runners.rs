@@ -2,6 +2,7 @@
 
 use crate::finding::location::{Locatable as _, SymbolicLocation};
 use crate::models::workflow::NormalJob;
+use fst::Set;
 use github_actions_expressions::{Expr, SpannedExpr};
 use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::job::RunsOn;
@@ -11,12 +12,9 @@ use std::sync::LazyLock;
 
 /// The list of well-known Github runners
 /// See https://docs.github.com/en/actions/reference/runners/github-hosted-runners
-static KNOWN_GITHUB_HOSTED_RUNNERS: LazyLock<HashSet<String>> = LazyLock::new(|| {
-    include_str!("../../../data/github-hosted-runners.txt")
-        .lines()
-        .filter(|line| !line.is_empty())
-        .map(|runner| runner.trim().to_string())
-        .collect::<HashSet<_>>()
+static KNOWN_GITHUB_HOSTED_RUNNERS: LazyLock<Set<&[u8]>> = LazyLock::new(|| {
+    Set::new(include_bytes!(concat!(env!("OUT_DIR"), "/github-hosted-runners.fst")).as_slice())
+        .expect("couldn't initialize github-hosted-runners FST")
 });
 
 /// The evidence that backs a self-hosted-runner finding
@@ -170,12 +168,7 @@ impl<'doc> JobRunners<'doc> {
         }
 
         // Trivial scenario
-        if KNOWN_GITHUB_HOSTED_RUNNERS
-            .deref()
-            .iter()
-            .find(|runner| label.eq_ignore_ascii_case(runner))
-            .is_some()
-        {
+        if KNOWN_GITHUB_HOSTED_RUNNERS.contains(label) {
             return Runner::GithubOwned;
         }
 
