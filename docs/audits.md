@@ -1711,7 +1711,7 @@ within `#!yaml uses:` clauses.
 This syntax has security and policy enforcement benefits when compared to
 the old "workspace-relative" (`#!yaml uses: ./...`) syntax:
 
-- Unlike the "workspace-relative" fork, the "self-repository" form is not subject
+- Unlike the "workspace-relative" form, the "self-repository" form is not subject
   to runtime filesystem state, meaning that it can't load an action that was
   cloned at runtime in a previous step.
 - Using the "self-repository" form makes it possible to enforce a "fully pinned"
