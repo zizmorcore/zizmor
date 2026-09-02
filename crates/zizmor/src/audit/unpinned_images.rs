@@ -186,40 +186,72 @@ fn candidates_for_leaf<'doc>(
                 return vec![];
             };
 
-            matrix
-                .expansions()
+            let expansions = matrix.expansions();
+
+            // Evaluate first candidates from static expansions
+            let mut candidates = expansions
                 .iter()
                 .filter(|expansion| context.matches(expansion.path.as_str()))
-                .flat_map(|expansion| {
-                    if expansion.is_static() {
-                        ImageCandidate::concrete(
-                            &DockerUses::parse(&expansion.value),
-                            location.clone(),
-                            vec![
-                                matrix.location().key_only(),
-                                expansion.location().annotated(format!(
-                                    "this expansion of {path}",
-                                    path = expansion.path
-                                )),
-                            ],
-                        )
-                        .into_iter()
-                        .collect()
-                    } else {
-                        // The expansion itself contains an expression, so we
-                        // can't analyze it statically.
-                        vec![ImageCandidate::opaque(
-                            location.clone(),
-                            vec![expansion.location()],
-                        )]
-                    }
+                .filter(|expansion| expansion.is_static())
+                .filter_map(|expansion| {
+                    let annotations = vec![
+                        matrix.location().key_only(),
+                        expansion
+                            .location()
+                            .annotated(format!("this expansion of {path}", path = expansion.path)),
+                    ];
+
+                    ImageCandidate::concrete(
+                        &DockerUses::parse(&expansion.value),
+                        location.clone(),
+                        annotations,
+                    )
                 })
-                .collect()
+                .collect::<Vec<_>>();
+
+            // Evaluate also indirect expansions
+            // An indirect matrix, dimensions block means this path may
+            // take values we never saw -- possibly all of them.
+            if expansions.has_indirect_expansions() {
+                let mut annotations = vec![matrix.location().key_only().annotated("this matrix")];
+
+                let indirect_matrix = annotated_indetermination(
+                    expansions.indirectly_expanded(),
+                    "indirect `matrix` adds combinations we can't see",
+                );
+
+                let indirect_inclusions = annotated_indetermination(
+                    expansions.indirect_inclusions(),
+                    "`include` may add combinations we can't see",
+                );
+
+                let indirect_exclusions = annotated_indetermination(
+                    expansions.indirect_exclusions(),
+                    "`exclude` may remove combinations we can't see",
+                );
+
+                annotations.extend(indirect_matrix);
+                annotations.extend(indirect_inclusions);
+                annotations.extend(indirect_exclusions);
+
+                candidates.push(ImageCandidate::opaque(location.clone(), annotations));
+            }
+
+            candidates
         }
         // Any other leaf (non-`matrix` context, function call, etc.) can't be
         // analyzed statically.
         _ => vec![ImageCandidate::opaque(location, vec![])],
     }
+}
+
+fn annotated_indetermination<'doc>(
+    target: &Option<SymbolicLocation<'doc>>,
+    annotation: &'doc str,
+) -> Option<SymbolicLocation<'doc>> {
+    target
+        .as_ref()
+        .map(|location| location.clone().annotated(annotation))
 }
 
 impl UnpinnedImages {

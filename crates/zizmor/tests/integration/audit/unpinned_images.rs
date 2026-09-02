@@ -227,6 +227,91 @@ fn test_matrix_in_image_regular() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_matrix_indirect_expansions() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test("unpinned-images/indirect-matrices.yml"))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @"
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:18:7
+       |
+    18 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+    19 |     strategy:
+    20 |       matrix: ${{ fromJSON(vars.CUSTOM_TARGETS) }}
+       |       --------------------------------------------
+       |       |
+       |       this matrix
+       |       indirect `matrix` adds combinations we can't see
+       |
+       = note: audit confidence → Low
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:29:7
+       |
+    29 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image uses the floating 'latest' tag
+    ...
+    32 |       matrix:
+       |       ------ this matrix
+    ...
+    35 |           - ubuntu:latest
+       |             ------------- this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:29:7
+       |
+    29 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+    ...
+    32 |       matrix:
+       |       ------ this matrix
+    ...
+    36 |         include: ${{ fromJSON(vars.EXTRA_TARGETS) }}
+       |         -------------------------------------------- `include` may add combinations we can't see
+       |
+       = note: audit confidence → Low
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:45:7
+       |
+    45 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image uses the floating 'latest' tag
+    ...
+    48 |       matrix:
+       |       ------ this matrix
+    ...
+    53 |           - ubuntu:latest
+       |             ------------- this expansion of matrix.image
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:45:7
+       |
+    45 |       image: ${{ matrix.image }}
+       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+    ...
+    48 |       matrix:
+       |       ------ this matrix
+    ...
+    54 |         exclude: ${{ fromJSON(vars.KNOWN_BROKEN_COMBINATIONS) }}
+       |         -------------------------------------------------------- `exclude` may remove combinations we can't see
+       |
+       = note: audit confidence → Low
+
+    5 findings: 0 informational, 0 low, 0 medium, 5 high
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_urllib3_empty_matrix_container_regular() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
