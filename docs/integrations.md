@@ -270,6 +270,28 @@ vim.lsp.enable('zizmor')
 
 For more information about LSP configuration in neovim, see `:h lspconfig-all`.
 
+### Sublime Text
+
+Support for `zizmor` in Sublime Text is provided via the
+[LSP](https://lsp.sublimetext.io/) package. As with Visual
+Studio Code, you must install `zizmor` [separately](./installation.md) for the
+LSP server to work. 
+
+Install [LSP](https://packages.sublimetext.com/packages/LSP)
+and [YamlPipelines](https://packages.sublimetext.com/packages/YamlPipelines)
+packages using Package Control. Then, enable `zizmor` LSP by adding the following
+configuration in `Preferences > Package Settings > LSP > Server Configurations`:
+
+```json
+{
+    "zizmor": {
+        "enabled": true,
+        "command": ["zizmor", "--lsp"],
+        "selector": "source.yaml.pipeline.github-actions"
+    }
+}
+```
+
 ### Generic LSP integration
 
 `zizmor` can be integrated with any editor or IDE that supports LSP.
