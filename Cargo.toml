@@ -46,14 +46,14 @@ flate2 = "1.1.9"
 fst = "0.4.7"
 futures = "0.3"
 http = "1.4.1"
-http-cache-reqwest = { version = "1.0.0-alpha.7", default-features = false, features = ["manager-cacache", "manager-moka", "url-standard"] }
+http-cache-reqwest = { version = "1.0.0-alpha.7", default-features = false, features = ["manager-cacache", "manager-moka", "reqwest-middleware", "url-standard"] }
 human-panic = "2.0.8"
 ignore = "0.4.25"
 indexmap = { version = "2.13.1", features = ["serde"] }
 indicatif = "0.18"
 insta = "1.48.0"
 itertools = "0.15.0"
-jsonschema = { version = "0.49.1", default-features = false }
+jsonschema = { version = "0.51.0", default-features = false }
 line-index = "0.1.2"
 memchr = "2.8.0"
 owo-colors = "4.3.0"
