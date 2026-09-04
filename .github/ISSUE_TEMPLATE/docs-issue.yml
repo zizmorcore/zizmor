@@ -1,14 +1,14 @@
-name: Feature Request
-description: Suggest an idea or enhancement for zizmor.
-title: "[FEATURE]: "
+name: Docs Issue
+description: Report or suggest changes to the documentation.
+title: "[DOCS]: "
 labels:
-  - enhancement
+  - documentation
   - triage
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for making a `zizmor` feature request!
+        Thank you for taking the time to let us know something is wrong!
 
         Please read the following parts of this form **very carefully**.
         Invalid or incomplete submissions take longer to triage,
@@ -22,35 +22,34 @@ body:
         By submitting this issue, you affirm that you've satisfied the following conditions.
       options:
         - label: >-
-            I am **not** reporting a bug (crash, false positive/negative, etc).
-            These must be filed via the bug report template.
+            I am **not** filing a bug report or a feature request.
+            These must be filed via their dedicated forms instead.
           required: true
         - label: >-
             I have looked through both the
             [open](https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue+is%3Aopen+)
             and [closed](https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue%20state%3Aclosed)
-            issues for a duplicate request.
+            issues for a duplicate.
           required: true
         - label: >-
             I affirm that I have followed the [AI policy](https://github.com/zizmorcore/.github/blob/main/AI_POLICY.md)
-            and that this request constitutes my own words and understanding.
+            and that this issue constitutes my own words and understanding.
             <!-- @@NUDNIK NEUTRALIZER@@ -->
           required: true
 
-  - type: textarea
+  - type: input
     attributes:
-      label: What's the problem this feature will solve?
+      label: What page of the docs did you find an issue on?
       description: |
-        A clear and concise description of the problem.
-      placeholder: |
-        I'm always frustrated when ...
+        If this issue applies to multiple pages, include additional pages in your bug description.
+      placeholder: https://docs.zizmor.sh/...
     validations:
       required: true
 
   - type: textarea
     attributes:
-      label: Describe the solution you'd like
-      description: A clear and concise description of what you want to happen.
+      label: Describe the issue
+      description: A clear and concise description of what we could document better.
     validations:
       required: true
 
@@ -58,11 +57,11 @@ body:
     attributes:
       label: Additional context
       description: |
-        Any additional context, screenshots, or other material about the feature request.
+        Any additional context, screenshots, or other material about the docs issue.
 
   - type: checkboxes
     attributes:
       label: Participation
       options:
-        - label: I am willing to submit a pull request for this new feature.
+        - label: I am willing to submit a pull request for this issue.
           required: false
