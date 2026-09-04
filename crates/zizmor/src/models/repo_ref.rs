@@ -86,7 +86,14 @@ impl<'doc> RepoRef<'doc> {
         let slug = if url.host_str() == Some("github.com") {
             // We expect `https://github.com/owner/repo`, but
             // the user can naturally feed us nonsense.
-            let path = url.path();
+            //
+            // Bug #2358: a Git URL can have a `.git` suffix,
+            // e.g. `https://github.com/pre-commit/pre-commit-hooks.git`.
+            // We need to strip that from the path (which also removes
+            // it from the repo component of the slug).
+            //
+            // See: <https://github.com/zizmorcore/zizmor/issues/2358>
+            let path = url.path().strip_suffix(".git").unwrap_or(url.path());
             let mut parts = path.split('/');
 
             // We expect an empty component first, since `path()`
@@ -253,6 +260,36 @@ mod tests {
                     owner: "foo",
                     repo: "bar",
                     slug: "foo/bar",
+                },
+            ),
+            git_ref: "v1",
+        }
+        "#);
+
+        // GitHub URL with `.git` suffix also works correctly with slug detection.
+        let url = Url::parse("https://github.com/pre-commit/pre-commit-hooks.git").unwrap();
+        insta::assert_debug_snapshot!(RepoRef::from_url(&url, "v1"), @r#"
+        Url {
+            _url: Url {
+                scheme: "https",
+                cannot_be_a_base: false,
+                username: "",
+                password: None,
+                host: Some(
+                    Domain(
+                        "github.com",
+                    ),
+                ),
+                port: None,
+                path: "/pre-commit/pre-commit-hooks.git",
+                query: None,
+                fragment: None,
+            },
+            slug: Some(
+                Slug {
+                    owner: "pre-commit",
+                    repo: "pre-commit-hooks",
+                    slug: "pre-commit/pre-commit-hooks",
                 },
             ),
             git_ref: "v1",
