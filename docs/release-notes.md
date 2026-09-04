@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where `zizmor` would crash on pre-commit inputs that reference
+  a GitHub URL with an explicit `.git` suffix (#2363)
+
 ## 1.30.0
 
 ### New Features 🌈
