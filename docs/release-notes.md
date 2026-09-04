@@ -19,6 +19,9 @@ of `zizmor`.
 
 ### Enhancements 🌱
 
+* GitHub Enterprise users can now use a separate `GITHUB_COM_TOKEN` for actions
+  on `github.com`.
+
 * The [impostor-commit] audit now supports pre-commit config inputs (#2256)
 
 * The [forbidden-uses] audit now supports pre-commit config inputs (#2263)
