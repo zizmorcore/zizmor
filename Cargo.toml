@@ -9,6 +9,7 @@ members = [
   "crates/yamlpatch",
   "crates/yamlpath",
   "crates/zizmor",
+  "crates/zizmor-http-cache",
   "crates/zizmor-sarif",
 ]
 
@@ -28,6 +29,7 @@ subfeature = { path = "crates/subfeature", version = "1.30.0" }
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.30.0" }
 yamlpatch = { path = "crates/yamlpatch", version = "1.30.0" }
 yamlpath = { path = "crates/yamlpath", version = "1.30.0" }
+zizmor-http-cache = { path = "crates/zizmor-http-cache", version = "1.30.0" }
 zizmor-sarif = { path = "crates/zizmor-sarif", version = "1.30.0" }
 
 annotate-snippets = "0.12.16"
@@ -35,27 +37,28 @@ anstream = "1.0.0"
 anyhow = "1.0.102"
 assert_cmd = "2.2.2"
 async-trait = "0.1.89"
+bytes = "1.11.1"
 camino = "1.2.2"
 clap = "4.6.1"
 clap_complete = "4.6.5"
 clap_complete_nushell = "4.6.0"
 clap-verbosity-flag = { version = "3.0.4", default-features = false }
 csv = "1.3.1"
-etcetera = "0.11.0"
 flate2 = "1.1.9"
 fst = "0.4.7"
 futures = "0.3"
 http = "1.4.1"
-http-cache-reqwest = { version = "1.0.0-alpha.7", default-features = false, features = ["manager-cacache", "manager-moka", "reqwest-middleware", "url-standard"] }
 human-panic = "2.0.8"
 ignore = "0.4.25"
 indexmap = { version = "2.13.1", features = ["serde"] }
 indicatif = "0.18"
 insta = "1.48.0"
 itertools = "0.15.0"
+jiff = { version = "0.2.35", default-features = false, features = ["std"] }
 jsonschema = { version = "0.51.0", default-features = false }
 line-index = "0.1.2"
 memchr = "2.8.0"
+moka = { version = "0.12.15", features = ["future"] }
 owo-colors = "4.3.0"
 regex = "1.12.3"
 reqwest = "0.13"

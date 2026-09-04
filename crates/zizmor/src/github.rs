@@ -9,10 +9,7 @@ use std::{
 
 use camino::Utf8Path;
 use flate2::read::GzDecoder;
-use http_cache_reqwest::{
-    CACacheManager, Cache, CacheManager, CacheMode, CacheOptions, HttpCache, HttpCacheOptions,
-    MokaCache, MokaManager,
-};
+use moka::future::Cache as MokaCache;
 use reqwest::{
     Response, StatusCode,
     header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, InvalidHeaderValue},
@@ -26,6 +23,7 @@ use tracing::instrument;
 
 use crate::{
     CollectionOptions,
+    http_cache::{CacheStatus, HttpCache},
     models::repo_ref::Slug,
     registry::input::{CollectionError, InputGroup, InputKey, InputKind, InputSlug},
     utils::ZIZMOR_AGENT,
@@ -171,18 +169,6 @@ pub(crate) enum ClientError {
     Inner(#[from] Arc<Self>),
 }
 
-#[derive(Clone, Copy, Debug)]
-enum CacheType {
-    File,
-    Memory,
-}
-
-#[derive(Clone, Copy, Debug)]
-enum CacheResult {
-    Miss,
-    Hit,
-}
-
 struct CacheLoggingMiddleware;
 
 #[async_trait::async_trait]
@@ -197,46 +183,13 @@ impl reqwest_middleware::Middleware for CacheLoggingMiddleware {
 
         let res = next.run(req, extensions).await?;
 
-        let cache_type = extensions
-            .get::<CacheType>()
-            .expect("internal error: expected CacheType");
-        let cache_result = extensions
-            .get::<CacheResult>()
-            .expect("internal error: expected CacheResult");
-        tracing::debug!("{:?} cache was {:?}", cache_type, cache_result);
+        let cache_status = res
+            .extensions()
+            .get::<CacheStatus>()
+            .expect("internal error: expected HTTP cache status");
+        tracing::debug!("HTTP cache was {cache_status:?}");
 
         Ok(res)
-    }
-}
-
-struct ChainedCache<T: CacheManager>(Cache<T>, CacheType);
-
-#[async_trait::async_trait]
-impl<T: CacheManager> reqwest_middleware::Middleware for ChainedCache<T> {
-    async fn handle(
-        &self,
-        req: reqwest::Request,
-        extensions: &mut http::Extensions,
-        next: reqwest_middleware::Next<'_>,
-    ) -> reqwest_middleware::Result<Response> {
-        extensions.insert(self.1);
-
-        let res = self.0.handle(req, extensions, next).await;
-
-        if let Ok(ref resp) = res
-            && let Some(cache) = resp.headers().get("x-cache")
-        {
-            let cache_result = match cache
-                .to_str()
-                .expect("invalid x-cache header (not a string)")
-            {
-                "HIT" => CacheResult::Hit,
-                _ => CacheResult::Miss,
-            };
-            extensions.get_or_insert(cache_result);
-        }
-
-        res
     }
 }
 
@@ -286,11 +239,7 @@ pub(crate) struct Client {
 }
 
 impl Client {
-    pub(crate) fn new(
-        host: &GitHubHost,
-        token: &GitHubToken,
-        cache_dir: &Utf8Path,
-    ) -> Result<Self, ClientError> {
+    pub(crate) fn new(host: &GitHubHost, token: &GitHubToken) -> Result<Self, ClientError> {
         // Base HTTP client for non-API requests, e.g. direct Git access.
         // This client currently has no middleware.
         let base_client = reqwest::Client::builder()
@@ -306,7 +255,6 @@ impl Client {
         api_client_headers.insert(ACCEPT, "application/vnd.github+json".parse()?);
 
         let api_client = Self::default_middleware(
-            cache_dir,
             reqwest::Client::builder()
                 .user_agent(ZIZMOR_AGENT)
                 .default_headers(api_client_headers)
@@ -352,40 +300,10 @@ impl Client {
         })
     }
 
-    fn default_middleware(cache_dir: &Utf8Path, client: reqwest::Client) -> ClientWithMiddleware {
-        let http_cache_options = HttpCacheOptions {
-            cache_options: Some(CacheOptions {
-                // GitHub API requests made with an API token seem to
-                // always have `Cache-Control: private`, so we need to
-                // explicitly tell http-cache that our cache is not shared
-                // in order for things to cache correctly.
-                shared: false,
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
+    fn default_middleware(client: reqwest::Client) -> ClientWithMiddleware {
         ClientBuilder::new(client)
             .with(CacheLoggingMiddleware)
-            .with(ChainedCache(
-                Cache(HttpCache {
-                    mode: CacheMode::Default,
-                    manager: CACacheManager {
-                        path: cache_dir.into(),
-                        remove_opts: Default::default(),
-                    },
-                    options: http_cache_options.clone(),
-                }),
-                CacheType::File,
-            ))
-            .with(ChainedCache(
-                Cache(HttpCache {
-                    mode: CacheMode::ForceCache,
-                    manager: MokaManager::new(MokaCache::new(1000)),
-                    options: http_cache_options,
-                }),
-                CacheType::Memory,
-            ))
+            .with(HttpCache::new(1_000))
             .build()
     }
 
@@ -460,7 +378,7 @@ impl Client {
 
         match entry {
             Ok(heads) => Ok(heads.into_value()),
-            Err(e) => Err(e.into()),
+            Err(error) => Err(error.into()),
         }
     }
 
@@ -1259,7 +1177,6 @@ mod tests {
         let client = Client::new(
             &GitHubHost::default(),
             &GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
-            "/tmp".into(),
         )
         .unwrap();
 
