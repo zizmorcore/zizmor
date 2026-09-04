@@ -1,10 +1,9 @@
 #![allow(clippy::unwrap_used)]
 
+use fst::{MapBuilder, SetBuilder};
 use std::fs::{self, File};
 use std::path::Path;
 use std::{env, io};
-
-use fst::{MapBuilder, SetBuilder};
 
 fn do_context_capabilities() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -55,10 +54,12 @@ fn do_codeql_injection_sinks() {
     fs::copy(source, target).unwrap();
 }
 
-fn do_archived_action_repos() {
+/// Helper to dedup building FST files from static lists without any specific processing
+/// before inserting
+fn do_fst_for_static_list(name: &str) {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let source = Path::new(&manifest_dir).join("data/archived-repos.txt");
-    let target = Path::new(&env::var("OUT_DIR").unwrap()).join("archived-repos.fst");
+    let source = Path::new(&manifest_dir).join(format!("data/{name}.txt"));
+    let target = Path::new(&env::var("OUT_DIR").unwrap()).join(format!("{name}.fst"));
 
     println!(
         "cargo::rerun-if-changed={source}",
@@ -79,5 +80,6 @@ fn do_archived_action_repos() {
 fn main() {
     do_context_capabilities();
     do_codeql_injection_sinks();
-    do_archived_action_repos();
+    do_fst_for_static_list("archived-repos");
+    do_fst_for_static_list("github-hosted-runners");
 }

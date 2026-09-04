@@ -1665,7 +1665,9 @@ GitHub supports self-hosted runners, which behave similarly to GitHub-hosted
 runners but use client-managed compute resources.
 
 Self-hosted runners are very hard to secure by default, which is why
-GitHub does not recommend their use in public repositories.
+GitHub does not recommend their use in public repositories. This
+audit can flag self-hosted runners provided as a service like [runs-on],
+[namespace] and others.
 
 Other resources:
 
@@ -2791,3 +2793,6 @@ once it's configured:
 [GitHub: Safeguard your containers with new container signing capability in GitHub Actions]: https://github.blog/security/supply-chain-security/safeguard-container-signing-capability-actions/
 [Pwning the Entire Nix Ecosystem]: https://ptrpa.ws/nixpkgs-actions-abuse
 [Guidelines on green software practices for GitHub Actions CI workflows]: https://github.com/Cambridge-ICCS/green-ci
+[runs-on]: https://runs-on.com
+[namespace]: https://namespace.so/docs/solutions/github-actions
+

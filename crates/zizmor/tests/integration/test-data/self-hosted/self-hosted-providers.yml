@@ -1,0 +1,29 @@
+on:
+  push:
+
+name: self-hosted-providers
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.base_ref == main }}
+
+jobs:
+  # OK : internally we match this as third-party
+  provider-namespace:
+    name: runs-on
+    runs-on: namespace-profile-default
+    steps:
+      - run: echo \"hello from a namespace runner\"
+
+  # OK : same as above
+  provider-runs-on:
+    name: runs-on
+    runs-on:
+      - runs-on=${{ github.run_id }}
+      - cpu=8
+      - family=c7i
+      - image=ubuntu24-full-x64
+    steps:
+      - run: echo \"hello from a runs-on runner\"
