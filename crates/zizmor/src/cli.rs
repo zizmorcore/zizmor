@@ -4,12 +4,10 @@ use std::io::stdout;
 
 use annotate_snippets::renderer::{AnsiColor, Effects};
 use anstream::stream::IsTerminal;
-use camino::Utf8PathBuf;
 use clap::builder::{NonEmptyStringValueParser, Styles};
 use clap::{ArgAction, Args, Parser, ValueEnum, ValueHint};
 use clap_complete::Generator;
 use clap_verbosity_flag::InfoLevel;
-use etcetera::AppStrategy as _;
 
 use crate::config::Config;
 use crate::finding::Persona;
@@ -42,20 +40,6 @@ pub(crate) struct App {
 
     #[command(flatten)]
     pub(crate) args: GlobalArgs,
-}
-
-impl App {
-    fn default_cache_dir() -> Utf8PathBuf {
-        etcetera::choose_app_strategy(etcetera::AppStrategyArgs {
-            top_level_domain: "io.github".into(),
-            author: "woodruffw".into(),
-            app_name: "zizmor".into(),
-        })
-        .expect("failed to determine default cache directory")
-        .cache_dir()
-        .try_into()
-        .expect("failed to turn cache directory into a sane path")
-    }
 }
 
 #[derive(Debug, Args)]
@@ -213,17 +197,6 @@ pub(crate) struct NetworkArgs {
     /// require connectivity.
     #[arg(long, env = "ZIZMOR_NO_ONLINE_AUDITS")]
     pub(crate) no_online_audits: bool,
-
-    /// The directory to use for HTTP caching. By default, a
-    /// host-appropriate user-caching directory will be used.
-    #[arg(
-        long,
-        value_name = "DIR",
-        default_value_t = App::default_cache_dir(),
-        hide_default_value = true,
-        value_hint = ValueHint::DirPath
-    )]
-    pub(crate) cache_dir: Utf8PathBuf,
 }
 
 #[derive(Args, Debug)]

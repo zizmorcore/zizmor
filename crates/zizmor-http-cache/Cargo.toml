@@ -1,0 +1,19 @@
+[package]
+name = "zizmor-http-cache"
+description = "Lightweight HTTP cache policy primitives"
+readme = "README.md"
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/zizmor-http-cache"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+license.workspace = true
+
+[dependencies]
+http.workspace = true
+jiff.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

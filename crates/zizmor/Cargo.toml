@@ -17,19 +17,18 @@ annotate-snippets.workspace = true
 anstream.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
+bytes.workspace = true
 camino = { workspace = true, features = ["serde1"] }
 clap = { workspace = true, features = ["derive", "env"] }
 clap_complete.workspace = true
 clap_complete_nushell.workspace = true
 clap-verbosity-flag = { workspace = true, features = ["tracing"] }
-etcetera.workspace = true
 flate2.workspace = true
 fst.workspace = true
 futures.workspace = true
 github-actions-expressions.workspace = true
 github-actions-models.workspace = true
 http.workspace = true
-http-cache-reqwest.workspace = true
 human-panic.workspace = true
 ignore.workspace = true
 indexmap.workspace = true
@@ -37,6 +36,7 @@ indicatif.workspace = true
 itertools.workspace = true
 jsonschema.workspace = true
 line-index.workspace = true
+moka.workspace = true
 owo-colors.workspace = true
 pre-commit-models.workspace = true
 regex.workspace = true
@@ -62,6 +62,7 @@ url.workspace = true
 yaml_serde.workspace = true
 yamlpatch.workspace = true
 yamlpath.workspace = true
+zizmor-http-cache.workspace = true
 zizmor-sarif.workspace = true
 
 [dev-dependencies]

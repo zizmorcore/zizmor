@@ -947,32 +947,11 @@ To do this, you can pass `--no-ignores` during audits:
 zizmor --no-ignores example/example
 ```
 
-## Caching between runs
+## Caching within a run
 
-!!! tip
-
-    Persistent caching (between runs of `zizmor`) is available in `v0.10.0` and later.
-
-!!! warning
-
-    Caches can contain sensitive metadata, especially when auditing private
-    repositories! Think twice before sharing your cache or reusing
-    it across machine/visibility boundaries.
-
-`zizmor` caches HTTP responses from GitHub's REST APIs to speed up individual
-audits. This HTTP cache is persisted and re-used between runs as well.
-
-By default `zizmor` will cache to an appropriate user-level caching directory:
-
-* Linux and macOS: `$XDG_CACHE_DIR` (`~/.cache/zizmor` by default)
-* Windows: `~\AppData\Roaming\woodruffw\zizmor`.
-
-To override the default caching directory, pass `--cache-dir`:
-
-```bash
-# cache in /tmp instead
-zizmor --cache-dir /tmp/zizmor ...
-```
+`zizmor` caches HTTP responses from GitHub's REST APIs in memory to speed up
+individual audits. The cache lasts only for the current process and is not
+persisted between runs.
 
 ## Other GitHub hosts
 
