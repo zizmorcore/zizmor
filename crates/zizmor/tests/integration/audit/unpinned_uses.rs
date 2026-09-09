@@ -620,7 +620,7 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    3 findings (1 safe fixes): 0 informational, 1 low, 0 medium, 2 high
+    3 findings (1 unsafe fixes): 0 informational, 1 low, 0 medium, 2 high
     "
     );
 
