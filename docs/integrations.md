@@ -83,7 +83,7 @@ GitHub Actions setup:
         branches: ["**"]
 
     env:
-      ZIZMOR_VERSION: 1.30.0
+      ZIZMOR_VERSION: 1.30.1
 
     permissions: {}
 
@@ -159,7 +159,7 @@ GitHub Actions setup:
         branches: ["**"]
 
     env:
-      ZIZMOR_VERSION: 1.30.0
+      ZIZMOR_VERSION: 1.30.1
 
     jobs:
       zizmor:
@@ -275,7 +275,7 @@ For more information about LSP configuration in neovim, see `:h lspconfig-all`.
 Support for `zizmor` in Sublime Text is provided via the
 [LSP](https://lsp.sublimetext.io/) package. As with Visual
 Studio Code, you must install `zizmor` [separately](./installation.md) for the
-LSP server to work. 
+LSP server to work.
 
 Install [LSP](https://packages.sublimetext.com/packages/LSP)
 and [YamlPipelines](https://packages.sublimetext.com/packages/YamlPipelines)
