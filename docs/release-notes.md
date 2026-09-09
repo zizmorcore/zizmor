@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.30.1
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where `zizmor` would crash on pre-commit inputs that reference
