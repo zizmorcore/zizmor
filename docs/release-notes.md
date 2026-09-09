@@ -14,6 +14,9 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would crash on pre-commit inputs that reference
   a GitHub URL with an explicit `.git` suffix (#2363)
 
+* Fixed a bug where [self-repository] auto-fixes were incorrectly marked as
+  "safe" instead of "unsafe" (#2373)
+
 ## 1.30.0
 
 ### New Features 🌈

@@ -1725,6 +1725,11 @@ Other resources:
 
 ### Remediation
 
+!!! tip
+
+    This audit has an **unsafe** [auto-fix](./usage.md#auto-fixing-results).
+    Use `--fix=all` or `--fix=unsafe-only` to attempt it.
+
 Replace any workspace-relative `#!yaml uses:` clause with its self-repository equivalent.
 
 For example:
