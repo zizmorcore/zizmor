@@ -57,7 +57,11 @@ impl SelfRepository {
                     .fix(Fix {
                         title: "rewrite './...' to '$/...'".to_string(),
                         key: parent.location().key,
-                        disposition: FixDisposition::Safe,
+                        // NOTE: We consider this fix unsafe because some
+                        // users dynamically clone a repository and use the
+                        // old relative syntax to invoke actions/workflows
+                        // within it.
+                        disposition: FixDisposition::Unsafe,
                         patches: vec![Patch {
                             route: parent.route().with_key("uses"),
                             operation: Op::RewriteFragment {

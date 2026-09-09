@@ -29,7 +29,7 @@ fn test_basic() -> anyhow::Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    2 findings (2 safe fixes): 0 informational, 2 low, 0 medium, 0 high
+    2 findings (2 unsafe fixes): 0 informational, 2 low, 0 medium, 0 high
     "
     );
 
@@ -47,7 +47,7 @@ fn test_fix() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/self-repository.yml", |workspace| {
             zizmor()
-                .args(["--fix=safe"])
+                .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
         })?,
