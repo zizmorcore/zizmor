@@ -12,7 +12,15 @@ Legend:
 
 | Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action, Dependabot | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit supports auto-fixes when used in the `--fix` mode | The audit supports custom configuration |
+| Workflow, Action, Dependabot | Links to vulnerable examples | Added to `zizmor` in this version | The audit works with `--offline` | The audit supports auto-fixes | The audit supports custom configuration |
+
+When an audit has auto-fixes available, there are a few possible options:
+
+| Symbol | Meaning |
+|--------|---------|
+| ❌      | Auto-fixes are not available. |
+| ✅     | _Safe_ auto-fixes are available. `--fix` or `--fix=safe` will work. |
+| ⚠️     | _Unsafe_ auto-fixes are available. `--fix=all` or `--fix=unsafe-only` will work. |
 
 ## `adhoc-packages`
 
@@ -179,7 +187,7 @@ Depending on the archived repository's functionality, you may be able to:
 
 | Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|------------------|---------------|----------------|--------------------| -------------|
-| Workflow  | [artipacked.yml] | v0.1.0        | ✅             | ✅               | ❌           |
+| Workflow  | [artipacked.yml] | v0.1.0        | ✅             | ⚠️               | ❌           |
 
 [artipacked.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/artipacked.yml
 
@@ -323,7 +331,7 @@ not using `pull_request_target` for auto-merge workflows.
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow  | [cache-poisoning.yml]   | v0.10.0       | ✅             | ✅               | ❌  |
+| Workflow  | [cache-poisoning.yml]   | v0.10.0       | ✅             | ⚠️               | ❌  |
 
 [cache-poisoning.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/cache-poisoning.yml
 
@@ -598,7 +606,7 @@ In general, you should enable `cooldown` for all updaters.
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Dependabot  | [dependabot-execution/]       | v1.15.0       | ✅             | ✅                | ❌  |
+| Dependabot  | [dependabot-execution/]       | v1.15.0       | ✅             | ⚠️                | ❌  |
 
 [dependabot-execution/]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dependabot-execution/
 
@@ -1050,7 +1058,7 @@ within an authentic commit (or an authentic tag/branch reference).
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | [insecure-commands.yml] | v0.5.0        | ✅             | ✅       | ❌  |
+| Workflow, Action  | [insecure-commands.yml] | v0.5.0        | ✅             | ⚠️       | ❌  |
 
 [insecure-commands.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/insecure-commands.yml
 
@@ -1140,7 +1148,7 @@ The following table shows insecure schemes and their recommended alternatives:
 
 | Type             | Examples                       | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |------------------|--------------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ✅                 | ❌  |
+| Workflow, Action | [known-vulnerable-actions.yml] | v0.1.0        | ❌             | ⚠️                 | ❌  |
 
 [known-vulnerable-actions.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/known-vulnerable-actions.yml
 
@@ -1198,7 +1206,7 @@ the action if one is available, or remove the action's usage entirely.
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | N/A   | v1.21.0        | ✅             | ✅                 | ❌  |
+| Workflow, Action  | N/A   | v1.21.0        | ✅             | ❌                 | ❌  |
 
 Checks for usages of GitHub Actions features that are considered "misfeatures."
 
@@ -1272,7 +1280,7 @@ Address the misfeature by removing or replacing its usage.
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | N/A   | v1.7.0        | ✅             | ✅                 | ❌  |
+| Workflow, Action  | N/A   | v1.7.0        | ✅             | ⚠️                 | ❌  |
 
 Checks for obfuscated usages of GitHub Actions features.
 
@@ -1420,7 +1428,7 @@ Switch to hash-pinned actions.
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | [ref-version-mismatch.yml] | v1.14.0       | ✅             | ✅                 | ❌  |
+| Workflow, Action  | [ref-version-mismatch.yml] | v1.14.0       | ✅             | ⚠️                 | ❌  |
 
 [ref-version-mismatch.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/ref-version-mismatch.yml
 
@@ -1697,7 +1705,7 @@ there are steps you can take to minimize their risk:
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|-------------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action  | [self-repository.yml]            | v1.30.0        | ✅            | ✅                | ❌          |
+| Workflow, Action  | [self-repository.yml]            | v1.30.0        | ✅            | ⚠️                | ❌          |
 
 [self-repository.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/self-repository.yml
 
@@ -1724,11 +1732,6 @@ Other resources:
 * [Bypassing GitHub Actions policies in the dumbest way possible](https://blog.yossarian.net/2025/06/11/github-actions-policies-dumb-bypass)
 
 ### Remediation
-
-!!! tip
-
-    This audit has an **unsafe** [auto-fix](./usage.md#auto-fixing-results).
-    Use `--fix=all` or `--fix=unsafe-only` to attempt it.
 
 Replace any workspace-relative `#!yaml uses:` clause with its self-repository equivalent.
 
@@ -1851,7 +1854,7 @@ The following table lists some common superfluous actions and their recommended 
 
 | Type     | Examples                 | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|--------------------------|---------------|----------------|--------------------| ---------------|
-| Workflow, Action  | [template-injection.yml] | v0.1.0        | ✅             | ✅        | ❌  |
+| Workflow, Action  | [template-injection.yml] | v0.1.0        | ✅             | ⚠️        | ❌  |
 
 [template-injection.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/template-injection.yml
 
@@ -2165,7 +2168,7 @@ default versions or `latest`.
 
 | Type             | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |------------------|------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action | [unpinned.yml]   | v0.4.0        | ✅             | ✅                | ✅           |
+| Workflow, Action | [unpinned.yml]   | v0.4.0        | ✅             | ⚠️                | ✅           |
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
 
