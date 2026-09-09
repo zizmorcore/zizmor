@@ -77,17 +77,17 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
+        @r"
     help[concurrency-limits]: insufficient job-level concurrency limits
-     --> @@INPUT@@:2:1
-      |
-    2 | on: push
-      | ^^^^^^^^ workflow is missing concurrency setting
+      --> @@INPUT@@:2:1
+       |
+     2 | on: push
+       | ^^^^^^^^ workflow is missing concurrency setting
     ...
-    9 |     concurrency: group
-      |     ------------------ job concurrency is missing cancel-in-progress
-      |
-      = note: audit confidence → High
+    10 |     concurrency: group
+       |     ------------------ job concurrency is missing cancel-in-progress
+       |
+       = note: audit confidence → High
 
     help[concurrency-limits]: insufficient job-level concurrency limits
       --> @@INPUT@@:2:1
@@ -95,7 +95,7 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
      2 | on: push
        | ^^^^^^^^ workflow is missing concurrency setting
     ...
-    14 |     name: job-2
+    15 |     name: job-2
        |     ----------- job affected by missing workflow concurrency
        |
        = note: audit confidence → High

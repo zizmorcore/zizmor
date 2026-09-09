@@ -14,6 +14,7 @@ jobs:
   issue-433-repro:
     name: issue-433-repro
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - name: no-finding-1
         # workflow is local, so tagging is superfluous

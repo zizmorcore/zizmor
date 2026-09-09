@@ -10,7 +10,7 @@ fn test_allow_all() -> Result<()> {
                 "forbidden-uses/forbidden-uses-menagerie.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())
@@ -50,7 +50,7 @@ fn test_deny_all() -> Result<()> {
        |
        = note: audit confidence → High
 
-    4 findings (1 suppressed): 0 informational, 0 low, 0 medium, 3 high
+    5 findings (2 suppressed): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -75,7 +75,7 @@ fn test_allow_some() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -108,7 +108,7 @@ fn test_deny_some() -> Result<()> {
        |
        = note: audit confidence → High
 
-    3 findings (1 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    4 findings (2 suppressed): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 
@@ -141,7 +141,7 @@ fn test_deny_some_refs() -> Result<()> {
        |
        = note: audit confidence → High
 
-    3 findings (1 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    4 findings (2 suppressed): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 
@@ -166,7 +166,7 @@ fn test_allow_some_refs() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 

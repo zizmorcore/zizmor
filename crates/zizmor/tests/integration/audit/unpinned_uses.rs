@@ -8,11 +8,11 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
             .input(input_under_test("unpinned-uses.yml"))
             .args(["--pedantic"])
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:16:15
+      --> @@INPUT@@:17:15
        |
-    16 |       - uses: actions/checkout@v3
+    17 |       - uses: actions/checkout@v3
        |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
@@ -30,11 +30,11 @@ fn test_unpinned_uses_default() -> Result<()> {
         zizmor()
             .input(input_under_test("unpinned-uses.yml"))
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:16:15
+      --> @@INPUT@@:17:15
        |
-    16 |       - uses: actions/checkout@v3
+    17 |       - uses: actions/checkout@v3
        |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
@@ -98,11 +98,11 @@ fn test_issue_659_repro() -> Result<()> {
             .input(input_under_test("unpinned-uses/issue-659-repro.yml"))
             .args(["--pedantic"])
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
-      --> @@INPUT@@:24:15
+      --> @@INPUT@@:25:15
        |
-    24 |         uses: actions/setup-node@v4
+    25 |         uses: actions/setup-node@v4
        |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
@@ -123,7 +123,7 @@ fn test_issue_1543_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("unpinned-uses/issue-1543-repro.yml"))
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:18:11
        |
@@ -132,7 +132,7 @@ fn test_issue_1543_repro() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -146,7 +146,7 @@ fn test_default_config() -> Result<()> {
         zizmor()
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:12:15
        |
@@ -187,7 +187,7 @@ fn test_default_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    6 findings (1 suppressed): 0 informational, 0 low, 0 medium, 5 high
+    7 findings (2 suppressed): 0 informational, 0 low, 0 medium, 5 high
     "
     );
 
@@ -204,7 +204,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
             ))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:12:15
        |
@@ -245,7 +245,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    6 findings (1 suppressed): 0 informational, 0 low, 0 medium, 5 high
+    7 findings (2 suppressed): 0 informational, 0 low, 0 medium, 5 high
     "
     );
 
@@ -262,7 +262,7 @@ fn test_ref_pin_everything_config() -> Result<()> {
             ))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())
@@ -275,7 +275,7 @@ fn test_composite_config() -> Result<()> {
             .config(input_under_test("unpinned-uses/configs/composite.yml"))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:12:15
        |
@@ -300,7 +300,7 @@ fn test_composite_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    4 findings (1 suppressed): 0 informational, 0 low, 0 medium, 3 high
+    5 findings (2 suppressed): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -314,7 +314,7 @@ fn test_composite_config_2() -> Result<()> {
             .config(input_under_test("unpinned-uses/configs/composite-2.yml"))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:24:15
        |
@@ -331,7 +331,7 @@ fn test_composite_config_2() -> Result<()> {
        |
        = note: audit confidence → High
 
-    3 findings (1 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    4 findings (2 suppressed): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 
@@ -345,7 +345,7 @@ fn test_empty_config() -> Result<()> {
             .config(input_under_test("unpinned-uses/configs/empty.yml"))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
-        @"
+        @r"
     error[unpinned-uses]: unpinned action reference
       --> @@INPUT@@:12:15
        |
@@ -386,7 +386,7 @@ fn test_empty_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    6 findings (1 suppressed): 0 informational, 0 low, 0 medium, 5 high
+    7 findings (2 suppressed): 0 informational, 0 low, 0 medium, 5 high
     "
     );
 

@@ -14,6 +14,7 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - name: test
         run: echo "${{ github.triggering_actor }}"

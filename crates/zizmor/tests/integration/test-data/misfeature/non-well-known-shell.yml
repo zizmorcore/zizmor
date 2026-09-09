@@ -13,6 +13,7 @@ jobs:
   some-job:
     name: non-well-known-shell
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - name: cursed
         shell: tcc -run {0}

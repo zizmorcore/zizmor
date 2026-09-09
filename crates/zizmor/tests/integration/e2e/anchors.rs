@@ -61,7 +61,7 @@ fn test_basic() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    5 findings (1 suppressed, 4 unsafe fixes): 0 informational, 0 low, 0 medium, 4 high
+    6 findings (2 suppressed, 4 unsafe fixes): 0 informational, 0 low, 0 medium, 4 high
     "#
     );
 
@@ -87,7 +87,7 @@ fn test_scalar_cross_context() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (3 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -100,7 +100,7 @@ fn test_with_mapping_alias() -> Result<()> {
         zizmor()
             .input(input_under_test("anchors/with-mapping-alias.yml"))
             .run()?,
-        @"
+        @r"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:8:9
        |
@@ -124,7 +124,7 @@ fn test_with_mapping_alias() -> Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (2 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
+    5 findings (3 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 
@@ -152,7 +152,7 @@ fn test_trigger_paths_anchor() -> Result<()> {
       |
       = note: audit confidence → Medium
 
-    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (3 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -179,7 +179,7 @@ fn test_trigger_block_alias() -> Result<()> {
       |
       = note: audit confidence → Medium
 
-    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (3 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -215,7 +215,7 @@ fn test_steps_list_alias() -> Result<()> {
       = note: audit confidence → High
       = note: this finding has an auto-fix
 
-    5 findings (3 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
+    7 findings (5 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 
@@ -253,7 +253,7 @@ fn test_cross_key_scalar() -> Result<()> {
        |
        = note: audit confidence → High
 
-    4 findings (2 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    5 findings (3 suppressed): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 
@@ -320,7 +320,7 @@ fn test_multi_scalar_anchors() -> Result<()> {
        |
        = note: audit confidence → High
 
-    6 findings (2 suppressed): 0 informational, 0 low, 0 medium, 4 high
+    7 findings (3 suppressed): 0 informational, 0 low, 0 medium, 4 high
     "#
     );
 
@@ -333,7 +333,7 @@ fn test_dummy_job_anchors() -> Result<()> {
         zizmor()
             .input(input_under_test("anchors/dummy-job-anchors.yml"))
             .run()?,
-        @"
+        @r"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:9:9
        |
@@ -354,7 +354,7 @@ fn test_dummy_job_anchors() -> Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    5 findings (3 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
+    7 findings (5 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 
@@ -367,7 +367,7 @@ fn test_inputs_block_alias() -> Result<()> {
         zizmor()
             .input(input_under_test("anchors/inputs-block-alias.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (3 suppressed)"
     );
 
     Ok(())
@@ -414,7 +414,7 @@ fn test_flow_mapping_step() -> Result<()> {
       |
       = note: audit confidence → High
 
-    6 findings (2 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 2 high
+    7 findings (3 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 2 high
     "#
     );
 

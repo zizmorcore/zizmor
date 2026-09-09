@@ -11,6 +11,7 @@ jobs:
   repro: # zizmor: ignore[secrets-outside-env]
     name: Repro
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - name: Multiline expression in folded block scalar crashes zizmor
         run: >

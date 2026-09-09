@@ -6,7 +6,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("typosquat-uses.yml"))
             .run()?,
-        @"
+        @r"
     error[typosquat-uses]: action reference resembles a popular action
       --> @@INPUT@@:17:15
        |
@@ -62,7 +62,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = tip: run with a GitHub token to check whether this repository actually exists
 
-    5 findings: 0 informational, 0 low, 0 medium, 5 high
+    6 findings (1 suppressed): 0 informational, 0 low, 0 medium, 5 high
     "
     );
 

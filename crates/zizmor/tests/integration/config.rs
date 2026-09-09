@@ -20,7 +20,7 @@ fn test_discovers_config_in_root() -> anyhow::Result<()> {
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@INPUT@@")`)
     DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
     DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}:happy path: zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
-    No findings to report. Good job! (1 ignored, 1 suppressed)
+    No findings to report. Good job! (1 ignored, 2 suppressed)
     "#
     );
 
@@ -46,7 +46,7 @@ fn test_discovers_config_in_root_from_file_input() -> anyhow::Result<()> {
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@REPO_ROOT@@")`)
     DEBUG discover_in_dir{path="@@REPO_ROOT@@/.github/workflows" root=Some("@@REPO_ROOT@@")}: zizmor::config: attempting config discovery for `@@REPO_ROOT@@/.github/workflows` (root: `Some("@@REPO_ROOT@@")`)
     DEBUG discover_in_dir{path="@@REPO_ROOT@@/.github/workflows" root=Some("@@REPO_ROOT@@")}:happy path: zizmor::config: found config candidate at `@@REPO_ROOT@@/zizmor.yml`
-    No findings to report. Good job! (1 ignored, 1 suppressed)
+    No findings to report. Good job! (1 ignored, 2 suppressed)
     "#
     );
 
@@ -72,7 +72,7 @@ fn test_discovers_config_in_root_from_child_dir() -> anyhow::Result<()> {
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@REPO_ROOT@@")`)
     DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@REPO_ROOT@@")}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@REPO_ROOT@@")`)
     DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@REPO_ROOT@@")}:happy path: zizmor::config: found config candidate at `@@REPO_ROOT@@/zizmor.yml`
-    No findings to report. Good job! (1 ignored, 1 suppressed)
+    No findings to report. Good job! (1 ignored, 2 suppressed)
     "#
     );
 
@@ -160,7 +160,7 @@ fn test_discovers_config_in_dotgithub() -> anyhow::Result<()> {
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@INPUT@@")`)
     DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
     DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}:happy path: zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yml`
-    No findings to report. Good job! (1 ignored, 1 suppressed)
+    No findings to report. Good job! (1 ignored, 2 suppressed)
     "#,
     );
 
@@ -190,7 +190,7 @@ fn test_discovers_dotyaml_config_in_dotgithub() -> anyhow::Result<()> {
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@INPUT@@")`)
     DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some("@@INPUT@@")`)
     DEBUG discover_in_dir{path="@@INPUT@@" root=Some("@@INPUT@@")}:happy path: zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yaml`
-    No findings to report. Good job! (1 ignored, 1 suppressed)
+    No findings to report. Good job! (1 ignored, 2 suppressed)
     "#,
     );
 
@@ -219,7 +219,7 @@ fn test_discovers_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
     DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some("@@REPO_ROOT@@")`)
     DEBUG discover_in_dir{path="@@REPO_ROOT@@/.github/workflows" root=Some("@@REPO_ROOT@@")}: zizmor::config: attempting config discovery for `@@REPO_ROOT@@/.github/workflows` (root: `Some("@@REPO_ROOT@@")`)
     DEBUG discover_in_dir{path="@@REPO_ROOT@@/.github/workflows" root=Some("@@REPO_ROOT@@")}:happy path: zizmor::config: found config candidate at `@@REPO_ROOT@@/.github/zizmor.yml`
-    No findings to report. Good job! (1 ignored, 1 suppressed)
+    No findings to report. Good job! (1 ignored, 2 suppressed)
     "#
     );
 
@@ -348,7 +348,7 @@ fn test_disablement() -> anyhow::Result<()> {
             .run()?,
         @r#"
     DEBUG audit{input=Workflow(file://@@INPUT@@/.github/workflows/hackme.yml)}: zizmor::audit: skipping: template-injection is disabled in config for group Group("@@INPUT@@")
-    No findings to report. Good job! (1 suppressed)
+    No findings to report. Good job! (2 suppressed)
     "#
     );
 
@@ -397,7 +397,7 @@ fn test_severity_remap() -> anyhow::Result<()> {
         zizmor()
             .input(workspace.path())
             .run()?,
-        @"
+        @r"
     error[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@/.github/workflows/hackme.yml:12:9
        |
@@ -407,7 +407,7 @@ fn test_severity_remap() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -426,7 +426,7 @@ fn test_severity_remap_affects_min_severity() -> anyhow::Result<()> {
             .input(workspace.path())
             .args(["--min-severity=high"])
             .run()?,
-        @"
+        @r"
     error[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@/.github/workflows/hackme.yml:12:9
        |
@@ -436,7 +436,7 @@ fn test_severity_remap_affects_min_severity() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -452,7 +452,7 @@ fn test_no_remap_filtered_by_min_severity() -> anyhow::Result<()> {
             .input(input_under_test("config-scenarios/severity-remap"))
             .args(["--min-severity=high"])
             .run()?,
-        @"No findings to report. Good job! (1 ignored, 1 suppressed)"
+        @"No findings to report. Good job! (1 ignored, 2 suppressed)"
     );
 
     Ok(())
@@ -468,7 +468,7 @@ fn test_severity_remap_is_negated_by_no_config() -> anyhow::Result<()> {
             .input(input_under_test("config-scenarios/severity-remap"))
             .args(["--min-severity=high", "--no-config"])
             .run()?,
-        @"No findings to report. Good job! (1 ignored, 1 suppressed)"
+        @"No findings to report. Good job! (1 ignored, 2 suppressed)"
     );
 
     Ok(())
