@@ -11,7 +11,7 @@ fn test_actions_labeler_exception() -> anyhow::Result<()> {
                 "dangerous-triggers/actions-labeler.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (3 suppressed)"
+        @"No findings to report. Good job! (4 suppressed)"
     );
 
     Ok(())

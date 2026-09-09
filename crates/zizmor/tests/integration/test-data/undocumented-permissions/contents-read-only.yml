@@ -14,6 +14,7 @@ jobs:
   test-job:
     name: Test Job
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     # This should also NOT trigger the rule
     permissions:
       contents: read

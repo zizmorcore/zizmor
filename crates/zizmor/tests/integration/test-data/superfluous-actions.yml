@@ -11,6 +11,7 @@ jobs:
   superfluous-actions:
     name: superfluous-actions
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - name: setup rust
         uses: dtolnay/rust-toolchain@086dfa4efe372cfb6b375460a56e26a62a873d2e # 1.93.1

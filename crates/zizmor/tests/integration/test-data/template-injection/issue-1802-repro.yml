@@ -15,6 +15,7 @@ jobs:
   repro: # zizmor: ignore[secrets-outside-env]
     name: Repro
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     steps:
       - run: |
           test "${{ needs.test-matrix.result }}" = "success"

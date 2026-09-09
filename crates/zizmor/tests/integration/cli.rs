@@ -16,7 +16,7 @@ jobs:
     // output, and `-` would corrupt arrows, flags, etc.
     insta::assert_snapshot!(
         zizmor().stdin(workflow).no_config(true).args(["-"]).run()?,
-        @"
+        @r"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
      --> <stdin>:6:9
       |
@@ -48,7 +48,7 @@ jobs:
       |
       = note: audit confidence → High
 
-    7 findings (4 suppressed): 0 informational, 0 low, 2 medium, 1 high
+    8 findings (5 suppressed): 0 informational, 0 low, 2 medium, 1 high
     "
     );
 

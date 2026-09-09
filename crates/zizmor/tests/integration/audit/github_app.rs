@@ -6,7 +6,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("github-app.yml"))
             .run()?,
-        @"
+        @r"
     error[github-app]: dangerous use of GitHub App tokens
       --> @@INPUT@@:21:11
        |
@@ -74,7 +74,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → High
        = tip: use `repositories: 'repo1,repo2'` to scope the token to specific repositories
 
-    6 findings: 0 informational, 0 low, 0 medium, 6 high
+    7 findings (1 suppressed): 0 informational, 0 low, 0 medium, 6 high
     ");
     Ok(())
 }
@@ -89,7 +89,7 @@ fn test_issue_2219() -> anyhow::Result<()> {
     zizmor()
         .input(input_under_test("github-app/issue-2219-repro.yml"))
         .run()?,
-    @"No findings to report. Good job!"
+    @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())

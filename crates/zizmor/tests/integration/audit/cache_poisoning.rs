@@ -8,7 +8,7 @@ fn test_caching_disabled_by_default() -> anyhow::Result<()> {
                 "cache-poisoning/caching-disabled-by-default.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())
@@ -22,7 +22,7 @@ fn test_caching_enabled_by_default() -> anyhow::Result<()> {
                 "cache-poisoning/caching-enabled-by-default.yml"
             ))
             .run()?,
-        @"
+        @r"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:21:9
        |
@@ -35,7 +35,7 @@ fn test_caching_enabled_by_default() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     ",
     );
 
@@ -66,7 +66,7 @@ fn test_caching_opt_in_boolean_toggle() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    5 findings (1 ignored, 3 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     ",
     );
 
@@ -97,7 +97,7 @@ fn test_caching_opt_in_expression() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    3 findings (1 ignored, 1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     ",
     );
 
@@ -127,7 +127,7 @@ fn test_caching_opt_in_multi_value_toggle() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "#,
     );
 
@@ -140,7 +140,7 @@ fn test_caching_opt_out() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/caching-opt-out.yml"))
             .run()?,
-        @"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())
@@ -152,7 +152,7 @@ fn test_no_cache_aware_steps() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/no-cache-aware-steps.yml"))
             .run()?,
-        @"No findings to report. Good job! (1 ignored, 2 suppressed)"
+        @"No findings to report. Good job! (1 ignored, 3 suppressed)"
     );
 
     Ok(())
@@ -180,7 +180,7 @@ fn test_workflow_tag_trigger() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    5 findings (1 ignored, 3 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -211,7 +211,7 @@ fn test_caching_opt_in_boolish_toggle() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#,
     );
 
@@ -224,7 +224,7 @@ fn test_publisher_step() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/publisher-step.yml"))
             .run()?,
-        @"
+        @r"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:23:9
        |
@@ -237,7 +237,7 @@ fn test_publisher_step() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    3 findings (1 ignored, 1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -305,7 +305,7 @@ fn test_issue_343() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    5 findings (2 suppressed, 3 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
+    6 findings (3 suppressed, 3 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
     "#
     );
 
@@ -335,7 +335,7 @@ fn test_caching_not_configurable() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    4 findings (1 ignored, 2 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    5 findings (1 ignored, 3 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -366,7 +366,7 @@ fn test_workflow_release_branch_trigger() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    5 findings (1 ignored, 3 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -383,7 +383,7 @@ fn test_issue_378() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-378-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())
@@ -396,7 +396,7 @@ fn test_issue_642() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-642-repro.yml"))
             .run()?,
-        @"
+        @r"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:15:9
        |
@@ -413,7 +413,7 @@ fn test_issue_642() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    4 findings (3 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -429,7 +429,7 @@ fn test_issue_1081() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-1081-repro.yml"))
             .run()?,
-        @"
+        @r"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:15:9
        |
@@ -472,7 +472,7 @@ fn test_issue_1081() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 suppressed, 3 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
+    6 findings (3 suppressed, 3 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -488,7 +488,7 @@ fn test_issue_1152() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-1152-repro.yml"))
             .run()?,
-        @"
+        @r"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:16:9
        |
@@ -525,7 +525,7 @@ fn test_issue_1152() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    4 findings (1 suppressed): 0 informational, 0 low, 0 medium, 3 high
+    7 findings (4 suppressed): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -541,7 +541,7 @@ fn test_issue_1485() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("cache-poisoning/issue-1485-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (3 suppressed)"
     );
 
     Ok(())
@@ -556,7 +556,7 @@ fn test_ramsey_composer_install_action() -> anyhow::Result<()> {
                 "cache-poisoning/ramsey-composer-install.yml"
             ))
             .run()?,
-        @"
+        @r"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:13:9
        |
@@ -582,7 +582,7 @@ fn test_ramsey_composer_install_action() -> anyhow::Result<()> {
        |
        = note: audit confidence → Low
 
-    3 findings (1 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    4 findings (2 suppressed): 0 informational, 0 low, 0 medium, 2 high
     "
     );
 
@@ -616,7 +616,7 @@ fn test_workflow_release_trigger_object() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    5 findings (1 ignored, 3 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -629,7 +629,7 @@ fn test_issue_1940() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         zizmor()
             .input(input_under_test("cache-poisoning/issue-1940-repro.yml")).run()?,
-        @r#"No findings to report. Good job! (2 suppressed)"#);
+        @"No findings to report. Good job! (3 suppressed)");
 
     Ok(())
 }
@@ -643,7 +643,7 @@ fn test_issue_2320() -> anyhow::Result<()> {
     zizmor()
         .input(input_under_test("cache-poisoning/issue-2320-repro.yml"))
         .run()?,
-    @"
+    @r"
     error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
       --> @@INPUT@@:19:9
        |
@@ -686,7 +686,7 @@ fn test_issue_2320() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (1 ignored, 3 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
+    6 findings (1 ignored, 2 suppressed, 3 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 
@@ -740,7 +740,7 @@ fn test_trigger_heuristics_tag_only() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (2 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
+    5 findings (3 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 
@@ -755,7 +755,7 @@ fn test_trigger_heuristics_tag_and_release() -> anyhow::Result<()> {
                 "cache-poisoning/trigger-heuristics/tag-and-release.yml"
             ))
             .run()?,
-        @"No findings to report. Good job!"
+        @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())
@@ -812,7 +812,7 @@ fn test_trigger_heuristics_tag_and_branch() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = note: this finding has an auto-fix
 
-    4 findings (2 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
+    5 findings (3 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 

@@ -6,7 +6,7 @@ fn test_basic() -> anyhow::Result<()> {
         zizmor()
             .input(input_under_test("self-repository.yml"))
             .run()?,
-        @"
+        @r"
     help[self-repository]: use GitHub's dedicated self-repository syntax
       --> @@INPUT@@:18:15
        |
@@ -29,7 +29,7 @@ fn test_basic() -> anyhow::Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    2 findings (2 unsafe fixes): 0 informational, 2 low, 0 medium, 0 high
+    3 findings (1 suppressed, 2 unsafe fixes): 0 informational, 2 low, 0 medium, 0 high
     "
     );
 

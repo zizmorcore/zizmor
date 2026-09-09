@@ -267,16 +267,16 @@ expression: output
         "concrete": {
           "location": {
             "start_point": {
-              "row": 15,
+              "row": 16,
               "column": 8
             },
             "end_point": {
-              "row": 18,
+              "row": 19,
               "column": 0
             },
             "offset_span": {
-              "start": 295,
-              "end": 372
+              "start": 318,
+              "end": 395
             }
           },
           "feature": "uses: actions/checkout@v3\n        with:\n          persist-credentials: false\n",
@@ -323,16 +323,16 @@ expression: output
         "concrete": {
           "location": {
             "start_point": {
-              "row": 15,
+              "row": 16,
               "column": 14
             },
             "end_point": {
-              "row": 15,
+              "row": 16,
               "column": 33
             },
             "offset_span": {
-              "start": 301,
-              "end": 320
+              "start": 324,
+              "end": 343
             }
           },
           "feature": "actions/checkout@v3",

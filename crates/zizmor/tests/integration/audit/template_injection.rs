@@ -12,11 +12,11 @@ fn test_template_injection_static_matrix() -> Result<()> {
             .run()?,
         @r#"
     help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:25:36
+      --> @@INPUT@@:26:36
        |
-    24 |         run: |
+    25 |         run: |
        |         --- this run block
-    25 |           echo "issue created: ${{ matrix.frob }}"
+    26 |           echo "issue created: ${{ matrix.frob }}"
        |                                    ^^^^^^^^^^^ may expand into attacker-controllable code
        |
        = note: audit confidence → High
@@ -39,11 +39,11 @@ fn test_template_injection_dynamic_matrix() -> Result<()> {
             .run()?,
         @r#"
     warning[template-injection]: code injection via template expansion
-      --> @@INPUT@@:26:36
+      --> @@INPUT@@:27:36
        |
-    25 |         run: |
+    26 |         run: |
        |         --- this run block
-    26 |           echo "doing a thing: ${{ matrix.dynamic }}"
+    27 |           echo "doing a thing: ${{ matrix.dynamic }}"
        |                                    ^^^^^^^^^^^^^^ may expand into attacker-controllable code
        |
        = note: audit confidence → Medium
@@ -62,7 +62,7 @@ fn test_issue_22_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-22-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (6 suppressed)"
+        @"No findings to report. Good job! (7 suppressed)"
     );
 
     Ok(())
@@ -74,7 +74,7 @@ fn test_pr_317_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/pr-317-repro.yml"))
             .run()?,
-        @"
+        @r"
     warning[template-injection]: code injection via template expansion
       --> @@INPUT@@:28:20
        |
@@ -86,7 +86,7 @@ fn test_pr_317_repro() -> Result<()> {
        = note: audit confidence → Medium
        = note: this finding has an auto-fix
 
-    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
+    3 findings (2 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
@@ -99,7 +99,7 @@ fn test_static_env() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/static-env.yml"))
             .run()?,
-        @"
+        @r"
     help[template-injection]: code injection via template expansion
       --> @@INPUT@@:43:20
        |
@@ -133,7 +133,7 @@ fn test_static_env() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    7 findings (4 suppressed, 3 unsafe fixes): 0 informational, 3 low, 0 medium, 0 high
+    8 findings (5 suppressed, 3 unsafe fixes): 0 informational, 3 low, 0 medium, 0 high
     "
     );
 
@@ -157,7 +157,7 @@ fn test_issue_339_repro() -> Result<()> {
        |
        = note: audit confidence → Low
 
-    2 findings (1 suppressed): 1 informational, 0 low, 0 medium, 0 high
+    3 findings (2 suppressed): 1 informational, 0 low, 0 medium, 0 high
     "#
     );
 
@@ -173,7 +173,7 @@ fn test_issue_418_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-418-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (3 suppressed)"
     );
 
     Ok(())
@@ -259,7 +259,7 @@ fn test_false_positive_menagerie() -> Result<()> {
                 "template-injection/false-positive-menagerie.yml"
             ))
             .run()?,
-        @"No findings to report. Good job! (7 suppressed)"
+        @"No findings to report. Good job! (8 suppressed)"
     );
 
     Ok(())
@@ -271,7 +271,7 @@ fn test_issue_749_repro() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-749-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (2 suppressed)"
+        @"No findings to report. Good job! (3 suppressed)"
     );
 
     Ok(())
@@ -283,7 +283,7 @@ fn test_codeql_sinks() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/codeql-sinks.yml"))
             .run()?,
-        @"
+        @r"
     error[template-injection]: code injection via template expansion
       --> @@INPUT@@:17:20
        |
@@ -297,7 +297,7 @@ fn test_codeql_sinks() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "
     );
 
@@ -324,7 +324,7 @@ fn test_pwsh_script() -> Result<()> {
        |
        = note: audit confidence → High
 
-    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -456,36 +456,36 @@ fn test_multiline_expression_pedantic() -> Result<()> {
             .run()?,
         @r#"
     info[template-injection]: code injection via template expansion
-      --> @@INPUT@@:19:16
+      --> @@INPUT@@:20:16
        |
-    16 |       - run: |
+    17 |       - run: |
        |         --- this run block
     ...
-    19 |             && foo.bar
+    20 |             && foo.bar
        |                ^^^^^^^ may expand into attacker-controllable code
        |
        = note: audit confidence → Low
 
     info[template-injection]: code injection via template expansion
-      --> @@INPUT@@:20:16
+      --> @@INPUT@@:21:16
        |
-    16 |       - run: |
+    17 |       - run: |
        |         --- this run block
     ...
-    20 |             || baz.qux
+    21 |             || baz.qux
        |                ^^^^^^^ may expand into attacker-controllable code
        |
        = note: audit confidence → Low
 
     help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:26:15
+      --> @@INPUT@@:27:15
        |
-    24 |           run: |
+    25 |           run: |
        |           --- this run block
-    25 |             echo "TSAN_OPTIONS=log_path=${GITHUB_WORKSPACE}/tsan_log suppressions=${GITHUB_WORKSPACE}/Tools/tsan/suppressions${{
-    26 | /               fromJSON(inputs.free-threading)
-    27 | |               && '_free_threading'
-    28 | |               || ''
+    26 |             echo "TSAN_OPTIONS=log_path=${GITHUB_WORKSPACE}/tsan_log suppressions=${GITHUB_WORKSPACE}/Tools/tsan/suppressions${{
+    27 | /               fromJSON(inputs.free-threading)
+    28 | |               && '_free_threading'
+    29 | |               || ''
        | |___________________^ may expand into attacker-controllable code
        |
        = note: audit confidence → High
@@ -554,9 +554,9 @@ fn test_issue_1638() -> Result<()> {
             .run()?,
         @r#"
     help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:19:24
+      --> @@INPUT@@:20:24
        |
-    19 |         run: echo "${{ github.triggering_actor }}"
+    20 |         run: echo "${{ github.triggering_actor }}"
        |         ---            ^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
        |         |
        |         this run block
@@ -583,14 +583,14 @@ fn test_issue_1664() -> Result<()> {
             .run()?,
         @r#"
     help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:17:15
+      --> @@INPUT@@:18:15
        |
-    16 |           run: >
+    17 |           run: >
        |           --- this run block
-    17 |             ${{ secrets.MY_SECRET
+    18 |             ${{ secrets.MY_SECRET
        |  _______________^
-    18 | |           && 'true'
-    19 | |           || 'echo "fallback"' }}
+    19 | |           && 'true'
+    20 | |           || 'echo "fallback"' }}
        | |______________________________^ may expand into attacker-controllable code
        |
        = note: audit confidence → High
@@ -635,33 +635,33 @@ fn test_issue_1802() -> Result<()> {
             .run()?,
         @r#"
     help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:20:21
-       |
-    19 |       - run: |
-       |         --- this run block
-    20 |           test "${{ needs.test-matrix.result }}" = "success"
-       |                     ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → High
-
-    help[template-injection]: code injection via template expansion
       --> @@INPUT@@:21:21
        |
-    19 |       - run: |
+    20 |       - run: |
        |         --- this run block
-    20 |           test "${{ needs.test-matrix.result }}" = "success"
-    21 |           test "${{ needs['test-matrix']['result'] }}" = "success"
-       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    21 |           test "${{ needs.test-matrix.result }}" = "success"
+       |                     ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
        |
        = note: audit confidence → High
 
     help[template-injection]: code injection via template expansion
       --> @@INPUT@@:22:21
        |
-    19 |       - run: |
+    20 |       - run: |
+       |         --- this run block
+    21 |           test "${{ needs.test-matrix.result }}" = "success"
+    22 |           test "${{ needs['test-matrix']['result'] }}" = "success"
+       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |
+       = note: audit confidence → High
+
+    help[template-injection]: code injection via template expansion
+      --> @@INPUT@@:23:21
+       |
+    20 |       - run: |
        |         --- this run block
     ...
-    22 |           test "${{ needs.TEST_MATRIX['result'] }}" = "success"
+    23 |           test "${{ needs.TEST_MATRIX['result'] }}" = "success"
        |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
        |
        = note: audit confidence → High
@@ -694,7 +694,7 @@ fn test_issue_1903() -> Result<()> {
        |
        = note: audit confidence → Low
 
-    1 finding: 1 informational, 0 low, 0 medium, 0 high
+    2 findings (1 suppressed): 1 informational, 0 low, 0 medium, 0 high
     "#
     );
 
@@ -711,7 +711,7 @@ fn test_issue_2197() -> Result<()> {
         zizmor()
             .input(input_under_test("template-injection/issue-2197-repro.yml"))
             .run()?,
-        @"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())
@@ -920,6 +920,7 @@ on: push
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 42
     steps:
       - name: Equivalent vulnerable expressions
         run: |
@@ -941,7 +942,7 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -9,5 +9,5 @@
+    @@ -10,5 +10,5 @@
              run: |
     -          echo "User: ${{ github.actor }}"
     -          echo "User: ${{ env.GITHUB_ACTOR }}"
@@ -968,6 +969,7 @@ on: push
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 42
     steps:
       - name: Equivalent vulnerable expressions
         run: |
@@ -986,7 +988,7 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -9,2 +9,2 @@
+    @@ -10,2 +10,2 @@
              run: |
     -          echo "User: ${{ env.THIS_IS_NOT_A_DEFAULT }}"
     +          echo "User: ${THIS_IS_NOT_A_DEFAULT}"
@@ -1004,6 +1006,7 @@ on: push
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 42
     steps:
       - name: Vulnerable step with bash shell
         shell: /bin/bash
@@ -1022,7 +1025,7 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -9,2 +9,2 @@
+    @@ -10,2 +10,2 @@
              shell: /bin/bash
     -        run: echo "User is ${{ github.actor }}"
     +        run: echo "User is ${GITHUB_ACTOR}"
@@ -1040,6 +1043,7 @@ on: push
 jobs:
   test:
     runs-on: windows-latest
+    timeout-minutes: 42
     steps:
       - name: Vulnerable step with cmd shell
         shell: cmd
@@ -1057,8 +1061,8 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
-    @@ -9,2 +9,2 @@
+        @r"
+    @@ -10,2 +10,2 @@
              shell: cmd
     -        run: echo User is ${{ github.actor }}
     +        run: echo User is %GITHUB_ACTOR%
@@ -1076,6 +1080,7 @@ on: push
 jobs:
   test:
     runs-on: windows-latest
+    timeout-minutes: 42
     steps:
       - name: Vulnerable step with pwsh shell
         shell: pwsh
@@ -1094,7 +1099,7 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -9,2 +9,2 @@
+    @@ -10,2 +10,2 @@
              shell: pwsh
     -        run: Write-Host "User is ${{ github.actor }}"
     +        run: Write-Host "User is $env:GITHUB_ACTOR"
@@ -1112,6 +1117,7 @@ on: push
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 42
     steps:
       - name: Vulnerable step with default shell
         run: echo "User is ${{ github.actor }}"
@@ -1129,7 +1135,7 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -8,2 +8,2 @@
+    @@ -9,2 +9,2 @@
            - name: Vulnerable step with default shell
     -        run: echo "User is ${{ github.actor }}"
     +        run: echo "User is ${GITHUB_ACTOR}"
@@ -1147,6 +1153,7 @@ on: push
 jobs:
   test:
     runs-on: windows-latest
+    timeout-minutes: 42
     steps:
       - name: Vulnerable step with default shell
         run: Write-Host "User is ${{ github.actor }}"
@@ -1164,7 +1171,7 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -8,2 +8,2 @@
+    @@ -9,2 +9,2 @@
            - name: Vulnerable step with default shell
     -        run: Write-Host "User is ${{ github.actor }}"
     +        run: Write-Host "User is $env:GITHUB_ACTOR"
@@ -1182,6 +1189,7 @@ on: push
 jobs:
   test:
     runs-on: windows-latest
+    timeout-minutes: 42
     steps:
       - name: Vulnerable step with custom context
         shell: cmd
@@ -1199,8 +1207,8 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
-    @@ -9,2 +9,4 @@
+        @r"
+    @@ -10,2 +10,4 @@
              shell: cmd
     -        run: echo PR title is ${{ github.event.pull_request.title }}
     +        run: echo PR title is %GITHUB_EVENT_PULL_REQUEST_TITLE%
@@ -1225,6 +1233,7 @@ on:
 jobs:
   repro:
     runs-on: ubuntu-latest
+    timeout-minutes: 42
     steps:
       - shell: bash
         run: |
@@ -1246,7 +1255,7 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -11,3 +11,5 @@
+    @@ -12,3 +12,5 @@
              run: |
     -          echo "✓ ${{ github.event.comment.body }}"
     +          echo "✓ ${GITHUB_EVENT_COMMENT_BODY}"

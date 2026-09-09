@@ -134,7 +134,6 @@ jobs:
 
                 let fixed_document = apply_fix_for_snapshot(workflow.as_document(), findings);
                 insta::assert_snapshot!(fixed_document.source(), @r#"
-
                 name: Test
                 on: push
                 jobs:
