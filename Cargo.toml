@@ -53,7 +53,7 @@ indexmap = { version = "2.13.1", features = ["serde"] }
 indicatif = "0.18"
 insta = "1.48.0"
 itertools = "0.15.0"
-jsonschema = { version = "0.51.0", default-features = false }
+jsonschema = { version = "0.52.1", default-features = false }
 line-index = "0.1.2"
 memchr = "2.8.0"
 owo-colors = "4.3.0"
@@ -76,7 +76,7 @@ tower-lsp-server = "0.23"
 tracing = "0.1.44"
 tracing-indicatif = "0.3.14"
 tracing-subscriber = { version = "0.3.23" }
-tree-sitter = "0.26.9"
+tree-sitter = "0.27.0"
 tree-sitter-bash = "0.25.1"
 # Exact version since the upstream performed a breaking change outside of semver.
 # See: https://github.com/zizmorcore/zizmor/pull/1427
