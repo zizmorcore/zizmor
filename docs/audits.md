@@ -1674,7 +1674,7 @@ runners but use client-managed compute resources.
 
 Self-hosted runners are very hard to secure by default, which is why
 GitHub does not recommend their use in public repositories. This
-audit can flag self-hosted runners provided as a service like [runs-on],
+audit can flag self-hosted runners provided by services like [runs-on],
 [namespace] and others.
 
 Other resources:
