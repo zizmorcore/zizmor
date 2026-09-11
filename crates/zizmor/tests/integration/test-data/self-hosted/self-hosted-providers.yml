@@ -10,14 +10,14 @@ concurrency:
   cancel-in-progress: ${{ github.base_ref == main }}
 
 jobs:
-  # OK : internally we match this as third-party
+  # OK: internally we match this as third-party
   provider-namespace:
     name: runs-on
     runs-on: namespace-profile-default
     steps:
       - run: echo \"hello from a namespace runner\"
 
-  # OK : same as above
+  # OK: same as above
   provider-runs-on:
     name: runs-on
     runs-on:

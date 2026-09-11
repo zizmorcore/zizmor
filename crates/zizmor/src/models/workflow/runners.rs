@@ -20,7 +20,7 @@ static KNOWN_GITHUB_HOSTED_RUNNERS: LazyLock<Set<&[u8]>> = LazyLock::new(|| {
 /// The evidence that backs a self-hosted-runner finding
 pub(crate) enum RunnerEvidence {
     /// For classic registration methods like Runner binary self-registration
-    /// and legacy ARC : both forces the "self-hosted" label
+    /// and legacy ARC: both forces the "self-hosted" label
     ClassicSentinel,
     /// RunnerGroups imply self-hosting, with a notable exception for
     /// Github Large Runners
