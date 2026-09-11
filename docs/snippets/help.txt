@@ -26,11 +26,18 @@ Output Options:
       --no-exit-codes           Disable all error codes besides success and tool failure
 
 Network Options:
-  -o, --offline                    Perform only offline operations [env: ZIZMOR_OFFLINE=]
-      --gh-token <GH_TOKEN>        The GitHub API token to use [env: GH_TOKEN or GITHUB_TOKEN or ZIZMOR_GITHUB_TOKEN]
-      --gh-hostname <GH_HOSTNAME>  The GitHub Server Hostname. Defaults to github.com [env: GH_HOST=] [default: github.com]
-      --no-online-audits           Perform only offline audits [env: ZIZMOR_NO_ONLINE_AUDITS=]
-      --cache-dir <DIR>            The directory to use for HTTP caching. By default, a host-appropriate user-caching directory will be used
+  -o, --offline
+          Perform only offline operations [env: ZIZMOR_OFFLINE=]
+      --gh-token <GH_TOKEN>
+          The GitHub API token to use [env: GH_TOKEN or GITHUB_TOKEN or ZIZMOR_GITHUB_TOKEN]
+      --github-com-token <GITHUB_COM_TOKEN>
+          The GitHub.com API token to use as a fallback [env: GITHUB_COM_TOKEN]
+      --gh-hostname <GH_HOSTNAME>
+          The GitHub Server Hostname. Defaults to github.com [env: GH_HOST=] [default: github.com]
+      --no-online-audits
+          Perform only offline audits [env: ZIZMOR_NO_ONLINE_AUDITS=]
+      --cache-dir <DIR>
+          The directory to use for HTTP caching. By default, a host-appropriate user-caching directory will be used
 
 Options:
       --lsp                  Run in language server mode (EXPERIMENTAL)
