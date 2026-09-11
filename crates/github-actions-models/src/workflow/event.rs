@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::EnvValue;
 
+use super::Secrets;
+
 /// "Bare" workflow event triggers.
 ///
 /// These appear when a workflow is triggered with an event with no context,
@@ -237,8 +239,7 @@ pub struct WorkflowCall {
     pub inputs: IndexMap<String, WorkflowCallInput>,
     #[serde(default)]
     pub outputs: IndexMap<String, WorkflowCallOutput>,
-    #[serde(default)]
-    pub secrets: IndexMap<String, Option<WorkflowCallSecret>>,
+    pub secrets: Option<Secrets<Option<WorkflowCallSecret>>>,
 }
 
 /// A single input in a `workflow_call` event trigger body.
@@ -270,7 +271,7 @@ pub struct WorkflowCallOutput {
 }
 
 /// A single secret in a `workflow_call` event trigger body.
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct WorkflowCallSecret {
     pub description: Option<String>,
@@ -360,5 +361,32 @@ issue_comment:";
 
         let events = yaml_serde::from_str::<super::Events>(events).unwrap();
         assert_eq!(events.count(), 4);
+    }
+
+    #[test]
+    fn test_workflow_call_secrets() {
+        use super::{Secrets, WorkflowCall};
+
+        // `secrets: inherit` (the bare string) parses as `Inherit`.
+        let call = yaml_serde::from_str::<WorkflowCall>("secrets: inherit").unwrap();
+        assert_eq!(call.secrets, Some(Secrets::Inherit));
+
+        // An explicit mapping parses as `Env`.
+        let call = yaml_serde::from_str::<WorkflowCall>(
+            "
+secrets:
+  my-secret:
+    required: true
+",
+        )
+        .unwrap();
+        let Some(Secrets::Env(secrets)) = call.secrets else {
+            panic!("unexpected secrets variant");
+        };
+        assert!(secrets.contains_key("my-secret"));
+
+        // An absent `secrets` field parses as `None`.
+        let call = yaml_serde::from_str::<WorkflowCall>("inputs: {}").unwrap();
+        assert_eq!(call.secrets, None);
     }
 }
