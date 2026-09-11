@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* The [self-hosted-runner] audit is now significantly more precise (#2350)
+
+    Many thanks to @ubiratansoares for proposing and implementing this enhancement!
+
 ## 1.30.1
 
 ### Bug Fixes 🐛

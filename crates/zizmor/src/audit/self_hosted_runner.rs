@@ -5,13 +5,12 @@
 //! This audit is "auditor" only, since zizmor can't detect
 //! whether self-hosted runners are ephemeral or not.
 
-use github_actions_models::{
-    common::expr::{ExplicitExpr, LoE},
-    workflow::job::RunsOn,
-};
-
-use super::{Audit, AuditLoadError, Job, audit_meta};
+use super::{Audit, AuditLoadError, audit_meta};
+use crate::config::Config;
+use crate::finding::Finding;
 use crate::finding::location::Locatable as _;
+use crate::models::workflow::runners::{Runner, RunnerEvidence};
+use crate::models::workflow::{JobCommon as _, NormalJob};
 use crate::{
     AuditState,
     audit::AuditError,
@@ -35,71 +34,81 @@ impl Audit for SelfHostedRunner {
         Ok(Self)
     }
 
-    async fn audit_workflow<'doc>(
+    async fn audit_normal_job<'doc>(
         &self,
-        workflow: &'doc crate::models::workflow::Workflow,
-        _config: &crate::config::Config,
-    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
-        let mut results = vec![];
+        job: &NormalJob<'doc>,
+        config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let included_runners = &config.self_hosted_runner_config.deny_runners;
+        let excluded_groups = &config.self_hosted_runner_config.allow_groups;
 
-        for job in workflow.jobs() {
-            let Job::NormalJob(job) = job else {
-                continue;
-            };
+        let self_hosted_runners = job
+            .runners(included_runners, excluded_groups)
+            .filter(|runner| match runner {
+                Runner::SelfHosted { .. } => true,
+                Runner::Indeterminate {
+                    self_hosted_evidence,
+                    ..
+                } => *self_hosted_evidence,
+                _ => false,
+            })
+            .collect::<Vec<_>>();
 
-            match &job.runs_on {
-                LoE::Literal(RunsOn::Target(labels)) => {
-                    {
-                        let Some(label) = labels.first() else {
-                            continue;
+        let mut findings = Vec::new();
+
+        for runner in self_hosted_runners {
+            match runner {
+                Runner::SelfHosted {
+                    location,
+                    evidence,
+                    from_matrix,
+                } => match evidence {
+                    RunnerEvidence::ClassicSentinel | RunnerEvidence::ExplicitlyFlagged => {
+                        let finding_builder = Self::finding()
+                            .confidence(Confidence::High)
+                            .severity(Severity::Medium)
+                            .persona(Persona::Auditor)
+                            .add_location(
+                                job.location()
+                                    .primary()
+                                    .with_keys(["runs-on".into()])
+                                    .annotated("self-hosted runner used here"),
+                            );
+
+                        if from_matrix {
+                            findings.push(
+                                finding_builder
+                                    .add_location(
+                                        location
+                                            .with_keys(["strategy".into()])
+                                            .annotated("matrix declares self-hosted runner"),
+                                    )
+                                    .build(job.parent())?,
+                            );
+                        } else {
+                            findings.push(finding_builder.build(job.parent())?);
                         };
-
-                        if label == "self-hosted" {
-                            // All self-hosted runners start with the 'self-hosted'
-                            // label followed by any specifiers.
-                            results.push(
-                                Self::finding()
-                                    .confidence(Confidence::High)
-                                    .severity(Severity::Medium)
-                                    .persona(Persona::Auditor)
-                                    .add_location(
-                                        job.location()
-                                            .primary()
-                                            .with_keys(["runs-on".into()])
-                                            .annotated("self-hosted runner used here"),
-                                    )
-                                    .build(workflow)?,
-                            );
-                        } else if ExplicitExpr::from_curly(label).is_some() {
-                            // The job might also have its runner expanded via an
-                            // expression. Long-term we should perform this evaluation
-                            // to increase our confidence, but for now we flag it as
-                            // potentially expanding to self-hosted.
-                            results.push(
-                                Self::finding()
-                                    .confidence(Confidence::Low)
-                                    .severity(Severity::Medium)
-                                    .persona(Persona::Auditor)
-                                    .add_location(
-                                        job.location()
-                                            .primary()
-                                            .with_keys(["runs-on".into()])
-                                            .annotated(
-                                                "expression may expand into a self-hosted runner",
-                                            ),
-                                    )
-                                    .build(workflow)?,
-                            );
-                        }
                     }
-                }
-                // NOTE: GHA docs are unclear on whether runner groups always
-                // imply self-hosted runners or not. All examples suggest that they
-                // do, but I'm not sure.
-                // See: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/managing-access-to-self-hosted-runners-using-groups
-                // See: https://docs.github.com/en/actions/writing-workflows/choosing-where-your-workflow-runs/choosing-the-runner-for-a-job
-                LoE::Literal(RunsOn::Group { .. }) => results.push(
-                    Self::finding()
+                    RunnerEvidence::RunnerGroup => findings.push(
+                        Self::finding()
+                            .confidence(Confidence::High)
+                            .severity(Severity::Medium)
+                            .persona(Persona::Auditor)
+                            .add_location(
+                                job.location()
+                                    .primary()
+                                    .with_keys(["runs-on".into()])
+                                    .annotated("runner group used here"),
+                            )
+                            .build(job.parent())?,
+                    ),
+                },
+                Runner::Indeterminate {
+                    location,
+                    from_matrix,
+                    ..
+                } => {
+                    let finding_builder = Self::finding()
                         .confidence(Confidence::Low)
                         .severity(Severity::Medium)
                         .persona(Persona::Auditor)
@@ -107,47 +116,29 @@ impl Audit for SelfHostedRunner {
                             job.location()
                                 .primary()
                                 .with_keys(["runs-on".into()])
-                                .annotated("runner group implies self-hosted runner"),
-                        )
-                        .build(workflow)?,
-                ),
-                // The entire `runs-on:` is an expression, which may or may
-                // not be a self-hosted runner when expanded, like above.
-                LoE::Expr(exp) => {
-                    let Some(matrix) = job.matrix() else {
-                        continue;
-                    };
+                                .annotated("expression may expand into a self-hosted runner"),
+                        );
 
-                    let self_hosted = matrix.expansions().iter().any(|expansion| {
-                        exp.as_bare() == expansion.path && expansion.value.contains("self-hosted")
-                    });
-
-                    if self_hosted {
-                        results.push(
-                            Self::finding()
-                                .confidence(Confidence::High)
-                                .severity(Severity::Medium)
-                                .persona(Persona::Auditor)
+                    if from_matrix {
+                        findings.push(
+                            finding_builder
                                 .add_location(
-                                    job.location()
+                                    location
                                         .with_keys(["strategy".into()])
-                                        .annotated("matrix declares self-hosted runner"),
+                                        .annotated("matrix may use self-hosted runners"),
                                 )
-                                .add_location(
-                                    job.location()
-                                        .primary()
-                                        .with_keys(["runs-on".into()])
-                                        .annotated(
-                                            "expression may expand into a self-hosted runner",
-                                        ),
-                                )
-                                .build(workflow)?,
-                        )
-                    }
+                                .build(job.parent())?,
+                        );
+                    } else {
+                        findings.push(finding_builder.build(job.parent())?);
+                    };
+                }
+                _ => {
+                    // should we trace here?
                 }
             }
         }
 
-        Ok(results)
+        Ok(findings)
     }
 }

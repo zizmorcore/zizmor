@@ -3,8 +3,6 @@
 //! These models enrich the models under [`github_actions_models::workflow`],
 //! providing higher-level APIs for zizmor to use.
 
-use std::sync::LazyLock;
-
 use github_actions_expressions::context::{self};
 use github_actions_models::{
     common::{self, expr::LoE},
@@ -14,10 +12,14 @@ use github_actions_models::{
         job,
     },
 };
+use std::collections::HashSet;
+use std::sync::LazyLock;
 use terminal_link::Link;
 
 pub(crate) mod matrix;
+pub(crate) mod runners;
 
+use crate::models::workflow::runners::{JobRunners, Runner};
 use crate::{
     InputKey,
     finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
@@ -314,6 +316,17 @@ impl<'doc> NormalJob<'doc> {
             self.steps()
                 .filter_map(|step| step.r#if().map(|cond| (cond, step.location()))),
         )
+    }
+
+    /// Returns an iterator over this job's runners. A runner may be precisely
+    /// defined or have an indetermination attached in case of matrices and
+    /// expressions. See [`Runner`].
+    pub(crate) fn runners(
+        &self,
+        included_runners: &HashSet<String>,
+        excluded_groups: &HashSet<String>,
+    ) -> impl Iterator<Item = Runner<'doc>> {
+        JobRunners::new(self, included_runners, excluded_groups).iter()
     }
 }
 
