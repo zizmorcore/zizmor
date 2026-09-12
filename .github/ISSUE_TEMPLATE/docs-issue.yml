@@ -58,10 +58,3 @@ body:
       label: Additional context
       description: |
         Any additional context, screenshots, or other material about the docs issue.
-
-  - type: checkboxes
-    attributes:
-      label: Participation
-      options:
-        - label: I am willing to submit a pull request for this issue.
-          required: false
