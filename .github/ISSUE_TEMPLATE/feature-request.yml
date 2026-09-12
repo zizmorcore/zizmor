@@ -1,6 +1,6 @@
-name: Feature Request
-description: Suggest an idea or enhancement for zizmor.
-title: "[FEATURE]: "
+name: Feature request
+description: Suggest an idea or enhancement for zizmor
+title: "Feature: "
 labels:
   - enhancement
   - triage
@@ -59,10 +59,5 @@ body:
       label: Additional context
       description: |
         Any additional context, screenshots, or other material about the feature request.
-
-  - type: checkboxes
-    attributes:
-      label: Participation
-      options:
-        - label: I am willing to submit a pull request for this new feature.
-          required: false
+      placeholder: |
+        Any additional context you want to share.
