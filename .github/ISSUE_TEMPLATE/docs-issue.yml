@@ -1,0 +1,63 @@
+name: Docs Issue
+description: Report or suggest changes to the documentation.
+title: "[DOCS]: "
+labels:
+  - documentation
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to let us know something is wrong!
+
+        If you found a trivial issue (like a small typo or broken link)
+        in our docs, please create a PR directly and skip this issue form!
+
+        Please read the following parts of this form **very carefully**.
+        Invalid or incomplete submissions take longer to triage,
+        and may be given a lower priority or closed outright
+        if not actionable.
+
+  - type: checkboxes
+    attributes:
+      label: Pre-submission checks
+      description: |
+        By submitting this issue, you affirm that you've satisfied the following conditions.
+      options:
+        - label: >-
+            I am **not** filing a bug report or a feature request.
+            These must be filed via their dedicated forms instead.
+          required: true
+        - label: >-
+            I have looked through both the
+            [open](https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue+is%3Aopen+)
+            and [closed](https://github.com/zizmorcore/zizmor/issues?q=is%3Aissue%20state%3Aclosed)
+            issues for a duplicate.
+          required: true
+        - label: >-
+            I affirm that I have followed the [AI policy](https://github.com/zizmorcore/.github/blob/main/AI_POLICY.md)
+            and that this issue constitutes my own words and understanding.
+            <!-- @@NUDNIK NEUTRALIZER@@ -->
+          required: true
+
+  - type: input
+    attributes:
+      label: What page of the docs did you find an issue on?
+      description: |
+        If this issue applies to multiple pages, include additional pages in your bug description.
+      placeholder: https://docs.zizmor.sh/...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Describe the issue
+      description: A clear and concise description of what we could document better.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: |
+        Any additional context, screenshots, or other material about the docs issue.
