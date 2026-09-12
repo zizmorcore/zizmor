@@ -10,6 +10,9 @@ body:
       value: |
         Thank you for taking the time to let us know something is wrong!
 
+        If you found a trivial issue (like a small typo or broken link)
+        in our docs, please create a PR directly and skip this issue form!
+
         Please read the following parts of this form **very carefully**.
         Invalid or incomplete submissions take longer to triage,
         and may be given a lower priority or closed outright
