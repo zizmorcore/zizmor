@@ -73,15 +73,24 @@ impl AdhocPackages {
                     _ => false,
                 }
             }
-            "yarn" => {
-                // Require at least one non-flag argument after `add` so we
-                // don't flag malformed invocations like `yarn add`.
-                args.any(|arg| arg == "add") && args.any(|arg| !arg.starts_with('-'))
-            }
-            "pnpm" => {
-                // Require at least one non-flag argument after `add` so we
-                // don't flag malformed invocations like `pnpm add`.
-                args.any(|arg| arg == "add") && args.any(|arg| !arg.starts_with('-'))
+            "yarn" | "pnpm" => {
+                // Looking for `add` as the subcommand, i.e. the first argument
+                // that is neither a flag nor a flag's value.
+                let mut args = args.peekable();
+                while let Some(flag) = args.next_if(|arg| arg.starts_with('-')) {
+                    // A flag may take a value; `add` is never one, so `pnpm -r add pkg` still counts.
+                    if !flag.contains('=') {
+                        args.next_if(|arg| *arg != "add" && !arg.starts_with('-'));
+                    }
+                }
+
+                // `yarn workspace <name> add <pkg>` installs into a workspace.
+                if args.next_if_eq(&"workspace").is_some() {
+                    args.next();
+                }
+
+                // A package name must follow, so a bare `pnpm add` isn't flagged.
+                matches!(args.next(), Some("add")) && args.any(|arg| !arg.starts_with('-'))
             }
             _ => false,
         }
@@ -315,6 +324,40 @@ mod tests {
             // "pnpm install" is fine.
             (&["pnpm", "install"][..], false),
             (&["pnpm", "install", "--frozen-lockfile"][..], false),
+            // A dispatched tool's own `add` subcommand is not an install.
+            (&["pnpm", "exec", "changeset", "add", "lodash"][..], false),
+            (&["pnpm", "dlx", "changeset", "add", "lodash"][..], false),
+            (&["pnpm", "run", "build", "add", "lodash"][..], false),
+            (&["yarn", "exec", "changeset", "add", "lodash"][..], false),
+            (&["yarn", "run", "lint", "add", "lodash"][..], false),
+            // `pnpm <script>` is shorthand for `pnpm run <script>`.
+            (&["pnpm", "test", "add", "lodash"][..], false),
+            (&["pnpm", "lint", "add", "lodash"][..], false),
+            // Flags before the subcommand, including ones taking a value.
+            (&["pnpm", "-r", "add", "lodash"][..], true),
+            (&["pnpm", "-C", "./sub", "add", "lodash"][..], true),
+            (
+                &["pnpm", "--filter", "./pkgs/core/", "add", "lodash"][..],
+                true,
+            ),
+            (
+                &["pnpm", "--filter=./pkgs/core/", "add", "lodash"][..],
+                true,
+            ),
+            // A `--flag=value` takes no separate value, so `lint` is the subcommand.
+            (
+                &["pnpm", "--filter=./pkgs/core/", "lint", "add", "lodash"][..],
+                false,
+            ),
+            // `yarn workspace <name> add` is still an install.
+            (
+                &["yarn", "workspace", "@acme/core", "add", "lodash"][..],
+                true,
+            ),
+            (
+                &["yarn", "workspace", "@acme/core", "build", "add", "lodash"][..],
+                false,
+            ),
             // In the future we should consider catching wrapped commands, those using `sudo` and so on.
             // (&["sudo", "gem", "install", "rails"][..], true),
             // (&["bundle", "exec", "gem", "install", "rails"][..], true),
