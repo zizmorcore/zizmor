@@ -25,6 +25,11 @@ of `zizmor`.
 * Fixed a bug where [self-repository] auto-fixes were incorrectly marked as
   "safe" instead of "unsafe" (#2373)
 
+* Fixed a class of false positives/imprecisions in [adhoc-packages] that caused
+  some `pnpm` and `yarn` invocations to be misclassified as package installations (#2386)
+
+    Many thanks to @marcalexiei for implementing this improvement!
+
 ## 1.30.0
 
 ### New Features 🌈
