@@ -39,6 +39,32 @@ impl AdhocPackages {
         cursor.matches(query, tree.root_node(), source.as_bytes())
     }
 
+    /// Whether a supported package-manager option consumes a separate value.
+    /// Unknown options are assumed to take no value.
+    fn option_takes_value(cmd: &str, option: &str) -> bool {
+        match cmd {
+            "pnpm" => matches!(option, "-C" | "--dir" | "-F" | "--filter" | "--filter-prod"),
+            "yarn" => matches!(option, "--cwd" | "--mutex" | "--cache-folder"),
+            _ => false,
+        }
+    }
+
+    /// Find the next subcommand after leading options and their known values.
+    fn next_subcommand<'a>(cmd: &str, args: &mut impl Iterator<Item = &'a str>) -> Option<&'a str> {
+        while let Some(arg) = args.next() {
+            if arg == "--" {
+                return args.next();
+            }
+            if !arg.starts_with('-') {
+                return Some(arg);
+            }
+            if !arg.contains('=') && Self::option_takes_value(cmd, arg) {
+                args.next()?;
+            }
+        }
+        None
+    }
+
     /// Determine whether the given command and arguments correspond to an
     /// ad-hoc package installation, e.g. `gem install <package>`.
     fn is_adhoc_install_command<'a>(cmd: &'a str, args: impl Iterator<Item = &'a str>) -> bool {
@@ -74,23 +100,21 @@ impl AdhocPackages {
                 }
             }
             "yarn" | "pnpm" => {
-                // Looking for `add` as the subcommand, i.e. the first argument
-                // that is neither a flag nor a flag's value.
-                let mut args = args.peekable();
-                while let Some(flag) = args.next_if(|arg| arg.starts_with('-')) {
-                    // A flag may take a value; `add` is never one, so `pnpm -r add pkg` still counts.
-                    if !flag.contains('=') {
-                        args.next_if(|arg| *arg != "add" && !arg.starts_with('-'));
+                let subcommand = match (cmd, Self::next_subcommand(cmd, &mut args)) {
+                    // `yarn workspace <name> add <pkg>` installs into a workspace.
+                    ("yarn", Some("workspace")) => {
+                        args.next();
+                        Self::next_subcommand(cmd, &mut args)
                     }
-                }
-
-                // `yarn workspace <name> add <pkg>` installs into a workspace.
-                if args.next_if_eq(&"workspace").is_some() {
-                    args.next();
-                }
+                    // These prefixes also dispatch to the package manager's own commands.
+                    ("yarn", Some("global")) | ("pnpm", Some("recursive" | "multi" | "m")) => {
+                        Self::next_subcommand(cmd, &mut args)
+                    }
+                    (_, subcommand) => subcommand,
+                };
 
                 // A package name must follow, so a bare `pnpm add` isn't flagged.
-                matches!(args.next(), Some("add")) && args.any(|arg| !arg.starts_with('-'))
+                matches!(subcommand, Some("add")) && args.any(|arg| !arg.starts_with('-'))
             }
             _ => false,
         }
@@ -335,7 +359,20 @@ mod tests {
             (&["pnpm", "lint", "add", "lodash"][..], false),
             // Flags before the subcommand, including ones taking a value.
             (&["pnpm", "-r", "add", "lodash"][..], true),
+            (&["pnpm", "-r", "lint", "add", "lodash"][..], false),
             (&["pnpm", "-C", "./sub", "add", "lodash"][..], true),
+            (&["pnpm", "--dir", "./sub", "add", "lodash"][..], true),
+            (&["pnpm", "-F", "core", "add", "lodash"][..], true),
+            (
+                &["pnpm", "--filter-prod", "core", "add", "lodash"][..],
+                true,
+            ),
+            (&["yarn", "--cwd", "./sub", "add", "lodash"][..], true),
+            (&["yarn", "--mutex", "file", "add", "lodash"][..], true),
+            (
+                &["yarn", "--cache-folder", "./cache", "add", "lodash"][..],
+                true,
+            ),
             (
                 &["pnpm", "--filter", "./pkgs/core/", "add", "lodash"][..],
                 true,
@@ -349,6 +386,18 @@ mod tests {
                 &["pnpm", "--filter=./pkgs/core/", "lint", "add", "lodash"][..],
                 false,
             ),
+            // `add` can itself be an option value.
+            (&["pnpm", "--filter", "add", "test"][..], false),
+            (&["pnpm", "--filter", "add", "add", "lodash"][..], true),
+            (&["yarn", "--cwd", "add", "run", "lint"][..], false),
+            // A required value or package name may be missing.
+            (&["pnpm", "--filter"][..], false),
+            (&["pnpm", "--filter", "core", "add"][..], false),
+            // Unknown options are assumed to take no value.
+            (&["pnpm", "--unknown", "add", "lodash"][..], true),
+            (&["pnpm", "--unknown", "lint", "add", "lodash"][..], false),
+            // `--` ends option scanning, including for known options.
+            (&["pnpm", "--", "--filter", "add", "lodash"][..], false),
             // `yarn workspace <name> add` is still an install.
             (
                 &["yarn", "workspace", "@acme/core", "add", "lodash"][..],
@@ -358,6 +407,43 @@ mod tests {
                 &["yarn", "workspace", "@acme/core", "build", "add", "lodash"][..],
                 false,
             ),
+            // Boolean options must not consume the workspace subcommand.
+            (
+                &["yarn", "--silent", "workspace", "core", "add", "lodash"][..],
+                true,
+            ),
+            (
+                &[
+                    "yarn",
+                    "--non-interactive",
+                    "workspace",
+                    "core",
+                    "add",
+                    "lodash",
+                ][..],
+                true,
+            ),
+            // Other package-manager prefixes can also dispatch to `add`.
+            (&["yarn", "global", "add", "typescript"][..], true),
+            (&["yarn", "global", "add"][..], false),
+            (&["yarn", "global", "list", "add", "lodash"][..], false),
+            (&["pnpm", "recursive", "add", "lodash"][..], true),
+            (&["pnpm", "multi", "add", "lodash"][..], true),
+            (&["pnpm", "m", "add", "lodash"][..], true),
+            (&["pnpm", "recursive", "add"][..], false),
+            (
+                &["pnpm", "recursive", "--filter", "core", "add", "lodash"][..],
+                true,
+            ),
+            (
+                &["pnpm", "recursive", "exec", "changeset", "add", "lodash"][..],
+                false,
+            ),
+            // Ensure we don't mix up different managers. For example,
+            // `yarn workspace` exists but `pnpm workspace` does not.
+            (&["pnpm", "workspace", "core", "add", "lodash"][..], false),
+            (&["pnpm", "global", "add", "lodash"][..], false),
+            (&["yarn", "recursive", "add", "lodash"][..], false),
             // In the future we should consider catching wrapped commands, those using `sudo` and so on.
             // (&["sudo", "gem", "install", "rails"][..], true),
             // (&["bundle", "exec", "gem", "install", "rails"][..], true),
