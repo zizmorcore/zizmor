@@ -161,7 +161,7 @@ impl UseTrustedPublishing {
         cursor: &'a mut tree_sitter::QueryCursor,
         tree: &'a tree_sitter::Tree,
         source: &'a str,
-    ) -> tree_sitter::QueryMatches<'a, 'a, &'a [u8], &'a [u8]> {
+    ) -> tree_sitter::QueryMatches<'a, 'a, 'static, &'a [u8], &'a [u8]> {
         cursor.matches(query, tree.root_node(), source.as_bytes())
     }
 
@@ -379,7 +379,7 @@ impl UseTrustedPublishing {
         matches.for_each(|mat| {
             let cmd = {
                 let cap = mat
-                    .captures
+                    .captures()
                     .iter()
                     .find(|cap| cap.index == cmd)
                     .expect("internal error: expected capture for cmd");
@@ -389,7 +389,7 @@ impl UseTrustedPublishing {
             };
 
             let args = mat
-                .captures
+                .captures()
                 .iter()
                 .filter(|cap| cap.index == args)
                 .map(|cap| {
@@ -400,7 +400,7 @@ impl UseTrustedPublishing {
 
             if Self::is_publish_command(cmd, args) {
                 let span = mat
-                    .captures
+                    .captures()
                     .iter()
                     .find(|cap| cap.index == query.span_idx)
                     .expect("internal error: expected capture for span");

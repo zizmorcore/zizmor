@@ -35,7 +35,7 @@ impl AdhocPackages {
         cursor: &'a mut tree_sitter::QueryCursor,
         tree: &'a tree_sitter::Tree,
         source: &'a str,
-    ) -> tree_sitter::QueryMatches<'a, 'a, &'a [u8], &'a [u8]> {
+    ) -> tree_sitter::QueryMatches<'a, 'a, 'static, &'a [u8], &'a [u8]> {
         cursor.matches(query, tree.root_node(), source.as_bytes())
     }
 
@@ -130,7 +130,7 @@ impl AdhocPackages {
         matches.for_each(|mat| {
             let cmd = {
                 let cap = mat
-                    .captures
+                    .captures()
                     .iter()
                     .find(|cap| cap.index == cmd_idx)
                     .expect("internal error: expected capture for cmd");
@@ -140,7 +140,7 @@ impl AdhocPackages {
             };
 
             let args = mat
-                .captures
+                .captures()
                 .iter()
                 .filter(|cap| cap.index == args_idx)
                 // The powershell grammar interleaves `command_argument_sep`
@@ -157,7 +157,7 @@ impl AdhocPackages {
 
             if Self::is_adhoc_install_command(cmd, args) {
                 let span = mat
-                    .captures
+                    .captures()
                     .iter()
                     .find(|cap| cap.index == query.span_idx)
                     .expect("internal error: expected capture for span");

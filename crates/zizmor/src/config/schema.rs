@@ -239,11 +239,10 @@ mod tests {
               - foo.yml:invalid
         "#;
         let instance = yaml_serde::from_str::<serde_json::Value>(invalid_ignore).unwrap();
-        let errors = SCHEMA_VALIDATOR.iter_errors(&instance).into_errors();
-        insta::assert_snapshot!(errors, @r#"
-        Validation errors:
-        01: "foo.yml:invalid" does not match "^[^:]+\.ya?ml(:[1-9][0-9]*)?(:[1-9][0-9]*)?$"
-        "#);
+        let error = SCHEMA_VALIDATOR
+            .validate(&instance)
+            .expect_err("invalid workflow rule should be rejected");
+        insta::assert_snapshot!(error, @r#""foo.yml:invalid" does not match "^[^:]+\.ya?ml(:[1-9][0-9]*)?(:[1-9][0-9]*)?$""#);
     }
 
     #[test]
@@ -349,11 +348,10 @@ mod tests {
                 actions/checkout: unknown-policy
         "#;
         let instance = yaml_serde::from_str::<serde_json::Value>(unknown_policy).unwrap();
-        let errors = SCHEMA_VALIDATOR.iter_errors(&instance).into_errors();
-        insta::assert_snapshot!(errors, @r#"
-        Validation errors:
-        01: "unknown-policy" is not valid under any of the schemas listed in the 'oneOf' keyword
-        "#);
+        let error = SCHEMA_VALIDATOR
+            .validate(&instance)
+            .expect_err("unknown pinning policy should be rejected");
+        insta::assert_snapshot!(error, @r#""unknown-policy" is not valid under any of the schemas listed in the 'oneOf' keyword"#);
     }
 
     #[test]

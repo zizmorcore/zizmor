@@ -143,7 +143,7 @@ impl GitHubEnv {
         cursor: &'a mut QueryCursor,
         tree: &'a Tree,
         source: &'a str,
-    ) -> QueryMatches<'a, 'a, &'a [u8], &'a [u8]> {
+    ) -> QueryMatches<'a, 'a, 'static, &'a [u8], &'a [u8]> {
         cursor.matches(query, tree.root_node(), source.as_bytes())
     }
 
@@ -189,7 +189,7 @@ impl GitHubEnv {
         matches.for_each(|mat| {
             let cmd = {
                 let cap = mat
-                    .captures
+                    .captures()
                     .iter()
                     .find(|cap| cap.index == cmd)
                     .expect("internal error: expected capture for cmd");
@@ -198,21 +198,21 @@ impl GitHubEnv {
                     .expect("impossible: capture should be UTF-8 by construction")
             };
 
-            let args = mat.captures.iter().filter(|cap| cap.index == args);
+            let args = mat.captures().iter().filter(|cap| cap.index == args);
 
             // Filter matches down to those where the command isn't `echo` or `printf`
             // *or* at least one argument isn't a string literal.
             // TODO: other echo-like commands to check here?
             if (cmd != "echo" && cmd != "printf") || !self.bash_echo_args_are_safe(args) {
                 let span = mat
-                    .captures
+                    .captures()
                     .iter()
                     .find(|cap| cap.index == self.bash_redirect_query.span_idx)
                     .expect("internal error: expected capture for span");
 
                 let destination = {
                     let cap = mat
-                        .captures
+                        .captures()
                         .iter()
                         .find(|cap| cap.index == destination)
                         .expect("internal error: expected capture for destination");
@@ -237,14 +237,14 @@ impl GitHubEnv {
 
             matches.for_each(|mat| {
                 let span = mat
-                    .captures
+                    .captures()
                     .iter()
                     .find(|cap| cap.index == query.span_idx)
                     .expect("internal error: expected capture for span");
 
                 let destination = {
                     let cap = mat
-                        .captures
+                        .captures()
                         .iter()
                         .find(|cap| cap.index == destination)
                         .expect("internal error: expected capture for destination");
@@ -299,14 +299,14 @@ impl GitHubEnv {
             let matches = self.query(query, &mut cursor, &tree, script_body);
             matches.for_each(|mat| {
                 let span = mat
-                    .captures
+                    .captures()
                     .iter()
                     .find(|cap| cap.index == query.span_idx)
                     .expect("internal error: no matching capture");
 
                 let destination = {
                     let cap = mat
-                        .captures
+                        .captures()
                         .iter()
                         .find(|cap| cap.index == destination)
                         .expect("internal error: no matching capture");
