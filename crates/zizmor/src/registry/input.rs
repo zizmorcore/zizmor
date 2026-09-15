@@ -533,9 +533,9 @@ impl InputGroup {
                 break;
             }
 
-            // TODO: Handle worktrees?
             tracing::trace!("checking if {candidate} is a Git repository root");
-            if candidate.join(".git").is_dir() {
+            // Submodules and linked worktrees use a `.git` file instead of a directory.
+            if candidate.join(".git").exists() {
                 return Some(candidate);
             }
 
@@ -1079,6 +1079,30 @@ mod tests {
 
         let local = InputKey::local("fakegroup".into(), child, None, Some(temp_path));
         assert_eq!(local.best_identifier(), "foo/bar/baz.yml");
+    }
+
+    #[test]
+    fn test_discover_root_in_submodule() {
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let temp_path = Utf8PathBuf::try_from(temp_dir.path().to_path_buf())
+            .unwrap()
+            .canonicalize_utf8()
+            .unwrap();
+
+        std::fs::create_dir_all(temp_path.join(".git/modules/submodule")).unwrap();
+        let submodule = temp_path.join("submodule");
+        let child = submodule.join("subdir");
+        std::fs::create_dir_all(&child).unwrap();
+        std::fs::write(
+            submodule.join(".git"),
+            "gitdir: ../.git/modules/submodule\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            InputGroup::discover_root_with_ceilings(&child, &HashSet::new()),
+            Some(submodule),
+        );
     }
 
     #[test]
