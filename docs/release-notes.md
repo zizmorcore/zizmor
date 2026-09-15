@@ -15,6 +15,16 @@ of `zizmor`.
 
     Many thanks to @ubiratansoares for proposing and implementing this enhancement!
 
+### Bug Fixes 🐛
+
+* Fixed a class of false positives/imprecisions in [adhoc-packages] that caused
+  some `pnpm` and `yarn` invocations to be misclassified as package installations (#2386)
+
+    Many thanks to @marcalexiei for implementing this improvement!
+
+* Fixed a bug where `zizmor` would fail to honor Git submodules and worktrees
+  when discovering configuration files relative to a repo root (#2390)
+
 ## 1.30.1
 
 ### Bug Fixes 🐛
@@ -24,11 +34,6 @@ of `zizmor`.
 
 * Fixed a bug where [self-repository] auto-fixes were incorrectly marked as
   "safe" instead of "unsafe" (#2373)
-
-* Fixed a class of false positives/imprecisions in [adhoc-packages] that caused
-  some `pnpm` and `yarn` invocations to be misclassified as package installations (#2386)
-
-    Many thanks to @marcalexiei for implementing this improvement!
 
 ## 1.30.0
 
