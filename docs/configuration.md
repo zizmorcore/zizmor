@@ -41,6 +41,14 @@ typically named `zizmor.yml` or `zizmor.yaml`.
     - If the input is within a Git repository, `zizmor` performs directory
       discovery starting (and ending) at the repository root.
 
+        !!! note
+
+            As of `v1.32.0`, `zizmor` honors Git submodule and worktree roots.
+
+            In other words, if you run `zizmor ./my-repo/submodule`,
+            `zizmor` will discover configuration relative to `./my-repo/submodule`
+            rather than `./my-repo`.
+
         !!! example
 
             Given an invocation like `zizmor ./repo/foo/action.yml`,
