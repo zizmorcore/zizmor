@@ -308,7 +308,8 @@ fn test_issue_2324() -> Result<()> {
     Ok(())
 }
 
-/// Bug #2393:
+/// Bug #2393: unusual comment placement on a `uses:` clause should not crash zizmor,
+/// and should produce a normal finding.
 ///
 /// See: <https://github.com/zizmorcore/zizmor/issues/2393>
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
