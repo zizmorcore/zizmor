@@ -411,9 +411,10 @@ impl<'doc> Feature<'doc> {
 
                 if let Some(raw_comment) = ANY_COMMENT.find(line) {
                     // We need to transform this comment match back into
-                    // a concrete location.
+                    // a concrete location using its offsets within the line.
+                    let line_start: usize = line_range.start().into();
                     let comment_location = ConcreteLocation::from_span(
-                        line_range.start().into()..line_range.end().into(),
+                        line_start + raw_comment.start()..line_start + raw_comment.end(),
                         document,
                     );
 
@@ -453,9 +454,64 @@ impl<'doc> Location<'doc> {
 
 #[cfg(test)]
 mod tests {
-    use crate::finding::location::{ConcreteLocation, Point};
+    use yamlpath::Route;
+
+    use crate::{
+        finding::location::{
+            ConcreteLocation, Feature, LocationKind, Point, SymbolicFeature, SymbolicLocation,
+        },
+        registry::input::InputKey,
+    };
 
     use super::Comment;
+
+    #[test]
+    fn test_comment_locations_are_exact() -> anyhow::Result<()> {
+        let input = r#"
+foo: # comment
+  bar: # another comment
+    - a
+    - b
+    - c # third comment
+  baz: |- # fourth comment
+    some content
+"#;
+
+        let doc = yamlpath::Document::new(input)?;
+        let symbolic = SymbolicLocation {
+            key: &InputKey::stdin(),
+            annotation: "zing".into(),
+            link: None,
+            route: Route::default(),
+            feature_kind: SymbolicFeature::Normal,
+            kind: LocationKind::Primary,
+        };
+
+        let feature = symbolic.concretize(&doc)?;
+
+        assert_eq!(feature.concrete.comments.len(), 4);
+        for comment in feature.concrete.comments {
+            // Each comment's raw value should exactly match its span in the input.
+            assert_eq!(
+                comment.as_raw(),
+                &input[comment.location().offset_span.start..comment.location().offset_span.end]
+            );
+        }
+
+        // Same as above, but via `from_span` to test the comment span logic there.
+        let feature = Feature::from_span(&(0..input.len()), &doc);
+
+        assert_eq!(feature.comments.len(), 4);
+        for comment in feature.comments {
+            // Each comment's raw value should exactly match its span in the input.
+            assert_eq!(
+                comment.as_raw(),
+                &input[comment.location().offset_span.start..comment.location().offset_span.end]
+            );
+        }
+
+        Ok(())
+    }
 
     #[test]
     fn test_comment_ignores() {

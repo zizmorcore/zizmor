@@ -151,6 +151,12 @@ pub(crate) trait AsDocument<'a, 'doc> {
     fn as_document(&'a self) -> &'doc yamlpath::Document;
 }
 
+impl<'a> AsDocument<'a, 'a> for yamlpath::Document {
+    fn as_document(&'a self) -> &'a yamlpath::Document {
+        self
+    }
+}
+
 /// Common fields between workflow and action step bodies.
 pub(crate) enum StepBodyCommon<'s> {
     Uses {
