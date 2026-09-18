@@ -1,0 +1,19 @@
+# repro for #2393
+
+name: issue-2393-repro
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: |- # v1.2.3
+          astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d

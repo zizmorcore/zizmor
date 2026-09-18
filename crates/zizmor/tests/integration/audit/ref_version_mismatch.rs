@@ -308,6 +308,36 @@ fn test_issue_2324() -> Result<()> {
     Ok(())
 }
 
+/// Bug #2393:
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/2393>
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn test_issue_2393() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .offline(NetworkMode::AssertOnline)
+            .input(input_under_test("ref-version-mismatch/issue-2393-repro.yml"))
+            .run()?,
+        @"
+    warning[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
+      --> @@INPUT@@:18:20
+       |
+    18 |       - uses: |- # v1.2.3
+       |                    ^^^^^^ points to unknown ref
+    19 |           astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+       |           ----------------------------------------------------------- is pointed to by tag v10.0.1
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    1 findings (1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
+
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_add_version_comment_composite_action() -> anyhow::Result<()> {
