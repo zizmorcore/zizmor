@@ -27,6 +27,7 @@ pub enum BareEvent {
     DiscussionComment,
     Fork,
     Gollum,
+    ImageVersion,
     IssueComment,
     Issues,
     Label,
@@ -68,6 +69,7 @@ pub struct Events {
     pub discussion: OptionalBody<GenericEvent>,
     pub discussion_comment: OptionalBody<GenericEvent>,
     // NOTE: `fork` and `gollum` are omitted, since they are always bare.
+    pub image_version: OptionalBody<ImageVersion>,
     pub issue_comment: OptionalBody<GenericEvent>,
     pub issues: OptionalBody<GenericEvent>,
     pub label: OptionalBody<GenericEvent>,
@@ -122,6 +124,7 @@ impl Events {
             check_suite,
             discussion,
             discussion_comment,
+            image_version,
             issue_comment,
             issues,
             label,
@@ -192,6 +195,13 @@ impl<T> From<Option<T>> for OptionalBody<T> {
 pub struct GenericEvent {
     #[serde(default, deserialize_with = "crate::common::scalar_or_vector")]
     pub types: Vec<String>,
+}
+
+/// The body of an `image_version` event trigger.
+#[derive(Deserialize, Serialize, Debug)]
+pub struct ImageVersion {
+    pub names: Vec<String>,
+    pub versions: Vec<String>,
 }
 
 /// The body of a `pull_request` event trigger.
@@ -350,6 +360,8 @@ pub enum PathFilters {
 
 #[cfg(test)]
 mod tests {
+    use crate::workflow::Trigger;
+
     #[test]
     fn test_events_count() {
         let events = "
@@ -360,5 +372,66 @@ issue_comment:";
 
         let events = yaml_serde::from_str::<super::Events>(events).unwrap();
         assert_eq!(events.count(), 4);
+    }
+
+    #[test]
+    fn test_image_version_trigger() {
+        let trigger = r#"
+image_version:
+  names:
+  - "MyNewImage"
+  - "MyOtherImage"
+  versions:
+  - 1.*
+  - 2.*
+        "#;
+
+        let trigger = yaml_serde::from_str::<Trigger>(trigger).unwrap();
+
+        insta::assert_debug_snapshot!(trigger, @r#"
+        Events(
+            Events {
+                branch_protection_rule: Missing,
+                check_run: Missing,
+                check_suite: Missing,
+                discussion: Missing,
+                discussion_comment: Missing,
+                image_version: Body(
+                    ImageVersion {
+                        names: [
+                            "MyNewImage",
+                            "MyOtherImage",
+                        ],
+                        versions: [
+                            "1.*",
+                            "2.*",
+                        ],
+                    },
+                ),
+                issue_comment: Missing,
+                issues: Missing,
+                label: Missing,
+                merge_group: Missing,
+                milestone: Missing,
+                project: Missing,
+                project_card: Missing,
+                project_column: Missing,
+                pull_request: Missing,
+                pull_request_comment: Missing,
+                pull_request_review: Missing,
+                pull_request_review_comment: Missing,
+                pull_request_target: Missing,
+                push: Missing,
+                registry_package: Missing,
+                release: Missing,
+                repository_dispatch: Missing,
+                schedule: Missing,
+                watch: Missing,
+                workflow_call: Missing,
+                workflow_dispatch: Missing,
+                workflow_run: Missing,
+            },
+        )
+        "#);
     }
 }
