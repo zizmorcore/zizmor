@@ -30,13 +30,17 @@ audit_meta!(
     "action's hash pin has mismatched or missing version comment"
 );
 
+/// The different states that can come from [`RefVersionMismatch::detect_version_comment`].
 #[derive(Debug)]
-enum CommentVersionState<'doc> {
+enum VersionCommentState<'doc> {
+    /// No version comment was detected.
     Missing,
+    /// A version comment was detected.
     Version {
         version: &'doc str,
         comment: &'doc Comment<'doc>,
     },
+    /// There was a comment (or comments), but none of them were version comments.
     NonVersionComments,
 }
 
@@ -52,11 +56,11 @@ impl RefVersionMismatch {
         None
     }
 
-    fn comment_version_state<'doc>(comments: &'doc [Comment<'doc>]) -> CommentVersionState<'doc> {
+    fn detect_version_comment<'doc>(comments: &'doc [Comment<'doc>]) -> VersionCommentState<'doc> {
         match Self::extract_version_from_comments(comments) {
-            Some((version, comment)) => CommentVersionState::Version { version, comment },
-            None if comments.is_empty() => CommentVersionState::Missing,
-            None => CommentVersionState::NonVersionComments,
+            Some((version, comment)) => VersionCommentState::Version { version, comment },
+            None if comments.is_empty() => VersionCommentState::Missing,
+            None => VersionCommentState::NonVersionComments,
         }
     }
 
@@ -115,11 +119,11 @@ impl RefVersionMismatch {
             .concretize(parent.as_document())
             .map_err(Self::err)?;
 
-        let comment_version_state = Self::comment_version_state(&uses_location.concrete.comments);
+        let comment_version_state = Self::detect_version_comment(&uses_location.concrete.comments);
 
         let (version, comment) = match comment_version_state {
-            CommentVersionState::Version { version, comment } => (version, comment),
-            CommentVersionState::Missing | CommentVersionState::NonVersionComments => {
+            VersionCommentState::Version { version, comment } => (version, comment),
+            VersionCommentState::Missing | VersionCommentState::NonVersionComments => {
                 // SHA-pinned action without a recognized version comment.
                 let Some(tag) = self
                     .client
@@ -131,15 +135,15 @@ impl RefVersionMismatch {
                 };
 
                 let (annotation, tip) = match comment_version_state {
-                    CommentVersionState::Missing => (
+                    VersionCommentState::Missing => (
                         "missing version comment",
                         format!("add version comment '# {}'", tag.name),
                     ),
-                    CommentVersionState::NonVersionComments => (
+                    VersionCommentState::NonVersionComments => (
                         "comment does not contain a version",
                         format!("rewrite comment to include '# {}'", tag.name),
                     ),
-                    CommentVersionState::Version { .. } => unreachable!(),
+                    VersionCommentState::Version { .. } => unreachable!(),
                 };
 
                 let mut builder = Self::finding()
@@ -156,7 +160,7 @@ impl RefVersionMismatch {
                     )
                     .tip(tip);
 
-                if matches!(comment_version_state, CommentVersionState::Missing) {
+                if matches!(comment_version_state, VersionCommentState::Missing) {
                     builder = builder.fix(Self::add_version_comment_fix(parent, &tag.name));
                 }
 
@@ -316,8 +320,8 @@ runs:
             .unwrap();
 
         assert_matches!(
-            RefVersionMismatch::comment_version_state(&uses_location.concrete.comments),
-            CommentVersionState::NonVersionComments,
+            RefVersionMismatch::detect_version_comment(&uses_location.concrete.comments),
+            VersionCommentState::NonVersionComments,
         );
     }
 }
