@@ -25,6 +25,9 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would fail to honor Git submodules and worktrees
   when discovering configuration files relative to a repo root (#2390)
 
+* Fixed a bug where the [ref-version-mismatch] audit would crash on
+  unusually placed version comments (#2394)
+
 ## 1.30.1
 
 ### Bug Fixes 🐛
@@ -2120,6 +2123,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [insecure-url-scheme]: ./audits.md#insecure-url-scheme
 [self-repository]: ./audits.md#self-repository
 [ref-confusion]: ./audits.md#ref-confusion
+[self-hosted-runner]: ./audits.md#self-hosted-runner
 
 [exit code]: ./usage.md#exit-codes
 
