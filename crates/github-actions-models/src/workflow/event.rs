@@ -1,4 +1,6 @@
 //! Workflow events.
+//!
+//! See: <https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows>
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
