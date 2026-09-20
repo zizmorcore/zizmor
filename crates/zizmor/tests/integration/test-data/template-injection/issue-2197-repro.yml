@@ -4,7 +4,7 @@
 
 name: issue-2197-repro
 
-on: issue_comment
+on: pull_request
 
 permissions: {}
 

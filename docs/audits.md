@@ -451,6 +451,11 @@ This audit checks for some of the biggest offenders:
 
 * `pull_request_target`
 * `workflow_run`
+* `issue_comment`
+
+!!! note
+
+    This audit flags `issue_comment` as of `v1.31.0`.
 
 These triggers are dangerous because they run in the context of the
 *target repository* rather than the *fork repository*, while also being
@@ -487,6 +492,7 @@ Some general pointers:
 
 * Replace `workflow_run` triggers with `workflow_call`: this will require
   re-tooling the workflow to be a [reusable workflow].
+
 * Replace `pull_request_target` with `pull_request`, unless you *absolutely*
   need repository write permissions (e.g. to leave a comment or make
   other changes to the upstream repo).
@@ -495,6 +501,9 @@ Some general pointers:
     pull requests from external forks. If you only expect pull requests from
     branches within the same repository, or if you are fine with some functionality
     not working for external pull requests, prefer `pull_request`.
+
+* Consider replacing `issue_comment` based developer workflows with workflows
+  that require a privileged user to add a label to an issue or pull request.
 
 * Automation for Dependabot pull requests can be implemented using `pull_request`,
   but requires setting dedicated [Dependabot secrets]
@@ -2803,4 +2812,3 @@ once it's configured:
 [Guidelines on green software practices for GitHub Actions CI workflows]: https://github.com/Cambridge-ICCS/green-ci
 [runs-on]: https://runs-on.com
 [namespace]: https://namespace.so/docs/solutions/github-actions
-

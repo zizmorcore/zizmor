@@ -167,6 +167,15 @@ impl Workflow {
         Jobs::new(self)
     }
 
+    /// Whether this workflow is triggered by `issue_comment`.
+    pub(crate) fn has_issue_comment(&self) -> bool {
+        match &self.on {
+            Trigger::BareEvent(event) => *event == BareEvent::IssueComment,
+            Trigger::BareEvents(events) => events.contains(&BareEvent::IssueComment),
+            Trigger::Events(events) => !matches!(events.issue_comment, OptionalBody::Missing),
+        }
+    }
+
     /// Whether this workflow is triggered by pull_request_target.
     pub(crate) fn has_pull_request_target(&self) -> bool {
         match &self.on {

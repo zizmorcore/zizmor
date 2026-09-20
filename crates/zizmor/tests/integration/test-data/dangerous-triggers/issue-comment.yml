@@ -1,0 +1,11 @@
+on:
+  issue_comment:
+
+permissions: {}
+
+jobs:
+  vulnerable:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: echo hello

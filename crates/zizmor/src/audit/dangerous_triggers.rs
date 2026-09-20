@@ -67,6 +67,7 @@ impl Audit for DangerousTriggers {
                     .build(workflow)?,
             );
         }
+
         if workflow.has_workflow_run() {
             findings.push(
                 Self::finding()
@@ -78,6 +79,22 @@ impl Audit for DangerousTriggers {
                             .primary()
                             .with_keys(["on".into()])
                             .annotated("workflow_run is almost always used insecurely"),
+                    )
+                    .build(workflow)?,
+            );
+        }
+
+        if workflow.has_issue_comment() {
+            findings.push(
+                Self::finding()
+                    .confidence(Confidence::Medium)
+                    .severity(Severity::High)
+                    .add_location(
+                        workflow
+                            .location()
+                            .primary()
+                            .with_keys(["on".into()])
+                            .annotated("issue_comment is almost always used insecurely"),
                     )
                     .build(workflow)?,
             );
