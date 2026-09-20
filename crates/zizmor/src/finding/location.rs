@@ -194,7 +194,7 @@ impl<'doc> SymbolicLocation<'doc> {
                 comments: document
                     .feature_comments(&feature)
                     .into_iter()
-                    .map(|f| Comment(document.extract(&f)))
+                    .map(|f| Comment::extract(document, &f))
                     .collect(),
             },
         })
@@ -231,7 +231,7 @@ impl<'a, 'doc, T: Locatable<'doc>> Routable<'a, 'doc> for T {
 }
 
 /// Represents a `(row, column)` point within a file.
-#[derive(Copy, Clone, Serialize)]
+#[derive(Debug, Copy, Clone, Serialize)]
 pub(crate) struct Point {
     pub(crate) row: usize,
     pub(crate) column: usize,
@@ -249,7 +249,7 @@ impl From<LineCol> for Point {
 /// A "concrete" location for some feature.
 /// Every concrete location contains two spans: a line-and-column span,
 /// and an offset range.
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) struct ConcreteLocation {
     pub(crate) start_point: Point,
     pub(crate) end_point: Point,
@@ -303,17 +303,37 @@ static_regex!(IGNORE_EXPR, r"# zizmor: ignore\[(.+)\](?:\s+.*)?$");
 /// Represents a single source comment.
 #[derive(Debug, Serialize)]
 #[serde(transparent)]
-pub(crate) struct Comment<'doc>(&'doc str);
+pub(crate) struct Comment<'doc> {
+    raw: &'doc str,
+    /// The comment's concrete location within its containing document.
+    #[serde(skip)]
+    location: ConcreteLocation,
+}
 
 impl<'doc> Comment<'doc> {
+    pub(crate) fn extract(document: &'doc yamlpath::Document, feature: &yamlpath::Feature) -> Self {
+        Self::new(
+            document.extract(feature),
+            ConcreteLocation::from(&feature.location),
+        )
+    }
+
+    pub(crate) fn new(raw: &'doc str, location: ConcreteLocation) -> Self {
+        Self { raw, location }
+    }
+
     pub(crate) fn is_meaningful(&self) -> bool {
-        let content = self.0.strip_prefix('#').unwrap_or(self.0).trim();
+        let content = self
+            .as_raw()
+            .strip_prefix('#')
+            .unwrap_or(self.as_raw())
+            .trim();
         !content.is_empty()
     }
 
     pub(crate) fn ignores(&self, rule_id: &str) -> bool {
         // Extracts foo,bar from `# zizmor: ignore[foo,bar]`
-        let Some(caps) = IGNORE_EXPR.captures(self.0) else {
+        let Some(caps) = IGNORE_EXPR.captures(self.as_raw()) else {
             return false;
         };
 
@@ -325,7 +345,11 @@ impl<'doc> Comment<'doc> {
     }
 
     pub(crate) fn as_raw(&self) -> &'doc str {
-        self.0
+        self.raw
+    }
+
+    pub(crate) fn location(&self) -> &ConcreteLocation {
+        &self.location
     }
 }
 
@@ -379,12 +403,25 @@ impl<'doc> Feature<'doc> {
             .flat_map(|line| {
                 // NOTE: We don't really expect this to fail, since this
                 // line range comes from the line index itself.
-                let line = document.line_index().line(line)?;
+                let line_range = document.line_index().line(line)?;
                 // Chomp the trailing newline rather than enabling
                 // multi-line mode in ANY_COMMENT, on the theory that
                 // chomping is a little faster.
-                let line = &raw[line].trim_end();
-                ANY_COMMENT.is_match(line).then_some(Comment(line))
+                let line = raw[line_range].trim_end();
+
+                if let Some(raw_comment) = ANY_COMMENT.find(line) {
+                    // We need to transform this comment match back into
+                    // a concrete location using its offsets within the line.
+                    let line_start: usize = line_range.start().into();
+                    let comment_location = ConcreteLocation::from_span(
+                        line_start + raw_comment.start()..line_start + raw_comment.end(),
+                        document,
+                    );
+
+                    Some(Comment::new(raw_comment.as_str(), comment_location))
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -417,7 +454,64 @@ impl<'doc> Location<'doc> {
 
 #[cfg(test)]
 mod tests {
+    use yamlpath::Route;
+
+    use crate::{
+        finding::location::{
+            ConcreteLocation, Feature, LocationKind, Point, SymbolicFeature, SymbolicLocation,
+        },
+        registry::input::InputKey,
+    };
+
     use super::Comment;
+
+    #[test]
+    fn test_comment_locations_are_exact() -> anyhow::Result<()> {
+        let input = r#"
+foo: # comment
+  bar: # another comment
+    - a
+    - b
+    - c # third comment
+  baz: |- # fourth comment
+    some content
+"#;
+
+        let doc = yamlpath::Document::new(input)?;
+        let symbolic = SymbolicLocation {
+            key: &InputKey::stdin(),
+            annotation: "zing".into(),
+            link: None,
+            route: Route::default(),
+            feature_kind: SymbolicFeature::Normal,
+            kind: LocationKind::Primary,
+        };
+
+        let feature = symbolic.concretize(&doc)?;
+
+        assert_eq!(feature.concrete.comments.len(), 4);
+        for comment in feature.concrete.comments {
+            // Each comment's raw value should exactly match its span in the input.
+            assert_eq!(
+                comment.as_raw(),
+                &input[comment.location().offset_span.start..comment.location().offset_span.end]
+            );
+        }
+
+        // Same as above, but via `from_span` to test the comment span logic there.
+        let feature = Feature::from_span(&(0..input.len()), &doc);
+
+        assert_eq!(feature.comments.len(), 4);
+        for comment in feature.comments {
+            // Each comment's raw value should exactly match its span in the input.
+            assert_eq!(
+                comment.as_raw(),
+                &input[comment.location().offset_span.start..comment.location().offset_span.end]
+            );
+        }
+
+        Ok(())
+    }
 
     #[test]
     fn test_comment_ignores() {
@@ -458,8 +552,14 @@ mod tests {
         ];
 
         for (comment, rule, ignores) in cases {
+            // Note: dummy location, since we don't need a real one here.
+            let noop_location = ConcreteLocation::new(
+                Point { row: 0, column: 0 },
+                Point { row: 0, column: 0 },
+                0..0,
+            );
             assert_eq!(
-                Comment(comment).ignores(rule),
+                Comment::new(comment, noop_location).ignores(rule),
                 *ignores,
                 "{comment} does not ignore {rule}"
             )

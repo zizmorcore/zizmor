@@ -30,28 +30,37 @@ audit_meta!(
     "action's hash pin has mismatched or missing version comment"
 );
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum CommentVersionState<'doc> {
+/// The different states that can come from [`RefVersionMismatch::detect_version_comment`].
+#[derive(Debug)]
+enum VersionCommentState<'doc> {
+    /// No version comment was detected.
     Missing,
-    Version(&'doc str),
+    /// A version comment was detected.
+    Version {
+        version: &'doc str,
+        comment: &'doc Comment<'doc>,
+    },
+    /// There was a comment (or comments), but none of them were version comments.
     NonVersionComments,
 }
 
 impl RefVersionMismatch {
-    fn extract_version_from_comments<'doc>(comments: &'doc [Comment<'doc>]) -> Option<&'doc str> {
+    fn extract_version_from_comments<'doc>(
+        comments: &'doc [Comment<'doc>],
+    ) -> Option<(&'doc str, &'doc Comment<'doc>)> {
         for comment in comments {
             if let Some(version) = RawVersion::from_comment(comment) {
-                return Some(version.as_raw());
+                return Some((version.as_raw(), comment));
             }
         }
         None
     }
 
-    fn comment_version_state<'doc>(comments: &'doc [Comment<'doc>]) -> CommentVersionState<'doc> {
+    fn detect_version_comment<'doc>(comments: &'doc [Comment<'doc>]) -> VersionCommentState<'doc> {
         match Self::extract_version_from_comments(comments) {
-            Some(version) => CommentVersionState::Version(version),
-            None if comments.is_empty() => CommentVersionState::Missing,
-            None => CommentVersionState::NonVersionComments,
+            Some((version, comment)) => VersionCommentState::Version { version, comment },
+            None if comments.is_empty() => VersionCommentState::Missing,
+            None => VersionCommentState::NonVersionComments,
         }
     }
 
@@ -110,11 +119,11 @@ impl RefVersionMismatch {
             .concretize(parent.as_document())
             .map_err(Self::err)?;
 
-        let comment_version_state = Self::comment_version_state(&uses_location.concrete.comments);
+        let comment_version_state = Self::detect_version_comment(&uses_location.concrete.comments);
 
-        let version_from_comment = match comment_version_state {
-            CommentVersionState::Version(version) => version,
-            CommentVersionState::Missing | CommentVersionState::NonVersionComments => {
+        let (version, comment) = match comment_version_state {
+            VersionCommentState::Version { version, comment } => (version, comment),
+            VersionCommentState::Missing | VersionCommentState::NonVersionComments => {
                 // SHA-pinned action without a recognized version comment.
                 let Some(tag) = self
                     .client
@@ -126,15 +135,15 @@ impl RefVersionMismatch {
                 };
 
                 let (annotation, tip) = match comment_version_state {
-                    CommentVersionState::Missing => (
+                    VersionCommentState::Missing => (
                         "missing version comment",
                         format!("add version comment '# {}'", tag.name),
                     ),
-                    CommentVersionState::NonVersionComments => (
+                    VersionCommentState::NonVersionComments => (
                         "comment does not contain a version",
                         format!("rewrite comment to include '# {}'", tag.name),
                     ),
-                    CommentVersionState::Version(_) => unreachable!(),
+                    VersionCommentState::Version { .. } => unreachable!(),
                 };
 
                 let mut builder = Self::finding()
@@ -151,18 +160,17 @@ impl RefVersionMismatch {
                     )
                     .tip(tip);
 
-                if matches!(comment_version_state, CommentVersionState::Missing) {
+                if matches!(comment_version_state, VersionCommentState::Missing) {
                     builder = builder.fix(Self::add_version_comment_fix(parent, &tag.name));
                 }
 
-                // findings.push(builder.build(step).map_err(Self::err)?);
                 return Ok(Some(builder.build(parent).map_err(Self::err)?));
             }
         };
 
         let git_ref = self
             .client
-            .lookup_ref(&uses.into(), version_from_comment)
+            .lookup_ref(&uses.into(), version)
             .await
             .map_err(Self::err)?;
 
@@ -171,10 +179,17 @@ impl RefVersionMismatch {
             return Ok(None);
         }
 
-        let subfeature = Subfeature::new(
-            uses_location.concrete.location.offset_span.end,
-            version_from_comment,
-        );
+        // Bug #2393: the user might try to use a block-style YAML string for the `uses:` clause,
+        // and then try and put the version comment next to the block start (e.g. `uses: |- # 1.2.3`).
+        //
+        // Previously this would cause a hard crash because the subfeature previously assumed that the
+        // comment comes *after* the `uses:` clause's contents, which isn't true in that case.
+        //
+        // Note that this is arguably not correct either: Dependabot and other tools expect the version
+        // comment to be on the same line as the `org/repo` reference, not just anywhere on the
+        // `uses:` clause. We could pretty easily reject this in the future instead by checking whether the
+        // comment's start is before the end of the `uses:` clause.
+        let subfeature = Subfeature::new(comment.location().offset_span.start, version);
 
         let comment_location = match git_ref {
             Some(commit_for_ref) => Location::new(
@@ -278,6 +293,8 @@ impl Audit for RefVersionMismatch {
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches;
+
     use super::*;
     use crate::{models::action::Action, registry::input::InputKey};
 
@@ -302,9 +319,9 @@ runs:
             .concretize(step.document())
             .unwrap();
 
-        assert_eq!(
-            RefVersionMismatch::comment_version_state(&uses_location.concrete.comments),
-            CommentVersionState::NonVersionComments,
+        assert_matches!(
+            RefVersionMismatch::detect_version_comment(&uses_location.concrete.comments),
+            VersionCommentState::NonVersionComments,
         );
     }
 }

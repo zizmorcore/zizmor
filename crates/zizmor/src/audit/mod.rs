@@ -451,7 +451,7 @@ pub(crate) trait Audit: AuditCore {
     ///
     /// TODO: This also means we effectively run the disablement check on every
     /// single input in a group, rather than just once per group.
-    #[instrument(skip(self, ident, config))]
+    #[instrument(skip(self, config))]
     async fn audit<'doc>(
         &self,
         ident: &'static str,

@@ -347,7 +347,7 @@ fn test_disablement() -> anyhow::Result<()> {
             .output(OutputMode::Both)
             .run()?,
         @r#"
-    DEBUG audit{input=Workflow(file://@@INPUT@@/.github/workflows/hackme.yml)}: zizmor::audit: skipping: template-injection is disabled in config for group Group("@@INPUT@@")
+    DEBUG audit{ident="template-injection" input=Workflow(file://@@INPUT@@/.github/workflows/hackme.yml)}: zizmor::audit: skipping: template-injection is disabled in config for group Group("@@INPUT@@")
     No findings to report. Good job! (1 suppressed)
     "#
     );
