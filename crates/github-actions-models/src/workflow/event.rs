@@ -1,6 +1,10 @@
 //! Workflow events.
 //!
 //! See: <https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows>
+//!
+//! NOTE: [`BareEvent`] and [`Events`] include several events that GitHub has deprecated/removed
+//! but that may still appear in older versions of GHES, like `project`, `project_card`,
+//! and `project_column`. We may want to remove these at some point.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -41,7 +45,6 @@ pub enum BareEvent {
     ProjectColumn,
     Public,
     PullRequest,
-    PullRequestComment,
     PullRequestReview,
     PullRequestReviewComment,
     PullRequestTarget,
@@ -86,7 +89,6 @@ pub struct Events {
     pub project_column: OptionalBody<GenericEvent>,
     pub public: OptionalBody<GenericEvent>,
     pub pull_request: OptionalBody<PullRequest>,
-    pub pull_request_comment: OptionalBody<GenericEvent>,
     pub pull_request_review: OptionalBody<GenericEvent>,
     pub pull_request_review_comment: OptionalBody<GenericEvent>,
     // NOTE: `pull_request_target` appears to have the same trigger filters as `pull_request`.
@@ -147,7 +149,6 @@ impl Events {
             project_column,
             public,
             pull_request,
-            pull_request_comment,
             pull_request_review,
             pull_request_review_comment,
             pull_request_target,
@@ -441,7 +442,6 @@ image_version:
                 project_column: Missing,
                 public: Missing,
                 pull_request: Missing,
-                pull_request_comment: Missing,
                 pull_request_review: Missing,
                 pull_request_review_comment: Missing,
                 pull_request_target: Missing,
