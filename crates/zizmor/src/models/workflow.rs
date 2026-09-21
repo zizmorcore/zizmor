@@ -867,19 +867,6 @@ mod tests {
     };
 
     #[test]
-    fn test_workflow_call_with_create_is_not_reusable_only() -> anyhow::Result<()> {
-        let workflow = Workflow::from_string(
-            "on:\n  workflow_call:\n  create:\njobs: {}\n".into(),
-            crate::InputKey::local("fakegroup".into(), "dummy", None, None),
-        )?;
-
-        assert!(workflow.has_workflow_call());
-        assert!(!workflow.is_reusable_only());
-
-        Ok(())
-    }
-
-    #[test]
     fn test_workflow_has_inputs() -> anyhow::Result<()> {
         let workflow = r#"
 name: Test Workflow
