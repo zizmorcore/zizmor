@@ -52,48 +52,44 @@ impl Audit for DangerousTriggers {
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
-        if workflow.has_pull_request_target() && !Self::is_labeler_exception(workflow) {
+        if let Some(location) = workflow.pull_request_target()
+            && !Self::is_labeler_exception(workflow)
+        {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::Medium)
                     .severity(Severity::High)
                     .add_location(
-                        workflow
-                            .location()
+                        location
                             .primary()
-                            .with_keys(["on".into()])
                             .annotated("pull_request_target is almost always used insecurely"),
                     )
                     .build(workflow)?,
             );
         }
 
-        if workflow.has_workflow_run() {
+        if let Some(location) = workflow.workflow_run() {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::Medium)
                     .severity(Severity::High)
                     .add_location(
-                        workflow
-                            .location()
+                        location
                             .primary()
-                            .with_keys(["on".into()])
                             .annotated("workflow_run is almost always used insecurely"),
                     )
                     .build(workflow)?,
             );
         }
 
-        if workflow.has_issue_comment() {
+        if let Some(location) = workflow.issue_comment() {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::Medium)
                     .severity(Severity::High)
                     .add_location(
-                        workflow
-                            .location()
+                        location
                             .primary()
-                            .with_keys(["on".into()])
                             .annotated("issue_comment is almost always used insecurely"),
                     )
                     .build(workflow)?,

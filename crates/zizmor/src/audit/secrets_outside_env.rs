@@ -35,7 +35,7 @@ impl Audit for SecretsOutsideEnvironment {
         job: &NormalJob<'doc>,
         config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        if job.parent().has_workflow_call() {
+        if job.parent().workflow_call().is_some() {
             // Reusable workflows and environments don't interact well, and are more or less
             // completely undocumented in terms of behavior. We don't flag any findings
             // for them, since users will discover that a reusable workflow that activates

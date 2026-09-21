@@ -20,6 +20,8 @@ of `zizmor`.
 
 * zizmor is now aware of the `image_version` workflow trigger (#2397)
 
+* The [dangerous-triggers] audit now produces more precise finding/diagnostic spans (#2402)
+
 ### Bug Fixes 🐛
 
 * Fixed a class of false positives/imprecisions in [adhoc-packages] that caused

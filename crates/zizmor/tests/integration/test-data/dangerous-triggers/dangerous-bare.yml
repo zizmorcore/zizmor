@@ -1,0 +1,10 @@
+on: pull_request_target
+
+permissions: {}
+
+jobs:
+  vulnerable:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: echo hello

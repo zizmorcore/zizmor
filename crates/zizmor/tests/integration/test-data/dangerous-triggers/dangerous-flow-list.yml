@@ -1,0 +1,10 @@
+on: [push, pull_request_target, workflow_call]
+
+permissions: {}
+
+jobs:
+  vulnerable:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: echo hello

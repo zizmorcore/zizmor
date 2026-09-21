@@ -137,23 +137,17 @@ fn test_trigger_paths_anchor() -> Result<()> {
         zizmor()
             .input(input_under_test("anchors/trigger-paths-anchor.yml"))
             .run()?,
-        @r#"
+        @"
     error[dangerous-triggers]: use of fundamentally insecure workflow trigger
-     --> @@INPUT@@:2:1
+     --> @@INPUT@@:3:3
       |
-    2 | / on:
-    3 | |   pull_request_target:
-    4 | |     paths-ignore: &ignore
-    5 | |       - "docs/**"
-    6 | |       - "**.md"
-    7 | |   push:
-    8 | |     paths-ignore: *ignore
-      | |_________________________^ pull_request_target is almost always used insecurely
+    3 |   pull_request_target:
+      |   ^^^^^^^^^^^^^^^^^^^ pull_request_target is almost always used insecurely
       |
       = note: audit confidence → Medium
 
     3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
-    "#
+    "
     );
 
     Ok(())
@@ -165,22 +159,17 @@ fn test_trigger_block_alias() -> Result<()> {
         zizmor()
             .input(input_under_test("anchors/trigger-block-alias.yml"))
             .run()?,
-        @r#"
+        @"
     error[dangerous-triggers]: use of fundamentally insecure workflow trigger
-     --> @@INPUT@@:2:1
+     --> @@INPUT@@:7:3
       |
-    2 | / on:
-    3 | |   push: &trigger
-    4 | |     branches: [main]
-    5 | |     paths-ignore:
-    6 | |       - "**.md"
-    7 | |   pull_request_target: *trigger
-      | |_______________________________^ pull_request_target is almost always used insecurely
+    7 |   pull_request_target: *trigger
+      |   ^^^^^^^^^^^^^^^^^^^ pull_request_target is almost always used insecurely
       |
       = note: audit confidence → Medium
 
     3 findings (2 suppressed): 0 informational, 0 low, 0 medium, 1 high
-    "#
+    "
     );
 
     Ok(())

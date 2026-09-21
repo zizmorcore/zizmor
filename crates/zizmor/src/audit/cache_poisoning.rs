@@ -753,6 +753,7 @@ impl CachePoisoning {
                 .add_location(
                     step.workflow()
                         .location()
+                        // TODO: This can be made more precise.
                         .with_keys(["on".into()])
                         .annotated("generally used when publishing artifacts generated at runtime"),
                 ),

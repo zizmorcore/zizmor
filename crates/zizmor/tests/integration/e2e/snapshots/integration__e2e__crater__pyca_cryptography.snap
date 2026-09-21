@@ -700,16 +700,10 @@ help[concurrency-limits]: insufficient job-level concurrency limits
   = note: audit confidence → High
 
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
-  --> .github/workflows/pypi-publish.yml:3:1
+  --> .github/workflows/pypi-publish.yml:14:3
    |
- 3 | / on:
- 4 | |   workflow_dispatch:
- 5 | |     inputs:
- 6 | |       run_id:
-...  |
-15 | |     workflows: ["Wheel Builder"]
-16 | |     types: [completed]
-   | |______________________^ workflow_run is almost always used insecurely
+14 |   workflow_run:
+   |   ^^^^^^^^^^^^ workflow_run is almost always used insecurely
    |
    = note: audit confidence → Medium
 
