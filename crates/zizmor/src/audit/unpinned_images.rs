@@ -188,7 +188,7 @@ fn candidates_for_leaf<'doc>(
 
             let expansions = matrix.expansions();
 
-            // Evaluate first candidates from static expansions
+            // First: evaluate candidates from static expansions
             let mut candidates = expansions
                 .iter()
                 .filter(|expansion| context.matches(expansion.path.as_str()))
@@ -209,26 +209,31 @@ fn candidates_for_leaf<'doc>(
                 })
                 .collect::<Vec<_>>();
 
-            // Evaluate also indirect expansions
+            // Next: evaluate indirect expansions
             // An indirect matrix, dimensions block means this path may
             // take values we never saw -- possibly all of them.
             if expansions.has_indirect_expansions() {
                 let mut annotations = vec![matrix.location().key_only().annotated("this matrix")];
 
-                let indirect_matrix = annotated_indetermination(
-                    expansions.indirectly_expanded(),
-                    "indirect `matrix` adds combinations we can't see",
-                );
+                let indirect_matrix = expansions.indirectly_expanded().as_ref().map(|location| {
+                    location
+                        .clone()
+                        .annotated("indirect `matrix` adds unanalyzable combinations")
+                });
 
-                let indirect_inclusions = annotated_indetermination(
-                    expansions.indirect_inclusions(),
-                    "`include` may add combinations we can't see",
-                );
+                let indirect_inclusions =
+                    expansions.indirect_inclusions().as_ref().map(|location| {
+                        location
+                            .clone()
+                            .annotated("`include` may add unanalyzable combinations")
+                    });
 
-                let indirect_exclusions = annotated_indetermination(
-                    expansions.indirect_exclusions(),
-                    "`exclude` may remove combinations we can't see",
-                );
+                let indirect_exclusions =
+                    expansions.indirect_exclusions().as_ref().map(|location| {
+                        location
+                            .clone()
+                            .annotated("`exclude` may remove unanalyzable combinations")
+                    });
 
                 annotations.extend(indirect_matrix);
                 annotations.extend(indirect_inclusions);
@@ -243,15 +248,6 @@ fn candidates_for_leaf<'doc>(
         // analyzed statically.
         _ => vec![ImageCandidate::opaque(location, vec![])],
     }
-}
-
-fn annotated_indetermination<'doc>(
-    target: &Option<SymbolicLocation<'doc>>,
-    annotation: &'doc str,
-) -> Option<SymbolicLocation<'doc>> {
-    target
-        .as_ref()
-        .map(|location| location.clone().annotated(annotation))
 }
 
 impl UnpinnedImages {

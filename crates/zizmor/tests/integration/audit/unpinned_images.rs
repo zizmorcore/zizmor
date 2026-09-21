@@ -244,7 +244,7 @@ fn test_matrix_indirect_expansions() -> anyhow::Result<()> {
        |       --------------------------------------------
        |       |
        |       this matrix
-       |       indirect `matrix` adds combinations we can't see
+       |       indirect `matrix` adds unanalyzable combinations
        |
        = note: audit confidence → Low
 
@@ -272,7 +272,7 @@ fn test_matrix_indirect_expansions() -> anyhow::Result<()> {
        |       ------ this matrix
     ...
     36 |         include: ${{ fromJSON(vars.EXTRA_TARGETS) }}
-       |         -------------------------------------------- `include` may add combinations we can't see
+       |         -------------------------------------------- `include` may add unanalyzable combinations
        |
        = note: audit confidence → Low
 
@@ -300,7 +300,7 @@ fn test_matrix_indirect_expansions() -> anyhow::Result<()> {
        |       ------ this matrix
     ...
     54 |         exclude: ${{ fromJSON(vars.KNOWN_BROKEN_COMBINATIONS) }}
-       |         -------------------------------------------------------- `exclude` may remove combinations we can't see
+       |         -------------------------------------------------------- `exclude` may remove unanalyzable combinations
        |
        = note: audit confidence → Low
 

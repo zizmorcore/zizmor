@@ -309,7 +309,7 @@ impl<'doc> Matrix<'doc> {
 
     /// Checks whether some expanded path leads to an expression
     pub(crate) fn expands_to_static_values(&self, context: &Context) -> bool {
-        // If we have an indirect matrix, we can't determine whether it expands to
+        // If any part of the matrix is indirect, we can't determine whether it expands to
         // static values or not.
         if self.expansions().indirectly_expanded.is_some() {
             return false;
