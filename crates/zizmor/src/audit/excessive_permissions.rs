@@ -74,7 +74,7 @@ impl Audit for ExcessivePermissions {
         );
 
         let workflow_is_reusable_only =
-            workflow.has_workflow_call() && workflow.has_single_trigger();
+            workflow.workflow_call().is_some() && workflow.has_single_trigger();
 
         // Top-level permissions are a pedantic finding under the following
         // conditions:

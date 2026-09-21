@@ -167,12 +167,26 @@ impl Workflow {
         Jobs::new(self)
     }
 
-    /// Whether this workflow is triggered by `issue_comment`.
-    pub(crate) fn has_issue_comment(&self) -> bool {
+    /// Return the symbolic location for this workflow's `issue_comment` trigger,
+    /// if it has one.
+    ///
+    /// TODO: Dedupe this, [`Self::pull_request_target`], and below.
+    pub(crate) fn issue_comment<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
+        let parent = self.location().with_keys(["on".into()]);
+
         match &self.on {
-            Trigger::BareEvent(event) => *event == BareEvent::IssueComment,
-            Trigger::BareEvents(events) => events.contains(&BareEvent::IssueComment),
-            Trigger::Events(events) => !matches!(events.issue_comment, OptionalBody::Missing),
+            Trigger::Events(events) if !matches!(events.issue_comment, OptionalBody::Missing) => {
+                Some(parent.with_keys(["issue_comment".into()]).key_only())
+            }
+            Trigger::BareEvent(event) if *event == BareEvent::IssueComment => Some(parent),
+            Trigger::BareEvents(events)
+                if let Some(idx) = events
+                    .iter()
+                    .position(|event| *event == BareEvent::IssueComment) =>
+            {
+                Some(parent.with_keys([idx.into()]))
+            }
+            _ => None,
         }
     }
 
@@ -199,21 +213,45 @@ impl Workflow {
         }
     }
 
-    /// Whether this workflow is triggered by workflow_run.
-    pub(crate) fn has_workflow_run(&self) -> bool {
+    /// Return the symbolic location for this workflow's `workflow_run` trigger,
+    /// if it has one.
+    pub(crate) fn workflow_run<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
+        let parent = self.location().with_keys(["on".into()]);
+
         match &self.on {
-            Trigger::BareEvent(event) => *event == BareEvent::WorkflowRun,
-            Trigger::BareEvents(events) => events.contains(&BareEvent::WorkflowRun),
-            Trigger::Events(events) => !matches!(events.workflow_run, OptionalBody::Missing),
+            Trigger::Events(events) if !matches!(events.workflow_run, OptionalBody::Missing) => {
+                Some(parent.with_keys(["workflow_run".into()]).key_only())
+            }
+            Trigger::BareEvent(event) if *event == BareEvent::WorkflowRun => Some(parent),
+            Trigger::BareEvents(events)
+                if let Some(idx) = events
+                    .iter()
+                    .position(|event| *event == BareEvent::WorkflowRun) =>
+            {
+                Some(parent.with_keys([idx.into()]))
+            }
+            _ => None,
         }
     }
 
-    /// Whether this workflow is triggered by `workflow_call`, i.e. whether it's reusable or not.
-    pub(crate) fn has_workflow_call(&self) -> bool {
+    /// Return the symbolic location for this workflow's `workflow_call` trigger,
+    /// if it has one.
+    pub(crate) fn workflow_call<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
+        let parent = self.location().with_keys(["on".into()]);
+
         match &self.on {
-            Trigger::BareEvent(event) => *event == BareEvent::WorkflowCall,
-            Trigger::BareEvents(events) => events.contains(&BareEvent::WorkflowCall),
-            Trigger::Events(events) => !matches!(events.workflow_call, OptionalBody::Missing),
+            Trigger::Events(events) if !matches!(events.workflow_call, OptionalBody::Missing) => {
+                Some(parent.with_keys(["workflow_call".into()]).key_only())
+            }
+            Trigger::BareEvent(event) if *event == BareEvent::WorkflowCall => Some(parent),
+            Trigger::BareEvents(events)
+                if let Some(idx) = events
+                    .iter()
+                    .position(|event| *event == BareEvent::WorkflowCall) =>
+            {
+                Some(parent.with_keys([idx.into()]))
+            }
+            _ => None,
         }
     }
 
@@ -229,7 +267,7 @@ impl Workflow {
     /// Whether this workflow is *only* a reusable workflow, i.e. it's triggered by a
     /// `workflow_call` event and nothing else.
     pub(crate) fn is_reusable_only(&self) -> bool {
-        self.has_workflow_call() && self.has_single_trigger()
+        self.workflow_call().is_some() && self.has_single_trigger()
     }
 
     /// Returns this workflow's [`SymbolicLocation`].

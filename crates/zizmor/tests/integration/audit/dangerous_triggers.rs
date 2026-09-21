@@ -96,11 +96,10 @@ fn test_issue_comment() -> anyhow::Result<()> {
             .run()?,
         @"
     error[dangerous-triggers]: use of fundamentally insecure workflow trigger
-     --> @@INPUT@@:1:1
+     --> @@INPUT@@:2:3
       |
-    1 | / on:
-    2 | |   issue_comment:
-      | |________________^ issue_comment is almost always used insecurely
+    2 |   issue_comment:
+      |   ^^^^^^^^^^^^^ issue_comment is almost always used insecurely
       |
       = note: audit confidence → Medium
 
