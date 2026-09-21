@@ -1093,13 +1093,10 @@ warning[excessive-permissions]: overly broad permissions
    = note: audit confidence → Medium
 
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
-  --> .github/workflows/workflow-run.yml:17:1
+  --> .github/workflows/workflow-run.yml:19:3
    |
-17 | / on:
-18 | |   # NOT OK: allows trivial third-party access to the upstream's context
-19 | |   workflow_run:
-20 | |     workflows: ["CI"]
-   | |_____________________^ workflow_run is almost always used insecurely
+19 |   workflow_run:
+   |   ^^^^^^^^^^^^ workflow_run is almost always used insecurely
    |
    = note: audit confidence → Medium
 
