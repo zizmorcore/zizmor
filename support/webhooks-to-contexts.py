@@ -151,8 +151,6 @@ _WORKFLOW_TRIGGERS_TO_EVENTS: dict[str, list[str]] = {
         "auto_merge_enabled",
         "auto_merge_disabled",
     ],
-    # Unused.
-    # "pull_request_comment": []
     "pull_request_review": [
         "submitted",
         "edited",

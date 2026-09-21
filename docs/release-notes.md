@@ -15,6 +15,11 @@ of `zizmor`.
 
     Many thanks to @ubiratansoares for proposing and implementing this enhancement!
 
+* The [dangerous-triggers] audit now considers the `issue_comment` trigger
+  fundamentally dangerous (#2396)
+
+* zizmor is now aware of the `image_version` workflow trigger (#2397)
+
 ### Bug Fixes 🐛
 
 * Fixed a class of false positives/imprecisions in [adhoc-packages] that caused
