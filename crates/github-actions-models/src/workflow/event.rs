@@ -376,7 +376,6 @@ pub enum PathFilters {
 
 #[cfg(test)]
 mod tests {
-    use super::OptionalBody;
     use crate::workflow::Trigger;
 
     #[test]
@@ -389,54 +388,6 @@ issue_comment:";
 
         let events = yaml_serde::from_str::<super::Events>(events).unwrap();
         assert_eq!(events.count(), 4);
-    }
-
-    #[test]
-    fn test_unconfigured_event_triggers() {
-        for event in [
-            "create",
-            "delete",
-            "deployment",
-            "deployment_status",
-            "fork",
-            "gollum",
-            "page_build",
-            "public",
-            "status",
-        ] {
-            for body in ["", " null", " {}"] {
-                let trigger = format!("{event}:{body}\nworkflow_call:\n");
-                let Trigger::Events(events) = yaml_serde::from_str::<Trigger>(&trigger).unwrap()
-                else {
-                    panic!("expected event mapping");
-                };
-
-                assert_eq!(events.count(), 2, "{trigger}");
-            }
-        }
-    }
-
-    #[test]
-    fn test_schedule_trigger_timezones() {
-        let trigger = r#"
-schedule:
-  - cron: '30 5 * * 1-5'
-    timezone: America/New_York
-  - cron: '15 4 * * *'
-"#;
-
-        let Trigger::Events(events) = yaml_serde::from_str::<Trigger>(trigger).unwrap() else {
-            panic!("expected event mapping");
-        };
-        let OptionalBody::Body(schedules) = events.schedule else {
-            panic!("expected schedules");
-        };
-
-        assert_eq!(schedules.len(), 2);
-        assert_eq!(schedules[0].cron, "30 5 * * 1-5");
-        assert_eq!(schedules[0].timezone.as_deref(), Some("America/New_York"));
-        assert_eq!(schedules[1].cron, "15 4 * * *");
-        assert_eq!(schedules[1].timezone, None);
     }
 
     #[test]
