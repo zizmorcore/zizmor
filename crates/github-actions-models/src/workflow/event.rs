@@ -57,7 +57,7 @@ pub enum BareEvent {
     WorkflowRun,
 }
 
-/// Workflow event triggers, with bodies.
+/// Workflow event triggers in mapping form, with optional bodies.
 ///
 /// Like [`BareEvent`], but with per-event properties.
 #[derive(Deserialize, Serialize, Debug, Default)]
@@ -66,22 +66,25 @@ pub struct Events {
     pub branch_protection_rule: OptionalBody<GenericEvent>,
     pub check_run: OptionalBody<GenericEvent>,
     pub check_suite: OptionalBody<GenericEvent>,
-    // NOTE: `create` and `delete` are omitted, since they are always bare.
-    // NOTE: `deployment` and `deployment_status` are omitted, since they are always bare.
+    pub create: OptionalBody<GenericEvent>,
+    pub delete: OptionalBody<GenericEvent>,
+    pub deployment: OptionalBody<GenericEvent>,
+    pub deployment_status: OptionalBody<GenericEvent>,
     pub discussion: OptionalBody<GenericEvent>,
     pub discussion_comment: OptionalBody<GenericEvent>,
-    // NOTE: `fork` and `gollum` are omitted, since they are always bare.
+    pub fork: OptionalBody<GenericEvent>,
+    pub gollum: OptionalBody<GenericEvent>,
     pub image_version: OptionalBody<ImageVersion>,
     pub issue_comment: OptionalBody<GenericEvent>,
     pub issues: OptionalBody<GenericEvent>,
     pub label: OptionalBody<GenericEvent>,
     pub merge_group: OptionalBody<GenericEvent>,
     pub milestone: OptionalBody<GenericEvent>,
-    // NOTE: `page_build` is omitted, since it is always bare.
+    pub page_build: OptionalBody<GenericEvent>,
     pub project: OptionalBody<GenericEvent>,
     pub project_card: OptionalBody<GenericEvent>,
     pub project_column: OptionalBody<GenericEvent>,
-    // NOTE: `public` is omitted, since it is always bare.
+    pub public: OptionalBody<GenericEvent>,
     pub pull_request: OptionalBody<PullRequest>,
     pub pull_request_comment: OptionalBody<GenericEvent>,
     pub pull_request_review: OptionalBody<GenericEvent>,
@@ -93,7 +96,7 @@ pub struct Events {
     pub release: OptionalBody<GenericEvent>,
     pub repository_dispatch: OptionalBody<GenericEvent>,
     pub schedule: OptionalBody<Vec<Cron>>,
-    // NOTE: `status` is omitted, since it is always bare.
+    pub status: OptionalBody<GenericEvent>,
     pub watch: OptionalBody<GenericEvent>,
     pub workflow_call: OptionalBody<WorkflowCall>,
     // TODO: Custom type.
@@ -124,17 +127,25 @@ impl Events {
             branch_protection_rule,
             check_run,
             check_suite,
+            create,
+            delete,
+            deployment,
+            deployment_status,
             discussion,
             discussion_comment,
+            fork,
+            gollum,
             image_version,
             issue_comment,
             issues,
             label,
             merge_group,
             milestone,
+            page_build,
             project,
             project_card,
             project_column,
+            public,
             pull_request,
             pull_request_comment,
             pull_request_review,
@@ -145,6 +156,7 @@ impl Events {
             release,
             repository_dispatch,
             schedule,
+            status,
             watch,
             workflow_call,
             workflow_dispatch,
@@ -239,6 +251,8 @@ pub struct Push {
 #[serde(rename_all = "kebab-case")]
 pub struct Cron {
     pub cron: String,
+    /// An IANA timezone name. GitHub defaults to UTC when omitted.
+    pub timezone: Option<String>,
 }
 
 /// The body of a `workflow_call` event trigger.
@@ -362,6 +376,7 @@ pub enum PathFilters {
 
 #[cfg(test)]
 mod tests {
+    use super::OptionalBody;
     use crate::workflow::Trigger;
 
     #[test]
@@ -374,6 +389,54 @@ issue_comment:";
 
         let events = yaml_serde::from_str::<super::Events>(events).unwrap();
         assert_eq!(events.count(), 4);
+    }
+
+    #[test]
+    fn test_unconfigured_event_triggers() {
+        for event in [
+            "create",
+            "delete",
+            "deployment",
+            "deployment_status",
+            "fork",
+            "gollum",
+            "page_build",
+            "public",
+            "status",
+        ] {
+            for body in ["", " null", " {}"] {
+                let trigger = format!("{event}:{body}\nworkflow_call:\n");
+                let Trigger::Events(events) = yaml_serde::from_str::<Trigger>(&trigger).unwrap()
+                else {
+                    panic!("expected event mapping");
+                };
+
+                assert_eq!(events.count(), 2, "{trigger}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_schedule_trigger_timezones() {
+        let trigger = r#"
+schedule:
+  - cron: '30 5 * * 1-5'
+    timezone: America/New_York
+  - cron: '15 4 * * *'
+"#;
+
+        let Trigger::Events(events) = yaml_serde::from_str::<Trigger>(trigger).unwrap() else {
+            panic!("expected event mapping");
+        };
+        let OptionalBody::Body(schedules) = events.schedule else {
+            panic!("expected schedules");
+        };
+
+        assert_eq!(schedules.len(), 2);
+        assert_eq!(schedules[0].cron, "30 5 * * 1-5");
+        assert_eq!(schedules[0].timezone.as_deref(), Some("America/New_York"));
+        assert_eq!(schedules[1].cron, "15 4 * * *");
+        assert_eq!(schedules[1].timezone, None);
     }
 
     #[test]
@@ -396,8 +459,14 @@ image_version:
                 branch_protection_rule: Missing,
                 check_run: Missing,
                 check_suite: Missing,
+                create: Missing,
+                delete: Missing,
+                deployment: Missing,
+                deployment_status: Missing,
                 discussion: Missing,
                 discussion_comment: Missing,
+                fork: Missing,
+                gollum: Missing,
                 image_version: Body(
                     ImageVersion {
                         names: [
@@ -415,9 +484,11 @@ image_version:
                 label: Missing,
                 merge_group: Missing,
                 milestone: Missing,
+                page_build: Missing,
                 project: Missing,
                 project_card: Missing,
                 project_column: Missing,
+                public: Missing,
                 pull_request: Missing,
                 pull_request_comment: Missing,
                 pull_request_review: Missing,
@@ -428,6 +499,7 @@ image_version:
                 release: Missing,
                 repository_dispatch: Missing,
                 schedule: Missing,
+                status: Missing,
                 watch: Missing,
                 workflow_call: Missing,
                 workflow_dispatch: Missing,
