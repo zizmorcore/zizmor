@@ -370,12 +370,10 @@ error[excessive-permissions]: overly broad permissions
    = note: audit confidence → High
 
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
-  --> .github/workflows/github-env.yml:19:1
+  --> .github/workflows/github-env.yml:21:3
    |
-19 | / on:
-20 | |   # NOT OK: pull_request_target enables this attack
-21 | |   pull_request_target:
-   | |______________________^ pull_request_target is almost always used insecurely
+21 |   pull_request_target:
+   |   ^^^^^^^^^^^^^^^^^^^ pull_request_target is almost always used insecurely
    |
    = note: audit confidence → Medium
 
@@ -598,12 +596,10 @@ warning[excessive-permissions]: overly broad permissions
    = note: audit confidence → Medium
 
 error[dangerous-triggers]: use of fundamentally insecure workflow trigger
-  --> .github/workflows/pull-request-target.yml:20:1
+  --> .github/workflows/pull-request-target.yml:22:3
    |
-20 | / on:
-21 | |   # NOT OK: pull_request_target should almost never be used
-22 | |   pull_request_target:
-   | |______________________^ pull_request_target is almost always used insecurely
+22 |   pull_request_target:
+   |   ^^^^^^^^^^^^^^^^^^^ pull_request_target is almost always used insecurely
    |
    = note: audit confidence → Medium
 

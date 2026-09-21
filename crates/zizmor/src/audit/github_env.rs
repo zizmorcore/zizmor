@@ -388,7 +388,7 @@ impl Audit for GitHubEnv {
         let workflow = step.workflow();
 
         let has_dangerous_triggers =
-            workflow.has_workflow_run() || workflow.has_pull_request_target();
+            workflow.has_workflow_run() || workflow.pull_request_target().is_some();
 
         if !has_dangerous_triggers {
             return Ok(findings);

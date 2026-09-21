@@ -176,12 +176,26 @@ impl Workflow {
         }
     }
 
-    /// Whether this workflow is triggered by pull_request_target.
-    pub(crate) fn has_pull_request_target(&self) -> bool {
+    /// Return the symbolic location for this workflow's `pull_request_target` trigger,
+    /// if it has one.
+    pub(crate) fn pull_request_target<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
+        let parent = self.location().with_keys(["on".into()]);
+
         match &self.on {
-            Trigger::BareEvent(event) => *event == BareEvent::PullRequestTarget,
-            Trigger::BareEvents(events) => events.contains(&BareEvent::PullRequestTarget),
-            Trigger::Events(events) => !matches!(events.pull_request_target, OptionalBody::Missing),
+            Trigger::Events(events)
+                if !matches!(events.pull_request_target, OptionalBody::Missing) =>
+            {
+                Some(parent.with_keys(["pull_request_target".into()]).key_only())
+            }
+            Trigger::BareEvent(event) if *event == BareEvent::PullRequestTarget => Some(parent),
+            Trigger::BareEvents(events)
+                if let Some(idx) = events
+                    .iter()
+                    .position(|event| *event == BareEvent::PullRequestTarget) =>
+            {
+                Some(parent.with_keys([idx.into()]))
+            }
+            _ => None,
         }
     }
 
