@@ -22,6 +22,11 @@ of `zizmor`.
 
 * The [dangerous-triggers] audit now produces more precise finding/diagnostic spans (#2402)
 
+* The [unpinned-images] audit now produces more precise findings when the user's
+  workflow contains an indirect matrix (#2395)
+
+    Many thanks to @ubiratansoares for proposing and implementing this enhancement!
+
 ### Bug Fixes 🐛
 
 * Fixed a class of false positives/imprecisions in [adhoc-packages] that caused
