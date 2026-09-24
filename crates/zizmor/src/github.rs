@@ -35,10 +35,12 @@ mod lineref;
 mod pktline;
 
 /// Represents different types of GitHub hosts.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) enum GitHubHost {
     Enterprise(String),
-    Standard(String),
+    EnterpriseCloud(String),
+    #[default]
+    Standard,
 }
 
 impl GitHubHost {
@@ -52,8 +54,10 @@ impl GitHubHost {
             return Err("must be a domain name, not a URL".into());
         }
 
-        if normalized.eq_ignore_ascii_case("github.com") || normalized.ends_with(".ghe.com") {
-            Ok(Self::Standard(hostname.into()))
+        if normalized.eq_ignore_ascii_case("github.com") {
+            Ok(Self::Standard)
+        } else if normalized.ends_with(".ghe.com") {
+            Ok(Self::EnterpriseCloud(hostname.into()))
         } else {
             Ok(Self::Enterprise(hostname.into()))
         }
@@ -62,21 +66,17 @@ impl GitHubHost {
     fn to_api_host(&self) -> String {
         match self {
             Self::Enterprise(host) => host.clone(),
-            Self::Standard(host) => format!("api.{host}"),
+            Self::EnterpriseCloud(host) => format!("api.{host}"),
+            Self::Standard => "api.github.com".into(),
         }
     }
 
     fn to_api_url(&self) -> String {
         match self {
             Self::Enterprise(_) => format!("https://{host}/api/v3", host = self.to_api_host()),
-            Self::Standard(_) => format!("https://{host}", host = self.to_api_host()),
+            Self::EnterpriseCloud(_) => format!("https://{host}", host = self.to_api_host()),
+            Self::Standard => "https://api.github.com".into(),
         }
-    }
-}
-
-impl Default for GitHubHost {
-    fn default() -> Self {
-        Self::Standard("github.com".into())
     }
 }
 
@@ -84,7 +84,8 @@ impl Display for GitHubHost {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Enterprise(host) => write!(f, "{host}"),
-            Self::Standard(host) => write!(f, "{host}"),
+            Self::EnterpriseCloud(host) => write!(f, "{host}"),
+            Self::Standard => write!(f, "github.com"),
         }
     }
 }
@@ -276,7 +277,7 @@ impl Ref {
 }
 
 #[derive(Clone)]
-pub(crate) struct Client {
+struct HostClient {
     api_base: String,
     host: GitHubHost,
     token: GitHubToken,
@@ -285,8 +286,8 @@ pub(crate) struct Client {
     ref_cache: MokaCache<String, Vec<RemoteHead>>,
 }
 
-impl Client {
-    pub(crate) fn new(
+impl HostClient {
+    fn new(
         host: &GitHubHost,
         token: &GitHubToken,
         cache_dir: &Utf8Path,
@@ -983,6 +984,217 @@ impl Client {
     }
 }
 
+/// A client for `github.com` or a GitHub Enterprise host.
+///
+/// A GitHub Enterprise client can use a separate `github.com` client. The
+/// repository on the enterprise host takes precedence when the same slug
+/// exists on both hosts. This behavior matches GitHub Actions. If the
+/// repository is not available on the enterprise host, the client uses
+/// `github.com`. It returns all other errors.
+#[derive(Clone)]
+pub(crate) struct Client {
+    primary: HostClient,
+    github_com: Option<HostClient>,
+    primary_repo_cache: MokaCache<String, bool>,
+}
+
+impl Client {
+    pub(crate) fn new(
+        host: &GitHubHost,
+        token: &GitHubToken,
+        cache_dir: &Utf8Path,
+    ) -> Result<Self, ClientError> {
+        Ok(Self {
+            primary: HostClient::new(host, token, cache_dir)?,
+            github_com: None,
+            primary_repo_cache: MokaCache::new(100),
+        })
+    }
+
+    /// Adds a `github.com` client for repositories that are not available on
+    /// GitHub Enterprise.
+    pub(crate) fn with_github_com_token(
+        mut self,
+        token: &GitHubToken,
+        cache_dir: &Utf8Path,
+    ) -> Result<Self, ClientError> {
+        if self.primary.host == GitHubHost::Standard {
+            tracing::debug!("primary host is github.com; ignoring github.com fallback token");
+            return Ok(self);
+        }
+
+        self.github_com = Some(HostClient::new(&GitHubHost::Standard, token, cache_dir)?);
+        Ok(self)
+    }
+
+    /// Selects the GitHub Enterprise or `github.com` client for a repository.
+    ///
+    /// The GitHub Enterprise client takes precedence when the repository is
+    /// available on both hosts.
+    async fn client_for_slug<'a>(&'a self, slug: &Slug<'_>) -> Result<&'a HostClient, ClientError> {
+        let Some(github_com) = &self.github_com else {
+            return Ok(&self.primary);
+        };
+
+        let primary_exists = self
+            .primary_repo_cache
+            .entry(slug.to_string())
+            .or_try_insert_with(self.primary.repo_exists(slug))
+            .await
+            .map_err(ClientError::from)?;
+
+        if *primary_exists.value() {
+            Ok(&self.primary)
+        } else {
+            tracing::debug!(
+                "{slug} is unavailable on {host}; falling back to github.com",
+                host = self.primary.host
+            );
+            Ok(github_com)
+        }
+    }
+
+    /// Selects the GitHub Enterprise or `github.com` client for an input
+    /// repository.
+    async fn client_for_input_slug<'a>(
+        &'a self,
+        slug: &InputSlug,
+    ) -> Result<&'a HostClient, ClientError> {
+        let slug_string = format!("{}/{}", slug.owner, slug.repo);
+        let slug = Slug::parse(&slug_string).expect("valid InputSlug must produce a valid Slug");
+        self.client_for_slug(&slug).await
+    }
+
+    pub(crate) async fn list_branches(&self, slug: &Slug<'_>) -> Result<Vec<Branch>, ClientError> {
+        self.client_for_slug(slug).await?.list_branches(slug).await
+    }
+
+    pub(crate) async fn list_tags(&self, slug: &Slug<'_>) -> Result<Vec<Tag>, ClientError> {
+        self.client_for_slug(slug).await?.list_tags(slug).await
+    }
+
+    pub(crate) async fn has_branch(
+        &self,
+        slug: &Slug<'_>,
+        branch: &str,
+    ) -> Result<bool, ClientError> {
+        self.client_for_slug(slug)
+            .await?
+            .has_branch(slug, branch)
+            .await
+    }
+
+    pub(crate) async fn has_tag(&self, slug: &Slug<'_>, tag: &str) -> Result<bool, ClientError> {
+        self.client_for_slug(slug).await?.has_tag(slug, tag).await
+    }
+
+    pub(crate) async fn commit_for_ref(
+        &self,
+        slug: &Slug<'_>,
+        git_ref: &str,
+    ) -> Result<Option<String>, ClientError> {
+        self.client_for_slug(slug)
+            .await?
+            .commit_for_ref(slug, git_ref)
+            .await
+    }
+
+    pub(crate) async fn tag_sha_to_commit_sha(
+        &self,
+        slug: &Slug<'_>,
+        maybe_tag_sha: &str,
+    ) -> Result<Option<String>, ClientError> {
+        self.client_for_slug(slug)
+            .await?
+            .tag_sha_to_commit_sha(slug, maybe_tag_sha)
+            .await
+    }
+
+    pub(crate) async fn longest_tag_for_commit(
+        &self,
+        slug: &Slug<'_>,
+        commit: &str,
+    ) -> Result<Option<Tag>, ClientError> {
+        self.client_for_slug(slug)
+            .await?
+            .longest_tag_for_commit(slug, commit)
+            .await
+    }
+
+    pub(crate) async fn branch_commits(
+        &self,
+        slug: &Slug<'_>,
+        commit: &str,
+    ) -> Result<BranchCommits, ClientError> {
+        self.client_for_slug(slug)
+            .await?
+            .branch_commits(slug, commit)
+            .await
+    }
+
+    pub(crate) async fn repo_exists(&self, slug: &Slug<'_>) -> Result<bool, ClientError> {
+        self.client_for_slug(slug).await?.repo_exists(slug).await
+    }
+
+    pub(crate) async fn compare_commits(
+        &self,
+        slug: &Slug<'_>,
+        base: &str,
+        head: &str,
+    ) -> Result<Option<ComparisonStatus>, ClientError> {
+        self.client_for_slug(slug)
+            .await?
+            .compare_commits(slug, base, head)
+            .await
+    }
+
+    pub(crate) async fn gha_advisories(
+        &self,
+        slug: &Slug<'_>,
+        version: &str,
+    ) -> Result<Vec<Advisory>, ClientError> {
+        self.client_for_slug(slug)
+            .await?
+            .gha_advisories(slug, version)
+            .await
+    }
+
+    pub(crate) async fn fetch_single_file(
+        &self,
+        slug: &InputSlug,
+        file: &str,
+    ) -> Result<Option<String>, ClientError> {
+        self.client_for_input_slug(slug)
+            .await?
+            .fetch_single_file(slug, file)
+            .await
+    }
+
+    pub(crate) async fn fetch_workflows(
+        &self,
+        slug: &InputSlug,
+        options: &CollectionOptions,
+        group: &mut InputGroup,
+    ) -> Result<(), CollectionError> {
+        self.client_for_input_slug(slug)
+            .await?
+            .fetch_workflows(slug, options, group)
+            .await
+    }
+
+    pub(crate) async fn fetch_audit_inputs(
+        &self,
+        slug: &InputSlug,
+        options: &CollectionOptions,
+        group: &mut InputGroup,
+    ) -> Result<(), CollectionError> {
+        self.client_for_input_slug(slug)
+            .await?
+            .fetch_audit_inputs(slug, options, group)
+            .await
+    }
+}
+
 /// A single branch, as returned by GitHub's branches endpoints.
 ///
 /// This model is intentionally incomplete.
@@ -1251,6 +1463,58 @@ mod tests {
         for token in ["", " ", "\r", "\n", "\t", "     "] {
             assert!(GitHubToken::new(token).is_err());
         }
+    }
+
+    #[tokio::test]
+    async fn test_github_com_repository_resolution() {
+        let client = Client::new(
+            &GitHubHost::new("example.ghe.com").unwrap(),
+            &GitHubToken::new("enterprise-token").unwrap(),
+            "/tmp".into(),
+        )
+        .unwrap()
+        .with_github_com_token(
+            &GitHubToken::new("github-com-token").unwrap(),
+            "/tmp".into(),
+        )
+        .unwrap();
+
+        let enterprise_slug = Slug::parse("example/internal-action").unwrap();
+        client
+            .primary_repo_cache
+            .insert(enterprise_slug.to_string(), true)
+            .await;
+        assert_eq!(
+            client.client_for_slug(&enterprise_slug).await.unwrap().host,
+            client.primary.host
+        );
+
+        let github_com_slug = Slug::parse("actions/checkout").unwrap();
+        client
+            .primary_repo_cache
+            .insert(github_com_slug.to_string(), false)
+            .await;
+        assert_eq!(
+            client.client_for_slug(&github_com_slug).await.unwrap().host,
+            GitHubHost::Standard
+        );
+    }
+
+    #[test]
+    fn test_github_com_fallback_ignored_on_github_com() {
+        let client = Client::new(
+            &GitHubHost::default(),
+            &GitHubToken::new("primary-token").unwrap(),
+            "/tmp".into(),
+        )
+        .unwrap()
+        .with_github_com_token(
+            &GitHubToken::new("github-com-token").unwrap(),
+            "/tmp".into(),
+        )
+        .unwrap();
+
+        assert!(client.github_com.is_none());
     }
 
     #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
