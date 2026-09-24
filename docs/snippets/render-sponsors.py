@@ -8,6 +8,7 @@
 
 import json
 import re
+from itertools import batched
 from pathlib import Path
 
 _SPONSORS_HTML = """
@@ -15,9 +16,7 @@ _SPONSORS_HTML = """
 <table width="100%">
 <caption>Logo-level sponsors</caption>
 <tbody>
-<tr>
 {logo_sponsors}
-</tr>
 </tbody>
 </table>
 <hr align="center">
@@ -41,7 +40,7 @@ _SPONSOR_NAME_HTML = """
 """
 
 _SPONSOR_LOGO_HTML = """
-<td align="center" valign="top" width="15%">
+<td align="center" valign="top" width="25%" colspan="2">
 <a href="{url}">
 <img src="{img}" width="100px">
 <br>
@@ -67,8 +66,18 @@ for sponsor in _SPONSORS:
     else:
         name_sponsors.append(_SPONSOR_NAME_HTML.format(**sponsor).strip())
 
+# Each logo spans two of eight columns, allowing half-cell padding on either side.
+logo_rows = []
+for row in batched(logo_sponsors, 4):
+    cells = "\n".join(row)
+    padding = 4 - len(row)
+    if padding:
+        spacer = f'<td colspan="{padding}" width="{padding * 12.5:g}%"></td>'
+        cells = f"{spacer}\n{cells}\n{spacer}"
+    logo_rows.append(f"<tr>\n{cells}\n</tr>")
+
 sponsors_html = _SPONSORS_HTML.format(
-    logo_sponsors="\n".join(logo_sponsors), name_sponsors="\n".join(name_sponsors)
+    logo_sponsors="\n".join(logo_rows), name_sponsors="\n".join(name_sponsors)
 ).strip()
 
 readme = _README.read_text()
