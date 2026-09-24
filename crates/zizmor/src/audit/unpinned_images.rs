@@ -228,16 +228,8 @@ fn candidates_for_leaf<'doc>(
                             .annotated("`include` may add unanalyzable combinations")
                     });
 
-                let indirect_exclusions =
-                    expansions.indirect_exclusions().as_ref().map(|location| {
-                        location
-                            .clone()
-                            .annotated("`exclude` may remove unanalyzable combinations")
-                    });
-
                 annotations.extend(indirect_matrix);
                 annotations.extend(indirect_inclusions);
-                annotations.extend(indirect_exclusions);
 
                 candidates.push(ImageCandidate::opaque(location.clone(), annotations));
             }

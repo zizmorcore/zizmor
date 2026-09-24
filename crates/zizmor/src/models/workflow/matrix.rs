@@ -102,15 +102,15 @@ impl<'doc> Expansions<'doc> {
     }
 
     /// Exposes the `SymbolicLocation` if `matrix.exclude` holds any indirect values
+    #[allow(dead_code)]
     pub(crate) fn indirect_exclusions(&self) -> &Option<SymbolicLocation<'doc>> {
         &self.indirect_exclusions
     }
 
-    /// Whether we found any indirections after expanding the matrix
+    /// Whether there are any indirections after expanding the matrix.
+    /// Note that exclusions can't add values, hence they are not considered
     pub(crate) fn has_indirect_expansions(&self) -> bool {
-        self.indirectly_expanded.is_some()
-            || self.indirect_inclusions.is_some()
-            || self.indirect_exclusions.is_some()
+        self.indirectly_expanded.is_some() || self.indirect_inclusions.is_some()
     }
 
     /// Expands the current Matrix into all possible values

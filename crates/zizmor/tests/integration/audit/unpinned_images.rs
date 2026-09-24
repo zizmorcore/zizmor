@@ -290,21 +290,7 @@ fn test_matrix_indirect_expansions() -> anyhow::Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-images]: unpinned image references
-      --> @@INPUT@@:45:7
-       |
-    45 |       image: ${{ matrix.image }}
-       |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
-    ...
-    48 |       matrix:
-       |       ------ this matrix
-    ...
-    54 |         exclude: ${{ fromJSON(vars.KNOWN_BROKEN_COMBINATIONS) }}
-       |         -------------------------------------------------------- `exclude` may remove unanalyzable combinations
-       |
-       = note: audit confidence → Low
-
-    5 findings: 0 informational, 0 low, 0 medium, 5 high
+    4 findings: 0 informational, 0 low, 0 medium, 4 high
     "
     );
 
