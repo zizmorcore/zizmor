@@ -22,6 +22,8 @@ of `zizmor`.
 
 * The [dangerous-triggers] audit now produces more precise finding/diagnostic spans (#2402)
 
+* The [cache-poisoning] audit is now aware of @pnpm/setup (#2409)
+
 ### Bug Fixes 🐛
 
 * Fixed a class of false positives/imprecisions in [adhoc-packages] that caused
