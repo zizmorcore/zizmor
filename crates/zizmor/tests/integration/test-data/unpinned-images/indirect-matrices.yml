@@ -1,0 +1,56 @@
+name: indirect-matrices
+
+on:
+  workflow_call:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # NOT OK : matrix is fully indirect
+  indirect-matrix-full:
+    name: indirect-matrix-full
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      matrix: ${{ fromJSON(vars.CUSTOM_TARGETS) }}
+    steps:
+      - run: true
+
+  # NOT OK : `include` is indirect
+  indirect-matrix-include:
+    name: indirect-matrix-include
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - ubuntu@sha256:bfadbbcb25fd75c30c295843f1a861414f46c080f0f1d0c5cd93843c88edabcf
+          - ubuntu:latest
+        include: ${{ fromJSON(vars.EXTRA_TARGETS) }}
+    steps:
+      - run: true
+
+  # NOT OK : `exclude` is indirect
+  indirect-matrix-exclude:
+    name: indirect-matrix-exclude
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x86_64, aarch64, s390x, risc-v ]
+        image:
+          - ubuntu@sha256:bfadbbcb25fd75c30c295843f1a861414f46c080f0f1d0c5cd93843c88edabcf
+          - ubuntu@sha256:861414f46c080f0f1d0c5cd93bfadbbcb25fd75c30c295843f1a843c88edabcf
+          - ubuntu:latest
+        exclude: ${{ fromJSON(vars.KNOWN_BROKEN_COMBINATIONS) }}
+    steps:
+      - run: true
