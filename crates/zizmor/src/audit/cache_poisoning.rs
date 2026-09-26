@@ -238,6 +238,12 @@ static KNOWN_CACHE_AWARE_ACTIONS: LazyLock<Vec<CacheAwareAction>> = LazyLock::ne
             ),
         }
         .into(),
+        // https://github.com/pnpm/setup/blob/main/action.yml
+        ActionCoordinate::Configurable {
+            uses_pattern: "pnpm/setup".parse().unwrap(),
+            control: ControlExpr::field(Toggle::OptIn, "cache", ControlFieldType::Boolean, false),
+        }
+        .into(),
         // https://github.com/DeterminateSystems/magic-nix-cache-action/blob/main/action.yml
         ActionCoordinate::Configurable {
             uses_pattern: "DeterminateSystems/magic-nix-cache-action".parse().unwrap(),
