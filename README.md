@@ -87,7 +87,7 @@ Tracebit
 </td>
 </tr>
 <tr>
-<td colspan="2" width="25%"></td>
+<td colspan="1" width="12.5%"></td>
 <td align="center" valign="top" width="25%" colspan="2">
 <a href="https://github.com/coder">
 <img src="https://avatars.githubusercontent.com/u/95932066?s=100&v=4" width="100px">
@@ -102,7 +102,14 @@ Coder
 glueckkanja AG
 </a>
 </td>
-<td colspan="2" width="25%"></td>
+<td align="center" valign="top" width="25%" colspan="2">
+<a href="https://prospex.ch/">
+<img src="https://avatars.githubusercontent.com/u/319420253?s=100&v=4" width="100px">
+<br>
+prospex
+</a>
+</td>
+<td colspan="1" width="12.5%"></td>
 </tr>
 </tbody>
 </table>
