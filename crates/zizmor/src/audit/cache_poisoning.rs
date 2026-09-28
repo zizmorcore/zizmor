@@ -502,9 +502,10 @@ audit_meta!(
 
 impl CachePoisoning {
     fn triggers_used_when_publishing_artifacts(&self, trigger: &Trigger) -> Vec<ReleaseTrigger> {
+        let events = &trigger.events;
         let mut triggers = vec![];
 
-        if let OptionalBody::Body(body) = &trigger.push {
+        if let OptionalBody::Body(body) = &events.push {
             if body.tag_filters.is_some() {
                 triggers.push(ReleaseTrigger::TagPush);
             }
@@ -518,7 +519,7 @@ impl CachePoisoning {
             }
         }
 
-        if trigger.release.is_present() {
+        if events.release.is_present() {
             triggers.push(ReleaseTrigger::ReleaseEvent);
         }
 

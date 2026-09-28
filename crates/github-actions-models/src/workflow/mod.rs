@@ -58,36 +58,17 @@ pub struct Workflow {
 ///       pull_request:
 ///     ```
 ///
-/// All three forms expose the same event fields through [`event::Events`].
-/// Bare event names become [`event::OptionalBody::Default`], while absent
-/// events remain [`event::OptionalBody::Missing`]. The original syntax is
-/// retained separately for consumers that need to locate events in the source.
+/// All three forms expose the same event fields through [`Self::events`].
 #[derive(Deserialize, Debug)]
 #[serde(from = "TriggerRepr")]
 pub struct Trigger {
-    events: Box<event::Events>,
-    syntax: TriggerSyntax,
-}
-
-impl Trigger {
+    /// The normalized events, independent of the original YAML shape.
+    pub events: Box<event::Events>,
     /// The original YAML shape, for locating events in the source document.
-    pub fn syntax(&self) -> &TriggerSyntax {
-        &self.syntax
-    }
-}
-
-impl std::ops::Deref for Trigger {
-    type Target = event::Events;
-
-    fn deref(&self) -> &Self::Target {
-        &self.events
-    }
+    pub syntax: TriggerSyntax,
 }
 
 /// The source syntax of a [`Trigger`].
-///
-/// Use the fields on [`event::Events`] to inspect which events trigger a workflow.
-/// This type is only needed to map those events back to their source locations.
 #[derive(Debug)]
 pub enum TriggerSyntax {
     /// A single event name at `on`.
@@ -222,9 +203,9 @@ mod tests {
 
         for name in names {
             let mapping: Trigger = yaml_serde::from_str(&format!("{name}:")).unwrap();
-            assert!(matches!(mapping.syntax(), TriggerSyntax::Mapping));
-            assert_eq!(mapping.count(), 1, "{name}");
-            let expected = yaml_serde::to_value(&*mapping).unwrap();
+            assert!(matches!(mapping.syntax, TriggerSyntax::Mapping));
+            assert_eq!(mapping.events.count(), 1, "{name}");
+            let expected = yaml_serde::to_value(&mapping.events).unwrap();
 
             for yaml in [
                 name.to_owned(),
@@ -232,7 +213,11 @@ mod tests {
                 format!("{name}: null"),
             ] {
                 let trigger: Trigger = yaml_serde::from_str(&yaml).unwrap();
-                assert_eq!(yaml_serde::to_value(&*trigger).unwrap(), expected, "{yaml}");
+                assert_eq!(
+                    yaml_serde::to_value(&trigger.events).unwrap(),
+                    expected,
+                    "{yaml}"
+                );
             }
         }
     }
@@ -240,15 +225,15 @@ mod tests {
     #[test]
     fn test_trigger_presence_and_syntax() {
         let scalar: Trigger = yaml_serde::from_str("push").unwrap();
-        assert!(matches!(scalar.syntax(), TriggerSyntax::Scalar));
-        assert!(scalar.push.is_present());
-        assert!(!scalar.release.is_present());
+        assert!(matches!(scalar.syntax, TriggerSyntax::Scalar));
+        assert!(scalar.events.push.is_present());
+        assert!(!scalar.events.release.is_present());
 
         let list: Trigger = yaml_serde::from_str("[release, push, release]").unwrap();
-        assert_eq!(list.count(), 2);
-        assert!(matches!(list.push, OptionalBody::Default));
-        assert!(matches!(list.release, OptionalBody::Default));
-        let TriggerSyntax::Sequence(names) = list.syntax() else {
+        assert_eq!(list.events.count(), 2);
+        assert!(matches!(list.events.push, OptionalBody::Default));
+        assert!(matches!(list.events.release, OptionalBody::Default));
+        let TriggerSyntax::Sequence(names) = &list.syntax else {
             panic!()
         };
         use super::event::BareEvent;
@@ -259,8 +244,8 @@ mod tests {
 
         for yaml in ["[]", "{}"] {
             let empty: Trigger = yaml_serde::from_str(yaml).unwrap();
-            assert_eq!(empty.count(), 0);
-            assert!(!empty.push.is_present());
+            assert_eq!(empty.events.count(), 0);
+            assert!(!empty.events.push.is_present());
         }
     }
 
@@ -281,20 +266,23 @@ schedule:
         .unwrap();
 
         use super::event::{BranchFilters, TagFilters};
-        let OptionalBody::Body(push) = &trigger.push else {
+        let OptionalBody::Body(push) = &trigger.events.push else {
             panic!()
         };
         assert!(matches!(&push.branch_filters, Some(BranchFilters::Branches(b)) if b == &["main"]));
         assert!(matches!(&push.tag_filters, Some(TagFilters::Tags(t)) if t == &["v*"]));
-        assert!(matches!(trigger.pull_request, OptionalBody::Body(_)));
-        assert!(matches!(trigger.release, OptionalBody::Default));
-        assert!(matches!(trigger.workflow_call, OptionalBody::Missing));
-        let OptionalBody::Body(schedule) = &trigger.schedule else {
+        assert!(matches!(trigger.events.pull_request, OptionalBody::Body(_)));
+        assert!(matches!(trigger.events.release, OptionalBody::Default));
+        assert!(matches!(
+            trigger.events.workflow_call,
+            OptionalBody::Missing
+        ));
+        let OptionalBody::Body(schedule) = &trigger.events.schedule else {
             panic!()
         };
         assert_eq!(schedule[0].cron, "0 0 * * *");
         assert_eq!(schedule[0].timezone.as_deref(), Some("America/New_York"));
-        assert_eq!(trigger.count(), 4);
+        assert_eq!(trigger.events.count(), 4);
     }
 
     #[test]
@@ -349,7 +337,8 @@ schedule:
   pull_request_target:
         ";
 
-        let events: Trigger = yaml_serde::from_str(on).unwrap();
+        let trigger: Trigger = yaml_serde::from_str(on).unwrap();
+        let events = &trigger.events;
 
         assert!(matches!(events.issues, OptionalBody::Default));
         assert!(matches!(

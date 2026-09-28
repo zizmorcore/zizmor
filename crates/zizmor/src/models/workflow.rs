@@ -111,7 +111,7 @@ impl HasInputs for workflow::event::WorkflowDispatch {
 
 impl HasInputs for Workflow {
     fn get_input(&self, name: &str) -> Option<Capability> {
-        let events = &self.on;
+        let events = &self.on.events;
 
         let wc_cap = {
             if let OptionalBody::Body(wc) = &events.workflow_call {
@@ -172,7 +172,7 @@ impl Workflow {
     fn trigger_location(&self, event: BareEvent, name: &'static str) -> SymbolicLocation<'_> {
         let parent = self.location().with_keys(["on".into()]);
 
-        match self.on.syntax() {
+        match &self.on.syntax {
             TriggerSyntax::Mapping => parent.with_keys([name.into()]).key_only(),
             TriggerSyntax::Scalar => parent,
             TriggerSyntax::Sequence(events) => {
@@ -189,6 +189,7 @@ impl Workflow {
     /// if it has one.
     pub(crate) fn issue_comment<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
         self.on
+            .events
             .issue_comment
             .is_present()
             .then(|| self.trigger_location(BareEvent::IssueComment, "issue_comment"))
@@ -198,6 +199,7 @@ impl Workflow {
     /// if it has one.
     pub(crate) fn pull_request_target<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
         self.on
+            .events
             .pull_request_target
             .is_present()
             .then(|| self.trigger_location(BareEvent::PullRequestTarget, "pull_request_target"))
@@ -207,6 +209,7 @@ impl Workflow {
     /// if it has one.
     pub(crate) fn workflow_run<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
         self.on
+            .events
             .workflow_run
             .is_present()
             .then(|| self.trigger_location(BareEvent::WorkflowRun, "workflow_run"))
@@ -216,6 +219,7 @@ impl Workflow {
     /// if it has one.
     pub(crate) fn workflow_call<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
         self.on
+            .events
             .workflow_call
             .is_present()
             .then(|| self.trigger_location(BareEvent::WorkflowCall, "workflow_call"))
@@ -223,7 +227,7 @@ impl Workflow {
 
     /// Whether this workflow is triggered by exactly one event.
     pub(crate) fn has_single_trigger(&self) -> bool {
-        self.on.count() == 1
+        self.on.events.count() == 1
     }
 
     /// Whether this workflow is *only* a reusable workflow, i.e. it's triggered by a

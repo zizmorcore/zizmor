@@ -35,7 +35,10 @@ fn test_load_all() {
 fn test_pip_audit_ci() {
     let workflow = load_workflow("pip-audit-ci.yml");
 
-    assert!(matches!(workflow.on.pull_request, OptionalBody::Default));
+    assert!(matches!(
+        workflow.on.events.pull_request,
+        OptionalBody::Default
+    ));
 
     let test_job = &workflow.jobs["test"];
     let Job::NormalJob(test_job) = test_job else {

@@ -139,7 +139,7 @@ impl BotConditions {
     /// Get appropriate user context paths based on workflow trigger events.
     /// Returns (actor_name_context, actor_id_context) for the given workflow.
     fn get_user_contexts_for_triggers(workflow: &Workflow) -> Option<(&str, &str)> {
-        let events = &workflow.on;
+        let events = &workflow.on.events;
         if events.count() != 1 {
             return None;
         }
