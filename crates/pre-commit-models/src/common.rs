@@ -2,6 +2,38 @@
 
 use serde::{Deserialize, Deserializer, de::Error as _};
 
+/// Represents a version inside of a `language_version` or `default_language_version` request.
+#[derive(Debug, Default, serde::Deserialize)]
+#[serde(rename_all = "snake_case", rename_all_fields = "snake_case", untagged)]
+pub enum VersionRequest {
+    #[default]
+    Default,
+    Request(String),
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "snake_case", rename_all_fields = "snake_case", untagged)]
+pub enum LanguageVersion {
+    /// A raw `language_version` request, e.g. `python: "3.14"`
+    Version(VersionRequest),
+    /// A language version request along with its toolchain selection preference.
+    ///
+    /// This is a prek extension; see: <https://prek.j178.dev/reference/configuration/#language_version>
+    VersionWithPreference {
+        #[serde(default)]
+        request: VersionRequest,
+        // TODO: This could be strictly modeled as `only-managed`, `managed`,
+        // `system`, or `only-system`.
+        preference: String,
+    },
+}
+
+impl Default for LanguageVersion {
+    fn default() -> Self {
+        Self::Version(VersionRequest::Default)
+    }
+}
+
 /// A file-selection pattern accepted by pre-commit or prek.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields, untagged)]
