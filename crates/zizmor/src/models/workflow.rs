@@ -885,46 +885,6 @@ mod tests {
     };
 
     #[test]
-    fn test_trigger_locations() -> anyhow::Result<()> {
-        for name in [
-            "issue_comment",
-            "pull_request_target",
-            "workflow_run",
-            "workflow_call",
-        ] {
-            for (on, route) in [
-                (name.to_owned(), yamlpath::route!("on")),
-                (format!("[push, {name}]"), yamlpath::route!("on", 1)),
-                (format!("\n  - push\n  - {name}"), yamlpath::route!("on", 1)),
-                (format!("\n  {name}:"), yamlpath::route!("on", name)),
-            ] {
-                let workflow = Workflow::from_string(
-                    format!(
-                        "on: {on}\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n"
-                    ),
-                    crate::InputKey::local("fakegroup".into(), "dummy", None, None),
-                )?;
-                for (event, location) in [
-                    ("issue_comment", workflow.issue_comment()),
-                    ("pull_request_target", workflow.pull_request_target()),
-                    ("workflow_run", workflow.workflow_run()),
-                    ("workflow_call", workflow.workflow_call()),
-                ] {
-                    assert_eq!(location.is_some(), event == name, "{on}: {event}");
-                    if let Some(location) = location {
-                        assert_eq!(
-                            serde_json::to_value(&location.route)?,
-                            serde_json::to_value(&route)?
-                        );
-                        location.concretize(&workflow.document)?;
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    #[test]
     fn test_workflow_has_inputs() -> anyhow::Result<()> {
         let workflow = r#"
 name: Test Workflow

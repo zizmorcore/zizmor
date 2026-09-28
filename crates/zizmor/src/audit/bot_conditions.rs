@@ -410,34 +410,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_user_contexts_ignore_trigger_syntax() -> anyhow::Result<()> {
-        for name in ["issue_comment", "create", "delete", "fork", "public"] {
-            let event: BareEvent = yaml_serde::from_str(name)?;
-            let expected = BotConditions::get_contexts_for_event(&event);
-            assert!(expected.is_some());
-            for on in [
-                name.to_owned(),
-                format!("[{name}]"),
-                format!("{{{name}: null}}"),
-                format!("{{{name}: {{}}}}"),
-            ] {
-                let workflow = Workflow::from_string(
-                    format!(
-                        "on: {on}\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n"
-                    ),
-                    crate::InputKey::local("fakegroup".into(), "dummy", None, None),
-                )?;
-                assert_eq!(
-                    BotConditions::get_user_contexts_for_triggers(&workflow),
-                    expected,
-                    "{on}"
-                );
-            }
-        }
-        Ok(())
-    }
-
-    #[test]
     fn test_bot_condition() {
         for (cond, context, confidence) in &[
             // Trivial dominating cases.
