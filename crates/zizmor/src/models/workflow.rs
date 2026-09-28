@@ -165,10 +165,8 @@ impl Workflow {
         Jobs::new(self)
     }
 
-    /// Locate an event known to be present in this workflow's triggers.
-    ///
-    /// Event checks use the normalized model; only source locations depend on
-    /// whether the author used a scalar, sequence, or mapping.
+    /// Produce a [`SymbolicLocation`] for an event that's known to be present
+    /// in the workflow's triggers.
     fn trigger_location(&self, event: BareEvent, name: &'static str) -> SymbolicLocation<'_> {
         let parent = self.location().with_keys(["on".into()]);
 
