@@ -167,11 +167,11 @@ impl Workflow {
 
     /// Produce a [`SymbolicLocation`] for an event that's known to be present
     /// in the workflow's triggers.
-    fn trigger_location(&self, event: BareEvent, name: &'static str) -> SymbolicLocation<'_> {
+    fn trigger_location(&self, event: BareEvent) -> SymbolicLocation<'_> {
         let parent = self.location().with_keys(["on".into()]);
 
         match &self.on.syntax {
-            TriggerSyntax::Mapping => parent.with_keys([name.into()]).key_only(),
+            TriggerSyntax::Mapping => parent.with_keys([event.as_str().into()]).key_only(),
             TriggerSyntax::Scalar => parent,
             TriggerSyntax::Sequence(events) => {
                 let idx = events
@@ -190,7 +190,7 @@ impl Workflow {
             .events
             .issue_comment
             .is_present()
-            .then(|| self.trigger_location(BareEvent::IssueComment, "issue_comment"))
+            .then(|| self.trigger_location(BareEvent::IssueComment))
     }
 
     /// Return the symbolic location for this workflow's `pull_request_target` trigger,
@@ -200,7 +200,7 @@ impl Workflow {
             .events
             .pull_request_target
             .is_present()
-            .then(|| self.trigger_location(BareEvent::PullRequestTarget, "pull_request_target"))
+            .then(|| self.trigger_location(BareEvent::PullRequestTarget))
     }
 
     /// Return the symbolic location for this workflow's `workflow_run` trigger,
@@ -210,7 +210,7 @@ impl Workflow {
             .events
             .workflow_run
             .is_present()
-            .then(|| self.trigger_location(BareEvent::WorkflowRun, "workflow_run"))
+            .then(|| self.trigger_location(BareEvent::WorkflowRun))
     }
 
     /// Return the symbolic location for this workflow's `workflow_call` trigger,
@@ -220,7 +220,7 @@ impl Workflow {
             .events
             .workflow_call
             .is_present()
-            .then(|| self.trigger_location(BareEvent::WorkflowCall, "workflow_call"))
+            .then(|| self.trigger_location(BareEvent::WorkflowCall))
     }
 
     /// Whether this workflow is triggered by exactly one event.

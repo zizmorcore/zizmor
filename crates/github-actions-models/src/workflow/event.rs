@@ -28,6 +28,17 @@ macro_rules! events {
             $($($variant,)?)*
         }
 
+        impl BareEvent {
+            /// The event name used in workflow YAML.
+            pub fn as_str(&self) -> &'static str {
+                match self {
+                    $($(
+                        Self::$variant => stringify!($field),
+                    )?)*
+                }
+            }
+        }
+
         /// Normalized workflow event triggers, with optional bodies.
         #[derive(Deserialize, Serialize, Debug, Default)]
         #[serde(default, rename_all = "snake_case")]
