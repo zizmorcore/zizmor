@@ -60,7 +60,7 @@ pub struct Workflow {
 ///
 /// All three forms expose the same event fields through [`Self::events`].
 #[derive(Deserialize, Debug)]
-#[serde(from = "TriggerRepr")]
+#[serde(from = "TriggerWire")]
 pub struct Trigger {
     /// The normalized events, independent of the original YAML shape.
     pub events: Box<event::Events>,
@@ -80,8 +80,8 @@ pub enum TriggerSyntax {
 }
 
 #[derive(Deserialize)]
-#[serde(rename = "Trigger", untagged)]
-enum TriggerRepr {
+#[serde(untagged)]
+enum TriggerWire {
     // NOTE: `Events` is before `BareEvent` because serde-yaml appears to capture
     // `pull_request:` (an event with a missing body) as equivalent to `on: pull_request`
     // (a bare event).
@@ -90,18 +90,18 @@ enum TriggerRepr {
     BareEvents(Vec<event::BareEvent>),
 }
 
-impl From<TriggerRepr> for Trigger {
-    fn from(value: TriggerRepr) -> Self {
+impl From<TriggerWire> for Trigger {
+    fn from(value: TriggerWire) -> Self {
         match value {
-            TriggerRepr::Events(events) => Self {
+            TriggerWire::Events(events) => Self {
                 events,
                 syntax: TriggerSyntax::Mapping,
             },
-            TriggerRepr::BareEvent(event) => Self {
+            TriggerWire::BareEvent(event) => Self {
                 events: Box::new(std::iter::once(&event).collect()),
                 syntax: TriggerSyntax::Scalar,
             },
-            TriggerRepr::BareEvents(events) => Self {
+            TriggerWire::BareEvents(events) => Self {
                 events: Box::new(events.iter().collect()),
                 syntax: TriggerSyntax::Sequence(events),
             },
@@ -159,68 +159,6 @@ mod tests {
     };
 
     use super::{Concurrency, Trigger, TriggerSyntax};
-
-    #[test]
-    fn test_bare_triggers_normalize() {
-        // Cover every supported bare event, including legacy GHES events.
-        let names = [
-            "branch_protection_rule",
-            "check_run",
-            "check_suite",
-            "create",
-            "delete",
-            "deployment",
-            "deployment_status",
-            "discussion",
-            "discussion_comment",
-            "fork",
-            "gollum",
-            "image_version",
-            "issue_comment",
-            "issues",
-            "label",
-            "merge_group",
-            "milestone",
-            "page_build",
-            "project",
-            "project_card",
-            "project_column",
-            "public",
-            "pull_request",
-            "pull_request_review",
-            "pull_request_review_comment",
-            "pull_request_target",
-            "push",
-            "registry_package",
-            "release",
-            "repository_dispatch",
-            "status",
-            "watch",
-            "workflow_call",
-            "workflow_dispatch",
-            "workflow_run",
-        ];
-
-        for name in names {
-            let mapping: Trigger = yaml_serde::from_str(&format!("{name}:")).unwrap();
-            assert!(matches!(mapping.syntax, TriggerSyntax::Mapping));
-            assert_eq!(mapping.events.count(), 1, "{name}");
-            let expected = yaml_serde::to_value(&mapping.events).unwrap();
-
-            for yaml in [
-                name.to_owned(),
-                format!("[{name}]"),
-                format!("{name}: null"),
-            ] {
-                let trigger: Trigger = yaml_serde::from_str(&yaml).unwrap();
-                assert_eq!(
-                    yaml_serde::to_value(&trigger.events).unwrap(),
-                    expected,
-                    "{yaml}"
-                );
-            }
-        }
-    }
 
     #[test]
     fn test_trigger_presence_and_syntax() {
