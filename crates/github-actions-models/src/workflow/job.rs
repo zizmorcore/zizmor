@@ -5,7 +5,7 @@ use serde::Deserialize;
 use yaml_serde::Value;
 
 use crate::common::expr::{BoE, LoE};
-use crate::common::{DockerUses, Env, If, Permissions, Uses, custom_error};
+use crate::common::{CacheMode, DockerUses, Env, If, Permissions, Uses, custom_error};
 
 use super::{Concurrency, Defaults};
 
@@ -15,6 +15,7 @@ use super::{Concurrency, Defaults};
 #[serde(rename_all = "kebab-case")]
 pub struct NormalJob {
     pub name: Option<String>,
+    pub cache_mode: Option<CacheMode>,
     #[serde(default)]
     pub permissions: Permissions,
     #[serde(default, deserialize_with = "crate::common::scalar_or_vector")]
@@ -248,6 +249,7 @@ pub struct DockerCredentials {
 #[serde(rename_all = "kebab-case")]
 pub struct ReusableWorkflowCallJob {
     pub name: Option<String>,
+    pub cache_mode: Option<CacheMode>,
     #[serde(default)]
     pub permissions: Permissions,
     #[serde(default, deserialize_with = "crate::common::scalar_or_vector")]
