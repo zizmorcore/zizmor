@@ -5,7 +5,7 @@ use github_actions_models::{
         Uses,
         expr::{ExplicitExpr, LoE},
     },
-    workflow::{Job, Trigger, Workflow, event::OptionalBody, job},
+    workflow::{Job, Workflow, event::OptionalBody, job},
 };
 
 fn load_workflow(name: &str) -> Workflow {
@@ -35,9 +35,7 @@ fn test_load_all() {
 fn test_pip_audit_ci() {
     let workflow = load_workflow("pip-audit-ci.yml");
 
-    assert!(
-        matches!(workflow.on, Trigger::Events(events) if matches!(events.pull_request, OptionalBody::Default))
-    );
+    assert!(matches!(workflow.on.pull_request, OptionalBody::Default));
 
     let test_job = &workflow.jobs["test"];
     let Job::NormalJob(test_job) = test_job else {
