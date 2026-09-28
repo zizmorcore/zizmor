@@ -12,7 +12,7 @@ use serde::{Deserialize, Deserializer, Serialize, de};
 pub mod expr;
 
 /// `cache-mode` for a workflow or job.
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Copy, Clone, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case", untagged)]
 pub enum CacheMode {
     Read,

@@ -5,7 +5,7 @@
 
 use github_actions_expressions::context::{self};
 use github_actions_models::{
-    common::{self, expr::LoE},
+    common::{self, CacheMode, expr::LoE},
     workflow::{
         self, TriggerSyntax,
         event::{BareEvent, OptionalBody},
@@ -232,6 +232,17 @@ impl Workflow {
     /// `workflow_call` event and nothing else.
     pub(crate) fn is_reusable_only(&self) -> bool {
         self.workflow_call().is_some() && self.has_single_trigger()
+    }
+
+    /// The workflow's effective cache mode.
+    ///
+    /// This is either the workflow's explicitly configured cache mode (if configured)
+    /// or the inferred cache mode if omitted.
+    pub(crate) fn effective_cache_mode(&self) -> CacheMode {
+        match self.cache_mode {
+            Some(cache_mode) => cache_mode,
+            None => todo!(),
+        }
     }
 
     /// Returns this workflow's [`SymbolicLocation`].
