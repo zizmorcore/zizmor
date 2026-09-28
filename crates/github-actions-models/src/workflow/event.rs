@@ -11,9 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::EnvValue;
 
-// Each entry defines a field and its body type, plus an optional bare variant.
-// Generate the model and its helpers together so adding an event cannot leave
-// counting or bare-event normalization out of sync.
+/// Constructs our various types/transformations for event triggers.
 macro_rules! events {
     ($($(#[$attr:meta])* $field:ident: $body:ty $(=> $variant:ident)?),* $(,)?) => {
         /// "Bare" workflow event triggers.
@@ -31,9 +29,6 @@ macro_rules! events {
         }
 
         /// Normalized workflow event triggers, with optional bodies.
-        ///
-        /// This type deserializes the mapping form directly. [`super::Trigger`] also
-        /// normalizes scalar and sequence forms into these fields.
         #[derive(Deserialize, Serialize, Debug, Default)]
         #[serde(default, rename_all = "snake_case")]
         pub struct Events {
