@@ -42,6 +42,10 @@ of `zizmor`.
 * Fixed a bug where the [ref-version-mismatch] audit would crash on
   unusually placed version comments (#2394)
 
+* Fixed a bug where `zizmor` would fail to handle some pre-commit inputs
+  that use prek extensions to the `language_version` and `default_language_version`
+  keys (#2413)
+
 ## 1.30.1
 
 ### Bug Fixes 🐛

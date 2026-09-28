@@ -2,7 +2,7 @@
 //!
 //! See: <https://pre-commit.com/#new-hooks>
 
-use crate::common::{self, FilePattern};
+use crate::common::{self, FilePattern, LanguageVersion};
 
 /// One or more hook definitions.
 #[derive(Debug, serde::Deserialize)]
@@ -67,8 +67,8 @@ pub struct HookDefinition {
     pub description: String,
 
     /// The default version to use for [`Self::language`].
-    #[serde(default = "default_language_version")]
-    pub language_version: String,
+    #[serde(default)]
+    pub language_version: LanguageVersion,
 
     /// The minimum version of pre-commit required.
     #[serde(default = "common::default_minimum_pre_commit_version")]
@@ -84,8 +84,4 @@ pub struct HookDefinition {
 
 const fn default_true() -> bool {
     true
-}
-
-fn default_language_version() -> String {
-    "default".into()
 }

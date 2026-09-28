@@ -2,7 +2,7 @@
 //!
 //! See: <https://pre-commit.com/#plugins>
 
-use crate::common::{self, FilePattern};
+use crate::common::{self, FilePattern, LanguageVersion};
 use indexmap::IndexMap;
 
 /// A single pre-commit configuration, containing one or more repositories,
@@ -24,7 +24,7 @@ pub struct Config {
     /// should be used for that language, if a hook does not supply its
     /// own `language_version`.
     #[serde(default)]
-    pub default_language_version: IndexMap<String, String>,
+    pub default_language_version: IndexMap<String, LanguageVersion>,
 
     /// The `stages` property for a hook, if a hook does not supply its
     /// own `stages`.
@@ -106,7 +106,7 @@ pub struct Hook {
     pub name: Option<String>,
 
     /// Overrides the language version for the hook.
-    pub language_version: Option<String>,
+    pub language_version: Option<LanguageVersion>,
 
     /// Overrides the files pattern for the hook.
     pub files: Option<FilePattern>,
