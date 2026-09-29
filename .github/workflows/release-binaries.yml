@@ -28,6 +28,8 @@ jobs:
             target: aarch64-apple-darwin
           - runner: windows-latest
             target: x86_64-pc-windows-msvc
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
