@@ -17,6 +17,8 @@ adafruit/circuitpython#9785
 ag2ai/faststream#2398
 aio-libs/aiobotocore#1344
 aio-libs/aiobotocore#1355
+aiogram/aiogram#1908
+aipoch/open-science#2874
 altair-graphql/altair@4aa5679f89528c183321a07e387567c13be29f26
 anchore/sbom-action#564
 anchore/scan-action#573
@@ -51,6 +53,7 @@ aquasecurity/trivy-operator#2910
 aquasecurity/vuln-list-update#411
 arc53/DocsGPT#2383
 argoproj/argo-cd#27304
+argoproj/argo-helm#4086
 ariel-os/ariel-os#1738
 aristocratos/btop#1590
 Arize-ai/phoenix#13202
@@ -95,6 +98,7 @@ beste/firebase-php#1093
 better-auth/better-auth#8879
 bevyengine/bevy#22294
 bevyengine/bevy#22817
+BinarCode/laravel-restify#782
 biomejs/biome#10428
 biomejs/biome-vscode#1101
 biomejs/biome-zed#207
@@ -113,6 +117,7 @@ bluesky-social/social-app#10779
 boto/boto3#4755
 boto/botocore#3665
 boto/s3transfer#374
+brazilian-utils/javascript#507
 brian-team/brian2@d497b11a268549c0c491df2f5f9c6332c4f733d0
 bw2/ConfigArgParse#336
 bytecodealliance/jco#1543
@@ -147,6 +152,7 @@ containerd/nerdctl#4909
 containers/conmon#687
 containers/podman#27642
 CopilotKit/CopilotKit#4820
+cordx56/rustowl#675
 cortex/ripasso#411
 CosmoCreeper/Sine#487
 crate-ci/cargo-release#956
@@ -212,11 +218,13 @@ endevco/aube#631
 endevco/pitchfork#434
 endoflife-date/release-data#610
 endojs/endo#3252
+EnzymeAD/Enzyme#3145
 EpicWink/proxpi@5e04d5e24bb8abfc6ad65721aea1c1781628ac9b
 ergebnis/composer-normalize#1622
 erlang/otp#11000
 erlang/rebar3#3001
 erlef/oidcc#533
+errbit/errbit#3190
 esl/MongooseIM#4435
 ethereum/hevm#615
 external-secrets/external-secrets#5368
@@ -239,6 +247,7 @@ freemocap/freemocap#659
 freqtrade/freqtrade@5efad94d3de54d7c33731a40113f7218d46dd801
 freqtrade/technical@5fcb81bb1fcf269702de1634e59bb0ba87953ef2
 freqtrade/technical@63037a14d72be329dd35d4dced122705333af133
+FreshRSS/FreshRSS#9331
 G-Research/consuldotnet#640
 gaphor/gaphor#3658
 gechr/WhichSpace@e32d710e7e17102dd6eecd522aa1b511b961fcf3
@@ -733,6 +742,7 @@ TypeCellOS/BlockNote#2764
 typescript-eslint/typescript-eslint#12329
 ua-parser/uap-python#250
 ubicloud/ubicloud#5472
+ublue-os/aurora#2529
 UKGovernmentBEIS/inspect_evals#1597
 UKGovernmentBEIS/inspect_evals#1599
 ultrajson/ultrajson#650

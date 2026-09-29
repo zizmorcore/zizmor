@@ -61,6 +61,22 @@
         - aio-libs/aiobotocore#1355
 
 
+-   ![](https://github.com/aiogram.png?size=40){ width="40" loading=lazy align=left } aiogram
+
+    ---
+
+    ??? example "Examples"
+        - aiogram/aiogram#1908
+
+
+-   ![](https://github.com/aipoch.png?size=40){ width="40" loading=lazy align=left } aipoch
+
+    ---
+
+    ??? example "Examples"
+        - aipoch/open-science#2874
+
+
 -   ![](https://github.com/altair-graphql.png?size=40){ width="40" loading=lazy align=left } altair-graphql
 
     ---
@@ -156,6 +172,7 @@
 
     ??? example "Examples"
         - argoproj/argo-cd#27304
+        - argoproj/argo-helm#4086
 
 
 -   ![](https://github.com/ariel-os.png?size=40){ width="40" loading=lazy align=left } ariel-os
@@ -349,6 +366,14 @@
         - bevyengine/bevy#22817
 
 
+-   ![](https://github.com/BinarCode.png?size=40){ width="40" loading=lazy align=left } BinarCode
+
+    ---
+
+    ??? example "Examples"
+        - BinarCode/laravel-restify#782
+
+
 -   ![](https://github.com/biomejs.png?size=40){ width="40" loading=lazy align=left } biomejs
 
     ---
@@ -421,6 +446,14 @@
         - boto/boto3#4755
         - boto/botocore#3665
         - boto/s3transfer#374
+
+
+-   ![](https://github.com/brazilian-utils.png?size=40){ width="40" loading=lazy align=left } brazilian-utils
+
+    ---
+
+    ??? example "Examples"
+        - brazilian-utils/javascript#507
 
 
 -   ![](https://github.com/brian-team.png?size=40){ width="40" loading=lazy align=left } brian-team
@@ -630,6 +663,14 @@
 
     ??? example "Examples"
         - CopilotKit/CopilotKit#4820
+
+
+-   ![](https://github.com/cordx56.png?size=40){ width="40" loading=lazy align=left } cordx56
+
+    ---
+
+    ??? example "Examples"
+        - cordx56/rustowl#675
 
 
 -   ![](https://github.com/cortex.png?size=40){ width="40" loading=lazy align=left } cortex
@@ -1005,6 +1046,14 @@
         - endojs/endo#3252
 
 
+-   ![](https://github.com/EnzymeAD.png?size=40){ width="40" loading=lazy align=left } EnzymeAD
+
+    ---
+
+    ??? example "Examples"
+        - EnzymeAD/Enzyme#3145
+
+
 -   ![](https://github.com/EpicWink.png?size=40){ width="40" loading=lazy align=left } EpicWink
 
     ---
@@ -1036,6 +1085,14 @@
 
     ??? example "Examples"
         - erlef/oidcc#533
+
+
+-   ![](https://github.com/errbit.png?size=40){ width="40" loading=lazy align=left } errbit
+
+    ---
+
+    ??? example "Examples"
+        - errbit/errbit#3190
 
 
 -   ![](https://github.com/esl.png?size=40){ width="40" loading=lazy align=left } esl
@@ -1163,6 +1220,14 @@
         - freqtrade/freqtrade@5efad94d3de54d7c33731a40113f7218d46dd801
         - freqtrade/technical@5fcb81bb1fcf269702de1634e59bb0ba87953ef2
         - freqtrade/technical@63037a14d72be329dd35d4dced122705333af133
+
+
+-   ![](https://github.com/FreshRSS.png?size=40){ width="40" loading=lazy align=left } FreshRSS
+
+    ---
+
+    ??? example "Examples"
+        - FreshRSS/FreshRSS#9331
 
 
 -   ![](https://github.com/G-Research.png?size=40){ width="40" loading=lazy align=left } G-Research
@@ -3666,6 +3731,14 @@
 
     ??? example "Examples"
         - ubicloud/ubicloud#5472
+
+
+-   ![](https://github.com/ublue-os.png?size=40){ width="40" loading=lazy align=left } ublue-os
+
+    ---
+
+    ??? example "Examples"
+        - ublue-os/aurora#2529
 
 
 -   ![](https://github.com/UKGovernmentBEIS.png?size=40){ width="40" loading=lazy align=left } UKGovernmentBEIS
