@@ -7,7 +7,7 @@ use github_actions_expressions::{Expr, SpannedExpr};
 use github_actions_models::common::EnvValue;
 use github_actions_models::common::expr::LoE;
 use github_actions_models::workflow::Trigger;
-use github_actions_models::workflow::event::{BareEvent, BranchFilters, OptionalBody};
+use github_actions_models::workflow::event::{BranchFilters, OptionalBody};
 
 use crate::audit::{Audit, AuditError, audit_meta};
 use crate::config::Config;
@@ -502,38 +502,28 @@ audit_meta!(
 
 impl CachePoisoning {
     fn triggers_used_when_publishing_artifacts(&self, trigger: &Trigger) -> Vec<ReleaseTrigger> {
-        match trigger {
-            Trigger::BareEvent(BareEvent::Release) => {
-                vec![ReleaseTrigger::ReleaseEvent]
+        let events = &trigger.events;
+        let mut triggers = vec![];
+
+        if let OptionalBody::Body(body) = &events.push {
+            if body.tag_filters.is_some() {
+                triggers.push(ReleaseTrigger::TagPush);
             }
-            Trigger::BareEvents(events) if events.contains(&BareEvent::Release) => {
-                vec![ReleaseTrigger::ReleaseEvent]
+
+            if let Some(BranchFilters::Branches(branches)) = &body.branch_filters
+                && branches
+                    .iter()
+                    .any(|branch| branch.to_lowercase().contains("release"))
+            {
+                triggers.push(ReleaseTrigger::ReleaseBranchPush);
             }
-            Trigger::Events(events) => {
-                let mut triggers = vec![];
-
-                if let OptionalBody::Body(body) = &events.push {
-                    if body.tag_filters.is_some() {
-                        triggers.push(ReleaseTrigger::TagPush);
-                    }
-
-                    if let Some(BranchFilters::Branches(branches)) = &body.branch_filters
-                        && branches
-                            .iter()
-                            .any(|branch| branch.to_lowercase().contains("release"))
-                    {
-                        triggers.push(ReleaseTrigger::ReleaseBranchPush);
-                    }
-                }
-
-                if !matches!(events.release, OptionalBody::Missing) {
-                    triggers.push(ReleaseTrigger::ReleaseEvent);
-                }
-
-                triggers
-            }
-            _ => vec![],
         }
+
+        if events.release.is_present() {
+            triggers.push(ReleaseTrigger::ReleaseEvent);
+        }
+
+        triggers
     }
 
     fn detected_well_known_publisher_step(steps: Steps) -> Option<Step> {

@@ -11,161 +11,106 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::EnvValue;
 
-/// "Bare" workflow event triggers.
-///
-/// These appear when a workflow is triggered with an event with no context,
-/// e.g.:
-///
-/// ```yaml
-/// on: push
-/// ```
-#[derive(Deserialize, Debug, PartialEq, Eq, Hash)]
-#[serde(rename_all = "snake_case")]
-pub enum BareEvent {
-    BranchProtectionRule,
-    CheckRun,
-    CheckSuite,
-    Create,
-    Delete,
-    Deployment,
-    DeploymentStatus,
-    Discussion,
-    DiscussionComment,
-    Fork,
-    Gollum,
-    ImageVersion,
-    IssueComment,
-    Issues,
-    Label,
-    MergeGroup,
-    Milestone,
-    PageBuild,
-    Project,
-    ProjectCard,
-    ProjectColumn,
-    Public,
-    PullRequest,
-    PullRequestReview,
-    PullRequestReviewComment,
-    PullRequestTarget,
-    Push,
-    RegistryPackage,
-    Release,
-    RepositoryDispatch,
-    // NOTE: `schedule` is omitted, since it's never bare.
-    Status,
-    Watch,
-    WorkflowCall,
-    WorkflowDispatch,
-    WorkflowRun,
-}
-
-/// Workflow event triggers in mapping form, with optional bodies.
-///
-/// Like [`BareEvent`], but with per-event properties.
-#[derive(Deserialize, Serialize, Debug, Default)]
-#[serde(default, rename_all = "snake_case")]
-pub struct Events {
-    pub branch_protection_rule: OptionalBody<GenericEvent>,
-    pub check_run: OptionalBody<GenericEvent>,
-    pub check_suite: OptionalBody<GenericEvent>,
-    pub create: OptionalBody<GenericEvent>,
-    pub delete: OptionalBody<GenericEvent>,
-    pub deployment: OptionalBody<GenericEvent>,
-    pub deployment_status: OptionalBody<GenericEvent>,
-    pub discussion: OptionalBody<GenericEvent>,
-    pub discussion_comment: OptionalBody<GenericEvent>,
-    pub fork: OptionalBody<GenericEvent>,
-    pub gollum: OptionalBody<GenericEvent>,
-    pub image_version: OptionalBody<ImageVersion>,
-    pub issue_comment: OptionalBody<GenericEvent>,
-    pub issues: OptionalBody<GenericEvent>,
-    pub label: OptionalBody<GenericEvent>,
-    pub merge_group: OptionalBody<GenericEvent>,
-    pub milestone: OptionalBody<GenericEvent>,
-    pub page_build: OptionalBody<GenericEvent>,
-    pub project: OptionalBody<GenericEvent>,
-    pub project_card: OptionalBody<GenericEvent>,
-    pub project_column: OptionalBody<GenericEvent>,
-    pub public: OptionalBody<GenericEvent>,
-    pub pull_request: OptionalBody<PullRequest>,
-    pub pull_request_review: OptionalBody<GenericEvent>,
-    pub pull_request_review_comment: OptionalBody<GenericEvent>,
-    // NOTE: `pull_request_target` appears to have the same trigger filters as `pull_request`.
-    pub pull_request_target: OptionalBody<PullRequest>,
-    pub push: OptionalBody<Push>,
-    pub registry_package: OptionalBody<GenericEvent>,
-    pub release: OptionalBody<GenericEvent>,
-    pub repository_dispatch: OptionalBody<GenericEvent>,
-    pub schedule: OptionalBody<Vec<Cron>>,
-    pub status: OptionalBody<GenericEvent>,
-    pub watch: OptionalBody<GenericEvent>,
-    pub workflow_call: OptionalBody<WorkflowCall>,
-    // TODO: Custom type.
-    pub workflow_dispatch: OptionalBody<WorkflowDispatch>,
-    pub workflow_run: OptionalBody<WorkflowRun>,
-}
-
-impl Events {
-    /// Count the number of present event triggers.
-    ///
-    /// **IMPORTANT**: This must be kept in sync with the number of fields in `Events`.
-    pub fn count(&self) -> u32 {
-        // This is a little goofy, but it's faster than reflecting over the struct
-        // or doing a serde round-trip.
-        let mut count = 0;
-
-        macro_rules! count_if_present {
-            ($($field:ident),*) => {
-                $(
-                    if !matches!(self.$field, OptionalBody::Missing) {
-                        count += 1;
-                    }
-                )*
-            };
+/// Constructs our various types/transformations for event triggers.
+macro_rules! events {
+    ($($(#[$attr:meta])* $field:ident: $body:ty $(=> $variant:ident)?),* $(,)?) => {
+        /// "Bare" workflow event triggers.
+        ///
+        /// These appear when a workflow is triggered with an event with no context,
+        /// e.g.:
+        ///
+        /// ```yaml
+        /// on: push
+        /// ```
+        #[derive(Deserialize, Debug, PartialEq, Eq, Hash)]
+        #[serde(rename_all = "snake_case")]
+        pub enum BareEvent {
+            $($($variant,)?)*
         }
 
-        count_if_present!(
-            branch_protection_rule,
-            check_run,
-            check_suite,
-            create,
-            delete,
-            deployment,
-            deployment_status,
-            discussion,
-            discussion_comment,
-            fork,
-            gollum,
-            image_version,
-            issue_comment,
-            issues,
-            label,
-            merge_group,
-            milestone,
-            page_build,
-            project,
-            project_card,
-            project_column,
-            public,
-            pull_request,
-            pull_request_review,
-            pull_request_review_comment,
-            pull_request_target,
-            push,
-            registry_package,
-            release,
-            repository_dispatch,
-            schedule,
-            status,
-            watch,
-            workflow_call,
-            workflow_dispatch,
-            workflow_run
-        );
+        impl BareEvent {
+            /// The event name used in workflow YAML.
+            pub fn as_str(&self) -> &'static str {
+                match self {
+                    $($(
+                        Self::$variant => stringify!($field),
+                    )?)*
+                }
+            }
+        }
 
-        count
-    }
+        /// Normalized workflow event triggers, with optional bodies.
+        #[derive(Deserialize, Serialize, Debug, Default)]
+        #[serde(default, rename_all = "snake_case")]
+        pub struct Events {
+            $(
+                $(#[$attr])*
+                pub $field: OptionalBody<$body>,
+            )*
+        }
+
+        impl Events {
+            /// Count the number of present event triggers.
+            pub fn count(&self) -> u32 {
+                0 $(+ u32::from(self.$field.is_present()))*
+            }
+        }
+
+        impl<'a> FromIterator<&'a BareEvent> for Events {
+            fn from_iter<T: IntoIterator<Item = &'a BareEvent>>(iter: T) -> Self {
+                let mut events = Self::default();
+                for event in iter {
+                    match event {
+                        $($(
+                            BareEvent::$variant => events.$field = OptionalBody::Default,
+                        )?)*
+                    }
+                }
+                events
+            }
+        }
+    };
+}
+
+events! {
+    branch_protection_rule: GenericEvent => BranchProtectionRule,
+    check_run: GenericEvent => CheckRun,
+    check_suite: GenericEvent => CheckSuite,
+    create: GenericEvent => Create,
+    delete: GenericEvent => Delete,
+    deployment: GenericEvent => Deployment,
+    deployment_status: GenericEvent => DeploymentStatus,
+    discussion: GenericEvent => Discussion,
+    discussion_comment: GenericEvent => DiscussionComment,
+    fork: GenericEvent => Fork,
+    gollum: GenericEvent => Gollum,
+    image_version: ImageVersion => ImageVersion,
+    issue_comment: GenericEvent => IssueComment,
+    issues: GenericEvent => Issues,
+    label: GenericEvent => Label,
+    merge_group: GenericEvent => MergeGroup,
+    milestone: GenericEvent => Milestone,
+    page_build: GenericEvent => PageBuild,
+    project: GenericEvent => Project,
+    project_card: GenericEvent => ProjectCard,
+    project_column: GenericEvent => ProjectColumn,
+    public: GenericEvent => Public,
+    pull_request: PullRequest => PullRequest,
+    pull_request_review: GenericEvent => PullRequestReview,
+    pull_request_review_comment: GenericEvent => PullRequestReviewComment,
+    /// Uses the same trigger filters as `pull_request`.
+    pull_request_target: PullRequest => PullRequestTarget,
+    push: Push => Push,
+    registry_package: GenericEvent => RegistryPackage,
+    release: GenericEvent => Release,
+    repository_dispatch: GenericEvent => RepositoryDispatch,
+    // `schedule` has no bare form.
+    schedule: Vec<Cron>,
+    status: GenericEvent => Status,
+    watch: GenericEvent => Watch,
+    workflow_call: WorkflowCall => WorkflowCall,
+    workflow_dispatch: WorkflowDispatch => WorkflowDispatch,
+    workflow_run: WorkflowRun => WorkflowRun,
 }
 
 /// A generic container type for distinguishing between
@@ -181,6 +126,13 @@ pub enum OptionalBody<T> {
     #[default]
     Missing,
     Body(T),
+}
+
+impl<T> OptionalBody<T> {
+    /// Whether this event is enabled, with either default or explicit settings.
+    pub fn is_present(&self) -> bool {
+        !matches!(self, Self::Missing)
+    }
 }
 
 impl<'de, T> Deserialize<'de> for OptionalBody<T>
@@ -406,8 +358,8 @@ image_version:
         let trigger = yaml_serde::from_str::<Trigger>(trigger).unwrap();
 
         insta::assert_debug_snapshot!(trigger, @r#"
-        Events(
-            Events {
+        Trigger {
+            events: Events {
                 branch_protection_rule: Missing,
                 check_run: Missing,
                 check_suite: Missing,
@@ -456,7 +408,8 @@ image_version:
                 workflow_dispatch: Missing,
                 workflow_run: Missing,
             },
-        )
+            syntax: Mapping,
+        }
         "#);
     }
 }

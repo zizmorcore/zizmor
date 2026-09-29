@@ -6,10 +6,7 @@ use github_actions_expressions::{
     context::{Context, ContextPattern},
     op::{BinExpr, BinOp, UnOp},
 };
-use github_actions_models::{
-    common::If,
-    workflow::event::{BareEvent, OptionalBody},
-};
+use github_actions_models::{common::If, workflow::event::BareEvent};
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
@@ -142,63 +139,64 @@ impl BotConditions {
     /// Get appropriate user context paths based on workflow trigger events.
     /// Returns (actor_name_context, actor_id_context) for the given workflow.
     fn get_user_contexts_for_triggers(workflow: &Workflow) -> Option<(&str, &str)> {
-        use github_actions_models::workflow::Trigger;
-
-        // Check for single specific event types first
-        match &workflow.on {
-            Trigger::BareEvent(event) => Self::get_contexts_for_event(event),
-            Trigger::BareEvents(event_list) if event_list.len() == 1 => {
-                Self::get_contexts_for_event(&event_list[0])
-            }
-            Trigger::Events(event_map) if event_map.count() == 1 => {
-                // Check each possible event type
-                if !matches!(event_map.issue_comment, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::IssueComment);
-                }
-                if !matches!(event_map.pull_request, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::PullRequest);
-                }
-                if !matches!(event_map.pull_request_target, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::PullRequestTarget);
-                }
-                if !matches!(event_map.discussion_comment, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::DiscussionComment);
-                }
-                if !matches!(event_map.pull_request_review, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::PullRequestReview);
-                }
-                if !matches!(event_map.pull_request_review_comment, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::PullRequestReviewComment);
-                }
-                if !matches!(event_map.issues, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::Issues);
-                }
-                if !matches!(event_map.discussion, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::Discussion);
-                }
-                if !matches!(event_map.release, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::Release);
-                }
-                if !matches!(event_map.push, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::Push);
-                }
-                if !matches!(event_map.milestone, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::Milestone);
-                }
-                if !matches!(event_map.label, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::Label);
-                }
-                if !matches!(event_map.project, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::Project);
-                }
-                if !matches!(event_map.watch, OptionalBody::Missing) {
-                    return Self::get_contexts_for_event(&BareEvent::Watch);
-                }
-
-                None
-            }
-            _ => None,
+        let events = &workflow.on.events;
+        if events.count() != 1 {
+            return None;
         }
+
+        if events.issue_comment.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::IssueComment);
+        }
+        if events.pull_request.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::PullRequest);
+        }
+        if events.pull_request_target.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::PullRequestTarget);
+        }
+        if events.discussion_comment.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::DiscussionComment);
+        }
+        if events.pull_request_review.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::PullRequestReview);
+        }
+        if events.pull_request_review_comment.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::PullRequestReviewComment);
+        }
+        if events.issues.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Issues);
+        }
+        if events.discussion.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Discussion);
+        }
+        if events.release.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Release);
+        }
+        if events.create.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Create);
+        }
+        if events.delete.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Delete);
+        }
+        if events.milestone.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Milestone);
+        }
+        if events.label.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Label);
+        }
+        if events.project.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Project);
+        }
+        if events.fork.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Fork);
+        }
+        if events.watch.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Watch);
+        }
+        if events.public.is_present() {
+            return Self::get_contexts_for_event(&BareEvent::Public);
+        }
+
+        None
     }
 
     /// Get context paths for a specific event type.

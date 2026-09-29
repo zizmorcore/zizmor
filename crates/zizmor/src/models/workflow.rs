@@ -7,7 +7,7 @@ use github_actions_expressions::context::{self};
 use github_actions_models::{
     common::{self, expr::LoE},
     workflow::{
-        self, Trigger,
+        self, TriggerSyntax,
         event::{BareEvent, OptionalBody},
         job,
     },
@@ -111,12 +111,10 @@ impl HasInputs for workflow::event::WorkflowDispatch {
 
 impl HasInputs for Workflow {
     fn get_input(&self, name: &str) -> Option<Capability> {
-        let workflow::Trigger::Events(events) = &self.on else {
-            return None;
-        };
+        let events = &self.on.events;
 
         let wc_cap = {
-            if let workflow::event::OptionalBody::Body(wc) = &events.workflow_call {
+            if let OptionalBody::Body(wc) = &events.workflow_call {
                 wc.get_input(name)
             } else {
                 None
@@ -124,7 +122,7 @@ impl HasInputs for Workflow {
         };
 
         let wd_cap = {
-            if let workflow::event::OptionalBody::Body(wd) = &events.workflow_dispatch {
+            if let OptionalBody::Body(wd) = &events.workflow_dispatch {
                 wd.get_input(name)
             } else {
                 None
@@ -167,101 +165,67 @@ impl Workflow {
         Jobs::new(self)
     }
 
-    /// Return the symbolic location for this workflow's `issue_comment` trigger,
-    /// if it has one.
-    ///
-    /// TODO: Dedupe this, [`Self::pull_request_target`], and below.
-    pub(crate) fn issue_comment<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
+    /// Produce a [`SymbolicLocation`] for an event that's known to be present
+    /// in the workflow's triggers.
+    fn trigger_location(&self, event: BareEvent) -> SymbolicLocation<'_> {
         let parent = self.location().with_keys(["on".into()]);
 
-        match &self.on {
-            Trigger::Events(events) if !matches!(events.issue_comment, OptionalBody::Missing) => {
-                Some(parent.with_keys(["issue_comment".into()]).key_only())
-            }
-            Trigger::BareEvent(event) if *event == BareEvent::IssueComment => Some(parent),
-            Trigger::BareEvents(events)
-                if let Some(idx) = events
+        match &self.on.syntax {
+            TriggerSyntax::Mapping => parent.with_keys([event.as_str().into()]).key_only(),
+            TriggerSyntax::Scalar => parent,
+            TriggerSyntax::Sequence(events) => {
+                let idx = events
                     .iter()
-                    .position(|event| *event == BareEvent::IssueComment) =>
-            {
-                Some(parent.with_keys([idx.into()]))
+                    .position(|candidate| *candidate == event)
+                    .expect("present event must appear in the source sequence");
+                parent.with_keys([idx.into()])
             }
-            _ => None,
         }
+    }
+
+    /// Return the symbolic location for this workflow's `issue_comment` trigger,
+    /// if it has one.
+    pub(crate) fn issue_comment<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
+        self.on
+            .events
+            .issue_comment
+            .is_present()
+            .then(|| self.trigger_location(BareEvent::IssueComment))
     }
 
     /// Return the symbolic location for this workflow's `pull_request_target` trigger,
     /// if it has one.
     pub(crate) fn pull_request_target<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
-        let parent = self.location().with_keys(["on".into()]);
-
-        match &self.on {
-            Trigger::Events(events)
-                if !matches!(events.pull_request_target, OptionalBody::Missing) =>
-            {
-                Some(parent.with_keys(["pull_request_target".into()]).key_only())
-            }
-            Trigger::BareEvent(event) if *event == BareEvent::PullRequestTarget => Some(parent),
-            Trigger::BareEvents(events)
-                if let Some(idx) = events
-                    .iter()
-                    .position(|event| *event == BareEvent::PullRequestTarget) =>
-            {
-                Some(parent.with_keys([idx.into()]))
-            }
-            _ => None,
-        }
+        self.on
+            .events
+            .pull_request_target
+            .is_present()
+            .then(|| self.trigger_location(BareEvent::PullRequestTarget))
     }
 
     /// Return the symbolic location for this workflow's `workflow_run` trigger,
     /// if it has one.
     pub(crate) fn workflow_run<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
-        let parent = self.location().with_keys(["on".into()]);
-
-        match &self.on {
-            Trigger::Events(events) if !matches!(events.workflow_run, OptionalBody::Missing) => {
-                Some(parent.with_keys(["workflow_run".into()]).key_only())
-            }
-            Trigger::BareEvent(event) if *event == BareEvent::WorkflowRun => Some(parent),
-            Trigger::BareEvents(events)
-                if let Some(idx) = events
-                    .iter()
-                    .position(|event| *event == BareEvent::WorkflowRun) =>
-            {
-                Some(parent.with_keys([idx.into()]))
-            }
-            _ => None,
-        }
+        self.on
+            .events
+            .workflow_run
+            .is_present()
+            .then(|| self.trigger_location(BareEvent::WorkflowRun))
     }
 
     /// Return the symbolic location for this workflow's `workflow_call` trigger,
     /// if it has one.
     pub(crate) fn workflow_call<'doc>(&'doc self) -> Option<SymbolicLocation<'doc>> {
-        let parent = self.location().with_keys(["on".into()]);
-
-        match &self.on {
-            Trigger::Events(events) if !matches!(events.workflow_call, OptionalBody::Missing) => {
-                Some(parent.with_keys(["workflow_call".into()]).key_only())
-            }
-            Trigger::BareEvent(event) if *event == BareEvent::WorkflowCall => Some(parent),
-            Trigger::BareEvents(events)
-                if let Some(idx) = events
-                    .iter()
-                    .position(|event| *event == BareEvent::WorkflowCall) =>
-            {
-                Some(parent.with_keys([idx.into()]))
-            }
-            _ => None,
-        }
+        self.on
+            .events
+            .workflow_call
+            .is_present()
+            .then(|| self.trigger_location(BareEvent::WorkflowCall))
     }
 
     /// Whether this workflow is triggered by exactly one event.
     pub(crate) fn has_single_trigger(&self) -> bool {
-        match &self.on {
-            Trigger::BareEvent(_) => true,
-            Trigger::BareEvents(events) => events.len() == 1,
-            Trigger::Events(events) => events.count() == 1,
-        }
+        self.on.events.count() == 1
     }
 
     /// Whether this workflow is *only* a reusable workflow, i.e. it's triggered by a
