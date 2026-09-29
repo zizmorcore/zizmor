@@ -16,10 +16,14 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 use terminal_link::Link;
 
+pub(crate) mod cache_mode;
 pub(crate) mod matrix;
 pub(crate) mod runners;
 
-use crate::models::workflow::runners::{JobRunners, Runner};
+use crate::models::workflow::{
+    cache_mode::EffectiveCacheMode,
+    runners::{JobRunners, Runner},
+};
 use crate::{
     InputKey,
     finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
@@ -238,10 +242,32 @@ impl Workflow {
     ///
     /// This is either the workflow's explicitly configured cache mode (if configured)
     /// or the inferred cache mode if omitted.
-    pub(crate) fn effective_cache_mode(&self) -> CacheMode {
+    ///
+    /// NOTE: Intentionally not public since [`Job::effective_cache_mode`] is what all
+    /// analyses should actually use (and wraps this).
+    ///
+    /// TODO: Maybe just inline this into [`cache_mode::HasEffectiveCacheMode`].
+    fn effective_cache_mode(&self) -> EffectiveCacheMode {
         match self.cache_mode {
-            Some(cache_mode) => cache_mode,
-            None => todo!(),
+            Some(cache_mode) => EffectiveCacheMode::Explicit(cache_mode),
+            None => {
+                // Only a fixed set of triggers get `cache-mode: write` by default.
+                // See: <https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#cache-access-for-low-trust-workflow-triggers>
+                let events = &self.on.events;
+                if events.push.is_present()
+                    || events.workflow_dispatch.is_present()
+                    || events.repository_dispatch.is_present()
+                    || events.delete.is_present()
+                    || events.registry_package.is_present()
+                    || events.page_build.is_present()
+                    || events.schedule.is_present()
+                {
+                    EffectiveCacheMode::Implicit(CacheMode::Write)
+                } else {
+                    // Everything else gets `cache-mode: read` by default.
+                    EffectiveCacheMode::Implicit(CacheMode::Read)
+                }
+            }
         }
     }
 
@@ -384,6 +410,10 @@ impl<'doc> JobCommon<'doc> for NormalJob<'doc> {
     fn parent(&self) -> &'doc Workflow {
         self.parent
     }
+
+    fn cache_mode(&self) -> Option<CacheMode> {
+        self.cache_mode
+    }
 }
 
 impl<'doc> std::ops::Deref for NormalJob<'doc> {
@@ -433,6 +463,10 @@ impl<'doc> JobCommon<'doc> for ReusableWorkflowCallJob<'doc> {
     fn parent(&self) -> &'doc Workflow {
         self.parent
     }
+
+    fn cache_mode(&self) -> Option<CacheMode> {
+        self.cache_mode
+    }
 }
 
 impl<'doc> std::ops::Deref for ReusableWorkflowCallJob<'doc> {
@@ -453,6 +487,9 @@ pub(crate) trait JobCommon<'doc>: Locatable<'doc> {
 
     /// The job's parent [`Workflow`].
     fn parent(&self) -> &'doc Workflow;
+
+    /// The job's [`CacheMode`], if it has an explicit one.
+    fn cache_mode(&self) -> Option<CacheMode>;
 }
 
 impl<'doc, T: JobCommon<'doc>> Locatable<'doc> for T {
