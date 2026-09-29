@@ -1,0 +1,28 @@
+on: release
+
+name: cache-poisoning
+
+permissions: {}
+
+cache-mode: write
+
+concurrency:
+  group: foo
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    # Takes precedence over `cache-mode: write` at the workflow level.
+    cache-mode: none
+    permissions:
+      id-token: write # Trusted Publishing
+    steps:
+      - name: Setup uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a
+        with:
+          python-version: "3.12"
+
+      - name: Publish on Pypi
+        run: uv build publish

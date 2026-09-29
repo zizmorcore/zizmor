@@ -13,7 +13,7 @@ pub mod expr;
 
 /// `cache-mode` for a workflow or job.
 #[derive(Copy, Clone, Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "kebab-case", untagged)]
+#[serde(rename_all = "kebab-case")]
 pub enum CacheMode {
     Read,
     Write,
