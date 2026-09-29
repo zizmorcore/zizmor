@@ -350,12 +350,11 @@ for the sake of easily integrating with GitHub cache server at Workflow runtime.
 
 This vulnerability happens when release workflows leverage build state cached
 from previous workflow executions, in general on top of the aforementioned
-actions or  similar ones. The publication of artifacts usually happens driven
-by trigger events like `release` or events with path filters like `push`
-(e.g. for tags).
+actions or similar ones. The publication of artifacts is usually driven
+by trigger events like `release` or events like `push` (with tags).
 
-In such scenarios, an attacker with access to a valid `GITHUB_TOKEN` can use it
-to poison the repository's GitHub Actions caches. That compounds with the
+In such scenarios, an attacker with access to a valid `ACTIONS_RUNTIME_TOKEN`
+can use it to poison the repository's GitHub Actions caches. That compounds with the
 default behavior of @actions/toolkit during cache restorations, allowing an
 attacker to retrieve payloads from poisoned cache entries, hence achieving code
 execution at Workflow runtime, potentially compromising ready-to-publish
@@ -363,18 +362,36 @@ artifacts.
 
 Other resources:
 
+* [GitHub: Dependency caching reference]
 * [The Monsters in Your Build Cache – GitHub Actions Cache Poisoning]
 * [Cacheract: The Monster in your Build Cache]
 
 ### Remediation
 
+!!! note
+
+    Starting with zizmor 1.31.0, zizmor is aware of GitHub's new
+    [`cache-mode`](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#cache-mode)
+    and will fully suppress any cache poisoning
+    findings when `#!yaml cache-mode: none` is effective.
+
 In general, you should avoid using previously cached CI state within workflows
 intended to publish build artifacts:
 
+* First and foremost, disable caching entirely by setting `#!yaml cache-mode: none`
+  at either the workflow or job level.
+
+    !!! tip
+
+        If you set `#!yaml cache-mode: none`, you're done!
+        You don't need any of the other steps below.
+
 * Remove cache-aware actions like @actions/cache from workflows that produce
   releases, *or*
+
 * Disable cache-aware actions with an `#!yaml if:` condition based on the trigger at
   the step level, *or*
+
 * Set an action-specific input to disable cache restoration when appropriate.
   Some (non-exhaustive) examples below:
 
@@ -2812,3 +2829,4 @@ once it's configured:
 [Guidelines on green software practices for GitHub Actions CI workflows]: https://github.com/Cambridge-ICCS/green-ci
 [runs-on]: https://runs-on.com
 [namespace]: https://namespace.so/docs/solutions/github-actions
+[GitHub: Dependency caching reference]: https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#defaults
