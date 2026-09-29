@@ -37,3 +37,12 @@ impl<'doc, Job: JobCommon<'doc>> HasEffectiveCacheMode for Job {
         )
     }
 }
+
+impl AsRef<CacheMode> for EffectiveCacheMode {
+    fn as_ref(&self) -> &CacheMode {
+        match self {
+            Self::Implicit(mode) => mode,
+            Self::Explicit(mode) => mode,
+        }
+    }
+}

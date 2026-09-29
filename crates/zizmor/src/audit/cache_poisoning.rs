@@ -4,8 +4,8 @@ use github_actions_expressions::call::{Call, Function};
 use github_actions_expressions::literal::Literal;
 use github_actions_expressions::op::{BinExpr, BinOp, UnOp};
 use github_actions_expressions::{Expr, SpannedExpr};
-use github_actions_models::common::EnvValue;
 use github_actions_models::common::expr::LoE;
+use github_actions_models::common::{CacheMode, EnvValue};
 use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BranchFilters, OptionalBody};
 
@@ -17,6 +17,7 @@ use crate::models::coordinate::{
     ActionCoordinate, ControlExpr, ControlFieldType, ControlOrigin, Toggle, Usage, VersionBound,
 };
 use crate::models::version::Version;
+use crate::models::workflow::cache_mode::HasEffectiveCacheMode as _;
 use crate::models::workflow::{JobCommon as _, NormalJob, Step, Steps};
 use crate::models::{StepBodyCommon, StepCommon};
 use crate::state::AuditState;
@@ -798,6 +799,14 @@ impl Audit for CachePoisoning {
         let mut findings = vec![];
         let steps = job.steps();
         let trigger = &job.parent().on;
+
+        // If the job has all caching disabled via `cache-mode: none`,
+        // then no cache poisoning is possible.
+        let effective_cache_mode = job.effective_cache_mode();
+        if let CacheMode::None = effective_cache_mode.as_ref() {
+            tracing::debug!("no cache poisoning is possible due to `cache-mode: none`");
+            return Ok(findings);
+        }
 
         let Some(scenario) = self.is_job_publishing_artifacts(trigger, steps) else {
             return Ok(findings);
