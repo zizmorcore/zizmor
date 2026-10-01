@@ -20,10 +20,7 @@ pub(crate) mod cache_mode;
 pub(crate) mod matrix;
 pub(crate) mod runners;
 
-use crate::models::workflow::{
-    cache_mode::EffectiveCacheMode,
-    runners::{JobRunners, Runner},
-};
+use crate::models::workflow::runners::{JobRunners, Runner};
 use crate::{
     InputKey,
     finding::location::{Locatable, SymbolicFeature, SymbolicLocation},
@@ -236,39 +233,6 @@ impl Workflow {
     /// `workflow_call` event and nothing else.
     pub(crate) fn is_reusable_only(&self) -> bool {
         self.workflow_call().is_some() && self.has_single_trigger()
-    }
-
-    /// The workflow's effective cache mode.
-    ///
-    /// This is either the workflow's explicitly configured cache mode (if configured)
-    /// or the inferred cache mode if omitted.
-    ///
-    /// NOTE: Intentionally not public since [`Job::effective_cache_mode`] is what all
-    /// analyses should actually use (and wraps this).
-    ///
-    /// TODO: Maybe just inline this into [`cache_mode::HasEffectiveCacheMode`].
-    fn effective_cache_mode(&self) -> EffectiveCacheMode {
-        match self.cache_mode {
-            Some(cache_mode) => EffectiveCacheMode::Explicit(cache_mode),
-            None => {
-                // Only a fixed set of triggers get `cache-mode: write` by default.
-                // See: <https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#cache-access-for-low-trust-workflow-triggers>
-                let events = &self.on.events;
-                if events.push.is_present()
-                    || events.workflow_dispatch.is_present()
-                    || events.repository_dispatch.is_present()
-                    || events.delete.is_present()
-                    || events.registry_package.is_present()
-                    || events.page_build.is_present()
-                    || events.schedule.is_present()
-                {
-                    EffectiveCacheMode::Implicit(CacheMode::Write)
-                } else {
-                    // Everything else gets `cache-mode: read` by default.
-                    EffectiveCacheMode::Implicit(CacheMode::Read)
-                }
-            }
-        }
     }
 
     /// Returns this workflow's [`SymbolicLocation`].

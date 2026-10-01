@@ -803,7 +803,7 @@ impl Audit for CachePoisoning {
         // If the job has all caching disabled via `cache-mode: none`,
         // then no cache poisoning is possible.
         let effective_cache_mode = job.effective_cache_mode();
-        if let CacheMode::None = effective_cache_mode.as_ref() {
+        if let CacheMode::None = effective_cache_mode.mode {
             tracing::debug!("no cache poisoning is possible due to `cache-mode: none`");
             return Ok(findings);
         }
