@@ -1,5 +1,4 @@
 use github_actions_expressions::Expr;
-use subfeature::Subfeature;
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
@@ -82,8 +81,7 @@ impl Audit for SecretsOutsideEnvironment {
                     continue;
                 }
 
-                let after = span.start + origin.span.start;
-                let subfeature = Subfeature::new(after, origin.raw);
+                let span = expr.source_span(origin.span).adjust(span.start).as_range();
 
                 findings.push(
                     Self::finding()
@@ -98,7 +96,7 @@ impl Audit for SecretsOutsideEnvironment {
                             job.location()
                                 .primary()
                                 .annotated("secret is accessed outside of a dedicated environment"),
-                            Feature::from_subfeature(&subfeature, job),
+                            Feature::from_span(&span, job),
                         ))
                         .build(job)?,
                 );

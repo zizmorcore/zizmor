@@ -2,7 +2,6 @@ use github_actions_expressions::{
     Expr, SpannedExpr,
     op::{BinExpr, BinOp},
 };
-use subfeature::Subfeature;
 
 use crate::{
     audit::AuditError,
@@ -50,8 +49,10 @@ impl Audit for UnsoundTernary {
             };
 
             for true_value in Self::unsound_true_values(&parsed) {
-                let after = expr_span.start + true_value.origin.span.start;
-                let subfeature = Subfeature::new(after, true_value.origin.raw);
+                let span = expr
+                    .source_span(true_value.origin.span)
+                    .adjust(expr_span.start)
+                    .as_range();
 
                 findings.push(
                     Self::finding()
@@ -62,7 +63,7 @@ impl Audit for UnsoundTernary {
                                 .location()
                                 .annotated("pseudo-ternary has falsy true value")
                                 .primary(),
-                            Feature::from_subfeature(&subfeature, input),
+                            Feature::from_span(&span, input),
                         ))
                         .build(input)?,
                 );

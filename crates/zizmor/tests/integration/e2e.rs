@@ -10,6 +10,21 @@ mod crater;
 mod json_v1;
 mod parallel_steps;
 
+/// Regression test for #2422: YAML quote escaping must be decoded before
+/// expression parsing, while diagnostics retain their original source spans.
+#[test]
+fn issue_2422() -> Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .output(OutputMode::Both)
+            .args(["--persona=auditor"])
+            .input(input_under_test("issue-2422.yml"))
+            .run()?
+    );
+
+    Ok(())
+}
+
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn gha_hazmat() -> Result<()> {

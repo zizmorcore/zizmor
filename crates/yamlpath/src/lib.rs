@@ -660,6 +660,24 @@ impl Document {
         self.range_spanned_by_comment(offset, offset)
     }
 
+    /// Returns whether the given offset is within a single-quoted scalar.
+    pub fn offset_inside_single_quote_scalar(&self, offset: usize) -> bool {
+        let mut node = self
+            .tree
+            .root_node()
+            .named_descendant_for_byte_range(offset, offset);
+
+        // Escaped quotes are children of the scalar, so check ancestors too.
+        while let Some(current) = node {
+            if current.is_single_quote_scalar() {
+                return true;
+            }
+            node = current.parent();
+        }
+
+        false
+    }
+
     /// Perform a route on the current document, returning `true`
     /// if the route succeeds (i.e. references an existing feature).
     ///
@@ -1530,6 +1548,29 @@ baz: quux
                 assert!(!doc.offset_inside_comment(idx));
             } else {
                 assert!(doc.offset_inside_comment(idx));
+            }
+        }
+    }
+
+    #[test]
+    fn test_offset_inside_single_quote_scalar() {
+        for (source, expected) in [
+            ("foo: 'it''s quoted'", true),
+            ("foo: &anchor 'it''s quoted'", true),
+            ("foo: {bar: 'it''s quoted'}", true),
+            ("foo: \"it's quoted\"", false),
+            ("foo: it's plain", false),
+            ("foo: |\n  it's a block", false),
+            ("foo: bar # it's a comment", false),
+        ] {
+            let doc = Document::new(source).unwrap();
+            let start = source.find("it").unwrap();
+            for offset in start..start + 4 {
+                assert_eq!(
+                    doc.offset_inside_single_quote_scalar(offset),
+                    expected,
+                    "{source} at {offset}"
+                );
             }
         }
     }

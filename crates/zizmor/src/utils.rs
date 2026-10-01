@@ -349,6 +349,49 @@ impl<'a> ExtractedExpr<'a> {
     }
 }
 
+/// A fenced expression extracted from YAML, retaining its original spelling.
+///
+/// Single-quoted YAML scalars double each quote, which must be decoded before
+/// parsing the expression. Source spans still refer to the original YAML.
+pub(crate) struct RawExtractedExpr<'doc> {
+    raw: ExtractedExpr<'doc>,
+    unescaped: Option<String>,
+}
+
+impl<'doc> RawExtractedExpr<'doc> {
+    /// Returns the expression without fences or YAML quote escaping.
+    pub(crate) fn as_bare(&self) -> &str {
+        self.unescaped
+            .as_deref()
+            .unwrap_or_else(|| self.raw.as_bare())
+    }
+
+    /// Returns the original YAML spelling, including expression fences.
+    pub(crate) fn as_raw(&self) -> &'doc str {
+        self.raw.as_raw()
+    }
+
+    /// Maps a span within the decoded, bare expression to its original spelling,
+    /// relative to the start of the fenced expression.
+    pub(crate) fn source_span(&self, span: subfeature::Span) -> subfeature::Span {
+        let offset = |offset| {
+            let escapes = if self.unescaped.is_some() {
+                self.as_bare()[..offset]
+                    .bytes()
+                    .filter(|&byte| byte == b'\'')
+                    .count()
+            } else {
+                0
+            };
+            // Each decoded quote occupies two bytes in the source. Include
+            // the opening fence, since expression parser spans omit it.
+            offset + escapes + 3
+        };
+
+        (offset(span.start)..offset(span.end)).into()
+    }
+}
+
 /// Extract a fenced expression from the given free-form text, starting
 /// at the given offset. The returned span is absolute.
 ///
@@ -361,15 +404,29 @@ pub(crate) fn extract_fenced_expression(
     text: &str,
     offset: usize,
 ) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
+    extract_fenced_expression_with_quoting(text, offset, false)
+}
+
+/// Like [`extract_fenced_expression`], accounting for doubled YAML quotes when
+/// the expression occurs inside a single-quoted scalar.
+fn extract_fenced_expression_with_quoting(
+    text: &str,
+    offset: usize,
+    single_quoted: bool,
+) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
     let view = &text[offset..];
     let start = view.find("${{")?;
 
     let mut end = None;
     let mut in_string = false;
 
-    for (idx, char) in view.bytes().enumerate().skip(start) {
+    let mut bytes = view.bytes().enumerate().skip(start).peekable();
+    while let Some((idx, char)) = bytes.next() {
         if char == b'\'' {
             in_string = !in_string;
+            if single_quoted && bytes.peek().is_some_and(|(_, byte)| *byte == b'\'') {
+                bytes.next();
+            }
         } else if !in_string && view.as_bytes()[idx] == b'}' && view.as_bytes()[idx - 1] == b'}' {
             end = Some(idx);
             break;
@@ -407,8 +464,8 @@ pub(crate) fn extract_fenced_expressions(text: &str) -> Vec<(ExtractedExpr<'_>, 
 /// (which could be the entire document, like a workflow, or a fragment of it).
 ///
 /// Unlike [`extract_fenced_expressions`], this function performs some semantic
-/// filtering over the raw input. For example, it skip ignore expressions
-/// that are inside comments.
+/// filtering over the raw input. For example, it ignores expressions
+/// inside comments and decodes doubled quotes in single-quoted YAML scalars.
 ///
 /// The span associated with each extracted expression is absolute,
 /// i.e. relative to the start of the document, not the start of the feature.
@@ -418,7 +475,7 @@ pub(crate) fn parse_fenced_expressions_from_routable<
     R: AsDocument<'a, 'doc> + Routable<'a, 'doc>,
 >(
     input: &'a R,
-) -> Vec<(ExtractedExpr<'doc>, Range<usize>)> {
+) -> Vec<(RawExtractedExpr<'doc>, Range<usize>)> {
     let doc = input.as_document();
 
     let (content, feature) = {
@@ -434,19 +491,26 @@ pub(crate) fn parse_fenced_expressions_from_routable<
     let bias = feature.location.byte_span.0;
     let mut offset = 0;
 
-    while let Some((expr, span)) = extract_fenced_expression(content, offset) {
+    while let Some(start) = content[offset..].find("${{").map(|start| start + offset) {
         // Ignore expressions that are inside comments.
-        if doc.offset_inside_comment(span.start + bias) {
-            // Don't jump the entire span, since we might have an
-            // actual expression accidentally captured within it.
-            // Instead, just resume searching from the next character.
-            offset = span.start + 1;
+        if doc.offset_inside_comment(start + bias) {
+            offset = start + 1;
             continue;
         }
 
+        let single_quoted = doc.offset_inside_single_quote_scalar(start + bias);
+        let Some((expr, span)) =
+            extract_fenced_expression_with_quoting(content, start, single_quoted)
+        else {
+            break;
+        };
+        let expr = RawExtractedExpr {
+            unescaped: single_quoted.then(|| expr.as_bare().replace("''", "'")),
+            raw: expr,
+        };
         exprs.push((expr, (span.start + bias..span.end + bias)));
 
-        if span.end >= feature.location.byte_span.1 {
+        if span.end >= content.len() {
             break;
         } else {
             offset = span.end;
@@ -809,6 +873,72 @@ jobs:
             &workflow_content[exprs[1].1.clone()],
             "${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}"
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_extract_single_quoted_expressions() -> Result<()> {
+        for (scalar, expected) in [
+            ("'${{ ''foo'' }}'", " 'foo' "),
+            ("'${{ ''don''''t'' }}'", " 'don''t' "),
+            ("'${{ ''}}'' }}'", " '}}' "),
+            ("'${{ ''${{ nested }}'' }}'", " '${{ nested }}' "),
+            ("'it''s ${{ ''foo'' }}'", " 'foo' "),
+            ("'${{ secrets[''TOKEN''] }}'", " secrets['TOKEN'] "),
+            (
+                "'${{ format(\n  ''é{0}'', github.actor) }}'",
+                " format(\n  'é{0}', github.actor) ",
+            ),
+            ("\"${{ 'don''t' }}\"", " 'don''t' "),
+            ("${{ 'don''t' }}", " 'don''t' "),
+            ("|\n  ${{ 'don''t' }}", " 'don''t' "),
+        ] {
+            let source = format!(
+                "name: {scalar}\non: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n"
+            );
+            let workflow = AuditInput::from(Workflow::from_string(
+                source.clone(),
+                InputKey::local("fakegroup".into(), "fake", None, None),
+            )?);
+            let exprs = parse_fenced_expressions_from_routable(&workflow);
+            assert_eq!(exprs.len(), 1, "{scalar}");
+            let (expr, span) = &exprs[0];
+            assert_eq!(expr.as_bare(), expected, "{scalar}");
+            assert_eq!(expr.as_raw(), &source[span.clone()]);
+            Expr::parse(expr.as_bare())?;
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_single_quoted_expression_spans() -> Result<()> {
+        let source = r#"
+name: 'é ${{ format(''é{0}'', secrets[''TOKEN'']) }} ${{ secrets.NEXT }}'
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+"#;
+        let workflow = AuditInput::from(Workflow::from_string(
+            source.into(),
+            InputKey::local("fakegroup".into(), "fake", None, None),
+        )?);
+        let exprs = parse_fenced_expressions_from_routable(&workflow);
+        assert_eq!(exprs.len(), 2);
+        for ((expr, span), expected) in exprs.iter().zip(["secrets[''TOKEN'']", "secrets.NEXT"]) {
+            let parsed = Expr::parse(expr.as_bare())?;
+            let contexts = parsed.contexts();
+            assert_eq!(contexts.len(), 1);
+            let source_span = expr
+                .source_span(contexts[0].1.span)
+                .adjust(span.start)
+                .as_range();
+            assert_eq!(&source[source_span], expected);
+        }
 
         Ok(())
     }
