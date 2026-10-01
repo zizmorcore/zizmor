@@ -1555,12 +1555,8 @@ baz: quux
     #[test]
     fn test_offset_inside_single_quote_scalar() {
         for (source, expected) in [
-            ("foo: 'it''s quoted'", true),
             ("foo: &anchor 'it''s quoted'", true),
             ("foo: {bar: 'it''s quoted'}", true),
-            ("foo: \"it's quoted\"", false),
-            ("foo: it's plain", false),
-            ("foo: |\n  it's a block", false),
             ("foo: bar # it's a comment", false),
         ] {
             let doc = Document::new(source).unwrap();

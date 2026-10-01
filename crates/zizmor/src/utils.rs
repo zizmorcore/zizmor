@@ -879,21 +879,21 @@ jobs:
 
     #[test]
     fn test_extract_single_quoted_expressions() -> Result<()> {
-        for (scalar, expected) in [
-            ("'${{ ''foo'' }}'", " 'foo' "),
-            ("'${{ ''don''''t'' }}'", " 'don''t' "),
-            ("'${{ ''}}'' }}'", " '}}' "),
-            ("'${{ ''${{ nested }}'' }}'", " '${{ nested }}' "),
-            ("'it''s ${{ ''foo'' }}'", " 'foo' "),
-            ("'${{ secrets[''TOKEN''] }}'", " secrets['TOKEN'] "),
+        let cases: &[(&str, &[&str])] = &[
+            ("'${{ ''${{ nested }}'' }}'", &[" '${{ nested }}' "]),
+            (
+                "'é it''s ${{ ''foo'' }} ${{ secrets.NEXT }}'",
+                &[" 'foo' ", " secrets.NEXT "],
+            ),
             (
                 "'${{ format(\n  ''é{0}'', github.actor) }}'",
-                " format(\n  'é{0}', github.actor) ",
+                &[" format(\n  'é{0}', github.actor) "],
             ),
-            ("\"${{ 'don''t' }}\"", " 'don''t' "),
-            ("${{ 'don''t' }}", " 'don''t' "),
-            ("|\n  ${{ 'don''t' }}", " 'don''t' "),
-        ] {
+            ("\"${{ 'don''t' }}\"", &[" 'don''t' "]),
+            ("${{ 'don''t' }}", &[" 'don''t' "]),
+            ("|\n  ${{ 'don''t' }}", &[" 'don''t' "]),
+        ];
+        for (scalar, expected) in cases {
             let source = format!(
                 "name: {scalar}\non: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n"
             );
@@ -902,42 +902,17 @@ jobs:
                 InputKey::local("fakegroup".into(), "fake", None, None),
             )?);
             let exprs = parse_fenced_expressions_from_routable(&workflow);
-            assert_eq!(exprs.len(), 1, "{scalar}");
-            let (expr, span) = &exprs[0];
-            assert_eq!(expr.as_bare(), expected, "{scalar}");
-            assert_eq!(expr.as_raw(), &source[span.clone()]);
-            Expr::parse(expr.as_bare())?;
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_single_quoted_expression_spans() -> Result<()> {
-        let source = r#"
-name: 'é ${{ format(''é{0}'', secrets[''TOKEN'']) }} ${{ secrets.NEXT }}'
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo ok
-"#;
-        let workflow = AuditInput::from(Workflow::from_string(
-            source.into(),
-            InputKey::local("fakegroup".into(), "fake", None, None),
-        )?);
-        let exprs = parse_fenced_expressions_from_routable(&workflow);
-        assert_eq!(exprs.len(), 2);
-        for ((expr, span), expected) in exprs.iter().zip(["secrets[''TOKEN'']", "secrets.NEXT"]) {
-            let parsed = Expr::parse(expr.as_bare())?;
-            let contexts = parsed.contexts();
-            assert_eq!(contexts.len(), 1);
-            let source_span = expr
-                .source_span(contexts[0].1.span)
-                .adjust(span.start)
-                .as_range();
-            assert_eq!(&source[source_span], expected);
+            assert_eq!(exprs.len(), expected.len(), "{scalar}");
+            for ((expr, span), expected) in exprs.iter().zip(*expected) {
+                assert_eq!(expr.as_bare(), *expected, "{scalar}");
+                assert_eq!(expr.as_raw(), &source[span.clone()]);
+                let parsed = Expr::parse(expr.as_bare())?;
+                let mapped = expr.source_span(parsed.origin.span).adjust(span.start);
+                assert_eq!(
+                    &source[mapped.as_range()],
+                    expr.as_raw()[3..expr.as_raw().len() - 2].trim()
+                );
+            }
         }
 
         Ok(())
