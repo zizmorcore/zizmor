@@ -349,49 +349,6 @@ impl<'a> ExtractedExpr<'a> {
     }
 }
 
-/// A fenced expression extracted from YAML, retaining its original spelling.
-///
-/// Single-quoted YAML scalars double each quote, which must be decoded before
-/// parsing the expression. Source spans still refer to the original YAML.
-pub(crate) struct RawExtractedExpr<'doc> {
-    raw: ExtractedExpr<'doc>,
-    unescaped: Option<String>,
-}
-
-impl<'doc> RawExtractedExpr<'doc> {
-    /// Returns the expression without fences or YAML quote escaping.
-    pub(crate) fn as_bare(&self) -> &str {
-        self.unescaped
-            .as_deref()
-            .unwrap_or_else(|| self.raw.as_bare())
-    }
-
-    /// Returns the original YAML spelling, including expression fences.
-    pub(crate) fn as_raw(&self) -> &'doc str {
-        self.raw.as_raw()
-    }
-
-    /// Maps a span within the decoded, bare expression to its original spelling,
-    /// relative to the start of the fenced expression.
-    pub(crate) fn source_span(&self, span: subfeature::Span) -> subfeature::Span {
-        let offset = |offset| {
-            let escapes = if self.unescaped.is_some() {
-                self.as_bare()[..offset]
-                    .bytes()
-                    .filter(|&byte| byte == b'\'')
-                    .count()
-            } else {
-                0
-            };
-            // Each decoded quote occupies two bytes in the source. Include
-            // the opening fence, since expression parser spans omit it.
-            offset + escapes + 3
-        };
-
-        (offset(span.start)..offset(span.end)).into()
-    }
-}
-
 /// Extract a fenced expression from the given free-form text, starting
 /// at the given offset. The returned span is absolute.
 ///
@@ -404,29 +361,15 @@ pub(crate) fn extract_fenced_expression(
     text: &str,
     offset: usize,
 ) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
-    extract_fenced_expression_with_quoting(text, offset, false)
-}
-
-/// Like [`extract_fenced_expression`], accounting for doubled YAML quotes when
-/// the expression occurs inside a single-quoted scalar.
-fn extract_fenced_expression_with_quoting(
-    text: &str,
-    offset: usize,
-    single_quoted: bool,
-) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
     let view = &text[offset..];
     let start = view.find("${{")?;
 
     let mut end = None;
     let mut in_string = false;
 
-    let mut bytes = view.bytes().enumerate().skip(start).peekable();
-    while let Some((idx, char)) = bytes.next() {
+    for (idx, char) in view.bytes().enumerate().skip(start) {
         if char == b'\'' {
             in_string = !in_string;
-            if single_quoted && bytes.peek().is_some_and(|(_, byte)| *byte == b'\'') {
-                bytes.next();
-            }
         } else if !in_string && view.as_bytes()[idx] == b'}' && view.as_bytes()[idx - 1] == b'}' {
             end = Some(idx);
             break;
@@ -459,65 +402,28 @@ pub(crate) fn extract_fenced_expressions(text: &str) -> Vec<(ExtractedExpr<'_>, 
     exprs
 }
 
-/// Like [`extract_fenced_expressions`], but over an "routable," i.e.
-/// a document feature that has an associated route within the document
-/// (which could be the entire document, like a workflow, or a fragment of it).
-///
-/// Unlike [`extract_fenced_expressions`], this function performs some semantic
-/// filtering over the raw input. For example, it ignores expressions
-/// inside comments and decodes doubled quotes in single-quoted YAML scalars.
-///
-/// The span associated with each extracted expression is absolute,
-/// i.e. relative to the start of the document, not the start of the feature.
+/// Extracts bare expression text from a routable's scalars, retaining its source
+/// mapping. Each accompanying span covers the original expression's fences too.
 pub(crate) fn parse_fenced_expressions_from_routable<
     'a,
     'doc,
     R: AsDocument<'a, 'doc> + Routable<'a, 'doc>,
 >(
     input: &'a R,
-) -> Vec<(RawExtractedExpr<'doc>, Range<usize>)> {
-    let doc = input.as_document();
-
-    let (content, feature) = {
-        // NOTE: expect here because a failure in feature extraction here indicates a
-        // significant internal error, not something the user can recover from.
-        let feature = doc
-            .query_pretty(&input.route())
-            .expect("invalid route when extracting fenced expressions");
-        (doc.extract(&feature), feature)
-    };
-
-    let mut exprs = vec![];
-    let bias = feature.location.byte_span.0;
-    let mut offset = 0;
-
-    while let Some(start) = content[offset..].find("${{").map(|start| start + offset) {
-        // Ignore expressions that are inside comments.
-        if doc.offset_inside_comment(start + bias) {
-            offset = start + 1;
-            continue;
-        }
-
-        let single_quoted = doc.offset_inside_single_quote_scalar(start + bias);
-        let Some((expr, span)) =
-            extract_fenced_expression_with_quoting(content, start, single_quoted)
-        else {
-            break;
-        };
-        let expr = RawExtractedExpr {
-            unescaped: single_quoted.then(|| expr.as_bare().replace("''", "'")),
-            raw: expr,
-        };
-        exprs.push((expr, (span.start + bias..span.end + bias)));
-
-        if span.end >= content.len() {
-            break;
-        } else {
-            offset = span.end;
-        }
-    }
-
-    exprs
+) -> impl Iterator<Item = (yamlpath::Scalar<'doc>, Range<usize>)> {
+    input
+        .as_document()
+        .scalars(&input.route())
+        .expect("invalid route when extracting scalars")
+        .flat_map(|scalar| {
+            extract_fenced_expressions(scalar.text())
+                .into_iter()
+                .map(|(_, span)| {
+                    let bare = scalar.slice(span.start + 3..span.end - 2);
+                    (bare, scalar.source_span(span))
+                })
+                .collect::<Vec<_>>()
+        })
 }
 
 /// Returns whether the given `env.name` environment access is "static,"
@@ -670,13 +576,19 @@ mod tests {
 
     use crate::{
         audit::AuditInput,
-        models::{action::Action, workflow::Workflow},
+        models::{AsDocument as _, action::Action, workflow::Workflow},
         registry::input::InputKey,
         utils::{
             env_is_static, extract_fenced_expression, extract_fenced_expressions, normalize_shell,
             parse_fenced_expressions_from_routable,
         },
     };
+
+    fn expressions_from_input(input: &AuditInput) -> Vec<(String, std::ops::Range<usize>)> {
+        parse_fenced_expressions_from_routable(input)
+            .map(|(_, span)| (input.as_document().source()[span.clone()].to_owned(), span))
+            .collect()
+    }
 
     #[test]
     fn split_patterns() {
@@ -779,9 +691,9 @@ runs:
             InputKey::local("fakegroup".into(), "fake", None, None),
         )?);
 
-        let exprs = parse_fenced_expressions_from_routable(&action);
+        let exprs = expressions_from_input(&action);
         assert_eq!(exprs.len(), 1);
-        assert_eq!(exprs[0].0.as_raw().to_string(), "${{ '' }}");
+        assert_eq!(exprs[0].0, "${{ '' }}");
 
         let workflow = r#"
 # ${{ 'don''t parse me' }}
@@ -789,6 +701,7 @@ runs:
 # Observe that the expression in the comment below is invalid:
 # it's missing a closing brace. This should not interfere with
 # parsing the rest of the file's expressions
+run-name: '${{ unclosed'
 name: >- # ${{ 'oops' }
   custom-name-${{ github.sha }}
 
@@ -810,9 +723,9 @@ jobs:
             InputKey::local("fakegroup".into(), "fake", None, None),
         )?);
 
-        let exprs = parse_fenced_expressions_from_routable(&workflow)
+        let exprs = expressions_from_input(&workflow)
             .into_iter()
-            .map(|(e, _)| e.as_raw().to_string())
+            .map(|(e, _)| e)
             .collect::<Vec<_>>();
 
         assert_eq!(exprs, &["${{ github.sha }}", "${{ github.actor }}",]);
@@ -852,10 +765,7 @@ jobs:
             workflow_content.into(),
             InputKey::local("fakegroup".into(), "fake", None, None),
         )?);
-        let exprs = parse_fenced_expressions_from_routable(&workflow)
-            .into_iter()
-            .map(|(e, span)| (e.as_raw().to_string(), span))
-            .collect::<Vec<_>>();
+        let exprs = expressions_from_input(&workflow);
 
         assert_eq!(exprs.len(), 2);
         assert_eq!(exprs[0].0, "${{ inputs.rp_target_branch }}");
@@ -901,17 +811,14 @@ jobs:
                 source.clone(),
                 InputKey::local("fakegroup".into(), "fake", None, None),
             )?);
-            let exprs = parse_fenced_expressions_from_routable(&workflow);
+            let exprs = parse_fenced_expressions_from_routable(&workflow).collect::<Vec<_>>();
             assert_eq!(exprs.len(), expected.len(), "{scalar}");
             for ((expr, span), expected) in exprs.iter().zip(*expected) {
-                assert_eq!(expr.as_bare(), *expected, "{scalar}");
-                assert_eq!(expr.as_raw(), &source[span.clone()]);
-                let parsed = Expr::parse(expr.as_bare())?;
-                let mapped = expr.source_span(parsed.origin.span).adjust(span.start);
-                assert_eq!(
-                    &source[mapped.as_range()],
-                    expr.as_raw()[3..expr.as_raw().len() - 2].trim()
-                );
+                assert_eq!(expr.text(), *expected, "{scalar}");
+                let parsed = Expr::parse(expr.text())?;
+                let mapped = expr.source_span(parsed.origin.span.as_range());
+                let raw = &source[span.clone()];
+                assert_eq!(&source[mapped], raw[3..raw.len() - 2].trim());
             }
         }
 

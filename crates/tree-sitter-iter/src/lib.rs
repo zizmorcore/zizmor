@@ -14,8 +14,13 @@ pub struct TreeIter<'tree> {
 impl<'tree> TreeIter<'tree> {
     /// Creates a new `TreeSitterIter` for the given syntax tree.
     pub fn new(tree: &'tree Tree) -> Self {
+        Self::from_node(tree.root_node())
+    }
+
+    /// Creates an iterator over a node and its descendants.
+    pub fn from_node(node: Node<'tree>) -> Self {
         Self {
-            cursor: Some(tree.root_node().walk()),
+            cursor: Some(node.walk()),
         }
     }
 }

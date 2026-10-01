@@ -45,8 +45,8 @@ impl Audit for UnredactedSecrets {
         }
 
         for (expr, span) in parse_fenced_expressions_from_routable(input) {
-            let Ok(parsed) = Expr::parse(expr.as_bare()) else {
-                tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
+            let Ok(parsed) = Expr::parse(expr.text()) else {
+                tracing::warn!("couldn't parse expression: {expr}", expr = expr.text());
                 continue;
             };
 

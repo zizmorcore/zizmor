@@ -142,6 +142,13 @@ pub enum Op<'doc> {
         from: subfeature::Subfeature<'doc>,
         to: Cow<'doc, str>,
     },
+    /// Rewrites a source fragment within a scalar, escaping replacement quotes
+    /// for single-quoted YAML. `from` matches the original YAML spelling;
+    /// `to` contains the replacement text without YAML quote escaping.
+    RewriteScalarFragment {
+        from: subfeature::Subfeature<'doc>,
+        to: Cow<'doc, str>,
+    },
     /// Replace a comment at the given path.
     ///
     /// This operation replaces the entire comment associated with the feature
@@ -225,7 +232,7 @@ fn apply_single_patch(
 ) -> Result<yamlpath::Document, Error> {
     let content = document.source();
     let mut patched_content = match &patch.operation {
-        Op::RewriteFragment { from, to } => {
+        Op::RewriteFragment { from, to } | Op::RewriteScalarFragment { from, to } => {
             // HACK: If we have an empty route, we're trying to rewrite against the entire document.
             // In an ideal world we'd use `top_feature` here (or indirectly in
             // `route_to_feature_exact`), but we might have leading whitespace that isn't captured
@@ -262,8 +269,30 @@ fn apply_single_patch(
                 )));
             };
 
+            let replacement = if matches!(&patch.operation, Op::RewriteScalarFragment { .. }) {
+                let scalar = document
+                    .scalar_at(range.start + span.start)
+                    .ok_or_else(|| {
+                        Error::InvalidOperation("replacement is not within a scalar".into())
+                    })?;
+                let scalar_span = scalar.source_span(0..scalar.text().len());
+                if range.start + span.start < scalar_span.start
+                    || range.start + span.end > scalar_span.end
+                {
+                    return Err(Error::InvalidOperation(
+                        "replacement extends beyond scalar".into(),
+                    ));
+                }
+                if scalar.style() == yamlpath::ScalarStyle::SingleQuoted {
+                    Cow::Owned(to.replace('\'', "''"))
+                } else {
+                    Cow::Borrowed(to.as_ref())
+                }
+            } else {
+                Cow::Borrowed(to.as_ref())
+            };
             let mut patched_feature = extracted_feature.to_string();
-            patched_feature.replace_range(span.as_range(), to);
+            patched_feature.replace_range(span.as_range(), &replacement);
 
             // Finally, put our patch back into the overall content.
             let mut patched_content = content.to_string();

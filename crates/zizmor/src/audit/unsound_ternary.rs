@@ -42,17 +42,14 @@ impl Audit for UnsoundTernary {
             return Ok(findings);
         }
 
-        for (expr, expr_span) in parse_fenced_expressions_from_routable(input) {
-            let Ok(parsed) = Expr::parse(expr.as_bare()) else {
-                tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
+        for (expr, _) in parse_fenced_expressions_from_routable(input) {
+            let Ok(parsed) = Expr::parse(expr.text()) else {
+                tracing::warn!("couldn't parse expression: {expr}", expr = expr.text());
                 continue;
             };
 
             for true_value in Self::unsound_true_values(&parsed) {
-                let span = expr
-                    .source_span(true_value.origin.span)
-                    .adjust(expr_span.start)
-                    .as_range();
+                let span = expr.source_span(true_value.origin.span.as_range());
 
                 findings.push(
                     Self::finding()
