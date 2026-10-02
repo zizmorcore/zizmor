@@ -1,0 +1,19 @@
+on: pull_request_target # zizmor: ignore[dangerous-triggers]
+
+name: cache-poisoning
+
+permissions: {}
+
+cache-mode: none
+
+concurrency:
+  group: foo
+  cancel-in-progress: true
+
+jobs:
+  foo:
+    name: foo
+    cache-mode: write
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo foo

@@ -842,6 +842,61 @@ fn test_effective_cache_mode_none_suppresses_findings() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// We flag the combination of an explicit `cache-mode: write` (or `write-only`)
+/// and a dangerous trigger.
+#[test]
+fn test_dangerous_trigger_cache_write() -> anyhow::Result<()> {
+    // cache-mode: write at the workflow level.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "cache-poisoning/dangerous-trigger-write-cache.yml"
+            ))
+            .run()?,
+        @"
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:7:1
+       |
+     1 | on: pull_request_target # zizmor: ignore[dangerous-triggers]
+       | ----------------------- trigger provides elevated access to external actors
+    ...
+     7 | cache-mode: write
+       | ^^^^^^^^^^^^^^^^^ cache writes enabled here
+    ...
+    15 |     name: foo
+       |     --------- this job can write to the cache
+       |
+       = note: audit confidence → High
+
+    2 findings (1 ignored): 0 informational, 0 low, 0 medium, 1 high
+    ");
+
+    // cache-mode: write at the job level.
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "cache-poisoning/dangerous-trigger-write-cache-job.yml"
+            ))
+            .run()?,
+        @"
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:16:5
+       |
+     1 | on: pull_request_target # zizmor: ignore[dangerous-triggers]
+       | ----------------------- trigger provides elevated access to external actors
+    ...
+    15 |     name: foo
+       |     --------- this job can write to the cache
+    16 |     cache-mode: write
+       |     ^^^^^^^^^^^^^^^^^ cache writes enabled here
+       |
+       = note: audit confidence → High
+
+    2 findings (1 ignored): 0 informational, 0 low, 0 medium, 1 high
+    ");
+    Ok(())
+}
+
 #[test]
 fn test_fix_cache_disable_opt_out_boolean() -> anyhow::Result<()> {
     let workflow_content = r#"

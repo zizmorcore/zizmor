@@ -13,7 +13,7 @@ pub(crate) struct EffectiveCacheMode<'doc> {
     pub(crate) mode: CacheMode,
     /// If the cache mode is explicit, this is the symbolic location
     /// where it appears.
-    _location: Option<SymbolicLocation<'doc>>,
+    pub(crate) location: Option<SymbolicLocation<'doc>>,
 }
 
 /// Exposes a job's effective cache mode.
@@ -35,13 +35,13 @@ impl<'doc, Job: JobCommon<'doc>> HasEffectiveCacheMode<'doc> for Job {
             // The job itself has an explicit cache-mode.
             Some(mode) => EffectiveCacheMode {
                 mode,
-                _location: Some(self.location().with_keys(["cache-mode".into()])),
+                location: Some(self.location().with_keys(["cache-mode".into()])),
             },
             None => match self.parent().cache_mode {
                 // The parent (workflow) has an explicit cache-mode.
                 Some(mode) => EffectiveCacheMode {
                     mode,
-                    _location: Some(self.parent().location().with_keys(["cache-mode".into()])),
+                    location: Some(self.parent().location().with_keys(["cache-mode".into()])),
                 },
                 // Neither the job nor the workfloe has an explicit-cache mode,
                 // so we get an implied one from the triggers.
@@ -57,13 +57,13 @@ impl<'doc, Job: JobCommon<'doc>> HasEffectiveCacheMode<'doc> for Job {
                     {
                         EffectiveCacheMode {
                             mode: CacheMode::Write,
-                            _location: None,
+                            location: None,
                         }
                     } else {
                         // Everything else gets `cache-mode: read` by default.
                         EffectiveCacheMode {
                             mode: CacheMode::Read,
-                            _location: None,
+                            location: None,
                         }
                     }
                 }
