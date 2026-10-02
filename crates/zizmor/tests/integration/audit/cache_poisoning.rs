@@ -929,7 +929,9 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -14,2 +14,3 @@
+    @@ -12,4 +12,5 @@
+                 ~/.cargo/registry
+                 ~/.cargo/git
                key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     +          lookup-only: true
            - uses: softprops/action-gh-release@v1
@@ -967,7 +969,9 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -11,3 +11,3 @@
+    @@ -9,5 +9,5 @@
+           - uses: actions/setup-go@v4
+             with:
                go-version: '1.21'
     -          cache: true
     +          cache: false
@@ -1011,7 +1015,9 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -9,10 +9,12 @@
+    @@ -7,12 +7,14 @@
+         runs-on: ubuntu-latest
+         steps:
            - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
     +        with:
     +          enable-cache: false
@@ -1068,10 +1074,15 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -7,3 +7,3 @@
-     
+    @@ -5,7 +5,7 @@
+     ⏎
+     permissions: {}
+     ⏎
     -cache-mode: write
     +cache-mode: none
+     ⏎
+     concurrency:
+       group: foo
     "
     );
 
@@ -1114,11 +1125,15 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -16,3 +16,3 @@
+    @@ -14,7 +14,7 @@
+     jobs:
+       foo:
          name: foo
     -    cache-mode: write
     +    cache-mode: none
          runs-on: ubuntu-latest
+         steps:
+           - run: echo foo
     "
     );
 

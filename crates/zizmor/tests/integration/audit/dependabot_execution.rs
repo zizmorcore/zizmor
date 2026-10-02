@@ -54,7 +54,9 @@ updates:
                 .run()
         })?,
         @"
-    @@ -10,2 +10,2 @@
+    @@ -8,4 +8,4 @@
+           interval: daily
+         cooldown:
            default-days: 7
     -    insecure-external-code-execution: allow
     +    insecure-external-code-execution: deny

@@ -368,11 +368,14 @@ runs:
                 .run()
         })?,
         @"
-    @@ -7,3 +7,3 @@
+    @@ -5,6 +5,6 @@
+       using: composite
+       steps:
          - name: Checkout without version comment
     -      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     +      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
            with:
+             persist-credentials: false
     "
     );
 
@@ -410,11 +413,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -9,3 +9,3 @@
+    @@ -7,6 +7,6 @@
+         runs-on: ubuntu-latest
+         steps:
            - name: Checkout without version comment
     -        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     +        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
              with:
+               persist-credentials: false
     "
     );
 
@@ -452,11 +458,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -9,3 +9,3 @@
+    @@ -7,6 +7,6 @@
+         runs-on: ubuntu-latest
+         steps:
            - name: Checkout with mismatched version comment
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
+               persist-credentials: false
     "
     );
 
@@ -495,11 +504,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -9,3 +9,3 @@
+    @@ -7,6 +7,6 @@
+         runs-on: ubuntu-latest
+         steps:
            - name: Checkout with mismatched version comment
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
+               persist-credentials: false
     "
     );
 
@@ -537,11 +549,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -9,3 +9,3 @@
+    @@ -7,6 +7,6 @@
+         runs-on: ubuntu-latest
+         steps:
            -
     -        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     +        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
              with:
+               persist-credentials: false
     "
     );
 
@@ -587,21 +602,24 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -9,3 +9,3 @@
+    @@ -7,14 +7,14 @@
+         runs-on: ubuntu-latest
+         steps:
            - name: Tag format
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # tag=v3.0.0
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
-    @@ -13,3 +13,3 @@
+               persist-credentials: false
            - name: Simple format
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
-    @@ -17,3 +17,3 @@
+               persist-credentials: false
            - name: Version format
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # version: v3.0.0
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
+               persist-credentials: false
     "
     );
 
@@ -642,7 +660,9 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -14,2 +14,2 @@
+    @@ -12,4 +12,4 @@
+         runs-on: ubuntu-latest
+         steps:
            - name: Setup Go
     -        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v9.9.9
     +        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -683,7 +703,9 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -11,2 +11,2 @@
+    @@ -9,4 +9,4 @@
+     jobs:
+       job1:
          name: job1
     -    uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.16.0
     +    uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.17.0

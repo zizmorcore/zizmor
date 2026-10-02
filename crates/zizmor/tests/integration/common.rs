@@ -1,7 +1,7 @@
 use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use regex::{Captures, Regex};
-use std::{env::current_dir, fs, io::ErrorKind, sync::LazyLock};
+use std::{env::current_dir, fmt::Write as _, fs, io::ErrorKind, sync::LazyLock};
 use tempfile::TempDir;
 
 use assert_cmd::{Command, cargo};
@@ -605,11 +605,16 @@ impl Workspace {
 
         let diff = similar::TextDiff::from_lines(&old, &new);
 
-        let rendered = diff
-            .unified_diff()
-            .context_radius(1)
-            .missing_newline_hint(false)
-            .to_string();
+        let mut rendered = String::new();
+        for hunk in diff.unified_diff().context_radius(3).iter_hunks() {
+            writeln!(rendered, "{}", hunk.header())?;
+            for change in hunk.iter_changes() {
+                let line = change.value().trim_end_matches(['\r', '\n']);
+                // Protect blank diff lines from editors that strip trailing whitespace.
+                let marker = if line.trim().is_empty() { "⏎" } else { "" };
+                writeln!(rendered, "{}{line}{marker}", change.tag())?;
+            }
+        }
 
         Ok(rendered)
     }

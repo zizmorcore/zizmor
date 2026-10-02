@@ -218,10 +218,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -12,2 +12,3 @@
+    @@ -10,6 +10,7 @@
+             with:
+                 token: ${{ secrets.GITHUB_TOKEN }}
                  fetch-depth: 2
     +            persist-credentials: false
            - name: Upload artifacts
+             uses: actions/upload-artifact@v4
+             with:
     "
     );
 
@@ -258,11 +262,15 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -9,2 +9,4 @@
+    @@ -7,6 +7,8 @@
+         steps:
+           - name: Checkout
              uses: actions/checkout@v4
     +        with:
     +          persist-credentials: false
            - name: Upload artifacts
+             uses: actions/upload-artifact@v4
+             with:
     "
     );
 

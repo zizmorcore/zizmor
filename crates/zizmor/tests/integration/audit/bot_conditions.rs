@@ -183,7 +183,9 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -8,6 +8,6 @@
+    @@ -6,8 +6,8 @@
+     jobs:
+       test:
          runs-on: ubuntu-latest
     -    if: github.actor == 'dependabot[bot]'
     +    if: github.event.pull_request.user.login == 'dependabot[bot]'
@@ -228,7 +230,9 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -7,6 +7,6 @@
+    @@ -5,8 +5,8 @@
+     jobs:
+       test:
          runs-on: ubuntu-latest
     -    if: github.ACTOR == 'dependabot[bot]'
     +    if: github.event.comment.user.login == 'dependabot[bot]'
@@ -270,7 +274,9 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -7,6 +7,6 @@
+    @@ -5,8 +5,8 @@
+     jobs:
+       test:
          runs-on: ubuntu-latest
     -    if: github.actor == 'dependabot[bot]'
     +    if: github.event.review.user.login == 'dependabot[bot]'
@@ -313,7 +319,9 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -8,6 +8,6 @@
+    @@ -6,8 +6,8 @@
+     jobs:
+       test:
          runs-on: ubuntu-latest
     -    if: github.actor == 'dependabot[bot]' || github.actor == 'renovate[bot]'
     +    if: github.event.pull_request.user.login == 'dependabot[bot]' || github.actor == 'renovate[bot]'
