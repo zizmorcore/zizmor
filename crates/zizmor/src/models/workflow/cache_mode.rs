@@ -46,7 +46,6 @@ impl<'doc, Job: JobCommon<'doc>> HasEffectiveCacheMode<'doc> for Job {
                 // Neither the job nor the workfloe has an explicit-cache mode,
                 // so we get an implied one from the triggers.
                 None => {
-                    // TODO: This is wrong, we need some kind of set operation here.
                     let events = &self.parent().on.events;
                     if events.push.is_present()
                         || events.workflow_dispatch.is_present()
