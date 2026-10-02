@@ -2,6 +2,42 @@ use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
 use anyhow::Result;
 
 #[test]
+fn test_fix_single_quoted_expressions() -> Result<()> {
+    for (original, fixed) in [
+        ("'${{ ''foo'' }}'", "'foo'"),
+        ("'${{ ''don''''t'' }}'", "'don''t'"),
+        (
+            "'${{ secrets[''TOKEN''] || contains(''a'', ''a'') }}'",
+            "'${{ secrets[''TOKEN''] || true }}'",
+        ),
+    ] {
+        let source = format!(
+            r#"
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+        env:
+          FOO: {original}
+"#,
+        );
+        let workspace = WorkspaceBuilder::new().build()?;
+        workspace.add_file("test.yml", &source);
+        let path = workspace.path().join("test.yml");
+        let output = zizmor().args(["--fix=safe"]).input(&path).run()?;
+        assert_eq!(
+            std::fs::read_to_string(path)?,
+            source.replace(original, fixed),
+            "{output}"
+        );
+    }
+
+    Ok(())
+}
+
+#[test]
 fn test_obfuscation() -> Result<()> {
     insta::assert_snapshot!(
         zizmor()

@@ -402,58 +402,28 @@ pub(crate) fn extract_fenced_expressions(text: &str) -> Vec<(ExtractedExpr<'_>, 
     exprs
 }
 
-/// Like [`extract_fenced_expressions`], but over an "routable," i.e.
-/// a document feature that has an associated route within the document
-/// (which could be the entire document, like a workflow, or a fragment of it).
-///
-/// Unlike [`extract_fenced_expressions`], this function performs some semantic
-/// filtering over the raw input. For example, it skip ignore expressions
-/// that are inside comments.
-///
-/// The span associated with each extracted expression is absolute,
-/// i.e. relative to the start of the document, not the start of the feature.
+/// Extracts bare expression text from a routable's scalars, retaining its source
+/// mapping. Each accompanying span covers the original expression's fences too.
 pub(crate) fn parse_fenced_expressions_from_routable<
     'a,
     'doc,
     R: AsDocument<'a, 'doc> + Routable<'a, 'doc>,
 >(
     input: &'a R,
-) -> Vec<(ExtractedExpr<'doc>, Range<usize>)> {
-    let doc = input.as_document();
-
-    let (content, feature) = {
-        // NOTE: expect here because a failure in feature extraction here indicates a
-        // significant internal error, not something the user can recover from.
-        let feature = doc
-            .query_pretty(&input.route())
-            .expect("invalid route when extracting fenced expressions");
-        (doc.extract(&feature), feature)
-    };
-
-    let mut exprs = vec![];
-    let bias = feature.location.byte_span.0;
-    let mut offset = 0;
-
-    while let Some((expr, span)) = extract_fenced_expression(content, offset) {
-        // Ignore expressions that are inside comments.
-        if doc.offset_inside_comment(span.start + bias) {
-            // Don't jump the entire span, since we might have an
-            // actual expression accidentally captured within it.
-            // Instead, just resume searching from the next character.
-            offset = span.start + 1;
-            continue;
-        }
-
-        exprs.push((expr, (span.start + bias..span.end + bias)));
-
-        if span.end >= feature.location.byte_span.1 {
-            break;
-        } else {
-            offset = span.end;
-        }
-    }
-
-    exprs
+) -> impl Iterator<Item = (yamlpath::Scalar<'doc>, Range<usize>)> {
+    input
+        .as_document()
+        .scalars(&input.route())
+        .expect("invalid route when extracting scalars")
+        .flat_map(|scalar| {
+            extract_fenced_expressions(scalar.text())
+                .into_iter()
+                .map(|(_, span)| {
+                    let bare = scalar.slice(span.start + 3..span.end - 2);
+                    (bare, scalar.source_span(span))
+                })
+                .collect::<Vec<_>>()
+        })
 }
 
 /// Returns whether the given `env.name` environment access is "static,"
@@ -606,13 +576,19 @@ mod tests {
 
     use crate::{
         audit::AuditInput,
-        models::{action::Action, workflow::Workflow},
+        models::{AsDocument as _, action::Action, workflow::Workflow},
         registry::input::InputKey,
         utils::{
             env_is_static, extract_fenced_expression, extract_fenced_expressions, normalize_shell,
             parse_fenced_expressions_from_routable,
         },
     };
+
+    fn expressions_from_input(input: &AuditInput) -> Vec<(String, std::ops::Range<usize>)> {
+        parse_fenced_expressions_from_routable(input)
+            .map(|(_, span)| (input.as_document().source()[span.clone()].to_owned(), span))
+            .collect()
+    }
 
     #[test]
     fn split_patterns() {
@@ -715,9 +691,9 @@ runs:
             InputKey::local("fakegroup".into(), "fake", None, None),
         )?);
 
-        let exprs = parse_fenced_expressions_from_routable(&action);
+        let exprs = expressions_from_input(&action);
         assert_eq!(exprs.len(), 1);
-        assert_eq!(exprs[0].0.as_raw().to_string(), "${{ '' }}");
+        assert_eq!(exprs[0].0, "${{ '' }}");
 
         let workflow = r#"
 # ${{ 'don''t parse me' }}
@@ -725,6 +701,7 @@ runs:
 # Observe that the expression in the comment below is invalid:
 # it's missing a closing brace. This should not interfere with
 # parsing the rest of the file's expressions
+run-name: '${{ unclosed'
 name: >- # ${{ 'oops' }
   custom-name-${{ github.sha }}
 
@@ -746,9 +723,9 @@ jobs:
             InputKey::local("fakegroup".into(), "fake", None, None),
         )?);
 
-        let exprs = parse_fenced_expressions_from_routable(&workflow)
+        let exprs = expressions_from_input(&workflow)
             .into_iter()
-            .map(|(e, _)| e.as_raw().to_string())
+            .map(|(e, _)| e)
             .collect::<Vec<_>>();
 
         assert_eq!(exprs, &["${{ github.sha }}", "${{ github.actor }}",]);
@@ -788,10 +765,7 @@ jobs:
             workflow_content.into(),
             InputKey::local("fakegroup".into(), "fake", None, None),
         )?);
-        let exprs = parse_fenced_expressions_from_routable(&workflow)
-            .into_iter()
-            .map(|(e, span)| (e.as_raw().to_string(), span))
-            .collect::<Vec<_>>();
+        let exprs = expressions_from_input(&workflow);
 
         assert_eq!(exprs.len(), 2);
         assert_eq!(exprs[0].0, "${{ inputs.rp_target_branch }}");
@@ -809,6 +783,44 @@ jobs:
             &workflow_content[exprs[1].1.clone()],
             "${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}"
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_extract_single_quoted_expressions() -> Result<()> {
+        let cases: &[(&str, &[&str])] = &[
+            ("'${{ ''${{ nested }}'' }}'", &[" '${{ nested }}' "]),
+            (
+                "'é it''s ${{ ''foo'' }} ${{ secrets.NEXT }}'",
+                &[" 'foo' ", " secrets.NEXT "],
+            ),
+            (
+                "'${{ format(\n  ''é{0}'', github.actor) }}'",
+                &[" format(\n  'é{0}', github.actor) "],
+            ),
+            ("\"${{ 'don''t' }}\"", &[" 'don''t' "]),
+            ("${{ 'don''t' }}", &[" 'don''t' "]),
+            ("|\n  ${{ 'don''t' }}", &[" 'don''t' "]),
+        ];
+        for (scalar, expected) in cases {
+            let source = format!(
+                "name: {scalar}\non: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n"
+            );
+            let workflow = AuditInput::from(Workflow::from_string(
+                source.clone(),
+                InputKey::local("fakegroup".into(), "fake", None, None),
+            )?);
+            let exprs = parse_fenced_expressions_from_routable(&workflow).collect::<Vec<_>>();
+            assert_eq!(exprs.len(), expected.len(), "{scalar}");
+            for ((expr, span), expected) in exprs.iter().zip(*expected) {
+                assert_eq!(expr.text(), *expected, "{scalar}");
+                let parsed = Expr::parse(expr.text())?;
+                let mapped = expr.source_span(parsed.origin.span.as_range());
+                let raw = &source[span.clone()];
+                assert_eq!(&source[mapped], raw[3..raw.len() - 2].trim());
+            }
+        }
 
         Ok(())
     }

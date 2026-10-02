@@ -24,6 +24,9 @@ use thiserror::Error;
 use tree_sitter::{Language, Node, Parser};
 use tree_sitter_iter::TreeIter;
 
+mod scalar;
+pub use scalar::{Scalar, ScalarStyle};
+
 /// Extension trait for tree-sitter `Node` to provide fluent node kind checks.
 /// The complete list of node type is available at https://github.com/tree-sitter-grammars/tree-sitter-yaml/blob/master/src/node-types.json
 /// but only the one used in this crate are implemented below.
@@ -658,6 +661,37 @@ impl Document {
     /// Returns whether the given offset is within a comment node's span.
     pub fn offset_inside_comment(&self, offset: usize) -> bool {
         self.range_spanned_by_comment(offset, offset)
+    }
+
+    /// Returns the scalars within a route's pretty feature, in source order.
+    ///
+    /// Includes mapping keys as well as values, but excludes comments and aliases.
+    pub fn scalars<'doc>(
+        &'doc self,
+        route: &Route,
+    ) -> Result<impl Iterator<Item = Scalar<'doc>> + use<'doc>, QueryError> {
+        let node = self.query_node(route, QueryMode::Pretty)?;
+        Ok(TreeIter::from_node(node)
+            .filter(|node| node.is_scalar())
+            .map(|node| Scalar::new(self.source(), node)))
+    }
+
+    /// Returns the scalar containing a document byte offset, if any.
+    pub fn scalar_at(&self, offset: usize) -> Option<Scalar<'_>> {
+        let mut node = self
+            .tree
+            .root_node()
+            .named_descendant_for_byte_range(offset, offset);
+
+        // Escape sequences are children of their scalar.
+        while let Some(current) = node {
+            if current.is_scalar() {
+                return Some(Scalar::new(self.source(), current));
+            }
+            node = current.parent();
+        }
+
+        None
     }
 
     /// Perform a route on the current document, returning `true`

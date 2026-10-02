@@ -1,5 +1,4 @@
 use github_actions_expressions::Expr;
-use subfeature::Subfeature;
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
@@ -60,9 +59,9 @@ impl Audit for SecretsOutsideEnvironment {
         // GitHub Actions doesn't require fencing on expressions. In practice however GitHub Actions
         // doesn't allow users to reference secrets in `if:` clauses.
         let mut findings = vec![];
-        for (expr, span) in parse_fenced_expressions_from_routable(job) {
-            let Ok(parsed) = Expr::parse(expr.as_bare()) else {
-                warn_once!("couldn't parse expression: {expr}", expr = expr.as_bare());
+        for (expr, _) in parse_fenced_expressions_from_routable(job) {
+            let Ok(parsed) = Expr::parse(expr.text()) else {
+                warn_once!("couldn't parse expression: {expr}", expr = expr.text());
                 continue;
             };
 
@@ -82,8 +81,7 @@ impl Audit for SecretsOutsideEnvironment {
                     continue;
                 }
 
-                let after = span.start + origin.span.start;
-                let subfeature = Subfeature::new(after, origin.raw);
+                let span = expr.source_span(origin.span.as_range());
 
                 findings.push(
                     Self::finding()
@@ -98,7 +96,7 @@ impl Audit for SecretsOutsideEnvironment {
                             job.location()
                                 .primary()
                                 .annotated("secret is accessed outside of a dedicated environment"),
-                            Feature::from_subfeature(&subfeature, job),
+                            Feature::from_span(&span, job),
                         ))
                         .build(job)?,
                 );
