@@ -335,30 +335,39 @@ not using `pull_request_target` for auto-merge workflows.
 
 [cache-poisoning.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/cache-poisoning.yml
 
-Detects potential cache-poisoning scenarios in release workflows.
+Detects two common cache-poisoning primitives in GitHub Actions:
 
-Caching and restoring build state is a process eased by utilities provided
-by GitHub, in particular @actions/cache and its "save" and "restore"
-sub-actions. In addition, many of the setup-like actions provided
-by GitHub come with built-in caching functionality, like @actions/setup-node,
-@actions/setup-java and others.
+- Potentially compromised **reads** from caches, within release
+  workflows.
 
-Furthermore, there are many examples of community-driven Actions with built-in
-caching functionality, like @ruby/setup-ruby, @astral-sh/setup-uv,
-@Swatinem/rust-cache. In general, most of them build on top of @actions/toolkit
-for the sake of easily integrating with GitHub cache server at Workflow runtime.
+- Potentially compromised **writes** to caches, via privileged
+  triggers (see [dangerous-triggers](#dangerous-triggers)) with
+  jobs that explicitly enable `#!yaml cache-mode: write` or
+  `#!yaml cache-mode: write-only`.
 
-This vulnerability happens when release workflows leverage build state cached
-from previous workflow executions, in general on top of the aforementioned
-actions or similar ones. The publication of artifacts is usually driven
-by trigger events like `release` or events like `push` (with tags).
+    !!! tip
 
-In such scenarios, an attacker with access to a valid `ACTIONS_RUNTIME_TOKEN`
-can use it to poison the repository's GitHub Actions caches. That compounds with the
-default behavior of @actions/toolkit during cache restorations, allowing an
-attacker to retrieve payloads from poisoned cache entries, hence achieving code
-execution at Workflow runtime, potentially compromising ready-to-publish
-artifacts.
+        Detection of dangerous cache writes is available in `v1.31.0` and later.
+
+GitHub Actions provides facilities for creating and restoring caches, including
+caches of code and build state. Specifically, the @actions/cache action and
+its "save" and "restore" sub-actions can be used to create and load from
+cache entries.
+
+In addition, many of the setup-like actions provided by GitHub come with built-in
+caching functionality, like @actions/setup-node, @actions/setup-java and others.
+Many third-party actions also provide caching functionality, like @ruby/setup-ruby,
+@astral-sh/setup-uv, and @Swatinem/rust-cache.
+
+When performing a cache poisoning attack, the attacker's goal is to
+compromise a cache via one workflow (the "source") and use it to pivot
+to another, higher-privilege workflow (the "sink").
+
+Typical "source" workflows include those that use a [dangerous trigger](#dangerous-triggers)
+or otherwise enable `#!yaml cache-mode: write` while providing arbitrary
+code execution to external actors. Meanwhile, typical "sink" workflows
+include _release workflows_, since they frequently contain valuable credentials
+or can be used to pivot to other projects via a compromised release.
 
 Other resources:
 
@@ -379,7 +388,8 @@ In general, you should avoid using previously cached CI state within workflows
 intended to publish build artifacts:
 
 * First and foremost, disable caching entirely by setting `#!yaml cache-mode: none`
-  at either the workflow or job level.
+  at either the workflow or job level in release workflows. Generally speaking, release
+  workflows should not read from the GitHub Actions cache.
 
     !!! tip
 

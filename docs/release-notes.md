@@ -33,6 +33,10 @@ of `zizmor`.
   and will skip any findings that would occur when a job has an effective `#!yaml cache-mode: none`
   (#2418)
 
+* The [cache-poisoning] audit now flags usages of `#!yaml cache-mode: write` and
+  `#!yaml cache-mode: write-only` with dangerous triggers, i.e. triggers that give
+  an attacker privileged code execution (#2426)
+
 ### Bug Fixes 🐛
 
 * Fixed a class of false positives/imprecisions in [adhoc-packages] that caused
