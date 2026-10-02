@@ -120,13 +120,16 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
-    @@ -8,3 +8,3 @@
+        @r#"
+    @@ -6,6 +6,6 @@
+         runs-on: ubuntu-latest
+         steps:
            - name: simple case
     -        if: |
     +        if: |-
                ${{ github.event_name == 'push' }}
-    "
+             run: echo "test"
+    "#
     );
 
     Ok(())
@@ -158,13 +161,16 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
-    @@ -8,3 +8,3 @@
+        @r#"
+    @@ -6,6 +6,6 @@
+         runs-on: ubuntu-latest
+         steps:
            - name: folded case
     -        if: >
     +        if: >-
                ${{ github.actor == 'dependabot[bot]' }}
-    "
+             run: echo "test"
+    "#
     );
 
     Ok(())
@@ -197,13 +203,17 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
-    @@ -8,3 +8,3 @@
+        @r#"
+    @@ -6,7 +6,7 @@
+         runs-on: ubuntu-latest
+         steps:
            - name: multiline case
     -        if: |
     +        if: |-
                ${{ github.event_name == 'push'
-    "
+                 && github.ref == 'refs/heads/main' }}
+             run: echo "test"
+    "#
     );
 
     Ok(())
@@ -240,11 +250,15 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -8,3 +8,3 @@
+    @@ -6,7 +6,7 @@
+         runs-on: ubuntu-latest
+         steps:
            - name: complex case
     -        if: |
     +        if: |-
                ${{
+                 github.event_name == 'push' &&
+                 (github.ref == 'refs/heads/main' ||
     "
     );
 
@@ -275,11 +289,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -5,3 +5,3 @@
+    @@ -3,6 +3,6 @@
+     on: push
+     jobs:
        reusable-job:
     -    if: |
     +    if: |-
            ${{ github.event_name == 'pull_request' }}
+         uses: $/.github/workflows/reusable.yml
     "
     );
 

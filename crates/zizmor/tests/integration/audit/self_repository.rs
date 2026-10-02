@@ -52,12 +52,15 @@ fn test_fix() -> anyhow::Result<()> {
                 .run()
         })?,
         @"
-    @@ -17,3 +17,3 @@
+    @@ -15,9 +15,9 @@
+         steps:
+           # NOT OK: should be $/some-action
            - name: uses-local-composite-action
     -        uses: ./some-action
     +        uses: $/some-action
-     
-    @@ -22,2 +22,2 @@
+     ⏎
+       reusable:
+         # NOT OK: should be $/.github/workflows/reuse.yml
          name: uses-reusable-workflow
     -    uses: ./.github/workflows/reuse.yml
     +    uses: $/.github/workflows/reuse.yml
