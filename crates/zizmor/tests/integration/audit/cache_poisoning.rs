@@ -867,8 +867,9 @@ fn test_dangerous_trigger_cache_write() -> anyhow::Result<()> {
        |     --------- this job can write to the cache
        |
        = note: audit confidence → High
+       = note: this finding has an auto-fix
 
-    2 findings (1 ignored): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 ignored, 1 safe fixes): 0 informational, 0 low, 0 medium, 1 high
     ");
 
     // cache-mode: write at the job level.
@@ -891,8 +892,9 @@ fn test_dangerous_trigger_cache_write() -> anyhow::Result<()> {
        |     ^^^^^^^^^^^^^^^^^ cache writes enabled here
        |
        = note: audit confidence → High
+       = note: this finding has an auto-fix
 
-    2 findings (1 ignored): 0 informational, 0 low, 0 medium, 1 high
+    2 findings (1 ignored, 1 safe fixes): 0 informational, 0 low, 0 medium, 1 high
     ");
     Ok(())
 }
@@ -1025,6 +1027,98 @@ jobs:
              with:
     -          enable-cache: ${{ github.ref == 'refs/heads/main' }}
     +          enable-cache: false
+    "
+    );
+
+    Ok(())
+}
+
+/// We can replace `cache-mode: write` with `cache-mode: none` at the workflow level.
+#[test]
+fn test_fix_cache_mode_write_workflow_level() -> anyhow::Result<()> {
+    let workflow_content = r#"
+on: pull_request_target # zizmor: ignore[dangerous-triggers]
+
+name: cache-poisoning
+
+permissions: {}
+
+cache-mode: write
+
+concurrency:
+  group: foo
+  cancel-in-progress: true
+
+jobs:
+  foo:
+    name: foo
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo foo
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/cache-poisoning.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/cache-poisoning.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -7,3 +7,3 @@
+     
+    -cache-mode: write
+    +cache-mode: none
+    "
+    );
+
+    Ok(())
+}
+
+/// We can replace `cache-mode: write` with `cache-mode: none` at the job level.
+#[test]
+fn test_fix_cache_mode_write_job_level() -> anyhow::Result<()> {
+    let workflow_content = r#"
+on: pull_request_target # zizmor: ignore[dangerous-triggers]
+
+name: cache-poisoning
+
+permissions: {}
+
+cache-mode: none
+
+concurrency:
+  group: foo
+  cancel-in-progress: true
+
+jobs:
+  foo:
+    name: foo
+    cache-mode: write
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo foo
+"#;
+
+    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/cache-poisoning.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/cache-poisoning.yml", |workspace| {
+            zizmor()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -16,3 +16,3 @@
+         name: foo
+    -    cache-mode: write
+    +    cache-mode: none
+         runs-on: ubuntu-latest
     "
     );
 

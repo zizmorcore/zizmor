@@ -535,6 +535,16 @@ impl CachePoisoning {
             return Ok(None);
         };
 
+        let fix = Fix {
+            title: "set `cache-mode: none` to disable dangerous cache writes".into(),
+            key: &job.parent().key,
+            disposition: FixDisposition::Safe,
+            patches: vec![Patch {
+                route: cache_mode_location.route.clone(),
+                operation: Op::Replace("none".into()),
+            }],
+        };
+
         Ok(Some(
             Self::finding()
                 .confidence(Confidence::High)
@@ -553,6 +563,7 @@ impl CachePoisoning {
                         .primary()
                         .annotated("cache writes enabled here"),
                 )
+                .fix(fix)
                 .build(job.parent())?,
         ))
     }
