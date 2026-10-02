@@ -11,7 +11,7 @@ use indexmap::IndexMap;
 use serde::Deserialize;
 
 use crate::common::{
-    Env, Permissions,
+    CacheMode, Env, Permissions,
     expr::{BoE, LoE},
 };
 
@@ -25,6 +25,7 @@ pub struct Workflow {
     pub name: Option<String>,
     pub run_name: Option<String>,
     pub on: Trigger,
+    pub cache_mode: Option<CacheMode>,
     #[serde(default)]
     pub permissions: Permissions,
     #[serde(default)]

@@ -5,7 +5,7 @@
 
 use github_actions_expressions::context::{self};
 use github_actions_models::{
-    common::{self, expr::LoE},
+    common::{self, CacheMode, expr::LoE},
     workflow::{
         self, TriggerSyntax,
         event::{BareEvent, OptionalBody},
@@ -16,6 +16,7 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 use terminal_link::Link;
 
+pub(crate) mod cache_mode;
 pub(crate) mod matrix;
 pub(crate) mod runners;
 
@@ -373,6 +374,10 @@ impl<'doc> JobCommon<'doc> for NormalJob<'doc> {
     fn parent(&self) -> &'doc Workflow {
         self.parent
     }
+
+    fn cache_mode(&self) -> Option<CacheMode> {
+        self.cache_mode
+    }
 }
 
 impl<'doc> std::ops::Deref for NormalJob<'doc> {
@@ -422,6 +427,10 @@ impl<'doc> JobCommon<'doc> for ReusableWorkflowCallJob<'doc> {
     fn parent(&self) -> &'doc Workflow {
         self.parent
     }
+
+    fn cache_mode(&self) -> Option<CacheMode> {
+        self.cache_mode
+    }
 }
 
 impl<'doc> std::ops::Deref for ReusableWorkflowCallJob<'doc> {
@@ -442,6 +451,9 @@ pub(crate) trait JobCommon<'doc>: Locatable<'doc> {
 
     /// The job's parent [`Workflow`].
     fn parent(&self) -> &'doc Workflow;
+
+    /// The job's [`CacheMode`], if it has an explicit one.
+    fn cache_mode(&self) -> Option<CacheMode>;
 }
 
 impl<'doc, T: JobCommon<'doc>> Locatable<'doc> for T {

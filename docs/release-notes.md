@@ -29,6 +29,10 @@ of `zizmor`.
 
     Many thanks to @ubiratansoares for proposing and implementing this enhancement!
 
+* The [cache-poisoning] audit is now aware of GitHub's new `#!yaml cache-mode:` setting,
+  and will skip any findings that would occur when a job has an effective `#!yaml cache-mode: none`
+  (#2418)
+
 ### Bug Fixes 🐛
 
 * Fixed a class of false positives/imprecisions in [adhoc-packages] that caused

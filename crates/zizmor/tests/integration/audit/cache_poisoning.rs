@@ -819,6 +819,29 @@ fn test_trigger_heuristics_tag_and_branch() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// An effective `cache-mode: none` on either a workflow or a job suppresses
+/// any cache poisoning findings that would occur.
+#[test]
+fn test_effective_cache_mode_none_suppresses_findings() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "cache-poisoning/workflow-effective-cache-mode-none.yml"
+            ))
+            .run()?,
+        @"No findings to report. Good job!");
+
+    insta::assert_snapshot!(
+        zizmor()
+            .input(input_under_test(
+                "cache-poisoning/job-effective-cache-mode-none.yml"
+            ))
+            .run()?,
+        @"No findings to report. Good job!");
+
+    Ok(())
+}
+
 #[test]
 fn test_fix_cache_disable_opt_out_boolean() -> anyhow::Result<()> {
     let workflow_content = r#"

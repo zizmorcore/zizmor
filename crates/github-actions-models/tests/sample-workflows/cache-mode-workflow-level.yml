@@ -1,0 +1,15 @@
+on: release
+
+name: cache-mode-workflow-level
+
+permissions: {}
+
+cache-mode: none
+
+jobs:
+  noop:
+    name: noop
+    runs-on: ubuntu-latest
+    steps:
+      - name: noop
+        run: true
