@@ -1,0 +1,21 @@
+[package]
+name = "zizmor-dev"
+description = "Shared helpers for zizmor's tests and benchmarks"
+readme = "README.md"
+repository = "https://github.com/zizmorcore/zizmor/tree/main/crates/zizmor-dev"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+assert_cmd.workspace = true
+camino.workspace = true
+regex.workspace = true
+similar.workspace = true
+tempfile.workspace = true
+walkdir.workspace = true
+
+[lints]
+workspace = true

@@ -89,13 +89,20 @@ orchestrate both of them.
 # run only unit tests
 cargo test --bins
 
-# run specific integration tests
-cargo test --test acceptance
-cargo test --test snapshot
+# run zizmor's integration tests
+cargo test -p zizmor --test integration
 
 # run all of the tests
 cargo test
 ```
+
+Integration tests live in `crates/zizmor/tests/integration/`. Their shared runner,
+fixture lookup, and temporary workspace helpers live in [`zizmor-dev`], an
+unpublished workspace member that can also support future Rust benchmarks.
+The tests' `common` module re-exports the helpers and provides a `zizmor()`
+shortcut for `Zizmor::cargo_bin()`.
+
+[`zizmor-dev`]: https://github.com/zizmorcore/zizmor/tree/main/crates/zizmor-dev
 
 ### Online tests
 
@@ -152,8 +159,10 @@ Snapshot tests are useful for a handful of scenarios:
 1. For regression detection with specific user-submitted workflows;
 1. For testing `zizmor`'s exact output/behavior on error scenarios.
 
-To add a new snapshot test, edit `tests/snapshot.rs` and add (or modify)
-an appropriate test function. You can use the existing ones for reference.
+To add a new snapshot test, add or modify an appropriate test function under
+`crates/zizmor/tests/integration/`. Audit-specific tests live in `audit/`, while
+tests spanning multiple audits or complex CLI behavior live in `e2e/`.
+You can use the existing tests for reference.
 
 When a new snapshot test is added, `cargo test` will run it and then fail,
 since the new snapshot has not yet been *accepted*. The easiest way to
@@ -351,8 +360,8 @@ The general procedure for adding a new audit can be described as:
 - Assign the proper `location` when creating a `Finding`, grabbing it from the
   proper `Workflow`, `Job` or `Step` instance
 - Add `MyNewAudit` to `AuditRegistry::default_audits` in `crates/zizmor/src/registry.rs`
-- Add proper integration tests covering some scenarios to the snapshot tests
-  in `crates/zizmor/tests/integration/snapshot.rs`
+- Add integration tests covering the audit's behavior in
+  `crates/zizmor/tests/integration/audit/`
 - Add proper docs for this new audit at `docs/audits`. Take care to add your new
   heading in alpha order relative to the other audit headings. Please include
   relevant public information about the underlying vulnerability
