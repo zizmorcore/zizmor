@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 
-use crate::common::{OutputMode, input_under_test, zizmor};
+use zizmor_dev::{OutputMode, Zizmor, input_under_test};
 
 /// Basic sanity test for parallel steps handling.
 ///
@@ -11,7 +11,7 @@ use crate::common::{OutputMode, input_under_test, zizmor};
 #[test]
 fn test_basic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .output(OutputMode::Both)
             .input(input_under_test(
                 "parallel-steps/basic.yml"

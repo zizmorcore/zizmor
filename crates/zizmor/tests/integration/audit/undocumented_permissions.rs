@@ -1,11 +1,11 @@
-use crate::common::{input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{Zizmor, input_under_test};
 
 /// Test with pedantic persona (should find issues)
 #[test]
 fn test_undocumented_permissions_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("undocumented-permissions.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -61,7 +61,7 @@ fn test_undocumented_permissions_pedantic() -> Result<()> {
 #[test]
 fn test_undocumented_permissions_default() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("undocumented-permissions.yml"))
             .run()?,
         @"No findings to report. Good job! (5 suppressed)"
@@ -74,7 +74,7 @@ fn test_undocumented_permissions_default() -> Result<()> {
 #[test]
 fn test_documented_permissions_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("undocumented-permissions/documented.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -114,7 +114,7 @@ fn test_documented_permissions_pedantic() -> Result<()> {
 #[test]
 fn test_contents_read_only_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "undocumented-permissions/contents-read-only.yml"
             ))
@@ -140,7 +140,7 @@ fn test_contents_read_only_pedantic() -> Result<()> {
 #[test]
 fn test_empty_permissions_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "undocumented-permissions/empty-permissions.yml"
             ))
@@ -166,7 +166,7 @@ fn test_empty_permissions_pedantic() -> Result<()> {
 #[test]
 fn test_contents_read_with_other_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "undocumented-permissions/contents-read-with-other.yml"
             ))
@@ -208,7 +208,7 @@ fn test_contents_read_with_other_pedantic() -> Result<()> {
 #[test]
 fn test_partially_documented_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "undocumented-permissions/partially-documented.yml"
             ))

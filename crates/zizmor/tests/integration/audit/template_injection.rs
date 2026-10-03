@@ -1,10 +1,10 @@
-use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_template_injection_static_matrix() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "template-injection/template-injection-static-matrix.yml"
             ))
@@ -31,7 +31,7 @@ fn test_template_injection_static_matrix() -> Result<()> {
 #[test]
 fn test_template_injection_dynamic_matrix() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "template-injection/template-injection-dynamic-matrix.yml"
             ))
@@ -59,7 +59,7 @@ fn test_template_injection_dynamic_matrix() -> Result<()> {
 #[test]
 fn test_issue_22_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-22-repro.yml"))
             .run()?,
         @"No findings to report. Good job! (6 suppressed)"
@@ -71,7 +71,7 @@ fn test_issue_22_repro() -> Result<()> {
 #[test]
 fn test_pr_317_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/pr-317-repro.yml"))
             .run()?,
         @"
@@ -96,7 +96,7 @@ fn test_pr_317_repro() -> Result<()> {
 #[test]
 fn test_static_env() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/static-env.yml"))
             .run()?,
         @"
@@ -143,7 +143,7 @@ fn test_static_env() -> Result<()> {
 #[test]
 fn test_issue_339_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-339-repro.yml"))
             .run()?,
         @r#"
@@ -170,7 +170,7 @@ fn test_issue_339_repro() -> Result<()> {
 #[test]
 fn test_issue_418_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-418-repro.yml"))
             .run()?,
         @"No findings to report. Good job! (2 suppressed)"
@@ -182,7 +182,7 @@ fn test_issue_418_repro() -> Result<()> {
 #[test]
 fn test_pr_425_backstop_action() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "template-injection/pr-425-backstop/action.yml"
             ))
@@ -254,7 +254,7 @@ fn test_pr_425_backstop_action() -> Result<()> {
 #[test]
 fn test_false_positive_menagerie() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "template-injection/false-positive-menagerie.yml"
             ))
@@ -268,7 +268,7 @@ fn test_false_positive_menagerie() -> Result<()> {
 #[test]
 fn test_issue_749_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-749-repro.yml"))
             .run()?,
         @"No findings to report. Good job! (2 suppressed)"
@@ -280,7 +280,7 @@ fn test_issue_749_repro() -> Result<()> {
 #[test]
 fn test_codeql_sinks() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/codeql-sinks.yml"))
             .run()?,
         @"
@@ -307,7 +307,7 @@ fn test_codeql_sinks() -> Result<()> {
 #[test]
 fn test_pwsh_script() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/pwsh-script.yml"))
             .run()?,
         @r#"
@@ -334,7 +334,7 @@ fn test_pwsh_script() -> Result<()> {
 #[test]
 fn test_issue_883_repro_action() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "template-injection/issue-883-repro/action.yml"
             ))
@@ -448,7 +448,7 @@ fn test_issue_883_repro_action() -> Result<()> {
 #[test]
 fn test_multiline_expression_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "template-injection/multiline-expression.yml"
             ))
@@ -500,7 +500,7 @@ fn test_multiline_expression_pedantic() -> Result<()> {
 #[test]
 fn test_issue_988_repro_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-988-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -541,14 +541,14 @@ fn test_issue_988_repro_pedantic() -> Result<()> {
 #[test]
 fn test_issue_1638() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-1638-repro.yml"))
             .run()?,
         @"No findings to report. Good job! (1 suppressed)"
     );
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-1638-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -577,7 +577,7 @@ fn test_issue_1638() -> Result<()> {
 #[test]
 fn test_issue_1664() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-1664-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -622,14 +622,14 @@ fn test_issue_1664() -> Result<()> {
 #[test]
 fn test_issue_1802() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-1802-repro.yml"))
             .run()?,
         @"No findings to report. Good job! (3 suppressed)"
     );
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-1802-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -680,7 +680,7 @@ fn test_issue_1802() -> Result<()> {
 #[test]
 fn test_issue_1903() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-1903-repro.yml"))
             .run()?,
         @r#"
@@ -708,7 +708,7 @@ fn test_issue_1903() -> Result<()> {
 #[test]
 fn test_issue_2197() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-2197-repro.yml"))
             .run()?,
         @"No findings to report. Good job! (1 suppressed)"
@@ -735,7 +735,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -773,7 +773,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -812,7 +812,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -855,7 +855,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -900,7 +900,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -944,8 +944,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all", "--persona=pedantic"])
                 .input(workspace.path())
                 .run()
@@ -991,8 +991,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all", "--persona=pedantic"])
                 .input(workspace.path())
                 .run()
@@ -1029,8 +1029,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all", "--persona=pedantic"])
                 .input(workspace.path())
                 .run()
@@ -1067,8 +1067,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all", "--persona=pedantic"])
                 .input(workspace.path())
                 .run()
@@ -1105,8 +1105,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all", "--persona=pedantic"])
                 .input(workspace.path())
                 .run()
@@ -1142,8 +1142,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all", "--persona=pedantic"])
                 .input(workspace.path())
                 .run()
@@ -1179,8 +1179,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all", "--persona=pedantic"])
                 .input(workspace.path())
                 .run()
@@ -1217,8 +1217,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all", "--persona=pedantic"])
                 .input(workspace.path())
                 .run()
@@ -1265,8 +1265,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all", "--persona=pedantic"])
                 .input(workspace.path())
                 .run()

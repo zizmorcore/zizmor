@@ -1,11 +1,11 @@
 use anyhow::Ok;
 
-use crate::common::{OutputMode, WorkspaceBuilder, input_under_test, zizmor};
+use zizmor_dev::{OutputMode, WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_missing_cooldown() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "dependabot-cooldown/missing/dependabot.yml"
             ))
@@ -30,7 +30,7 @@ fn test_missing_cooldown() -> anyhow::Result<()> {
 #[test]
 fn test_no_default_days() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "dependabot-cooldown/no-default-days/dependabot.yml"
             ))
@@ -54,7 +54,7 @@ fn test_no_default_days() -> anyhow::Result<()> {
 #[test]
 fn test_default_days_too_short() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "dependabot-cooldown/default-days-too-short/dependabot.yml"
             ))
@@ -79,7 +79,7 @@ fn test_default_days_too_short() -> anyhow::Result<()> {
 fn test_config_not_number() -> anyhow::Result<()> {
     // dependabot-cooldown audit config is invalid.
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-not-number.yml"))
@@ -106,7 +106,7 @@ fn test_config_not_number() -> anyhow::Result<()> {
 #[test]
 fn test_invalid_config_zero_days() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-zero-days.yml"))
@@ -133,7 +133,7 @@ fn test_invalid_config_zero_days() -> anyhow::Result<()> {
 #[test]
 fn test_invalid_config_negative_days() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-negative-days.yml"))
@@ -161,7 +161,7 @@ fn test_invalid_config_negative_days() -> anyhow::Result<()> {
 fn test_config_short_cooldown_permitted() -> anyhow::Result<()> {
     // A very short cooldown, but permitted by config.
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("dependabot-cooldown/default-days-too-short/dependabot.yml"))
             .config(input_under_test("dependabot-cooldown/configs/cooldown-one-day.yml"))
             .run()?,
@@ -174,7 +174,7 @@ fn test_config_short_cooldown_permitted() -> anyhow::Result<()> {
 #[test]
 fn test_multi_ecosystem_group_with_cooldown() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "dependabot-cooldown/multi-ecosystem-group-with-cooldown/dependabot.yml"
             ))
@@ -189,7 +189,7 @@ fn test_multi_ecosystem_group_with_cooldown() -> anyhow::Result<()> {
 #[test]
 fn test_opentofu_cooldown() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("dependabot-cooldown/opentofu-no-cooldown/dependabot.yml"))
             .run()?,
         @"
@@ -227,7 +227,7 @@ updates:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/dependabot.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -263,7 +263,7 @@ updates:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/dependabot.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -303,7 +303,7 @@ updates:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/dependabot.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -347,7 +347,7 @@ updates:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/dependabot.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()

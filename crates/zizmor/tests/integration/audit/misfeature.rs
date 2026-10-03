@@ -1,9 +1,9 @@
-use crate::common::{input_under_test, zizmor};
+use zizmor_dev::{Zizmor, input_under_test};
 
 #[test]
 fn test_setup_python_pip_install() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("misfeature/setup-python-pip-install.yml"))
             .run()?,
         @"
@@ -29,7 +29,7 @@ fn test_setup_python_pip_install() -> anyhow::Result<()> {
 #[test]
 fn test_non_well_known_shell() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("misfeature/non-well-known-shell.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -60,7 +60,7 @@ fn test_non_well_known_shell() -> anyhow::Result<()> {
 #[test]
 fn test_issue_1414_repro() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("misfeature/issue-1414-repro.yml"))
             .run()?,
         @"
@@ -82,7 +82,7 @@ fn test_issue_1414_repro() -> anyhow::Result<()> {
 
     // Like #1414, but with `shell: cmd` defined at the workflow level.
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("misfeature/workflow-cmd-default-shell.yml"))
             .run()?,
         @"

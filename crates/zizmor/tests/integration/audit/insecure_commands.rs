@@ -1,10 +1,10 @@
-use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_insecure_commands_auditor() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("insecure-commands.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -37,7 +37,7 @@ fn test_insecure_commands_auditor() -> Result<()> {
 #[test]
 fn test_insecure_commands_default() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("insecure-commands.yml"))
             .run()?,
         @"
@@ -61,7 +61,7 @@ fn test_insecure_commands_default() -> Result<()> {
 #[test]
 fn test_action_auditor() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("insecure-commands/action.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -104,7 +104,7 @@ fn test_action_auditor() -> Result<()> {
 #[test]
 fn test_issue_839_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("insecure-commands/issue-839-repro.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -155,7 +155,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/insecure-commands.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -196,7 +196,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/insecure-commands.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()

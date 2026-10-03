@@ -1,9 +1,9 @@
-use crate::common::{input_under_test, zizmor};
+use zizmor_dev::{Zizmor, input_under_test};
 
 #[test]
 fn test_pedantic_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-images.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -115,7 +115,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
 fn test_matrix_in_image_pedantic() -> anyhow::Result<()> {
     // pedantic: shows unhashed findings
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-images/matrix-in-image.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -187,7 +187,7 @@ fn test_matrix_in_image_pedantic() -> anyhow::Result<()> {
 fn test_matrix_in_image_regular() -> anyhow::Result<()> {
     // regular persona: suppresses unhashed findings
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-images/matrix-in-image.yml"))
             .run()?,
         @"
@@ -229,7 +229,7 @@ fn test_matrix_in_image_regular() -> anyhow::Result<()> {
 #[test]
 fn test_matrix_indirect_expansions() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-images/indirect-matrices.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -300,7 +300,7 @@ fn test_matrix_indirect_expansions() -> anyhow::Result<()> {
 #[test]
 fn test_urllib3_empty_matrix_container_regular() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "unpinned-images/urllib3-empty-matrix-container.yml"
             ))
@@ -330,7 +330,7 @@ fn test_urllib3_empty_matrix_container_regular() -> anyhow::Result<()> {
 #[test]
 fn test_issue_1942_repro() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-images/issue-1942-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -355,7 +355,7 @@ fn test_issue_1942_repro() -> anyhow::Result<()> {
 #[test]
 fn test_docker_action() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-images/docker-action/"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -380,7 +380,7 @@ fn test_issue_2097_repro() -> anyhow::Result<()> {
     // `${{ matrix.mysql || '' }}` expands to either a hash-pinned image or an
     // empty (absent) container, so there's nothing to report.
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-images/issue-2097-repro.yml"))
             .run()?,
         @"No findings to report. Good job!"

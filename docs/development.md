@@ -9,7 +9,7 @@ description: Development tasks and processes.
     This page contains information on specific development processes.
     For more general information on *how and what* to contribute to `zizmor`,
     see our [CONTRIBUTING.md].
-    
+
 !!! important
 
     Before contributing to `zizmor`, you **must** read our [AI Policy].
@@ -96,11 +96,7 @@ cargo test -p zizmor --test integration
 cargo test
 ```
 
-Integration tests live in `crates/zizmor/tests/integration/`. Their shared runner,
-fixture lookup, and temporary workspace helpers live in [`zizmor-dev`], an
-unpublished workspace member that can also support future Rust benchmarks.
-The tests' `common` module re-exports the helpers and provides a `zizmor()`
-shortcut for `Zizmor::cargo_bin()`.
+Integration tests live in `crates/zizmor/tests/integration/`.
 
 [`zizmor-dev`]: https://github.com/zizmorcore/zizmor/tree/main/crates/zizmor-dev
 

@@ -1,10 +1,10 @@
-use crate::common::{input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{Zizmor, input_under_test};
 
 #[test]
 fn test_unpinned_uses_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-uses.yml"))
             .args(["--pedantic"])
             .run()?,
@@ -27,7 +27,7 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
 #[test]
 fn test_unpinned_uses_default() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-uses.yml"))
             .run()?,
         @"
@@ -49,7 +49,7 @@ fn test_unpinned_uses_default() -> Result<()> {
 #[test]
 fn test_action_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-uses/action.yml"))
             .args(["--pedantic"])
             .run()?,
@@ -80,7 +80,7 @@ fn test_action_pedantic() -> Result<()> {
 #[test]
 fn test_issue_433_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-uses/issue-433-repro.yml"))
             .args(["--pedantic"])
             .run()?,
@@ -94,7 +94,7 @@ fn test_issue_433_repro() -> Result<()> {
 #[test]
 fn test_issue_659_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-uses/issue-659-repro.yml"))
             .args(["--pedantic"])
             .run()?,
@@ -120,7 +120,7 @@ fn test_issue_659_repro() -> Result<()> {
 #[test]
 fn test_issue_1543_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-uses/issue-1543-repro.yml"))
             .run()?,
         @"
@@ -143,7 +143,7 @@ fn test_issue_1543_repro() -> Result<()> {
 #[test]
 fn test_default_config() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
@@ -198,7 +198,7 @@ fn test_default_config() -> Result<()> {
 #[test]
 fn test_hash_pin_everything_config() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test(
                 "unpinned-uses/configs/hash-pin-everything.yml"
             ))
@@ -256,7 +256,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
 #[test]
 fn test_ref_pin_everything_config() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test(
                 "unpinned-uses/configs/ref-pin-everything.yml"
             ))
@@ -271,7 +271,7 @@ fn test_ref_pin_everything_config() -> Result<()> {
 #[test]
 fn test_composite_config() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test("unpinned-uses/configs/composite.yml"))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
@@ -310,7 +310,7 @@ fn test_composite_config() -> Result<()> {
 #[test]
 fn test_composite_config_2() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test("unpinned-uses/configs/composite-2.yml"))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
@@ -341,7 +341,7 @@ fn test_composite_config_2() -> Result<()> {
 #[test]
 fn test_empty_config() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test("unpinned-uses/configs/empty.yml"))
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
@@ -396,7 +396,7 @@ fn test_empty_config() -> Result<()> {
 #[test]
 fn test_invalid_wrong_policy_object() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-wrong-policy-object.yml"
@@ -424,7 +424,7 @@ fn test_invalid_wrong_policy_object() -> Result<()> {
 #[test]
 fn test_invalid_policy_syntax_1() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-1.yml"
@@ -452,7 +452,7 @@ fn test_invalid_policy_syntax_1() -> Result<()> {
 #[test]
 fn test_invalid_policy_syntax_2() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-2.yml"
@@ -480,7 +480,7 @@ fn test_invalid_policy_syntax_2() -> Result<()> {
 #[test]
 fn test_invalid_policy_syntax_3() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-3.yml"
@@ -508,7 +508,7 @@ fn test_invalid_policy_syntax_3() -> Result<()> {
 #[test]
 fn test_invalid_policy_syntax_4() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-4.yml"
@@ -536,7 +536,7 @@ fn test_invalid_policy_syntax_4() -> Result<()> {
 #[test]
 fn test_invalid_policy_syntax_5() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-5.yml"
@@ -564,7 +564,7 @@ fn test_invalid_policy_syntax_5() -> Result<()> {
 #[test]
 fn test_invalid_policy_syntax_6() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .config(input_under_test(
                 "unpinned-uses/configs/invalid-policy-syntax-6.yml"
@@ -589,7 +589,7 @@ fn test_invalid_policy_syntax_6() -> Result<()> {
 #[test]
 fn test_reusable_workflow_unpinned() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-uses/reusable-workflow-unpinned.yml"))
             .run()?,
         @"
@@ -630,7 +630,7 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix() -> anyhow::Result<()> {
-    use crate::common::{NetworkMode, WorkspaceBuilder};
+    use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
 name: Test
@@ -651,9 +651,9 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .offline(NetworkMode::AssertOnline)
-                .output(crate::common::OutputMode::Both)
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -676,7 +676,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_crlf() -> anyhow::Result<()> {
-    use crate::common::{NetworkMode, WorkspaceBuilder};
+    use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
 name: Test
@@ -698,9 +698,9 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .offline(NetworkMode::AssertOnline)
-                .output(crate::common::OutputMode::Both)
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -723,7 +723,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_overwrites_comment() -> anyhow::Result<()> {
-    use crate::common::{NetworkMode, WorkspaceBuilder};
+    use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
 name: Test
@@ -744,9 +744,9 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .offline(NetworkMode::AssertOnline)
-                .output(crate::common::OutputMode::Both)
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -769,7 +769,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_bizarre_formatting() -> anyhow::Result<()> {
-    use crate::common::{NetworkMode, WorkspaceBuilder};
+    use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
 name: Test
@@ -790,9 +790,9 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .offline(NetworkMode::AssertOnline)
-                .output(crate::common::OutputMode::Both)
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -815,7 +815,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_preserves_subpath() -> anyhow::Result<()> {
-    use crate::common::{NetworkMode, WorkspaceBuilder};
+    use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
 name: Test
@@ -833,9 +833,9 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .offline(NetworkMode::AssertOnline)
-                .output(crate::common::OutputMode::Both)
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -858,7 +858,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_major_version_pins_to_full_version() -> anyhow::Result<()> {
-    use crate::common::{NetworkMode, WorkspaceBuilder};
+    use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
 name: Test
@@ -879,9 +879,9 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .offline(NetworkMode::AssertOnline)
-                .output(crate::common::OutputMode::Both)
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()

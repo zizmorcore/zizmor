@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 
-use crate::common::{input_under_test, zizmor};
+use zizmor_dev::{Zizmor, input_under_test};
 
 /// Basic sanity test for anchor handling.
 ///
@@ -11,7 +11,7 @@ use crate::common::{input_under_test, zizmor};
 #[test]
 fn test_basic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "anchors/basic.yml"
             ))
@@ -71,7 +71,7 @@ fn test_basic() -> Result<()> {
 #[test]
 fn test_scalar_cross_context() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("anchors/scalar-cross-context.yml"))
             .run()?,
         @r#"
@@ -97,7 +97,7 @@ fn test_scalar_cross_context() -> Result<()> {
 #[test]
 fn test_with_mapping_alias() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("anchors/with-mapping-alias.yml"))
             .run()?,
         @"
@@ -134,7 +134,7 @@ fn test_with_mapping_alias() -> Result<()> {
 #[test]
 fn test_trigger_paths_anchor() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("anchors/trigger-paths-anchor.yml"))
             .run()?,
         @"
@@ -156,7 +156,7 @@ fn test_trigger_paths_anchor() -> Result<()> {
 #[test]
 fn test_trigger_block_alias() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("anchors/trigger-block-alias.yml"))
             .run()?,
         @"
@@ -178,7 +178,7 @@ fn test_trigger_block_alias() -> Result<()> {
 #[test]
 fn test_steps_list_alias() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("anchors/steps-list-alias.yml"))
             .run()?,
         @r#"
@@ -214,7 +214,7 @@ fn test_steps_list_alias() -> Result<()> {
 #[test]
 fn test_cross_key_scalar() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("anchors/cross-key-scalar.yml"))
             .run()?,
         @r#"
@@ -252,7 +252,7 @@ fn test_cross_key_scalar() -> Result<()> {
 #[test]
 fn test_multi_scalar_anchors() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("anchors/multi-scalar-anchors.yml"))
             .run()?,
         @r#"
@@ -319,7 +319,7 @@ fn test_multi_scalar_anchors() -> Result<()> {
 #[test]
 fn test_dummy_job_anchors() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("anchors/dummy-job-anchors.yml"))
             .run()?,
         @"
@@ -353,7 +353,7 @@ fn test_dummy_job_anchors() -> Result<()> {
 #[test]
 fn test_inputs_block_alias() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("anchors/inputs-block-alias.yml"))
             .run()?,
         @"No findings to report. Good job! (2 suppressed)"
@@ -365,7 +365,7 @@ fn test_inputs_block_alias() -> Result<()> {
 #[test]
 fn test_flow_mapping_step() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("anchors/flow-mapping-step.yml"))
             .run()?,
         @r#"

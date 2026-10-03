@@ -1,6 +1,6 @@
 //! Configuration discovery and functionality tests.
 
-use crate::common::{OutputMode, WorkspaceBuilder, input_under_test, zizmor};
+use zizmor_dev::{OutputMode, WorkspaceBuilder, Zizmor, input_under_test};
 
 /// Ensures we correctly discover a configuration file at the root
 /// of a given input directory, i.e. `config-in-root/zizmor.yml` in
@@ -11,7 +11,7 @@ fn test_discovers_config_in_root() -> anyhow::Result<()> {
     workspace.copy(&*input_under_test("config-scenarios/config-in-root"), ".");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path())
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
@@ -37,7 +37,7 @@ fn test_discovers_config_in_root_from_file_input() -> anyhow::Result<()> {
     workspace.copy(&*input_under_test("config-scenarios/config-in-root/"), ".");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path().join(".github/workflows/hackme.yml"))
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
@@ -63,7 +63,7 @@ fn test_discovers_config_in_root_from_child_dir() -> anyhow::Result<()> {
     workspace.copy(&*input_under_test("config-scenarios/config-in-root/"), ".");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path().join(".github/workflows"))
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
@@ -87,7 +87,7 @@ fn test_ignores_config_in_root() -> anyhow::Result<()> {
     workspace.copy(&*input_under_test("config-scenarios/config-in-root/"), ".");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .no_config(true)
             .input(workspace.path())
             .setenv("RUST_LOG", "zizmor::config=debug")
@@ -107,7 +107,7 @@ fn test_ignores_config_in_root_from_file_input() -> anyhow::Result<()> {
     workspace.copy(&*input_under_test("config-scenarios/config-in-root/"), ".");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .no_config(true)
             .input(workspace.path().join(".github/workflows/hackme.yml"))
             .setenv("RUST_LOG", "zizmor::config=debug")
@@ -127,7 +127,7 @@ fn test_ignores_config_in_root_from_child_dir() -> anyhow::Result<()> {
     workspace.copy(&*input_under_test("config-scenarios/config-in-root/"), ".");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .no_config(true)
             .input(workspace.path().join(".github/workflows"))
             .setenv("RUST_LOG", "zizmor::config=debug")
@@ -151,7 +151,7 @@ fn test_discovers_config_in_dotgithub() -> anyhow::Result<()> {
     );
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path())
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
@@ -181,7 +181,7 @@ fn test_discovers_dotyaml_config_in_dotgithub() -> anyhow::Result<()> {
     );
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path())
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
@@ -210,7 +210,7 @@ fn test_discovers_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
     );
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path().join(".github/workflows/hackme.yml"))
             .setenv("RUST_LOG", "zizmor::config=debug")
             .output(OutputMode::Both)
@@ -240,7 +240,7 @@ fn test_discovers_config_when_repo_is_named_workflows() -> anyhow::Result<()> {
     workspace.add_file("zizmor.yml", "rules: {}");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path())
             .expects_failure(3) // expected to fail, we're checking the logs here
             .setenv("RUST_LOG", "zizmor::config=trace")
@@ -270,7 +270,7 @@ fn test_discovers_config_when_repo_is_named_workflows() -> anyhow::Result<()> {
     workspace.add_file("zizmor.yml", "rules: {}");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path())
             .expects_failure(3) // expected to fail, we're checking the logs here
             .setenv("RUST_LOG", "zizmor::config=trace")
@@ -303,7 +303,7 @@ fn test_discovers_config_when_repo_is_named_workflows() -> anyhow::Result<()> {
 #[test]
 fn test_ignores_config_in_dotgithub() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .no_config(true)
             .input(input_under_test("config-scenarios/config-in-dotgithub"))
             .setenv("RUST_LOG", "zizmor::config=debug")
@@ -320,7 +320,7 @@ fn test_ignores_config_in_dotgithub() -> anyhow::Result<()> {
 #[test]
 fn test_ignores_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .no_config(true)
             .input(input_under_test(
                 "config-scenarios/config-in-dotgithub/.github/workflows/hackme.yml"
@@ -341,7 +341,7 @@ fn test_disablement() -> anyhow::Result<()> {
     workspace.copy(&*input_under_test("config-scenarios/disablement"), ".");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path())
             .setenv("RUST_LOG", "zizmor::audit=debug")
             .output(OutputMode::Both)
@@ -360,7 +360,7 @@ fn test_disablement() -> anyhow::Result<()> {
 fn test_invalid_configs() -> anyhow::Result<()> {
     // Top-level config schema is invalid.
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test(
@@ -394,7 +394,7 @@ fn test_severity_remap() -> anyhow::Result<()> {
     workspace.copy(&*input_under_test("config-scenarios/severity-remap"), ".");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path())
             .run()?,
         @"
@@ -422,7 +422,7 @@ fn test_severity_remap_affects_min_severity() -> anyhow::Result<()> {
     workspace.copy(&*input_under_test("config-scenarios/severity-remap"), ".");
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path())
             .args(["--min-severity=high"])
             .run()?,
@@ -447,7 +447,7 @@ fn test_severity_remap_affects_min_severity() -> anyhow::Result<()> {
 #[test]
 fn test_no_remap_filtered_by_min_severity() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .no_config(true)
             .input(input_under_test("config-scenarios/severity-remap"))
             .args(["--min-severity=high"])
@@ -464,7 +464,7 @@ fn test_no_remap_filtered_by_min_severity() -> anyhow::Result<()> {
 #[test]
 fn test_severity_remap_is_negated_by_no_config() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("config-scenarios/severity-remap"))
             .args(["--min-severity=high", "--no-config"])
             .run()?,
@@ -492,7 +492,7 @@ fn test_config_ignores_workflow_named_zizmor() -> anyhow::Result<()> {
     );
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .add_filter(workspace.path().as_str(), "WORKSPACE_PATH")
             .input(workspace.path().join(".github/workflows"))
             .setenv("RUST_LOG", "zizmor::config=trace")

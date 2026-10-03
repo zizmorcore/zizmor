@@ -1,12 +1,12 @@
 use anyhow::Result;
 
-use crate::common::{NetworkMode, input_under_test, zizmor};
+use zizmor_dev::{NetworkMode, Zizmor, input_under_test};
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn test_default_persona() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test("known-vulnerable-actions/setup-php.yml"))
             .run()?,
@@ -40,7 +40,7 @@ fn test_default_persona() -> Result<()> {
 #[test]
 fn test_config_allow() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test("known-vulnerable-actions/setup-php.yml"))
             .config(input_under_test(
@@ -56,7 +56,7 @@ fn test_config_allow() -> Result<()> {
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_version_pin() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     // Note: this ignores `unpinned-uses` because of bug #2286.
     // See: <https://github.com/zizmorcore/zizmor/issues/2286>
@@ -77,7 +77,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())
@@ -99,7 +99,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_commit_pin() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     let workflow_content = r#"
 name: Test
@@ -118,7 +118,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())
@@ -142,7 +142,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_commit_pin_no_comment() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     let workflow_content = r#"
 name: Test
@@ -161,7 +161,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())

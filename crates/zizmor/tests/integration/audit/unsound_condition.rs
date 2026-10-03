@@ -1,9 +1,9 @@
-use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
+use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_normal_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unsound-condition.yml"))
             .run()?,
         @r#"
@@ -114,8 +114,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -155,8 +155,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -197,8 +197,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -243,8 +243,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -282,8 +282,8 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()

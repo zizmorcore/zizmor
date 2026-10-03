@@ -3,13 +3,13 @@
 //! The idea behind these tests is to detect (unintended) large changes
 //! between versions of zizmor.
 
-use crate::common::{NetworkMode, OutputMode, zizmor};
+use zizmor_dev::{NetworkMode, OutputMode, Zizmor};
 
 #[cfg_attr(not(feature = "crater-tests"), ignore)]
 #[test]
 fn curl() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--persona=pedantic"])
@@ -23,7 +23,7 @@ fn curl() -> anyhow::Result<()> {
 #[test]
 fn libssh2() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--persona=pedantic"])
@@ -37,7 +37,7 @@ fn libssh2() -> anyhow::Result<()> {
 #[test]
 fn warehouse() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--persona=pedantic"])
@@ -51,7 +51,7 @@ fn warehouse() -> anyhow::Result<()> {
 #[test]
 fn pyca_cryptography() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--persona=pedantic"])
@@ -65,7 +65,7 @@ fn pyca_cryptography() -> anyhow::Result<()> {
 #[test]
 fn astral_sh_uv() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .output(OutputMode::Both)
             .args(["--persona=pedantic"])

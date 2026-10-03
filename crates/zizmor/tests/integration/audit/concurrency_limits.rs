@@ -1,10 +1,10 @@
-use crate::common::{input_under_test, zizmor};
+use zizmor_dev::{Zizmor, input_under_test};
 
 /// Note: per #1302, we intentionally don't produce findings here.
 #[test]
 fn test_cancel_false() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "concurrency-limits/cancel-false.yml"
             ))
@@ -19,7 +19,7 @@ fn test_cancel_false() -> anyhow::Result<()> {
 #[test]
 fn test_missing() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "concurrency-limits/missing.yml"
             ))
@@ -46,7 +46,7 @@ fn test_missing() -> anyhow::Result<()> {
 #[test]
 fn test_no_cancel() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "concurrency-limits/no-cancel.yml"
             ))
@@ -71,7 +71,7 @@ fn test_no_cancel() -> anyhow::Result<()> {
 #[test]
 fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "concurrency-limits/jobs-missing-no-cancel.yml"
             ))
@@ -111,7 +111,7 @@ fn test_jobs_missing_no_cancel() -> anyhow::Result<()> {
 #[test]
 fn test_issue_1511() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "concurrency-limits/issue-1511-repro.yml"
             ))

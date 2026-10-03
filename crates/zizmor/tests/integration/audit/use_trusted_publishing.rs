@@ -1,10 +1,10 @@
-use crate::common::{input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{Zizmor, input_under_test};
 
 #[test]
 fn test_use_trusted_publishing() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("use-trusted-publishing.yml"))
             .run()?,
         @"
@@ -106,7 +106,7 @@ fn test_use_trusted_publishing() -> Result<()> {
 #[test]
 fn test_demo_action() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "use-trusted-publishing/demo-action/action.yml"
             ))
@@ -133,7 +133,7 @@ fn test_demo_action() -> Result<()> {
 #[test]
 fn test_cargo_publish() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("use-trusted-publishing/cargo-publish.yml"))
             .run()?,
         @r"
@@ -213,7 +213,7 @@ fn test_cargo_publish() -> Result<()> {
 #[test]
 fn test_npm_publish() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("use-trusted-publishing/npm-publish.yml"))
             .run()?,
         @"
@@ -352,7 +352,7 @@ fn test_npm_publish() -> Result<()> {
 #[test]
 fn test_issue_1191_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "use-trusted-publishing/issue-1191-repro.yml"
             ))
@@ -366,7 +366,7 @@ fn test_issue_1191_repro() -> Result<()> {
 #[test]
 fn test_nuget_push() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("use-trusted-publishing/nuget-push.yml"))
             .run()?,
         @"
@@ -410,7 +410,7 @@ fn test_nuget_push() -> Result<()> {
 #[test]
 fn test_gem_push() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("use-trusted-publishing/gem-push.yml"))
             .run()?,
         @r"
@@ -456,7 +456,7 @@ fn test_gem_push() -> Result<()> {
 #[test]
 fn test_twine_upload() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("use-trusted-publishing/twine-upload.yml"))
             .run()?,
         @r"
@@ -513,7 +513,7 @@ fn test_twine_upload() -> Result<()> {
 #[test]
 fn test_bun_publish() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("use-trusted-publishing/bun-publish.yml"))
             .run()?,
         @r"

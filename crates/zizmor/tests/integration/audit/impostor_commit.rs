@@ -1,10 +1,10 @@
-use crate::common::{NetworkMode, input_under_test, zizmor};
+use zizmor_dev::{NetworkMode, Zizmor, input_under_test};
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("impostor-commit.yml"))
             .offline(NetworkMode::AssertOnline)
             .run()?,
@@ -36,7 +36,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
 #[test]
 fn test_peels_tag_sha_to_commit_sha() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-    zizmor()
+    Zizmor::cargo_bin()
         .input(input_under_test("impostor-commit/sha-is-tag.yml"))
         .offline(NetworkMode::AssertOnline)
         .run()?,
@@ -50,7 +50,7 @@ fn test_peels_tag_sha_to_commit_sha() -> anyhow::Result<()> {
 #[test]
 fn test_pre_commit() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-    zizmor()
+    Zizmor::cargo_bin()
         .input(input_under_test("impostor-commit/.pre-commit-config.yml"))
         .offline(NetworkMode::AssertOnline)
         .run()?,

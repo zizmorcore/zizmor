@@ -1,10 +1,10 @@
-use crate::common::{OutputMode, WorkspaceBuilder, input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{OutputMode, WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_allow_all() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test("forbidden-uses/configs/allow-all.yml"))
             .input(input_under_test(
                 "forbidden-uses/forbidden-uses-menagerie.yml"
@@ -19,7 +19,7 @@ fn test_allow_all() -> Result<()> {
 #[test]
 fn test_deny_all() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test("forbidden-uses/configs/deny-all.yml"))
             .input(input_under_test(
                 "forbidden-uses/forbidden-uses-menagerie.yml"
@@ -60,7 +60,7 @@ fn test_deny_all() -> Result<()> {
 #[test]
 fn test_allow_some() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test("forbidden-uses/configs/allow-some.yml"))
             .input(input_under_test(
                 "forbidden-uses/forbidden-uses-menagerie.yml"
@@ -85,7 +85,7 @@ fn test_allow_some() -> Result<()> {
 #[test]
 fn test_deny_some() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test("forbidden-uses/configs/deny-some.yml"))
             .input(input_under_test(
                 "forbidden-uses/forbidden-uses-menagerie.yml"
@@ -118,7 +118,7 @@ fn test_deny_some() -> Result<()> {
 #[test]
 fn test_deny_some_refs() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test("forbidden-uses/configs/deny-some-refs.yml"))
             .input(input_under_test(
                 "forbidden-uses/forbidden-uses-menagerie.yml"
@@ -151,7 +151,7 @@ fn test_deny_some_refs() -> Result<()> {
 #[test]
 fn test_allow_some_refs() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .config(input_under_test("forbidden-uses/configs/allow-some-refs.yml"))
             .input(input_under_test(
                 "forbidden-uses/forbidden-uses-menagerie.yml"
@@ -176,7 +176,7 @@ fn test_allow_some_refs() -> Result<()> {
 #[test]
 fn test_config_invalid_pattern() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test(
@@ -205,7 +205,7 @@ fn test_config_invalid_pattern() -> Result<()> {
 #[test]
 fn test_config_invalid_variant() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .expects_failure(1)
             .input(input_under_test("neutral.yml"))
             .config(input_under_test(
@@ -250,7 +250,7 @@ rules:
     );
 
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(workspace.path())
             .run()?,
         @"
