@@ -54,6 +54,8 @@ of `zizmor`.
   that use prek extensions to the `language_version` and `default_language_version`
   keys (#2413)
 
+* Fixed [use-trusted-publishing] misreading PowerShell command arguments (#2430)
+
 ## 1.30.1
 
 ### Bug Fixes 🐛

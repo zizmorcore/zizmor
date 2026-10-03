@@ -36,3 +36,12 @@ jobs:
             --source https://www.nuget.org/api/v2/package
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+
+  nuget-push-pwsh:
+    name: nuget-push-pwsh
+    runs-on: windows-latest
+    permissions: {}
+    steps:
+      # multi-argument commands are detected under powershell
+      - name: vulnerable-4
+        run: dotnet nuget push foo.nupkg

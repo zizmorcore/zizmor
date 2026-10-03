@@ -1,6 +1,7 @@
-use std::{sync::LazyLock, vec};
+use std::{iter, sync::LazyLock, vec};
 
 use anyhow::Context as _;
+use itertools::Either;
 use subfeature::Subfeature;
 use tree_sitter::StreamingIterator as _;
 
@@ -140,8 +141,9 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
     });
 
 const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) @span";
+// Matches once per command, since a quantified child pattern matches once per argument.
 const PWSH_COMMAND_QUERY: &str =
-    "(command command_name: (_) @cmd command_elements: (_ (generic_token) @args)+) @span";
+    "(command command_name: (_) @cmd command_elements: (command_elements) @args) @span";
 
 pub(crate) struct UseTrustedPublishing {
     bash_command_query: utils::SpannedQuery,
@@ -392,9 +394,20 @@ impl UseTrustedPublishing {
                 .captures()
                 .iter()
                 .filter(|cap| cap.index == args)
-                .map(|cap| {
-                    cap.node
-                        .utf8_text(run.as_bytes())
+                .flat_map(|cap| {
+                    let node = cap.node;
+                    if node.kind() == "command_elements" {
+                        Either::Left((0..node.child_count()).filter_map(move |i| {
+                            node.child(i).filter(|child| {
+                                matches!(child.kind(), "generic_token" | "command_parameter")
+                            })
+                        }))
+                    } else {
+                        Either::Right(iter::once(node))
+                    }
+                })
+                .map(|node| {
+                    node.utf8_text(run.as_bytes())
                         .expect("impossible: capture should be UTF-8 by construction")
                 });
 

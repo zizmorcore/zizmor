@@ -203,7 +203,17 @@ fn test_cargo_publish() -> Result<()> {
        |
        = note: audit confidence → High
 
-    10 findings (4 suppressed): 6 informational, 0 low, 0 medium, 0 high
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:81:14
+       |
+    81 |         run: cargo publish --locked
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    14 findings (7 suppressed): 7 informational, 0 low, 0 medium, 0 high
     "
     );
 
@@ -400,7 +410,17 @@ fn test_nuget_push() -> Result<()> {
        |
        = note: audit confidence → High
 
-    6 findings (3 suppressed): 3 informational, 0 low, 0 medium, 0 high
+    info[use-trusted-publishing]: prefer trusted publishing for authentication
+      --> @@INPUT@@:47:14
+       |
+    47 |         run: dotnet nuget push foo.nupkg
+       |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
+       |         |
+       |         this step
+       |
+       = note: audit confidence → High
+
+    7 findings (3 suppressed): 4 informational, 0 low, 0 medium, 0 high
     "
     );
 
