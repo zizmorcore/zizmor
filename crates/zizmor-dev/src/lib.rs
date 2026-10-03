@@ -1,7 +1,4 @@
 //! Shared helpers for zizmor's integration tests and benchmarks.
-//!
-//! Fixtures are resolved from the source checkout. Use [`Zizmor::cargo_bin`] for
-//! Cargo's zizmor executable.
 
 #![allow(
     clippy::unwrap_used,
@@ -62,7 +59,7 @@ const VERSION_PLACEHOLDER: &str = "@@VERSION@@";
 static PLACEHOLDER_PATH_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"@@\w+@@[\\/\w.-]*").unwrap());
 
-/// Return the absolute path to an existing integration test fixture.
+/// Locate a fixture under `crates/zizmor/tests/integration/test-data`.
 pub fn input_under_test(name: &str) -> Utf8PathBuf {
     let file_path = TEST_PREFIX.join(name);
 
@@ -73,17 +70,13 @@ pub fn input_under_test(name: &str) -> Utf8PathBuf {
     file_path
 }
 
-/// Select which output streams to capture.
 pub enum OutputMode {
-    /// Capture standard output.
     Stdout,
-    /// Capture standard error.
     Stderr,
     /// Capture standard error followed by standard output.
     Both,
 }
 
-/// Control whether a zizmor run may access the network.
 #[derive(Default)]
 pub enum NetworkMode {
     /// The zizmor run is implicitly offline or online, i.e. depends
@@ -97,7 +90,7 @@ pub enum NetworkMode {
     AssertOnline,
 }
 
-/// A configurable zizmor runner that returns snapshot-stable output.
+/// Runs `zizmor` with various configurable knobs.
 pub struct Zizmor {
     cmd: Command,
     stdin: Option<String>,
@@ -135,19 +128,12 @@ const SCRUBBED_ENV_VARS: &[&str] = &[
 const SCRUBBED_ENV_PREFIXES: &[&str] = &["GH_", "GITHUB_", "ZIZMOR_", "RUNNER_", "ACTIONS_"];
 
 impl Zizmor {
-    /// Create a runner for Cargo's zizmor executable.
-    ///
-    /// Intended for integration tests and benchmarks run by Cargo, which builds
-    /// the binary and makes its location available to `assert_cmd`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `assert_cmd` cannot locate the binary.
+    /// Use the `zizmor` binary built by Cargo for integration tests or benchmarks.
+    /// Panics if the binary cannot be found.
     pub fn cargo_bin() -> Self {
         Self::new(assert_cmd::cargo::cargo_bin("zizmor"))
     }
 
-    /// Create a new zizmor runner for the given executable.
     fn new(binary: impl AsRef<std::ffi::OsStr>) -> Self {
         let mut cmd = Command::new(binary);
 
@@ -183,37 +169,31 @@ impl Zizmor {
         }
     }
 
-    /// Supply standard input to zizmor.
     pub fn stdin(mut self, input: impl Into<String>) -> Self {
         self.stdin = Some(input.into());
         self
     }
 
-    /// Append command-line arguments.
     pub fn args<'a>(mut self, args: impl IntoIterator<Item = &'a str>) -> Self {
         self.cmd.args(args);
         self
     }
 
-    /// Set an environment variable for the child process.
     pub fn setenv(mut self, key: &str, value: &str) -> Self {
         self.cmd.env(key, value);
         self
     }
 
-    /// Add an input path or repository reference to audit.
     pub fn input(mut self, input: impl Into<Utf8PathBuf>) -> Self {
         self.inputs.push(input.into());
         self
     }
 
-    /// Use the configuration file at the given path.
     pub fn config(mut self, config: impl Into<String>) -> Self {
         self.config = Some(config.into());
         self
     }
 
-    /// Control whether automatic configuration discovery is disabled.
     pub fn no_config(mut self, flag: bool) -> Self {
         self.no_config = flag;
         self
@@ -237,7 +217,7 @@ impl Zizmor {
         self
     }
 
-    /// Select the output streams; defaults to standard output.
+    /// Defaults to standard output.
     pub fn output(mut self, output: OutputMode) -> Self {
         self.output = output;
         self
@@ -250,13 +230,11 @@ impl Zizmor {
         self
     }
 
-    /// Control whether audit URLs appear in the output.
     pub fn show_audit_urls(mut self, flag: bool) -> Self {
         self.show_audit_urls = flag;
         self
     }
 
-    /// Set the working directory for the child process.
     pub fn working_dir(mut self, dir: impl Into<Utf8PathBuf>) -> Self {
         self.working_dir = dir.into();
         self.cmd.current_dir(&self.working_dir);
@@ -577,7 +555,6 @@ pub struct Workspace {
 }
 
 impl Workspace {
-    /// Return the absolute path to the temporary workspace.
     pub fn path(&self) -> &Utf8Path {
         self.path.as_path()
     }
@@ -658,7 +635,6 @@ impl Workspace {
     }
 }
 
-/// Builds a temporary workspace with an optional root name and Git directory.
 #[derive(Default)]
 pub struct WorkspaceBuilder {
     root_name: Option<String>,
@@ -666,12 +642,10 @@ pub struct WorkspaceBuilder {
 }
 
 impl WorkspaceBuilder {
-    /// Create a builder for an empty temporary workspace.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Nest the workspace inside a directory with the given name.
     pub fn root_name(mut self, name: impl Into<String>) -> Self {
         self.root_name = Some(name.into());
         self
@@ -683,7 +657,6 @@ impl WorkspaceBuilder {
         self
     }
 
-    /// Create the temporary workspace on disk.
     pub fn build(self) -> anyhow::Result<Workspace> {
         let tempdir = tempfile::tempdir()?;
         let mut root = tempdir.path().to_path_buf();
