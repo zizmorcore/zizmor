@@ -1,9 +1,9 @@
-use crate::common::{input_under_test, zizmor};
+use zizmor_dev::{Zizmor, input_under_test};
 
 #[test]
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor().input(input_under_test("archived-uses.yml")).run()?,
+        Zizmor::cargo_bin().input(input_under_test("archived-uses.yml")).run()?,
         @"
     warning[archived-uses]: action or reusable workflow from archived repository
       --> @@INPUT@@:17:15
@@ -45,7 +45,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
 #[test]
 fn test_composite_action() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("archived-uses/action/"))
             .run()?,
         @"
@@ -69,7 +69,7 @@ fn test_composite_action() -> anyhow::Result<()> {
 #[test]
 fn test_pre_commit_config() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor().input(input_under_test("archived-uses/pre-commit/.pre-commit-config.yaml")).run()?, @"
+        Zizmor::cargo_bin().input(input_under_test("archived-uses/pre-commit/.pre-commit-config.yaml")).run()?, @"
     warning[archived-uses]: action or reusable workflow from archived repository
      --> @@INPUT@@:2:11
       |

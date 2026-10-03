@@ -1,11 +1,11 @@
-use crate::common::{NetworkMode, input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{NetworkMode, Zizmor, input_under_test};
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn test_ref_confusion() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("ref-confusion.yml"))
             .offline(NetworkMode::AssertOnline)
             .run()?,
@@ -29,7 +29,7 @@ fn test_ref_confusion() -> Result<()> {
 #[test]
 fn test_ref_confusion_pre_commit() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("ref-confusion/pre-commit/.pre-commit-config.yaml"))
             .offline(NetworkMode::AssertOnline)
             .run()?,
@@ -55,7 +55,7 @@ fn test_ref_confusion_pre_commit() -> Result<()> {
 #[test]
 fn test_issue_518_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("ref-confusion/issue-518-repro.yml"))
             .offline(NetworkMode::AssertOnline)
             .run()?,

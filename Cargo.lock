@@ -4331,7 +4331,6 @@ dependencies = [
  "annotate-snippets",
  "anstream",
  "anyhow",
- "assert_cmd",
  "async-trait",
  "camino",
  "clap",
@@ -4363,7 +4362,6 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "similar 3.2.0",
  "subfeature",
  "tar",
  "tempfile",
@@ -4380,11 +4378,24 @@ dependencies = [
  "tree-sitter-powershell",
  "typomania",
  "url",
- "walkdir",
  "yaml_serde",
  "yamlpatch",
  "yamlpath",
+ "zizmor-dev",
  "zizmor-sarif",
+]
+
+[[package]]
+name = "zizmor-dev"
+version = "1.30.1"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "camino",
+ "regex",
+ "similar 3.2.0",
+ "tempfile",
+ "walkdir",
 ]
 
 [[package]]

@@ -1,9 +1,9 @@
-use crate::common::{input_under_test, zizmor};
+use zizmor_dev::{Zizmor, input_under_test};
 
 #[test]
 fn secrets_inherit() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("secrets-inherit.yml"))
             .run()?,
         @"

@@ -3,9 +3,11 @@
 This directory contains `zizmor`'s various crates.
 
 See the table and each subdirectory for more details on each crate.
+
 | Crate | Version | Documentation | Description |
 |-------|---------|---------------|-------------|
 | [`zizmor`][zizmor-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor)][zizmor-crates] | [![docs.zizmor.sh](https://img.shields.io/badge/zizmor-docs.zizmor.sh-blue)][zizmor-docs] | The `zizmor` CLI and core auditing functionality. |
+| [`zizmor-dev`][zizmor-dev-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor-dev)][zizmor-dev-crates] | [![docs.rs](https://img.shields.io/docsrs/zizmor-dev)][zizmor-dev-docs] | Shared helpers for `zizmor`'s tests and benchmarks. |
 | [`subfeature`][subfeature-dir] | [![Crates.io](https://img.shields.io/crates/v/subfeature)][subfeature-crates] | [![docs.rs](https://img.shields.io/docsrs/subfeature)][subfeature-docs] | Subfeature handling APIs. |
 | [`yamlpath`][yamlpath-dir] | [![Crates.io](https://img.shields.io/crates/v/yamlpath)][yamlpath-crates] | [![docs.rs](https://img.shields.io/docsrs/yamlpath)][yamlpath-docs] | Format-preserving YAML feature extraction. |
 | [`yamlpatch`][yamlpath-dir] | [![Crates.io](https://img.shields.io/crates/v/yamlpatch)][yamlpath-crates] | [![docs.rs](https://img.shields.io/docsrs/yamlpatch)][yamlpath-docs] | Comment and format-preserving YAML patch operations. |
@@ -18,6 +20,10 @@ See the table and each subdirectory for more details on each crate.
 [zizmor-dir]: ./zizmor
 [zizmor-crates]: https://crates.io/crates/zizmor
 [zizmor-docs]: https://docs.zizmor.sh/
+
+[zizmor-dev-dir]: ./zizmor-dev
+[zizmor-dev-crates]: https://crates.io/crates/zizmor-dev
+[zizmor-dev-docs]: https://docs.rs/zizmor-dev
 
 [subfeature-dir]: ./subfeature
 [subfeature-crates]: https://crates.io/crates/subfeature

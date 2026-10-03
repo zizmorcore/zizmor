@@ -4,8 +4,6 @@
 mod audit;
 /// Basic CLI tests.
 mod cli;
-/// Helpers.
-mod common;
 /// Configuration discovery tests.
 mod config;
 /// "Big picture" end-to-end tests, i.e. tests that typically exercise

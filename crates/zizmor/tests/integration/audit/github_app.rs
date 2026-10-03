@@ -1,9 +1,9 @@
-use crate::common::{input_under_test, zizmor};
+use zizmor_dev::{Zizmor, input_under_test};
 
 #[test]
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("github-app.yml"))
             .run()?,
         @"
@@ -86,7 +86,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
 #[test]
 fn test_issue_2219() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-    zizmor()
+    Zizmor::cargo_bin()
         .input(input_under_test("github-app/issue-2219-repro.yml"))
         .run()?,
     @"No findings to report. Good job!"

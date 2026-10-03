@@ -1,9 +1,9 @@
-use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
+use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "dependabot-execution/basic/dependabot.yml"
             ))
@@ -43,12 +43,12 @@ updates:
     insecure-external-code-execution: allow
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/dependabot.yml", dependabot_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/dependabot.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()

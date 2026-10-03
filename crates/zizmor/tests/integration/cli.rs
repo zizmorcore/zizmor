@@ -1,4 +1,4 @@
-use crate::common::zizmor;
+use zizmor_dev::Zizmor;
 
 /// Test that `-` reads a workflow from stdin.
 #[test]
@@ -15,7 +15,7 @@ jobs:
     // test harness replaces all occurrences of the input string in the
     // output, and `-` would corrupt arrows, flags, etc.
     insta::assert_snapshot!(
-        zizmor().stdin(workflow).no_config(true).args(["-"]).run()?,
+        Zizmor::cargo_bin().stdin(workflow).no_config(true).args(["-"]).run()?,
         @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
      --> <stdin>:6:9
@@ -67,7 +67,7 @@ runs:
     - uses: actions/checkout@v3
 ";
     insta::assert_snapshot!(
-        zizmor().stdin(action).no_config(true).args(["-"]).run()?,
+        Zizmor::cargo_bin().stdin(action).no_config(true).args(["-"]).run()?,
         @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
      --> <stdin>:6:7
@@ -105,7 +105,7 @@ updates:
       interval: weekly
 ";
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .stdin(dependabot)
             .no_config(true)
             .args(["-"])
@@ -131,7 +131,7 @@ updates:
 #[test]
 fn test_stdin_with_other_inputs() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .stdin("on: push")
             .no_config(true)
             .expects_failure(2)
@@ -154,7 +154,7 @@ fn test_stdin_with_other_inputs() -> anyhow::Result<()> {
 #[test]
 fn test_stdin_with_fix() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .stdin("on: push")
             .no_config(true)
             .expects_failure(2)
@@ -177,7 +177,7 @@ fn test_stdin_with_fix() -> anyhow::Result<()> {
 #[test]
 fn test_stdin_invalid_yaml() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .stdin("{[invalid")
             .no_config(true)
             .expects_failure(1)
@@ -201,7 +201,7 @@ fn test_stdin_invalid_yaml() -> anyhow::Result<()> {
 #[test]
 fn test_stdin_invalid_yaml_strict() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .stdin("{[invalid")
             .no_config(true)
             .expects_failure(1)
@@ -225,7 +225,7 @@ fn test_stdin_invalid_yaml_strict() -> anyhow::Result<()> {
 #[test]
 fn test_stdin_empty() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .stdin("")
             .no_config(true)
             .expects_failure(3)
@@ -259,7 +259,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 ";
-    let output = zizmor()
+    let output = Zizmor::cargo_bin()
         .stdin(workflow)
         .no_config(true)
         .args(["--format=sarif", "-"])
@@ -783,7 +783,7 @@ jobs:
 fn test_stdin_valid_yaml_unknown_schema() -> anyhow::Result<()> {
     let unknown = "foo: bar\nbaz: 42\n";
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .stdin(unknown)
             .no_config(true)
             .expects_failure(3)
@@ -811,7 +811,7 @@ fn test_stdin_valid_yaml_unknown_schema() -> anyhow::Result<()> {
 fn test_stdin_valid_yaml_unknown_schema_strict() -> anyhow::Result<()> {
     let unknown = "foo: bar\nbaz: 42\n";
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .stdin(unknown)
             .no_config(true)
             .expects_failure(3)

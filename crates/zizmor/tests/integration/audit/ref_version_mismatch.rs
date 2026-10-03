@@ -1,13 +1,13 @@
-use crate::common::{NetworkMode, input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{NetworkMode, Zizmor, input_under_test};
 
 #[cfg_attr(not(feature = "gh-token-tests"), ignore)]
 #[test]
 fn test_ref_version_mismatch() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
-            .output(crate::common::OutputMode::Both)
+            .output(zizmor_dev::OutputMode::Both)
             .input(input_under_test("ref-version-mismatch.yml"))
             .run()?,
         @"
@@ -56,7 +56,7 @@ fn test_ref_version_mismatch() -> Result<()> {
 #[test]
 fn test_missing_version_comment_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .args(["--persona=pedantic"])
             .input(input_under_test("ref-version-mismatch.yml"))
@@ -135,7 +135,7 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
 #[test]
 fn test_nested_annotated_tags() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test(
                 "ref-version-mismatch/nested-annotated-tags.yml"
@@ -151,7 +151,7 @@ fn test_nested_annotated_tags() -> Result<()> {
 #[test]
 fn test_issue_1853() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-1853-repro.yml"))
             .run()?,
@@ -178,7 +178,7 @@ fn test_issue_1853() -> Result<()> {
 #[test]
 fn test_issue_1869() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-1869-repro.yml"))
             .run()?,
@@ -193,7 +193,7 @@ fn test_issue_1869() -> Result<()> {
 #[test]
 fn test_issue_1899() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-1899-repro.yml"))
             .run()?,
@@ -208,7 +208,7 @@ fn test_issue_1899() -> Result<()> {
 #[test]
 fn test_issue_1938() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .args(["--persona=pedantic"])
             .input(input_under_test("ref-version-mismatch/issue-1938-repro.yml"))
@@ -222,7 +222,7 @@ fn test_issue_1938() -> Result<()> {
 #[test]
 fn test_issue_2039() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-2039-repro.yml"))
             .run()?,
@@ -237,7 +237,7 @@ fn test_issue_2039() -> Result<()> {
 #[test]
 fn test_issue_2165() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-2165-repro.yml"))
             .run()?,
@@ -255,7 +255,7 @@ fn test_issue_2165() -> Result<()> {
 #[test]
 fn test_issue_2321() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-2321-repro.yml"))
             .run()?,
@@ -285,7 +285,7 @@ fn test_issue_2321() -> Result<()> {
 #[test]
 fn test_issue_2324() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-2324-repro.yml"))
             .run()?,
@@ -316,7 +316,7 @@ fn test_issue_2324() -> Result<()> {
 #[test]
 fn test_issue_2393() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
             .input(input_under_test("ref-version-mismatch/issue-2393-repro.yml"))
             .run()?,
@@ -342,7 +342,7 @@ fn test_issue_2393() -> Result<()> {
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_add_version_comment_composite_action() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     let action_content = r#"
 name: Test Missing Version Comment
@@ -356,12 +356,12 @@ runs:
         persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file("action/action.yml", action_content);
 
     insta::assert_snapshot!(
         &workspace.diff("action/action.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all", "--persona=pedantic"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())
@@ -385,7 +385,7 @@ runs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_add_version_comment_workflow() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     let workflow_content = r#"
 name: Test Missing Version Comment
@@ -401,12 +401,12 @@ jobs:
           persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all", "--persona=pedantic"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())
@@ -430,7 +430,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_version_comment_mismatch() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     let workflow_content = r#"
 name: Test Version Comment Mismatch
@@ -446,12 +446,12 @@ jobs:
           persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all", "--persona=pedantic"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())
@@ -475,7 +475,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_version_comment_mismatch_crlf() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     let workflow_content = r#"
 name: Test Version Comment Mismatch
@@ -492,12 +492,12 @@ jobs:
 "#
     .replace('\n', "\r\n");
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all", "--persona=pedantic"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())
@@ -521,7 +521,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_version_comment_mismatch_bizarre_formatting() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     let workflow_content = r#"
 name: Test Missing Version Comment
@@ -537,12 +537,12 @@ jobs:
           persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all", "--persona=pedantic"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())
@@ -566,7 +566,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_version_comment_different_formats() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     let workflow_content = r#"
 name: Test Different Version Formats
@@ -590,12 +590,12 @@ jobs:
           persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all", "--persona=pedantic"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())
@@ -629,7 +629,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_version_comment_nonexistent_ref() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     let workflow_content = r#"
 name: nonexistent
@@ -648,12 +648,12 @@ jobs:
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v9.9.9
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all", "--persona=pedantic"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())
@@ -675,7 +675,7 @@ jobs:
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix_reusable_workflow() -> anyhow::Result<()> {
-    use crate::common::WorkspaceBuilder;
+    use zizmor_dev::WorkspaceBuilder;
 
     let workflow_content = r#"
 name: reusable
@@ -691,12 +691,12 @@ jobs:
     uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.16.0
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all", "--persona=pedantic"])
                 .offline(NetworkMode::AssertOnline)
                 .input(workspace.path())

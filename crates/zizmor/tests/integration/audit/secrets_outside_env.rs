@@ -1,11 +1,11 @@
 use anyhow::Result;
 
-use crate::common::{OutputMode, input_under_test, zizmor};
+use zizmor_dev::{OutputMode, Zizmor, input_under_test};
 
 #[test]
 fn test_secrets_outside_env() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("secrets-outside-env.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -31,7 +31,7 @@ fn test_secrets_outside_env() -> Result<()> {
 #[test]
 fn test_config_invalid_variant() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
         .expects_failure(1)
         .input(input_under_test("neutral.yml"))
         .config(input_under_test("secrets-outside-env/configs/invalid-variant.yml"))
@@ -57,7 +57,7 @@ fn test_config_invalid_variant() -> Result<()> {
 #[test]
 fn test_config_allow_none() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
         .args(["--persona=auditor"])
         .input(input_under_test("secrets-outside-env/multiple-secrets.yml"))
         .config(input_under_test("secrets-outside-env/configs/allow-none.yml"))
@@ -116,7 +116,7 @@ fn test_config_allow_none() -> Result<()> {
 #[test]
 fn test_config_allow_one() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
         .args(["--persona=auditor"])
         .input(input_under_test("secrets-outside-env/multiple-secrets.yml"))
         .config(input_under_test("secrets-outside-env/configs/allow-one.yml"))
@@ -142,7 +142,7 @@ fn test_config_allow_one() -> Result<()> {
 #[test]
 fn test_config_allow_some() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
         .args(["--persona=auditor"])
         .input(input_under_test("secrets-outside-env/multiple-secrets.yml"))
         .config(input_under_test("secrets-outside-env/configs/allow-some.yml"))
@@ -159,7 +159,7 @@ fn test_config_allow_some() -> Result<()> {
 #[test]
 fn test_issue_2157() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
         .args(["--persona=auditor"])
         .input(input_under_test("secrets-outside-env/issue-2157-repro.yml"))
         .run()?,

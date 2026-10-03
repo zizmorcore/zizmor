@@ -1,10 +1,10 @@
-use crate::common::{input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{Zizmor, input_under_test};
 
 #[test]
 fn test_self_hosted_auditor() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("self-hosted.yml"))
             .config(input_under_test("self-hosted/configs/allow-all.yml"))
             .args(["--persona=auditor"])
@@ -44,7 +44,7 @@ fn test_self_hosted_auditor() -> Result<()> {
 #[test]
 fn test_self_hosted_default() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("self-hosted.yml"))
             .run()?,
         @"No findings to report. Good job! (3 suppressed)"
@@ -56,7 +56,7 @@ fn test_self_hosted_default() -> Result<()> {
 #[test]
 fn test_self_hosted_runner_label() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("self-hosted/self-hosted-runner-label.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -79,7 +79,7 @@ fn test_self_hosted_runner_label() -> Result<()> {
 #[test]
 fn test_self_hosted_runner_group() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("self-hosted/self-hosted-runner-group.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -103,7 +103,7 @@ fn test_self_hosted_runner_group() -> Result<()> {
 #[test]
 fn test_self_hosted_matrix_dimension() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "self-hosted/self-hosted-matrix-dimension.yml"
             ))
@@ -133,7 +133,7 @@ fn test_self_hosted_matrix_dimension() -> Result<()> {
 #[test]
 fn test_self_hosted_matrix_inclusion() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "self-hosted/self-hosted-matrix-inclusion.yml"
             ))
@@ -165,7 +165,7 @@ fn test_self_hosted_matrix_inclusion() -> Result<()> {
 #[test]
 fn test_self_hosted_matrix_exclusion() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "self-hosted/self-hosted-matrix-exclusion.yml"
             ))
@@ -180,7 +180,7 @@ fn test_self_hosted_matrix_exclusion() -> Result<()> {
 #[test]
 fn test_self_hosted_provider() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("self-hosted/self-hosted-providers.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -194,7 +194,7 @@ fn test_self_hosted_provider() -> Result<()> {
 #[test]
 fn test_issue_283_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("self-hosted/issue-283-repro.yml"))
             .args(["--persona=auditor"])
             .run()?,

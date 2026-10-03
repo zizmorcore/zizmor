@@ -1,8 +1,8 @@
-use crate::common::{input_under_test, zizmor};
+use zizmor_dev::{Zizmor, input_under_test};
 
 #[test]
 fn test_regular_persona() -> anyhow::Result<()> {
-    insta::assert_snapshot!(zizmor().input(input_under_test("unpinned-tools.yml")).run()?, @"
+    insta::assert_snapshot!(Zizmor::cargo_bin().input(input_under_test("unpinned-tools.yml")).run()?, @"
     warning[unpinned-tools]: action installs an unpinned external tool
       --> @@INPUT@@:16:15
        |
@@ -60,7 +60,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
 
 #[test]
 fn test_setup_just() -> anyhow::Result<()> {
-    insta::assert_snapshot!(zizmor()
+    insta::assert_snapshot!(Zizmor::cargo_bin()
         .input(input_under_test("unpinned-tools/setup-just.yml"))
         .run()?, @r#"
     warning[unpinned-tools]: action installs an unpinned external tool
@@ -104,7 +104,7 @@ fn test_setup_just() -> anyhow::Result<()> {
 #[test]
 fn test_if_false_skipped() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unpinned-tools/if-false.yml"))
             .run()?,
         @"No findings to report. Good job! (1 ignored, 1 suppressed)"

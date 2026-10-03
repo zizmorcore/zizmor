@@ -1,9 +1,9 @@
-use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
+use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_regular_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor().input(input_under_test("artipacked.yml")).run()?,
+        Zizmor::cargo_bin().input(input_under_test("artipacked.yml")).run()?,
         @"
     warning[artipacked]: credential persistence through GitHub Actions artifacts
       --> @@INPUT@@:22:9
@@ -24,7 +24,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
 #[test]
 fn test_pedantic_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("artipacked.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -48,7 +48,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
 #[test]
 fn test_auditor_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("artipacked.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -88,7 +88,7 @@ fn test_auditor_persona() -> anyhow::Result<()> {
 #[test]
 fn test_issue_447() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("artipacked/issue-447-repro.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -121,7 +121,7 @@ fn test_issue_447() -> anyhow::Result<()> {
 #[test]
 fn test_issue_1709() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("artipacked/issue-1709-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -149,7 +149,7 @@ fn test_issue_1709() -> anyhow::Result<()> {
 #[test]
 fn test_composite_action() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("artipacked/demo-action/action.yml"))
             .args(["--persona=auditor"])
             .run()?,
@@ -187,7 +187,7 @@ fn test_composite_action() -> anyhow::Result<()> {
 
 #[test]
 fn test_fix_merges_into_existing_with_block() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(
         ".github/workflows/artipacked.yml",
         r#"
@@ -212,7 +212,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/artipacked.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -234,7 +234,7 @@ jobs:
 
 #[test]
 fn test_fix_creates_block_when_missing() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(
         ".github/workflows/artipacked.yml",
         r#"
@@ -256,7 +256,7 @@ jobs:
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/artipacked.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()

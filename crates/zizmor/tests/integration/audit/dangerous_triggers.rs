@@ -1,4 +1,4 @@
-use crate::common::{input_under_test, zizmor};
+use zizmor_dev::{Zizmor, input_under_test};
 
 /// A workflow that only contains one step (of `actions/labeler`)
 /// should not produce a `dangerous-triggers` finding, even if
@@ -6,7 +6,7 @@ use crate::common::{input_under_test, zizmor};
 #[test]
 fn test_actions_labeler_exception() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "dangerous-triggers/actions-labeler.yml"
             ))
@@ -20,7 +20,7 @@ fn test_actions_labeler_exception() -> anyhow::Result<()> {
 #[test]
 fn test_dangerous_trigger_bare_style() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-    zizmor()
+    Zizmor::cargo_bin()
         .input(input_under_test(
             "dangerous-triggers/dangerous-bare.yml"
         ))
@@ -46,7 +46,7 @@ fn test_dangerous_trigger_bare_style() -> anyhow::Result<()> {
 #[test]
 fn test_dangerous_trigger_list_styles() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-    zizmor()
+    Zizmor::cargo_bin()
         .input(input_under_test(
             "dangerous-triggers/dangerous-block-list.yml"
         ))
@@ -65,7 +65,7 @@ fn test_dangerous_trigger_list_styles() -> anyhow::Result<()> {
     );
 
     insta::assert_snapshot!(
-    zizmor()
+    Zizmor::cargo_bin()
         .input(input_under_test(
             "dangerous-triggers/dangerous-flow-list.yml"
         ))
@@ -89,7 +89,7 @@ fn test_dangerous_trigger_list_styles() -> anyhow::Result<()> {
 #[test]
 fn test_issue_comment() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test(
                 "dangerous-triggers/issue-comment.yml"
             ))

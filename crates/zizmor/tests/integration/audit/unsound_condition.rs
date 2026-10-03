@@ -1,9 +1,9 @@
-use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
+use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_normal_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("unsound-condition.yml"))
             .run()?,
         @r#"
@@ -109,13 +109,13 @@ jobs:
         run: echo "test"
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -150,13 +150,13 @@ jobs:
         run: echo "test"
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -192,13 +192,13 @@ jobs:
         run: echo "test"
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -238,13 +238,13 @@ jobs:
         run: echo "test"
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()
@@ -277,13 +277,13 @@ jobs:
     uses: $/.github/workflows/reusable.yml
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
-                .output(crate::common::OutputMode::Both)
+            Zizmor::cargo_bin()
+                .output(zizmor_dev::OutputMode::Both)
                 .args(["--fix=all"])
                 .input(workspace.path())
                 .run()

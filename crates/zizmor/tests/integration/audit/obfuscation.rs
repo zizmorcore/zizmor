@@ -1,10 +1,10 @@
-use crate::common::{WorkspaceBuilder, input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_obfuscation() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("obfuscation.yml"))
             .run()?,
         @"
@@ -205,7 +205,7 @@ fn test_obfuscation() -> Result<()> {
 #[test]
 fn test_computed_indices_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("obfuscation/computed-indices.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -228,7 +228,7 @@ fn test_computed_indices_pedantic() -> Result<()> {
 #[test]
 fn test_issue_1177_repro_pedantic() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("obfuscation/issue-1177-repro.yml"))
             .args(["--persona=pedantic"])
             .run()?,
@@ -241,7 +241,7 @@ fn test_issue_1177_repro_pedantic() -> Result<()> {
 #[test]
 fn test_issue_1769() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
         .input(input_under_test("obfuscation/issue-1769-repro.yml")).run()?,
         @"
     info[obfuscation]: obfuscated usage of GitHub Actions features
@@ -290,12 +290,12 @@ jobs:
       iac/terraform/attribution.tfm--release_created: ${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=safe"])
                 .input(workspace.path())
                 .run()
@@ -326,12 +326,12 @@ jobs:
       - uses: actions/checkout////@v4
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=safe"])
                 .input(workspace.path())
                 .run()
@@ -362,12 +362,12 @@ jobs:
       - uses: github/codeql-action/./init@v2
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=safe"])
                 .input(workspace.path())
                 .run()
@@ -398,12 +398,12 @@ jobs:
       - uses: actions/cache/save/../save@v4
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
         &workspace.diff(".github/workflows/test.yml", |workspace| {
-            zizmor()
+            Zizmor::cargo_bin()
                 .args(["--fix=safe"])
                 .input(workspace.path())
                 .run()

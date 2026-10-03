@@ -65,11 +65,9 @@ yamlpath.workspace = true
 zizmor-sarif.workspace = true
 
 [dev-dependencies]
-assert_cmd.workspace = true
 insta.workspace = true
-similar.workspace = true
 tempfile.workspace = true
-walkdir.workspace = true
+zizmor-dev.workspace = true
 
 [build-dependencies]
 csv.workspace = true

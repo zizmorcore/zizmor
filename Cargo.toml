@@ -9,6 +9,7 @@ members = [
   "crates/yamlpatch",
   "crates/yamlpath",
   "crates/zizmor",
+  "crates/zizmor-dev",
   "crates/zizmor-sarif",
 ]
 
@@ -28,6 +29,7 @@ subfeature = { path = "crates/subfeature", version = "1.30.1" }
 tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.30.1" }
 yamlpatch = { path = "crates/yamlpatch", version = "1.30.1" }
 yamlpath = { path = "crates/yamlpath", version = "1.30.1" }
+zizmor-dev = { path = "crates/zizmor-dev" }
 zizmor-sarif = { path = "crates/zizmor-sarif", version = "1.30.1" }
 
 annotate-snippets = "0.12.16"

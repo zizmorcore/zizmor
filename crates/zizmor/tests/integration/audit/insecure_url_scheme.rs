@@ -1,9 +1,9 @@
-use crate::common::{input_under_test, zizmor};
+use zizmor_dev::{Zizmor, input_under_test};
 
 #[test]
 fn test_insecure_origin_pre_commit_config() -> anyhow::Result<()> {
     insta::assert_snapshot!(
-    zizmor()
+    Zizmor::cargo_bin()
         .input(input_under_test("insecure-url-scheme/"))
         .run()?,
     @r#"

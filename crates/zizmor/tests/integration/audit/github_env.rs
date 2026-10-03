@@ -1,10 +1,10 @@
-use crate::common::{OutputMode, input_under_test, zizmor};
 use anyhow::Result;
+use zizmor_dev::{OutputMode, Zizmor, input_under_test};
 
 #[test]
 fn test_action() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("github-env/action.yml"))
             .run()?,
         @r#"
@@ -45,7 +45,7 @@ fn test_action() -> Result<()> {
 #[test]
 fn test_github_path() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("github-env/github-path.yml"))
             .run()?,
         @r#"
@@ -69,7 +69,7 @@ fn test_github_path() -> Result<()> {
 #[test]
 fn test_issue_397_repro() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .input(input_under_test("github-env/issue-397-repro.yml"))
             .run()?,
         @r#"
@@ -95,7 +95,7 @@ fn test_issue_397_repro() -> Result<()> {
 #[test]
 fn test_issue_1333() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .output(OutputMode::Both)
             .setenv("RUST_LOG", "warn")
             .input(input_under_test("github-env/issue-1333/action.yml"))
@@ -116,7 +116,7 @@ fn test_issue_1333() -> Result<()> {
 #[test]
 fn test_issue_2200() -> Result<()> {
     insta::assert_snapshot!(
-        zizmor()
+        Zizmor::cargo_bin()
             .output(OutputMode::Both)
             .setenv("RUST_LOG", "warn")
             .input(input_under_test("github-env/issue-2200-repro.yml"))
