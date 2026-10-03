@@ -43,7 +43,7 @@ updates:
     insecure-external-code-execution: allow
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/dependabot.yml", dependabot_content);
 
     insta::assert_snapshot!(

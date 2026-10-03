@@ -642,10 +642,6 @@ pub struct WorkspaceBuilder {
 }
 
 impl WorkspaceBuilder {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn root_name(mut self, name: impl Into<String>) -> Self {
         self.root_name = Some(name.into());
         self

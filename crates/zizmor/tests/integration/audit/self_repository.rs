@@ -38,7 +38,7 @@ fn test_basic() -> anyhow::Result<()> {
 
 #[test]
 fn test_fix() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(
         &*input_under_test("self-repository.yml"),
         ".github/workflows/self-repository.yml",

@@ -7,7 +7,7 @@ use zizmor_dev::{OutputMode, WorkspaceBuilder, Zizmor, input_under_test};
 /// this case.
 #[test]
 fn test_discovers_config_in_root() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(&*input_under_test("config-scenarios/config-in-root"), ".");
 
     insta::assert_snapshot!(
@@ -33,7 +33,7 @@ fn test_discovers_config_in_root() -> anyhow::Result<()> {
 /// to `config-in-root/zizmor.yml` in this case.
 #[test]
 fn test_discovers_config_in_root_from_file_input() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(&*input_under_test("config-scenarios/config-in-root/"), ".");
 
     insta::assert_snapshot!(
@@ -59,7 +59,7 @@ fn test_discovers_config_in_root_from_file_input() -> anyhow::Result<()> {
 /// in this case.
 #[test]
 fn test_discovers_config_in_root_from_child_dir() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(&*input_under_test("config-scenarios/config-in-root/"), ".");
 
     insta::assert_snapshot!(
@@ -83,7 +83,7 @@ fn test_discovers_config_in_root_from_child_dir() -> anyhow::Result<()> {
 /// input directory when `--no-config` is specified.
 #[test]
 fn test_ignores_config_in_root() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(&*input_under_test("config-scenarios/config-in-root/"), ".");
 
     insta::assert_snapshot!(
@@ -103,7 +103,7 @@ fn test_ignores_config_in_root() -> anyhow::Result<()> {
 /// from an input filename when `--no-config` is specified.
 #[test]
 fn test_ignores_config_in_root_from_file_input() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(&*input_under_test("config-scenarios/config-in-root/"), ".");
 
     insta::assert_snapshot!(
@@ -123,7 +123,7 @@ fn test_ignores_config_in_root_from_file_input() -> anyhow::Result<()> {
 /// from a child input directory when `--no-config` is specified.
 #[test]
 fn test_ignores_config_in_root_from_child_dir() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(&*input_under_test("config-scenarios/config-in-root/"), ".");
 
     insta::assert_snapshot!(
@@ -144,7 +144,7 @@ fn test_ignores_config_in_root_from_child_dir() -> anyhow::Result<()> {
 /// `config-in-dotgithub/.github/zizmor.yml` in this case.
 #[test]
 fn test_discovers_config_in_dotgithub() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(
         &*input_under_test("config-scenarios/config-in-dotgithub/"),
         ".",
@@ -174,7 +174,7 @@ fn test_discovers_config_in_dotgithub() -> anyhow::Result<()> {
 /// This tests that both `.yml` and `.yaml` extensions are supported.
 #[test]
 fn test_discovers_dotyaml_config_in_dotgithub() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(
         &*input_under_test("config-scenarios/dotyaml-config-in-dotgithub/"),
         ".",
@@ -203,7 +203,7 @@ fn test_discovers_dotyaml_config_in_dotgithub() -> anyhow::Result<()> {
 /// to `config-in-dotgithub/.github/zizmor.yml` in this case.
 #[test]
 fn test_discovers_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(
         &*input_under_test("config-scenarios/config-in-dotgithub/"),
         ".",
@@ -232,7 +232,7 @@ fn test_discovers_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
 /// See: <https://github.com/zizmorcore/zizmor/issues/2229>
 #[test]
 fn test_discovers_config_when_repo_is_named_workflows() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new()
+    let workspace = WorkspaceBuilder::default()
         .is_git_repo(true)
         .root_name("workflows")
         .build()?;
@@ -262,7 +262,7 @@ fn test_discovers_config_when_repo_is_named_workflows() -> anyhow::Result<()> {
     );
 
     // Test the sad path as well (without a repo marker).
-    let workspace = WorkspaceBuilder::new()
+    let workspace = WorkspaceBuilder::default()
         .is_git_repo(false)
         .root_name("workflows")
         .build()?;
@@ -337,7 +337,7 @@ fn test_ignores_config_in_dotgithub_from_file_input() -> anyhow::Result<()> {
 /// Ensures we respect the `disable: true` configuration directive.
 #[test]
 fn test_disablement() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(&*input_under_test("config-scenarios/disablement"), ".");
 
     insta::assert_snapshot!(
@@ -390,7 +390,7 @@ fn test_invalid_configs() -> anyhow::Result<()> {
 /// artipacked normally produces Medium; remapped to High here.
 #[test]
 fn test_severity_remap() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(&*input_under_test("config-scenarios/severity-remap"), ".");
 
     insta::assert_snapshot!(
@@ -418,7 +418,7 @@ fn test_severity_remap() -> anyhow::Result<()> {
 /// A Medium finding remapped to High must survive --min-severity=high.
 #[test]
 fn test_severity_remap_affects_min_severity() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(&*input_under_test("config-scenarios/severity-remap"), ".");
 
     insta::assert_snapshot!(
@@ -480,7 +480,7 @@ fn test_severity_remap_is_negated_by_no_config() -> anyhow::Result<()> {
 /// the base of their source tree.
 #[test]
 fn test_config_ignores_workflow_named_zizmor() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(false).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(false).build()?;
 
     // The actual config file.
     workspace.add_file("zizmor.yml", "rules: {}");

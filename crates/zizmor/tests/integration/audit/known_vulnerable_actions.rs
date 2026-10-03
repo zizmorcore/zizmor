@@ -72,7 +72,7 @@ jobs:
         uses: actions/download-artifact@v4.0.0 # zizmor: ignore[unpinned-uses]
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
@@ -113,7 +113,7 @@ jobs:
         uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4  # v4.0.0
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
@@ -156,7 +156,7 @@ jobs:
         uses: actions/download-artifact@7a1cd3216ca9260cd8022db641d960b1db4d1be4
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(

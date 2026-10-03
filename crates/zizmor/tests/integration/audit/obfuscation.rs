@@ -290,7 +290,7 @@ jobs:
       iac/terraform/attribution.tfm--release_created: ${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
@@ -326,7 +326,7 @@ jobs:
       - uses: actions/checkout////@v4
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
@@ -362,7 +362,7 @@ jobs:
       - uses: github/codeql-action/./init@v2
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(
@@ -398,7 +398,7 @@ jobs:
       - uses: actions/cache/save/../save@v4
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", workflow_content);
 
     insta::assert_snapshot!(

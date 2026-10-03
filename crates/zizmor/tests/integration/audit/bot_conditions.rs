@@ -156,7 +156,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
 
 #[test]
 fn test_fix_replace_actor() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(
         ".github/workflows/bot-conditions.yml",
         r#"
@@ -216,7 +216,7 @@ jobs:
         run: echo "hello"
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(
         ".github/workflows/bot-conditions.yml",
         issue_comment_workflow,
@@ -263,7 +263,7 @@ jobs:
         run: echo "hello"
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/bot-conditions.yml", pr_review_workflow);
 
     insta::assert_snapshot!(
@@ -308,7 +308,7 @@ jobs:
         run: echo "hello"
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/bot-conditions.yml", workflow_content);
 
     insta::assert_snapshot!(

@@ -187,7 +187,7 @@ fn test_composite_action() -> anyhow::Result<()> {
 
 #[test]
 fn test_fix_merges_into_existing_with_block() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(
         ".github/workflows/artipacked.yml",
         r#"
@@ -234,7 +234,7 @@ jobs:
 
 #[test]
 fn test_fix_creates_block_when_missing() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(
         ".github/workflows/artipacked.yml",
         r#"

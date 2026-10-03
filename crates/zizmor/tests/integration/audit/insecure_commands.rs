@@ -150,7 +150,7 @@ jobs:
       - run: echo "test"
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/insecure-commands.yml", workflow_content);
 
     insta::assert_snapshot!(
@@ -191,7 +191,7 @@ jobs:
       - run: echo "test"
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/insecure-commands.yml", workflow_content);
 
     insta::assert_snapshot!(

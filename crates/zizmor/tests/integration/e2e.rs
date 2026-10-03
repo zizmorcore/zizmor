@@ -689,7 +689,7 @@ fn issue_1356_lsp_mode_starts() -> Result<()> {
 /// Ensures that the `.github` prefix is not stripped from the path.
 #[test]
 fn issue_1745() -> Result<()> {
-    let workspace = WorkspaceBuilder::new()
+    let workspace = WorkspaceBuilder::default()
         .is_git_repo(true)
         .root_name("issue-1745-repro")
         .build()?;

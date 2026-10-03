@@ -222,7 +222,7 @@ updates:
     insecure-external-code-execution: deny
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/dependabot.yml", dependabot_content);
 
     insta::assert_snapshot!(
@@ -258,7 +258,7 @@ updates:
     insecure-external-code-execution: deny
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/dependabot.yml", dependabot_content);
 
     insta::assert_snapshot!(
@@ -298,7 +298,7 @@ updates:
     insecure-external-code-execution: deny
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/dependabot.yml", dependabot_content);
 
     insta::assert_snapshot!(
@@ -342,7 +342,7 @@ updates:
       interval: weekly
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/dependabot.yml", dependabot_content);
 
     insta::assert_snapshot!(

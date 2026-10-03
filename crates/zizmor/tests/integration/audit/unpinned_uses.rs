@@ -646,7 +646,7 @@ jobs:
           persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(
@@ -693,7 +693,7 @@ jobs:
 "#
     .replace("\n", "\r\n");
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(
@@ -739,7 +739,7 @@ jobs:
             persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(
@@ -785,7 +785,7 @@ jobs:
           persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(
@@ -828,7 +828,7 @@ jobs:
       - uses: bytecodealliance/actions/wasmtime/setup@v1.1.3
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(
@@ -874,7 +874,7 @@ jobs:
           persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/test.yml", &workflow_content);
 
     insta::assert_snapshot!(

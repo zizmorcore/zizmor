@@ -918,7 +918,7 @@ jobs:
       - uses: softprops/action-gh-release@v1
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/cache-poisoning.yml", workflow_content);
 
     insta::assert_snapshot!(
@@ -958,7 +958,7 @@ jobs:
       - uses: softprops/action-gh-release@v1
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/cache-poisoning.yml", workflow_content);
 
     insta::assert_snapshot!(
@@ -1004,7 +1004,7 @@ jobs:
           enable-cache: ${{ github.ref == 'refs/heads/main' }}
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/cache-poisoning.yml", workflow_content);
 
     insta::assert_snapshot!(
@@ -1063,7 +1063,7 @@ jobs:
       - run: echo foo
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/cache-poisoning.yml", workflow_content);
 
     insta::assert_snapshot!(
@@ -1114,7 +1114,7 @@ jobs:
       - run: echo foo
 "#;
 
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.add_file(".github/workflows/cache-poisoning.yml", workflow_content);
 
     insta::assert_snapshot!(

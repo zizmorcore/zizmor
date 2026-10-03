@@ -233,7 +233,7 @@ fn test_config_invalid_variant() -> Result<()> {
 
 #[test]
 fn test_pre_commit() -> anyhow::Result<()> {
-    let workspace = WorkspaceBuilder::new().is_git_repo(true).build()?;
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(
         &*input_under_test("forbidden-uses/pre-commit/basic.yml"),
         ".pre-commit-config.yml",
