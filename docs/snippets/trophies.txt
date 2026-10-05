@@ -5,6 +5,7 @@
 # owner/repo@commit for individual commits
 
 0xMiden/miden-vm#2999
+99designs/gqlgen#4358
 aboutcode-org/scancode-toolkit#4847
 actix/actix#693
 actix/actix-extras#720
@@ -76,6 +77,7 @@ audreyfeldroy/cookiecutter-pypackage@40f172432f78ef920d758520b543cd69be32f80a
 autotag-dev/autotag#142
 axios/axios#10618
 Azure/azure-container-networking#4302
+Azure/azure-rest-api-specs#46939
 basecamp/activerecord-tenanted#284
 basecamp/audits1984#73
 basecamp/console1984#146
@@ -124,6 +126,7 @@ bytecodealliance/jco#1543
 c15t/c15t#853
 cachix/git-hooks.nix#606
 cactus/go-camo#87
+caipe-io/ai-platform-engineering#2652
 cakephp/cakephp#18081
 Calysto/metakernel#344
 Calysto/octave_kernel#263
@@ -150,6 +153,7 @@ composer/semver#176
 conda/conda-lock#814
 containerd/nerdctl#4909
 containers/conmon#687
+containers/crun#2313
 containers/podman#27642
 CopilotKit/CopilotKit#4820
 cordx56/rustowl#675
@@ -227,6 +231,7 @@ erlef/oidcc#533
 errbit/errbit#3190
 esl/MongooseIM#4435
 ethereum/hevm#615
+evenfurther/pathfinding#849
 external-secrets/external-secrets#5368
 falconry/falcon#2652
 fastapi/asyncer#555
@@ -248,6 +253,7 @@ freqtrade/freqtrade@5efad94d3de54d7c33731a40113f7218d46dd801
 freqtrade/technical@5fcb81bb1fcf269702de1634e59bb0ba87953ef2
 freqtrade/technical@63037a14d72be329dd35d4dced122705333af133
 FreshRSS/FreshRSS#9331
+fwupd/fwupd#11092
 G-Research/consuldotnet#640
 gaphor/gaphor#3658
 gechr/WhichSpace@e32d710e7e17102dd6eecd522aa1b511b961fcf3
@@ -378,6 +384,7 @@ kubecolor/kubecolor#273
 kubernetes-client/javascript#2814
 kubernetes-sigs/kubebuilder#5570
 kubernetes-sigs/kubebuilder#5578
+kubernetes-sigs/security-profiles-operator#3513
 kubewarden/kubewarden-controller#1596
 kysely-org/kysely#1869
 labd/nextjs-basic-auth-middleware#44
@@ -395,6 +402,7 @@ louislam/uptime-kuma#6575
 m-bain/whisperX#1423
 madnuttah/unbound-docker#119
 maennchen/ZipStream-PHP#414
+MagicStack/asyncpg#1374
 MAIF/yozefu#284
 maplibre/martin#2440
 marcusvolz/strava_py#53
@@ -424,6 +432,7 @@ mfussenegger/nvim-lint#710
 mgechev/revive#1733
 michaelbull/kotlin-result@7f213175f2bf525463fa4e8642956d14aebddc69
 michaelbull/kotlin-retry@b030616942c72812b892fec4950f3eca0813cb07
+microsoft/aspire#15987
 microsoft/azurelinux#15733
 microsoft/component-detection#1532
 microsoft/linux-package-repositories#208
@@ -514,6 +523,7 @@ oxigraph/oxigraph#1728
 pablosnt/rekono#299
 pallets/click#3304
 pallets/flask#5945
+pallets/markupsafe#535
 pallets/werkzeug#3150
 pantsbuild/pants#23249
 paperless-ngx/paperless-ngx#12466
@@ -549,6 +559,7 @@ pydantic/monty#312
 pydantic/pydantic#13039
 pydata/pydata-sphinx-theme#2077
 pydata/xarray#11294
+pykeen/pykeen#1687
 pylast/pylast#465
 pymc-devs/pymc#7624
 pymc-devs/pymc#7959
@@ -754,6 +765,7 @@ Uniswap/UniswapX#362
 Uniswap/v4-periphery#515
 updatecli/updatecli#7865
 urllib3/urllib3#3528
+usestrix/strix#1422
 uutils/coreutils#6973
 ViaVersion/ViaVersion#4315
 ViewComponent/view_component#2678
