@@ -7,6 +7,14 @@
         - 0xMiden/miden-vm#2999
 
 
+-   ![](https://github.com/99designs.png?size=40){ width="40" loading=lazy align=left } 99designs
+
+    ---
+
+    ??? example "Examples"
+        - 99designs/gqlgen#4358
+
+
 -   ![](https://github.com/aboutcode-org.png?size=40){ width="40" loading=lazy align=left } aboutcode-org
 
     ---
@@ -286,6 +294,7 @@
 
     ??? example "Examples"
         - Azure/azure-container-networking#4302
+        - Azure/azure-rest-api-specs#46939
 
 
 -   ![](https://github.com/basecamp.png?size=40){ width="40" loading=lazy align=left } basecamp
@@ -504,6 +513,14 @@
         - cactus/go-camo#87
 
 
+-   ![](https://github.com/caipe-io.png?size=40){ width="40" loading=lazy align=left } caipe-io
+
+    ---
+
+    ??? example "Examples"
+        - caipe-io/ai-platform-engineering#2652
+
+
 -   ![](https://github.com/cakephp.png?size=40){ width="40" loading=lazy align=left } cakephp
 
     ---
@@ -654,6 +671,7 @@
 
     ??? example "Examples"
         - containers/conmon#687
+        - containers/crun#2313
         - containers/podman#27642
 
 
@@ -1111,6 +1129,14 @@
         - ethereum/hevm#615
 
 
+-   ![](https://github.com/evenfurther.png?size=40){ width="40" loading=lazy align=left } evenfurther
+
+    ---
+
+    ??? example "Examples"
+        - evenfurther/pathfinding#849
+
+
 -   ![](https://github.com/external-secrets.png?size=40){ width="40" loading=lazy align=left } external-secrets
 
     ---
@@ -1228,6 +1254,14 @@
 
     ??? example "Examples"
         - FreshRSS/FreshRSS#9331
+
+
+-   ![](https://github.com/fwupd.png?size=40){ width="40" loading=lazy align=left } fwupd
+
+    ---
+
+    ??? example "Examples"
+        - fwupd/fwupd#11092
 
 
 -   ![](https://github.com/G-Research.png?size=40){ width="40" loading=lazy align=left } G-Research
@@ -1827,6 +1861,7 @@
     ??? example "Examples"
         - kubernetes-sigs/kubebuilder#5570
         - kubernetes-sigs/kubebuilder#5578
+        - kubernetes-sigs/security-profiles-operator#3513
 
 
 -   ![](https://github.com/kubewarden.png?size=40){ width="40" loading=lazy align=left } kubewarden
@@ -1949,6 +1984,14 @@
 
     ??? example "Examples"
         - maennchen/ZipStream-PHP#414
+
+
+-   ![](https://github.com/MagicStack.png?size=40){ width="40" loading=lazy align=left } MagicStack
+
+    ---
+
+    ??? example "Examples"
+        - MagicStack/asyncpg#1374
 
 
 -   ![](https://github.com/MAIF.png?size=40){ width="40" loading=lazy align=left } MAIF
@@ -2097,6 +2140,7 @@
     ---
 
     ??? example "Examples"
+        - microsoft/aspire#15987
         - microsoft/azurelinux#15733
         - microsoft/component-detection#1532
         - microsoft/linux-package-repositories#208
@@ -2572,6 +2616,7 @@
     ??? example "Examples"
         - pallets/click#3304
         - pallets/flask#5945
+        - pallets/markupsafe#535
         - pallets/werkzeug#3150
 
 
@@ -2775,6 +2820,14 @@
     ??? example "Examples"
         - pydata/pydata-sphinx-theme#2077
         - pydata/xarray#11294
+
+
+-   ![](https://github.com/pykeen.png?size=40){ width="40" loading=lazy align=left } pykeen
+
+    ---
+
+    ??? example "Examples"
+        - pykeen/pykeen#1687
 
 
 -   ![](https://github.com/pylast.png?size=40){ width="40" loading=lazy align=left } pylast
@@ -3799,6 +3852,14 @@
 
     ??? example "Examples"
         - urllib3/urllib3#3528
+
+
+-   ![](https://github.com/usestrix.png?size=40){ width="40" loading=lazy align=left } usestrix
+
+    ---
+
+    ??? example "Examples"
+        - usestrix/strix#1422
 
 
 -   ![](https://github.com/uutils.png?size=40){ width="40" loading=lazy align=left } uutils
