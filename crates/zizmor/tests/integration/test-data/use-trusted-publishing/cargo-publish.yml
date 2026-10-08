@@ -63,3 +63,21 @@ jobs:
             publish `
             --allow-dirty `
             --no-verify
+
+      # --dry-run is allowed under powershell
+      - name: not-vulnerable-4
+        run: cargo publish --dry-run
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      # -n is allowed under powershell
+      - name: not-vulnerable-5
+        run: cargo publish -n
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      # other flags are still detected under powershell
+      - name: vulnerable-6
+        run: cargo publish --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
