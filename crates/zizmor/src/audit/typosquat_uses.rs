@@ -85,6 +85,7 @@ struct PopularRepos(HashMap<String, RepoOwner>);
 
 impl PopularRepos {
     fn load() -> Self {
+        // TODO: This should probably be split into GHA repos vs. pre-commit repos.
         Self(
             include_str!("../../data/popular-actions.txt")
                 .lines()
