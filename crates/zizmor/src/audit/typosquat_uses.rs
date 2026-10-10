@@ -88,7 +88,6 @@ impl PopularRepos {
         Self(
             include_str!("../../data/popular-actions.txt")
                 .lines()
-                // Selected from https://pre-commit.com/hooks.html.
                 .chain(include_str!("../../data/popular-pre-commit-repos.txt").lines())
                 .filter(|l| !l.is_empty())
                 .map(|slug| {
