@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::LazyLock};
 
-use github_actions_models::common::{RepositoryUses, Uses};
+use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 use typomania::{
     AuthorSet, Corpus, Harness, Package,
@@ -15,6 +15,8 @@ use crate::{
     models::{
         StepCommon as _,
         action::CompositeStep,
+        pre_commit::PreCommitConfig,
+        repo_ref::RepoRef,
         workflow::{ReusableWorkflowCallJob, Step},
     },
     state::AuditState,
@@ -68,8 +70,8 @@ static TYPOS: &[(char, &[&str])] = &[
     ('/', &["-", "_"]),
 ];
 
-static HARNESS: LazyLock<Harness<PopularActions>> = LazyLock::new(|| {
-    let corpus = PopularActions::load();
+static HARNESS: LazyLock<Harness<PopularRepos>> = LazyLock::new(|| {
+    let corpus = PopularRepos::load();
     Harness::builder()
         .with_check(Omitted::new(ALPHABET))
         .with_check(SwappedWords::new("-_/"))
@@ -79,21 +81,23 @@ static HARNESS: LazyLock<Harness<PopularActions>> = LazyLock::new(|| {
         .build(corpus)
 });
 
-struct PopularActions(HashMap<String, ActionOwner>);
+struct PopularRepos(HashMap<String, RepoOwner>);
 
-impl PopularActions {
+impl PopularRepos {
     fn load() -> Self {
+        // TODO: This should probably be split into GHA repos vs. pre-commit repos.
         Self(
             include_str!("../../data/popular-actions.txt")
                 .lines()
+                .chain(include_str!("../../data/popular-pre-commit-repos.txt").lines())
                 .filter(|l| !l.is_empty())
                 .map(|slug| {
                     (
                         slug.to_lowercase(),
-                        ActionOwner::new(
+                        RepoOwner::new(
                             slug.split('/')
                                 .next()
-                                .expect("couldn't initialize popular actions corpus"),
+                                .expect("couldn't initialize popular repositories corpus"),
                         ),
                     )
                 })
@@ -102,7 +106,7 @@ impl PopularActions {
     }
 }
 
-impl Corpus for PopularActions {
+impl Corpus for PopularRepos {
     fn contains_name(&self, name: &str) -> typomania::Result<bool> {
         Ok(self.0.contains_key(name))
     }
@@ -112,11 +116,11 @@ impl Corpus for PopularActions {
     }
 }
 
-struct ActionOwner {
+struct RepoOwner {
     owner: String,
 }
 
-impl ActionOwner {
+impl RepoOwner {
     fn new(owner: &str) -> Self {
         Self {
             owner: owner.to_lowercase(),
@@ -124,7 +128,7 @@ impl ActionOwner {
     }
 }
 
-impl Package for ActionOwner {
+impl Package for RepoOwner {
     fn authors(&self) -> &dyn AuthorSet {
         self
     }
@@ -138,7 +142,7 @@ impl Package for ActionOwner {
     }
 }
 
-impl AuthorSet for ActionOwner {
+impl AuthorSet for RepoOwner {
     fn contains(&self, author: &str) -> bool {
         self.owner == author
     }
@@ -151,17 +155,19 @@ pub(crate) struct TyposquatUses {
 audit_meta!(
     TyposquatUses,
     "typosquat-uses",
-    "action reference resembles a popular action"
+    "repository reference resembles a popular repository"
 );
 
 impl TyposquatUses {
     async fn uses_is_typosquat<'doc>(
         &self,
-        uses: &RepositoryUses,
+        repo_ref: impl Into<RepoRef<'doc>>,
     ) -> Option<(FindingBuilder<'doc>, String)> {
-        let candidate: Box<dyn Package> = Box::new(ActionOwner::new(uses.owner()));
-        let slug = &uses.slug().to_lowercase();
-        let squats = HARNESS.check_package(slug, candidate).ok()?;
+        let repo_ref = repo_ref.into();
+        let slug = repo_ref.slug()?;
+        let candidate: Box<dyn Package> = Box::new(RepoOwner::new(slug.owner()));
+        let normalized = slug.slug().to_lowercase();
+        let squats = HARNESS.check_package(&normalized, candidate).ok()?;
         let squat = squats.into_iter().next()?;
 
         let mut finding = Self::finding()
@@ -169,22 +175,22 @@ impl TyposquatUses {
             .persona(Persona::Regular);
 
         let (confidence, annotation) = match &self.client {
-            Some(client) => match client.repo_exists(&uses.into()).await {
+            Some(client) => match client.repo_exists(&slug).await {
                 Ok(true) => (
                     Confidence::High,
-                    format!("{slug} {squat} and resolves to a live repository"),
+                    format!("{normalized} {squat} and resolves to a live repository"),
                 ),
                 Ok(false) => (
                     Confidence::Low,
-                    format!("{slug} {squat} (currently unregistered)"),
+                    format!("{normalized} {squat} (currently unregistered)"),
                 ),
-                Err(_) => (Confidence::Low, format!("{slug} {squat}")),
+                Err(_) => (Confidence::Low, format!("{normalized} {squat}")),
             },
             None => {
                 finding = finding.tip(
                     "run with a GitHub token to check whether this repository actually exists",
                 );
-                (Confidence::Low, format!("{slug} {squat}"))
+                (Confidence::Low, format!("{normalized} {squat}"))
             }
         };
 
@@ -283,6 +289,37 @@ impl Audit for TyposquatUses {
                     )
                     .build(job)?,
             )
+        }
+
+        Ok(findings)
+    }
+
+    async fn audit_pre_commit_config<'doc>(
+        &self,
+        pre_commit: &'doc PreCommitConfig,
+        _config: &Config,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let mut findings = vec![];
+
+        for repo in pre_commit.repos() {
+            let Some(remote) = repo.repo() else {
+                continue;
+            };
+
+            if let Some((finding, annotation)) = self.uses_is_typosquat(remote).await {
+                findings.push(
+                    finding
+                        .add_location(repo.location_with_grip())
+                        .add_location(
+                            repo.location()
+                                .with_keys(["repo".into()])
+                                .subfeature(Subfeature::new(0, remote.repo.as_str()))
+                                .annotated(annotation)
+                                .primary(),
+                        )
+                        .build(pre_commit)?,
+                );
+            }
         }
 
         Ok(findings)

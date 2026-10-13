@@ -7,7 +7,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
             .input(input_under_test("typosquat-uses.yml"))
             .run()?,
         @"
-    error[typosquat-uses]: action reference resembles a popular action
+    error[typosquat-uses]: repository reference resembles a popular repository
       --> @@INPUT@@:17:15
        |
     16 |       - name: omission
@@ -18,7 +18,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = tip: run with a GitHub token to check whether this repository actually exists
 
-    error[typosquat-uses]: action reference resembles a popular action
+    error[typosquat-uses]: repository reference resembles a popular repository
       --> @@INPUT@@:20:15
        |
     19 |       - name: transposition
@@ -29,7 +29,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = tip: run with a GitHub token to check whether this repository actually exists
 
-    error[typosquat-uses]: action reference resembles a popular action
+    error[typosquat-uses]: repository reference resembles a popular repository
       --> @@INPUT@@:23:15
        |
     22 |       - name: homoglyph
@@ -40,7 +40,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = tip: run with a GitHub token to check whether this repository actually exists
 
-    error[typosquat-uses]: action reference resembles a popular action
+    error[typosquat-uses]: repository reference resembles a popular repository
       --> @@INPUT@@:26:15
        |
     25 |       - name: repetition
@@ -51,7 +51,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = tip: run with a GitHub token to check whether this repository actually exists
 
-    error[typosquat-uses]: action reference resembles a popular action
+    error[typosquat-uses]: repository reference resembles a popular repository
       --> @@INPUT@@:29:15
        |
     28 |       - name: owner transposition
@@ -63,6 +63,68 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = tip: run with a GitHub token to check whether this repository actually exists
 
     5 findings: 0 informational, 0 low, 0 medium, 5 high
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_pre_commit_config() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("typosquat-uses/pre-commit/.pre-commit-config.yaml"))
+            .run()?,
+        @"
+    error[typosquat-uses]: repository reference resembles a popular repository
+     --> @@INPUT@@:3:11
+      |
+    3 |   - repo: https://github.com/pre-comit/pre-commit-hooks
+      |     ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      |     |     |
+      |     |     pre-comit/pre-commit-hooks omits characters in pre-commit/pre-commit-hooks
+      |     this repo
+      |
+      = note: audit confidence → Low
+      = tip: run with a GitHub token to check whether this repository actually exists
+
+    error[typosquat-uses]: repository reference resembles a popular repository
+     --> @@INPUT@@:9:11
+      |
+    9 |   - repo: https://github.com/astarl-sh/ruff-pre-commit
+      |     ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      |     |     |
+      |     |     astarl-sh/ruff-pre-commit swaps characters in astral-sh/ruff-pre-commit
+      |     this repo
+      |
+      = note: audit confidence → Low
+      = tip: run with a GitHub token to check whether this repository actually exists
+
+    error[typosquat-uses]: repository reference resembles a popular repository
+      --> @@INPUT@@:15:11
+       |
+    15 |   - repo: https://github.com/a5ottile/pyupgrade
+       |     ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+       |     |     |
+       |     |     a5ottile/pyupgrade uses a common typo for asottile/pyupgrade
+       |     this repo
+       |
+       = note: audit confidence → Low
+       = tip: run with a GitHub token to check whether this repository actually exists
+
+    error[typosquat-uses]: repository reference resembles a popular repository
+      --> @@INPUT@@:21:11
+       |
+    21 |   - repo: ssh://git@github.com/PSFF/BLACK.git
+       |     ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+       |     |     |
+       |     |     psff/black repeats characters in psf/black
+       |     this repo
+       |
+       = note: audit confidence → Low
+       = tip: run with a GitHub token to check whether this repository actually exists
+
+    4 findings: 0 informational, 0 low, 0 medium, 4 high
     "
     );
 

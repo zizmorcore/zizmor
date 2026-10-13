@@ -1982,26 +1982,30 @@ shell quoting/expansion rules.
 
 | Type     | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |----------|------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action | [typosquat-uses.yml] | v1.26.0        | ✅             | ❌                 | ❌           |
+| Workflow, Action, pre-commit | [typosquat-uses.yml] | v1.26.0        | ✅             | ❌                 | ❌           |
 
 [typosquat-uses.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/typosquat-uses.yml
 
-Detects `#!yaml uses:` clauses that reference an action whose `owner/repo`
-slug is a close textual variant of a well-known action, but is owned by a
-different account.
+Detects `#!yaml uses:` clauses and pre-commit `#!yaml repo:` URLs whose
+GitHub `owner/repo` slug is a close textual variant of a well-known action or
+hook repository, but is owned by a different account.
 
 Typosquatting attacks rely on a developer mistyping or copy-pasting a slightly
 wrong name (`action/checkout` instead of `actions/checkout`, `dokcer/login-action`
 instead of `docker/login-action`). If an attacker registers the misspelled
-namespace, the workflow will fetch and execute their code.
+namespace, the workflow or pre-commit hook will fetch and execute their code.
 
-This audit compares each `#!yaml uses:` slug against a baked-in corpus of
-popular actions using the [typomania] library. A finding is raised when the
-slug is one omitted, repeated, swapped, or substituted character away from a
-corpus entry **and** the owner differs from the legitimate action's owner.
+This audit compares each repository slug against a baked-in corpus of
+popular actions and pre-commit hooks using the [typomania] library. A finding
+is raised when the slug is one omitted, repeated, swapped, or substituted
+character away from a corpus entry **and** the owner differs from the
+legitimate repository's owner.
 Near-misses within the same owner (for example `actions/chckout`) are not
 reported, since the legitimate organisation already controls that namespace
 and the reference will simply fail at runtime.
+
+For pre-commit configurations, only GitHub repository URLs are checked;
+`local` and `meta` repositories and URLs on other hosts are skipped.
 
 [typomania]: https://github.com/rustfoundation/typomania
 
@@ -2012,7 +2016,8 @@ raises confidence to high if it does.
 
 ### Remediation
 
-Correct the `#!yaml uses:` reference to point at the intended action.
+Correct the `#!yaml uses:` reference or pre-commit `#!yaml repo:` URL to point
+at the intended repository.
 
 === "Before"
 
