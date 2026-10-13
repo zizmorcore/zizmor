@@ -11,7 +11,7 @@ of `zizmor`.
 
 ### Enhancements 🌱
 
-* The [typosquat-uses] audit now supports pre-commit config inputs.
+* The [typosquat-uses] audit now supports pre-commit config inputs (#2437)
 
 * The [self-hosted-runner] audit is now significantly more precise (#2350)
 
