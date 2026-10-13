@@ -155,6 +155,16 @@
         - apollographql/apollo-client#13236
 
 
+-   ![](https://github.com/Apple-Actions.png?size=40){ width="40" loading=lazy align=left } Apple-Actions
+
+    ---
+
+    ??? example "Examples"
+        - Apple-Actions/download-provisioning-profiles#95
+        - Apple-Actions/import-codesign-certs#219
+        - Apple-Actions/upload-testflight-build#218
+
+
 -   ![](https://github.com/aquasecurity.png?size=40){ width="40" loading=lazy align=left } aquasecurity
 
     ---
@@ -1036,6 +1046,7 @@
     ---
 
     ??? example "Examples"
+        - emberjs/ember-inspector#2782
         - emberjs/ember.js#21185
 
 
@@ -1280,6 +1291,14 @@
         - gaphor/gaphor#3658
 
 
+-   ![](https://github.com/gdg-x.png?size=40){ width="40" loading=lazy align=left } gdg-x
+
+    ---
+
+    ??? example "Examples"
+        - gdg-x/hoverboard#3781
+
+
 -   ![](https://github.com/gechr.png?size=40){ width="40" loading=lazy align=left } gechr
 
     ---
@@ -1294,6 +1313,14 @@
 
     ??? example "Examples"
         - GenericMappingTools/pygmt#3861
+
+
+-   ![](https://github.com/GeoSpoof.png?size=40){ width="40" loading=lazy align=left } GeoSpoof
+
+    ---
+
+    ??? example "Examples"
+        - GeoSpoof/geospoof#146
 
 
 -   ![](https://github.com/getsops.png?size=40){ width="40" loading=lazy align=left } getsops
@@ -1489,6 +1516,14 @@
         - hellux/jotdown#76
 
 
+-   ![](https://github.com/helm.png?size=40){ width="40" loading=lazy align=left } helm
+
+    ---
+
+    ??? example "Examples"
+        - helm/chart-releaser#661
+
+
 -   ![](https://github.com/hexpm.png?size=40){ width="40" loading=lazy align=left } hexpm
 
     ---
@@ -1557,6 +1592,14 @@
         - hugovk/em-keyboard#148
         - hugovk/norwegianblue#233
         - hugovk/pypistats#460
+
+
+-   ![](https://github.com/humbug.png?size=40){ width="40" loading=lazy align=left } humbug
+
+    ---
+
+    ??? example "Examples"
+        - humbug/php-scoper#1247
 
 
 -   ![](https://github.com/hynek.png?size=40){ width="40" loading=lazy align=left } hynek
@@ -1804,6 +1847,14 @@
         - jupytext/jupytext#1569
 
 
+-   ![](https://github.com/kairos-io.png?size=40){ width="40" loading=lazy align=left } kairos-io
+
+    ---
+
+    ??? example "Examples"
+        - kairos-io/kairos#5319
+
+
 -   ![](https://github.com/kanidm.png?size=40){ width="40" loading=lazy align=left } kanidm
 
     ---
@@ -1936,6 +1987,7 @@
 
     ??? example "Examples"
         - lissy93/dashy#2140
+        - lissy93/web-check#351
 
 
 -   ![](https://github.com/llvm.png?size=40){ width="40" loading=lazy align=left } llvm
@@ -1992,6 +2044,7 @@
 
     ??? example "Examples"
         - MagicStack/asyncpg#1374
+        - MagicStack/httptools#152
 
 
 -   ![](https://github.com/MAIF.png?size=40){ width="40" loading=lazy align=left } MAIF
@@ -2051,6 +2104,14 @@
         - maxmind/MaxMind-DB-Reader-python#178
         - maxmind/mmdbinspect#82
         - maxmind/mmdbwriter#104
+
+
+-   ![](https://github.com/maypok86.png?size=40){ width="40" loading=lazy align=left } maypok86
+
+    ---
+
+    ??? example "Examples"
+        - maypok86/otter#250
 
 
 -   ![](https://github.com/mbta.png?size=40){ width="40" loading=lazy align=left } mbta
@@ -2316,6 +2377,14 @@
         - neocmakelsp/neocmakelsp#216
 
 
+-   ![](https://github.com/neostandard.png?size=40){ width="40" loading=lazy align=left } neostandard
+
+    ---
+
+    ??? example "Examples"
+        - neostandard/neostandard#399
+
+
 -   ![](https://github.com/neovim.png?size=40){ width="40" loading=lazy align=left } neovim
 
     ---
@@ -2487,6 +2556,14 @@
         - open-quantum-safe/oqs-provider#786
 
 
+-   ![](https://github.com/open-source-cooperative.png?size=40){ width="40" loading=lazy align=left } open-source-cooperative
+
+    ---
+
+    ??? example "Examples"
+        - open-source-cooperative/keyring-rs#358
+
+
 -   ![](https://github.com/open-telemetry.png?size=40){ width="40" loading=lazy align=left } open-telemetry
 
     ---
@@ -2557,6 +2634,7 @@
 
     ??? example "Examples"
         - ossf/allstar#818
+        - ossf/scorecard-action#1716
 
 
 -   ![](https://github.com/otter-sec.png?size=40){ width="40" loading=lazy align=left } otter-sec
@@ -3244,6 +3322,14 @@
     ??? example "Examples"
         - rustsec/advisory-db#2444
         - rustsec/rustsec#1449
+
+
+-   ![](https://github.com/safedep.png?size=40){ width="40" loading=lazy align=left } safedep
+
+    ---
+
+    ??? example "Examples"
+        - safedep/pmg#536
 
 
 -   ![](https://github.com/Saghen.png?size=40){ width="40" loading=lazy align=left } Saghen
@@ -3986,6 +4072,7 @@
     ??? example "Examples"
         - withastro/astro#16810
         - withastro/docs#13917
+        - withastro/starlight#4011
 
 
 -   ![](https://github.com/wntrblm.png?size=40){ width="40" loading=lazy align=left } wntrblm
@@ -4003,6 +4090,14 @@
     ??? example "Examples"
         - WordPress/gutenberg#69126
         - WordPress/wordpress-develop#8007
+
+
+-   ![](https://github.com/wspurgin.png?size=40){ width="40" loading=lazy align=left } wspurgin
+
+    ---
+
+    ??? example "Examples"
+        - wspurgin/rspec-sidekiq#302
 
 
 -   ![](https://github.com/xgcm.png?size=40){ width="40" loading=lazy align=left } xgcm

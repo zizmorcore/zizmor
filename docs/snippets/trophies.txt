@@ -48,6 +48,9 @@ apache/ratis#1426
 apache/sedona#1976
 apache/sedona#2582
 apollographql/apollo-client#13236
+Apple-Actions/download-provisioning-profiles#95
+Apple-Actions/import-codesign-certs#219
+Apple-Actions/upload-testflight-build#218
 aquasecurity/trivy#10322
 aquasecurity/trivy-action#502
 aquasecurity/trivy-operator#2910
@@ -217,6 +220,7 @@ element-hq/element-desktop#2877
 element-hq/element-web#32717
 element-hq/element-x-ios#5161
 elixir-lang/elixir#15114
+emberjs/ember-inspector#2782
 emberjs/ember.js#21185
 endevco/aube#631
 endevco/pitchfork#434
@@ -256,8 +260,10 @@ FreshRSS/FreshRSS#9331
 fwupd/fwupd#11092
 G-Research/consuldotnet#640
 gaphor/gaphor#3658
+gdg-x/hoverboard#3781
 gechr/WhichSpace@e32d710e7e17102dd6eecd522aa1b511b961fcf3
 GenericMappingTools/pygmt#3861
+GeoSpoof/geospoof#146
 getsops/sops#1704
 girlbossceo/conduwuit@c6bf8f5ea15a6b963220a1de4bb50a639d0d0696
 Giskard-AI/giskard-oss#2336
@@ -297,6 +303,7 @@ h2non/jsonpath-ng@ca251d50a404aa5a608e42e800e8fa435338ad7e
 h5py/h5py#2824
 hanami/hanami@4c206392546c1bbaea29782df60fed7769071e84
 hellux/jotdown#76
+helm/chart-releaser#661
 hexpm/hex#1110
 hexpm/hexpm#1383
 holoviz/colorcet#155
@@ -325,6 +332,7 @@ huggingface/peft#2288
 hugovk/em-keyboard#148
 hugovk/norwegianblue#233
 hugovk/pypistats#460
+humbug/php-scoper#1247
 hynek/argon2-cffi#185
 hynek/doc2dash#225
 hynek/doc2dash#288
@@ -374,6 +382,7 @@ jupyterhub/jupyterhub#5049
 jupyterlab-contrib/jupyterlab_code_formatter#403
 jupyterlab/jupyter-ai#1577
 jupytext/jupytext#1569
+kairos-io/kairos#5319
 kanidm/kanidm#3430
 kata-containers/kata-containers#11392
 kata-containers/kata-containers#11475
@@ -396,6 +405,7 @@ lemon24/reader@01bbe67e5722e373c62a108c3685c443042ee901
 libexpat/libexpat#1308
 libssh2/libssh2#1609
 lissy93/dashy#2140
+lissy93/web-check#351
 llvm/llvm-project#187905
 lmstudio-ai/venvstacks#51
 louislam/uptime-kuma#6575
@@ -403,6 +413,7 @@ m-bain/whisperX#1423
 madnuttah/unbound-docker#119
 maennchen/ZipStream-PHP#414
 MagicStack/asyncpg#1374
+MagicStack/httptools#152
 MAIF/yozefu#284
 maplibre/martin#2440
 marcusvolz/strava_py#53
@@ -420,6 +431,7 @@ maxmind/MaxMind-DB-Reader-java#221
 maxmind/MaxMind-DB-Reader-python#178
 maxmind/mmdbinspect#82
 maxmind/mmdbwriter#104
+maypok86/otter#250
 mbta/api#1048
 mccutchen/go-httpbin#252
 medic/cht-core#10559
@@ -466,6 +478,7 @@ narwhals-dev/narwhals#1567
 NaturalIntelligence/fast-xml-parser#841
 nedbat/coveragepy@675c2f8c6c36771c85929ac9e1190b13e0269344
 neocmakelsp/neocmakelsp#216
+neostandard/neostandard#399
 neovim/neovim#38230
 NetApp/harvest#3247
 neuvector/neuvector#2719
@@ -497,6 +510,7 @@ open-edge-platform/geti#162
 open-edge-platform/geti-sdk#603
 open-policy-agent/opa#8356
 open-quantum-safe/oqs-provider#786
+open-source-cooperative/keyring-rs#358
 open-telemetry/opentelemetry-collector#15358
 open-telemetry/opentelemetry-dotnet#7334
 open-telemetry/opentelemetry-dotnet-contrib#4425
@@ -513,6 +527,7 @@ Orange-OpenSource/hurl#3574
 orion-rs/orion#441
 orion-rs/orion#490
 ossf/allstar#818
+ossf/scorecard-action#1716
 otter-sec/anchor#4594
 Ouranosinc/xclim#2023
 owid/owid-grapher#6615
@@ -647,6 +662,7 @@ rustls/webpki#299
 RustPython/RustPython#7463
 rustsec/advisory-db#2444
 rustsec/rustsec#1449
+safedep/pmg#536
 Saghen/blink.cmp#991
 sanity-io/sanity#12830
 SAP/ai-sdk-js#1822
@@ -787,9 +803,11 @@ wgsl-analyzer/wgsl-analyzer#844
 wireapp/wire-webapp#21362
 withastro/astro#16810
 withastro/docs#13917
+withastro/starlight#4011
 wntrblm/nox#925
 WordPress/gutenberg#69126
 WordPress/wordpress-develop#8007
+wspurgin/rspec-sidekiq#302
 xgcm/xgcm#700
 yamadashy/repomix#1212
 yt-dlp/ejs#40
