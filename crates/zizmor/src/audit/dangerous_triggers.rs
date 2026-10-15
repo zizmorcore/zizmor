@@ -52,6 +52,12 @@ impl Audit for DangerousTriggers {
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
+
+        // Bug #2448: we dropped the entire `on:` span when we switched to more
+        // precise trigger spans, so users who had an ignore comment elsewhere in
+        // the `on:` block stopped getting suppressions.
+        let on_location = workflow.location().with_keys(["on".into()]);
+
         if let Some(location) = workflow.pull_request_target()
             && !Self::is_labeler_exception(workflow)
         {
@@ -59,6 +65,7 @@ impl Audit for DangerousTriggers {
                 Self::finding()
                     .confidence(Confidence::Medium)
                     .severity(Severity::High)
+                    .add_location(on_location.clone().hidden())
                     .add_location(
                         location
                             .primary()
@@ -73,6 +80,7 @@ impl Audit for DangerousTriggers {
                 Self::finding()
                     .confidence(Confidence::Medium)
                     .severity(Severity::High)
+                    .add_location(on_location.clone().hidden())
                     .add_location(
                         location
                             .primary()
@@ -87,6 +95,7 @@ impl Audit for DangerousTriggers {
                 Self::finding()
                     .confidence(Confidence::Medium)
                     .severity(Severity::High)
+                    .add_location(on_location.clone().hidden())
                     .add_location(
                         location
                             .primary()
