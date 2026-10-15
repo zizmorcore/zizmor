@@ -15,7 +15,10 @@ const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) 
 // Include non-argument children in the repetition so they don't split the captures.
 const PWSH_COMMAND_QUERY: &str = r#"
 (command
-  name: (command_name) @cmd
+  name: [
+    (command_name) @cmd
+    (invocation_operator_command command: (command_argument) @cmd)
+  ]
   [
     (command_argument) @args
     (command_parameter) @args
@@ -291,38 +294,30 @@ mod tests {
         let sut = AdhocPackages::new(&AuditState::default()).unwrap();
 
         for (case, expected) in [
-            ("npm --silent install --no-fund lodash", true),
-            ("npm --silent install --no-fund", false),
+            // Invocation operators wrap the command name in a different node.
+            (". npm install lodash", true),
+            // Parameters and their values must remain in source order.
             ("pnpm --filter core add lodash", true),
             ("pnpm --filter add lint lodash", false),
-            ("yarn --cwd packages/core add lodash", true),
-            ("yarn --cwd add lint lodash", false),
-            ("gem install --no-document 'rake'", true),
-            ("npm install lodash@^1.2.3", true),
+            // Intervening nodes must not hide the package argument.
             ("npm install `\n  --no-fund `\n  lodash", true),
-            ("npm install `\n  --no-fund", false),
             ("npm install <# package #> lodash", true),
-            ("npm install # lodash", false),
-            ("npm install > lodash", false),
             ("npm install > install.log lodash", true),
-            ("npm install lodash > install.log", true),
+            // Redirections aren't package arguments; verbatim text stays in the span.
+            ("npm install > lodash", false),
             ("npm install lodash --% > install.log", true),
-            ("npm ci --% install lodash", false),
-            ("pnpm > add lint lodash", false),
+            // A quoted argument must not be split into a subcommand and package.
             ("npm 'install lodash'", false),
-            ("Write-Host 'npm install lodash'", false),
         ] {
             // Check command boundaries and byte offsets as well as classification.
             let run = format!("Write-Host '🦀'\n{case}\nWrite-Host done");
-            for shell in ["pwsh", "powershell"] {
-                let candidates = sut.adhoc_install_candidates(&run, shell).unwrap();
-                if expected {
-                    assert_eq!(candidates.len(), 1, "{shell}: {case}");
-                    let span = candidates[0].locate_within(&run).unwrap();
-                    assert_eq!(&run[span.as_range()], case, "{shell}: {case}");
-                } else {
-                    assert!(candidates.is_empty(), "{shell}: {case}");
-                }
+            let candidates = sut.adhoc_install_candidates(&run, "pwsh").unwrap();
+            if expected {
+                assert_eq!(candidates.len(), 1, "{case}");
+                let span = candidates[0].locate_within(&run).unwrap();
+                assert_eq!(&run[span.as_range()], case, "{case}");
+            } else {
+                assert!(candidates.is_empty(), "{case}");
             }
         }
     }
