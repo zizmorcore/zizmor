@@ -3,6 +3,7 @@
 use camino::Utf8Path;
 use github_actions_expressions::context::{Context, ContextPattern};
 use github_actions_models::common::{Env, expr::LoE};
+use std::borrow::Cow;
 use std::ops::{Deref, Range};
 use std::sync::LazyLock;
 
@@ -347,6 +348,15 @@ impl<'a> ExtractedExpr<'a> {
     pub(crate) fn as_raw(&self) -> &'a str {
         self.inner
     }
+
+    /// Returns opaque ASCII padding with the same byte length as [`Self::as_raw`].
+    ///
+    /// This masks any fencing and embedded newlines so an unquoted expression
+    /// remains a token rather than introducing shell statement boundaries.
+    /// The padding does not represent the expression's evaluated value.
+    pub(crate) fn masked(&self) -> String {
+        "x".repeat(self.inner.len())
+    }
 }
 
 /// Extract a fenced expression from the given free-form text, starting
@@ -400,6 +410,21 @@ pub(crate) fn extract_fenced_expressions(text: &str) -> Vec<(ExtractedExpr<'_>, 
     }
 
     exprs
+}
+
+/// Mask Actions expressions before parsing a script, preserving byte offsets.
+///
+/// Each complete expression is replaced with [`ExtractedExpr::masked`].
+///
+/// Parse and query the masked text, but read captured text and diagnostic spans
+/// from the original source.
+/// Byte offsets are preserved; tree-sitter row/column positions may change.
+pub(crate) fn mask_fenced_expressions(text: &str) -> Cow<'_, str> {
+    let mut masked = Cow::Borrowed(text);
+    for (expr, span) in extract_fenced_expressions(text) {
+        masked.to_mut().replace_range(span, &expr.masked());
+    }
+    masked
 }
 
 /// Like [`extract_fenced_expressions`], but over an "routable," i.e.
@@ -609,8 +634,8 @@ mod tests {
         models::{action::Action, workflow::Workflow},
         registry::input::InputKey,
         utils::{
-            env_is_static, extract_fenced_expression, extract_fenced_expressions, normalize_shell,
-            parse_fenced_expressions_from_routable,
+            env_is_static, extract_fenced_expression, extract_fenced_expressions,
+            mask_fenced_expressions, normalize_shell, parse_fenced_expressions_from_routable,
         },
     };
 
@@ -687,6 +712,22 @@ mod tests {
                 .collect::<Vec<_>>();
 
             assert_eq!(exprs, *expected)
+        }
+    }
+
+    #[test]
+    fn test_mask_fenced_expressions() {
+        for (source, expected) in [
+            ("Write-Host '🦀'", "Write-Host '🦀'"),
+            ("echo ${{ env.X", "echo ${{ env.X"),
+            (
+                "🦀\necho \"${{ '🦀}}' }}\" ${{\n env.X\n}}\nnext",
+                "🦀\necho \"xxxxxxxxxxxxxxx\" xxxxxxxxxxxxx\nnext",
+            ),
+        ] {
+            let masked = mask_fenced_expressions(source);
+            assert_eq!(masked, expected);
+            assert_eq!(masked.len(), source.len());
         }
     }
 

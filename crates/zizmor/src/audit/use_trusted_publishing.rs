@@ -355,13 +355,14 @@ impl UseTrustedPublishing {
         shell: &str,
     ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         let normalized = utils::normalize_shell(shell);
+        let source = utils::mask_fenced_expressions(run);
 
         let mut cursor = tree_sitter::QueryCursor::new();
         let (query, tree) = match normalized {
             "bash" | "sh" | "zsh" => {
                 let mut parser = utils::bash_parser();
                 let tree = parser
-                    .parse(run, None)
+                    .parse(source.as_bytes(), None)
                     .context("failed to parse `run:` body as bash")
                     .map_err(Self::err)?;
 
@@ -370,7 +371,7 @@ impl UseTrustedPublishing {
             "pwsh" | "powershell" => {
                 let mut parser = utils::pwsh_parser();
                 let tree = parser
-                    .parse(run, None)
+                    .parse(source.as_bytes(), None)
                     .context("failed to parse `run:` body as pwsh")
                     .map_err(Self::err)?;
 
@@ -382,7 +383,7 @@ impl UseTrustedPublishing {
             }
         };
 
-        let matches = self.query(query, &mut cursor, &tree, run);
+        let matches = self.query(query, &mut cursor, &tree, &source);
         let cmd = query
             .capture_index_for_name("cmd")
             .expect("internal error: missing capture index for 'cmd'");
@@ -526,6 +527,10 @@ mod tests {
             ("cargo publish `\n  --dry-run", false),
             ("cargo publish <# comment #> --dry-run", false),
             ("cargo publish > publish.log --dry-run", false),
+            (
+                r#"cargo publish --token "${{ secrets.TOKEN }}" --dry-run"#,
+                false,
+            ),
             // Only real arguments can select a publishing subcommand.
             ("cargo build > publish", false),
             ("cargo build --% \"| cargo publish\"", false),
