@@ -140,8 +140,23 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
     });
 
 const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) @span";
-const PWSH_COMMAND_QUERY: &str =
-    "(command command_name: (_) @cmd command_elements: (_ (generic_token) @args)+) @span";
+// Include non-argument children in the repetition so they don't split the captures.
+const PWSH_COMMAND_QUERY: &str = r#"
+(command
+  name: [
+    (command_name) @cmd
+    (invocation_operator_command command: (command_argument) @cmd)
+  ]
+  [
+    (command_argument) @args
+    (command_parameter) @args
+    (redirection)
+    (comment)
+    (line_continuation)
+    (verbatim_arguments)
+  ]+
+) @span
+"#;
 
 pub(crate) struct UseTrustedPublishing {
     bash_command_query: utils::SpannedQuery,
@@ -498,6 +513,39 @@ impl Audit for UseTrustedPublishing {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pwsh_publishing_candidates() {
+        let sut = UseTrustedPublishing::new(&AuditState::default()).unwrap();
+
+        for (case, expected) in [
+            ("& cargo publish", true),
+            ("& cargo publish --dry-run", false),
+            // Intervening nodes must not hide the option that suppresses a finding.
+            ("cargo publish `\n  --dry-run", false),
+            ("cargo publish <# comment #> --dry-run", false),
+            ("cargo publish > publish.log --dry-run", false),
+            // Only real arguments can select a publishing subcommand.
+            ("cargo build > publish", false),
+            ("cargo build --% \"| cargo publish\"", false),
+            // Publishing through Python requires capturing the -m parameter.
+            ("python -m twine upload dist/*", true),
+        ] {
+            let run = format!("Write-Host '🦀'\n{case}\nWrite-Host done");
+            let candidates = sut
+                .trusted_publishing_command_candidates(&run, "pwsh")
+                .unwrap();
+            if expected {
+                assert_eq!(candidates.len(), 1, "{case}");
+                let span = candidates[0].locate_within(&run).unwrap();
+                assert_eq!(&run[span.as_range()], case, "{case}");
+            } else {
+                assert!(candidates.is_empty(), "{case}");
+            }
+        }
+    }
+
     #[test]
     fn test_is_publish_command() {
         for (args, is_publish_command) in &[
