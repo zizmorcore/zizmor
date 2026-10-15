@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* Fixed a regression in [1.31.0](#1310) where some ignore comments/configurations
+  would no longer apply to the [dangerous-triggers] audit (#2450)
+
 ## 1.31.0
 
 ### Enhancements 🌱
