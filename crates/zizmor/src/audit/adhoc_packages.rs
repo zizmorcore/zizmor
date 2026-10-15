@@ -12,10 +12,20 @@ use crate::{
 };
 
 const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) @span";
-const PWSH_COMMAND_QUERY: &str = "(command \
-    command_name: (_) @cmd \
-    command_elements: (command_elements (_)+ @args) \
-) @span";
+// Include non-argument children in the repetition so they don't split the captures.
+const PWSH_COMMAND_QUERY: &str = r#"
+(command
+  name: (command_name) @cmd
+  [
+    (command_argument) @args
+    (command_parameter) @args
+    (redirection)
+    (comment)
+    (line_continuation)
+    (verbatim_arguments)
+  ]+
+) @span
+"#;
 
 pub(crate) struct AdhocPackages {
     bash_command_query: utils::SpannedQuery,
@@ -176,12 +186,6 @@ impl AdhocPackages {
                 .captures()
                 .iter()
                 .filter(|cap| cap.index == args_idx)
-                // The powershell grammar interleaves `command_argument_sep`
-                // whitespace nodes between real arguments inside
-                // `command_elements`. They have no analogue in bash, so
-                // filtering here is a no-op for bash but lets the single
-                // query work for pwsh too.
-                .filter(|cap| cap.node.kind() != "command_argument_sep")
                 .map(|cap| {
                     cap.node
                         .utf8_text(run.as_bytes())
@@ -280,6 +284,47 @@ impl Audit for AdhocPackages {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pwsh_install_candidates() {
+        let sut = AdhocPackages::new(&AuditState::default()).unwrap();
+
+        for (case, expected) in [
+            ("npm --silent install --no-fund lodash", true),
+            ("npm --silent install --no-fund", false),
+            ("pnpm --filter core add lodash", true),
+            ("pnpm --filter add lint lodash", false),
+            ("yarn --cwd packages/core add lodash", true),
+            ("yarn --cwd add lint lodash", false),
+            ("gem install --no-document 'rake'", true),
+            ("npm install lodash@^1.2.3", true),
+            ("npm install `\n  --no-fund `\n  lodash", true),
+            ("npm install `\n  --no-fund", false),
+            ("npm install <# package #> lodash", true),
+            ("npm install # lodash", false),
+            ("npm install > lodash", false),
+            ("npm install > install.log lodash", true),
+            ("npm install lodash > install.log", true),
+            ("npm install lodash --% > install.log", true),
+            ("npm ci --% install lodash", false),
+            ("pnpm > add lint lodash", false),
+            ("npm 'install lodash'", false),
+            ("Write-Host 'npm install lodash'", false),
+        ] {
+            // Check command boundaries and byte offsets as well as classification.
+            let run = format!("Write-Host '🦀'\n{case}\nWrite-Host done");
+            for shell in ["pwsh", "powershell"] {
+                let candidates = sut.adhoc_install_candidates(&run, shell).unwrap();
+                assert_eq!(candidates.len(), usize::from(expected), "{shell}: {case}");
+                if expected {
+                    let span = candidates[0].locate_within(&run).unwrap();
+                    assert_eq!(&run[span.as_range()], case, "{shell}: {case}");
+                }
+            }
+        }
+    }
+
     #[test]
     fn test_is_adhoc_install_command() {
         for (args, expected) in &[

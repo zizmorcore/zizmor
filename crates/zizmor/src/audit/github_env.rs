@@ -69,41 +69,30 @@ const BASH_PIPELINE_QUERY: &str = r#"
 
 const PWSH_REDIRECT_QUERY: &str = r#"
 (redirection
-  (file_redirection_operator)
-  (redirected_file_name
-    (_)*
-    (array_literal_expression
-      (unary_expression
-        [
-          (string_literal
-            (expandable_string_literal (variable) @destination))
-          (variable) @destination
-        ]
-      )
-    (_)*
+  operator: (file_redirection_operator)
+  destination: (command_argument
+    [
+      (expandable_string (variable) @destination)
+      (variable) @destination
+    ]
   )
   (#match? @destination "(?i)ENV:GITHUB_ENV|ENV:GITHUB_PATH")
-)) @span
+) @span
 "#;
 
 const PWSH_PIPELINE_QUERY: &str = r#"
 (pipeline
-  (pipeline_chain
-    (command
-        command_name: (command_name) @cmd
-        command_elements: (command_elements
-        (_)*
-        (array_literal_expression
-            (unary_expression [
-            (string_literal
-                (expandable_string_literal (variable) @destination))
-            (variable) @destination
-            ])
-        )
-        (_)*))
-    (#match? @cmd "(?i)out-file|add-content|set-content|tee-object")
-    (#match? @destination "(?i)ENV:GITHUB_ENV|ENV:GITHUB_PATH")
+  elements: (command
+    name: (command_name) @cmd
+    (command_argument
+      [
+        (expandable_string (variable) @destination)
+        (variable) @destination
+      ]
+    )
   )
+  (#match? @cmd "(?i)out-file|add-content|set-content|tee-object")
+  (#match? @destination "(?i)ENV:GITHUB_ENV|ENV:GITHUB_PATH")
 ) @span
 "#;
 
@@ -638,6 +627,17 @@ mod tests {
             ("echo \"foo\" | out-file $Env:GitHub_Env -Append", true),
             ("echo \"foo\" | out-File $Env:GitHub_Env -Append", true),
             ("echo \"foo\" | OUT-FILE $Env:GitHub_Env -Append", true),
+            // GITHUB_PATH uses the same destination shapes as GITHUB_ENV.
+            ("foo >> $env:GITHUB_PATH", true),
+            ("foo > \"${Env:GitHub_Path}\"", true),
+            ("Out-File -FilePath $env:GITHUB_PATH -Append", true),
+            ("Add-Content \"${env:GITHUB_PATH}\" $path", true),
+            ("Set-Content -Path $env:GITHUB_PATH -Value $path", true),
+            ("foo | Tee-Object -FilePath \"$env:GITHUB_PATH\"", true),
+            // Extras must not interrupt destination matching.
+            ("foo >> <# destination #> $env:GITHUB_ENV", true),
+            ("foo | Out-File `\n  -FilePath $env:GITHUB_ENV", true),
+            ("Add-Content <# destination #> $env:GITHUB_ENV $value", true),
             // Negative cases (comments should not be detected)
             ("foo >> bar # not $env:GITHUB_ENV", false),
             ("foo >> bar # not ${env:GITHUB_ENV}", false),
@@ -647,6 +647,9 @@ mod tests {
             ),
             ("foo >> GITHUB_ENV", false), // GITHUB_ENV is not a variable
             ("foo >> $GITHUB_ENV", false), // variable but not an envvar
+            ("foo >> '$env:GITHUB_ENV'", false),
+            ("Out-File -FilePath '$env:GITHUB_PATH'", false),
+            ("Write-Host $env:GITHUB_ENV", false),
             (
                 "\"PYTHON_BIN=$PYTHON_BIN\" | Out-File -FilePath GITHUB_ENV -Append",
                 false,
@@ -658,7 +661,11 @@ mod tests {
 
             let uses_github_env = sut.uses_github_env(case, "pwsh").unwrap();
 
-            assert!(uses_github_env.is_empty() != *expected, "failed: {case}");
+            assert_eq!(
+                uses_github_env.len(),
+                usize::from(*expected),
+                "failed: {case}"
+            );
         }
     }
 }

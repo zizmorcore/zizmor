@@ -140,8 +140,20 @@ static KNOWN_TRUSTED_PUBLISHING_ACTIONS: LazyLock<Vec<(ActionCoordinate, &[&str]
     });
 
 const BASH_COMMAND_QUERY: &str = "(command name: (_) @cmd argument: (_)+ @args) @span";
-const PWSH_COMMAND_QUERY: &str =
-    "(command command_name: (_) @cmd command_elements: (_ (generic_token) @args)+) @span";
+// Include non-argument children in the repetition so they don't split the captures.
+const PWSH_COMMAND_QUERY: &str = r#"
+(command
+  name: (command_name) @cmd
+  [
+    (command_argument) @args
+    (command_parameter) @args
+    (redirection)
+    (comment)
+    (line_continuation)
+    (verbatim_arguments)
+  ]+
+) @span
+"#;
 
 pub(crate) struct UseTrustedPublishing {
     bash_command_query: utils::SpannedQuery,
@@ -498,6 +510,49 @@ impl Audit for UseTrustedPublishing {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pwsh_publishing_candidates() {
+        let sut = UseTrustedPublishing::new(&AuditState::default()).unwrap();
+
+        for (case, expected) in [
+            ("cargo +nightly publish --allow-dirty", true),
+            ("cargo publish --dry-run", false),
+            ("cargo publish -n", false),
+            ("cargo publish `\n  --allow-dirty", true),
+            ("cargo publish `\n  --dry-run", false),
+            ("cargo <# comment #> publish", true),
+            ("cargo publish <# comment #> --dry-run", false),
+            ("cargo build # publish", false),
+            ("cargo build > publish", false),
+            ("cargo > publish.log publish", true),
+            ("cargo publish > publish.log --dry-run", false),
+            ("cargo publish > publish.log", true),
+            ("cargo publish --% > publish.log", true),
+            ("cargo build --% publish", false),
+            ("python -m twine upload dist/*", true),
+            ("python twine -m upload dist/*", false),
+            ("npm publish --access public", true),
+            ("npm publish --dry-run", false),
+            ("uv publish --dry-run", false),
+            ("cargo 'publish --dry-run'", false),
+            ("Write-Host 'cargo publish'", false),
+        ] {
+            let run = format!("Write-Host '🦀'\n{case}\nWrite-Host done");
+            for shell in ["pwsh", "powershell"] {
+                let candidates = sut
+                    .trusted_publishing_command_candidates(&run, shell)
+                    .unwrap();
+                assert_eq!(candidates.len(), usize::from(expected), "{shell}: {case}");
+                if expected {
+                    let span = candidates[0].locate_within(&run).unwrap();
+                    assert_eq!(&run[span.as_range()], case, "{shell}: {case}");
+                }
+            }
+        }
+    }
+
     #[test]
     fn test_is_publish_command() {
         for (args, is_publish_command) in &[
