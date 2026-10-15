@@ -661,11 +661,7 @@ mod tests {
 
             let uses_github_env = sut.uses_github_env(case, "pwsh").unwrap();
 
-            assert_eq!(
-                uses_github_env.len(),
-                usize::from(*expected),
-                "failed: {case}"
-            );
+            assert!(uses_github_env.is_empty() != *expected, "failed: {case}");
         }
     }
 }

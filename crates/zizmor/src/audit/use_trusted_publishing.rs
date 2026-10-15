@@ -544,10 +544,12 @@ mod tests {
                 let candidates = sut
                     .trusted_publishing_command_candidates(&run, shell)
                     .unwrap();
-                assert_eq!(candidates.len(), usize::from(expected), "{shell}: {case}");
                 if expected {
+                    assert_eq!(candidates.len(), 1, "{shell}: {case}");
                     let span = candidates[0].locate_within(&run).unwrap();
                     assert_eq!(&run[span.as_range()], case, "{shell}: {case}");
+                } else {
+                    assert!(candidates.is_empty(), "{shell}: {case}");
                 }
             }
         }

@@ -316,10 +316,12 @@ mod tests {
             let run = format!("Write-Host '🦀'\n{case}\nWrite-Host done");
             for shell in ["pwsh", "powershell"] {
                 let candidates = sut.adhoc_install_candidates(&run, shell).unwrap();
-                assert_eq!(candidates.len(), usize::from(expected), "{shell}: {case}");
                 if expected {
+                    assert_eq!(candidates.len(), 1, "{shell}: {case}");
                     let span = candidates[0].locate_within(&run).unwrap();
                     assert_eq!(&run[span.as_range()], case, "{shell}: {case}");
+                } else {
+                    assert!(candidates.is_empty(), "{shell}: {case}");
                 }
             }
         }
