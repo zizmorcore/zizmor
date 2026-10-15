@@ -109,3 +109,21 @@ fn test_issue_comment() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Repro for #2448: a `# zizmor: ignore` comment at the top of the `on:` block
+/// should be honored for `dangerous-triggers`.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/2448>
+#[test]
+fn test_issue_2448() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test(
+                "dangerous-triggers/issue-2448-repro.yml"
+            ))
+            .run()?,
+        @"No findings to report. Good job! (1 ignored, 3 suppressed)"
+    );
+
+    Ok(())
+}
