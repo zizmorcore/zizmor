@@ -39,6 +39,9 @@ of `zizmor`.
   `#!yaml cache-mode: write-only` with dangerous triggers, i.e. triggers that give
   an attacker privileged code execution (#2426)
 
+* zizmor now uses a tree-sitter grammar for PowerShell that's more precise/capable of
+  capturing more non-trivial PowerShell expressions (#2444)
+
 ### Bug Fixes 🐛
 
 * Fixed a class of false positives/imprecisions in [adhoc-packages] that caused
@@ -55,6 +58,9 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would fail to handle some pre-commit inputs
   that use prek extensions to the `language_version` and `default_language_version`
   keys (#2413)
+
+* Fixed a bug where the [use-trusted-publishing] audit would fail to detect certain
+  true-positive patterns inside of PowerShell blocks (#2444)
 
 ## 1.30.1
 
