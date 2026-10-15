@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.31.0
+
 ### Enhancements 🌱
 
 * The [typosquat-uses] audit now supports pre-commit config inputs (#2437)
