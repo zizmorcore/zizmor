@@ -83,7 +83,7 @@ GitHub Actions setup:
         branches: ["**"]
 
     env:
-      ZIZMOR_VERSION: 1.30.1
+      ZIZMOR_VERSION: 1.31.0
 
     permissions: {}
 
@@ -159,7 +159,7 @@ GitHub Actions setup:
         branches: ["**"]
 
     env:
-      ZIZMOR_VERSION: 1.30.1
+      ZIZMOR_VERSION: 1.31.0
 
     jobs:
       zizmor:
