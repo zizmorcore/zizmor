@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.31.1
+
 ### Bug Fixes 🐛
 
 * Fixed a regression in [1.31.0](#1310) where some ignore comments/configurations
