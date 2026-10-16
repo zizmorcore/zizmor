@@ -7,4 +7,5 @@
 pub mod action;
 pub mod common;
 pub mod dependabot;
+pub mod lock;
 pub mod workflow;
