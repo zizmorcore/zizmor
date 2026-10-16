@@ -18,7 +18,6 @@ use thiserror::Error;
 #[cfg(feature = "schema")]
 pub mod schema;
 
-use crate::audit::self_hosted_runner::SelfHostedRunner;
 use crate::{
     App, CollectionOptions,
     audit::{
@@ -31,6 +30,7 @@ use crate::{
     models::uses::RepositoryUsesPattern,
     registry::input::InputSlug,
 };
+use crate::{audit::self_hosted_runner::SelfHostedRunner, registry::input::root::Root};
 
 const CONFIG_CANDIDATES: &[&str] = &[
     ".github/zizmor.yml",
@@ -609,7 +609,7 @@ impl Config {
     #[tracing::instrument]
     fn discover_in_dir(
         path: &Utf8Path,
-        root: Option<&Utf8Path>,
+        root: Option<&Root>,
     ) -> Result<Option<Self>, ConfigErrorInner> {
         tracing::debug!("attempting config discovery for `{path}` (root: `{root:?}`)");
 
@@ -618,7 +618,7 @@ impl Config {
             let _span = tracing::span!(tracing::Level::DEBUG, "happy path").entered();
 
             for candidate in CONFIG_CANDIDATES {
-                let candidate_path = root.join(candidate);
+                let candidate_path = root.path().join(candidate);
 
                 if candidate_path.is_file() {
                     tracing::debug!("found config candidate at `{candidate_path}`");
@@ -687,7 +687,7 @@ impl Config {
     /// `zizmor.yml` in the directory itself.
     pub(crate) async fn discover_local(
         path: &Utf8Path,
-        root: Option<&Utf8Path>,
+        root: Option<&Root>,
     ) -> Result<Option<Self>, ConfigError> {
         tracing::debug!("discovering config for local input `{path}` (root: `{root:?}`)");
 

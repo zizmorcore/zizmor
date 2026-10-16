@@ -496,16 +496,32 @@ impl From<ColorMode> for anstream::ColorChoice {
 }
 
 /// How `zizmor` collects inputs from local and remote repository sources.
+///
+/// When `zizmor` is given a local directory, this mode is also affected
+/// by whether that directory is a repository is a Git root (e.g. `zizmor .`
+/// where `.` is the Git root).
+///
+/// When a source is a Git root, `zizmor` collects that source's inputs
+/// in a "smarter" mode. In particular, instead of walking the entire
+/// directory tree, the only the following root-relative patterns are collected:
+/// - `{root}/.github/workflows/*.ya?ml`
+/// - `{root}/**/action.ya?ml`
+/// - `{root}/.pre-commit-config.yaml`
+/// - `{root}/.pre-commit-hooks.yaml`
+///
+/// Those patterns are also subject to the mode itself. For example, actions will not
+/// be collected if the mode does not specify them, regardless of whether the
+/// directory source is a repository root or not.
 #[derive(Copy, Clone, Debug, Default, ValueEnum, Eq, PartialEq, Hash)]
 pub(crate) enum CliCollectionMode {
     /// Collect all possible inputs, ignoring `.gitignore` files.
     All,
-    /// Collect all possible inputs, respecting `.gitignore` files.
+    /// Collect all inputs, respecting `.gitignore` files.
     #[default]
     Default,
-    /// Collect workflows.
+    /// Collect GitHub Actions workflows.
     Workflows,
-    /// Collect action definitions (i.e. `action.yml`).
+    /// Collect GitHub Actions action definitions (i.e. `action.yml`).
     Actions,
     /// Collect Dependabot configuration files (i.e. `dependabot.yml`).
     Dependabot,

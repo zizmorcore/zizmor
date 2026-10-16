@@ -15,6 +15,7 @@ use crate::finding::{Persona, Severity};
 use crate::models::action::Action;
 use crate::models::dependabot::Dependabot;
 use crate::models::workflow::Workflow;
+use crate::registry::input::root::Root;
 use crate::registry::input::{InputGroup, InputRegistry};
 use crate::registry::{FindingRegistry, input::InputKey};
 use crate::{AuditRegistry, AuditState};
@@ -291,7 +292,8 @@ impl Backend {
             let workspace_dirs = self.workspace_dirs.read().await;
 
             for dir in workspace_dirs.as_slice() {
-                match Config::discover_local(dir.as_path(), Some(dir.as_path())).await {
+                let root = Root::discover(dir.as_path());
+                match Config::discover_local(dir.as_path(), root.as_ref()).await {
                     Ok(Some(cfg)) => {
                         config = cfg;
                         break;
