@@ -12,7 +12,7 @@ of `zizmor`.
 ### Bug Fixes 🐛
 
 * Fixed a false negative in the [bot-conditions] audit, which previously
-  didn't check the `if:` condition of jobs that call a reusable workflow (#XXXX)
+  didn't check the `if:` condition of jobs that call a reusable workflow (#2455)
 
 ## 1.31.1
 
