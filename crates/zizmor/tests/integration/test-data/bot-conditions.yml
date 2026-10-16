@@ -58,3 +58,14 @@ jobs:
       - name: vulnerable-11
         run: echo hello
         if: ${{ github.actor_id == '49699333' }}
+
+  hackme-reusable:
+    name: hackme-reusable
+    # ensure we check reusable workflow calls
+    if: github.actor == 'dependabot[bot]'
+    uses: example/example/.github/workflows/reusable.yml@d8a8d9c5b3e1a2f4c6b7e8d9a0b1c2d3e4f5a6b7 # v1.0.0
+
+  not-vulnerable-reusable:
+    name: not-vulnerable-reusable
+    if: github.actor == 'notabot'
+    uses: example/example/.github/workflows/reusable.yml@d8a8d9c5b3e1a2f4c6b7e8d9a0b1c2d3e4f5a6b7 # v1.0.0

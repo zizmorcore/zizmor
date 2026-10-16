@@ -147,7 +147,19 @@ fn test_regular_persona() -> anyhow::Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    13 findings (1 suppressed, 11 safe fixes): 0 informational, 0 low, 0 medium, 12 high
+    error[bot-conditions]: spoofable bot actor check
+      --> @@INPUT@@:65:9
+       |
+    63 |     name: hackme-reusable
+       |     --------------------- this job
+    64 |     # ensure we check reusable workflow calls
+    65 |     if: github.actor == 'dependabot[bot]'
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ actor context may be spoofable
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    14 findings (1 suppressed, 12 safe fixes): 0 informational, 0 low, 0 medium, 13 high
     "
     );
 
@@ -195,6 +207,44 @@ jobs:
     +        if: github.event.pull_request.user.login == 'dependabot[bot]'
              run: echo "hello"
     "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_reusable_workflow_call() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+    workspace.add_file(
+        ".github/workflows/bot-conditions.yml",
+        r#"
+name: Test Workflow
+on:
+  pull_request_target:
+
+jobs:
+  test:
+    if: github.actor == 'dependabot[bot]'
+    uses: example/example/.github/workflows/reusable.yml@d8a8d9c5b3e1a2f4c6b7e8d9a0b1c2d3e4f5a6b7 # v1.0.0
+"#,
+    );
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/bot-conditions.yml", |workspace| {
+            Zizmor::cargo_bin()
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -5,5 +5,5 @@
+     ⏎
+     jobs:
+       test:
+    -    if: github.actor == 'dependabot[bot]'
+    +    if: github.event.pull_request.user.login == 'dependabot[bot]'
+         uses: example/example/.github/workflows/reusable.yml@d8a8d9c5b3e1a2f4c6b7e8d9a0b1c2d3e4f5a6b7 # v1.0.0
+    "
     );
 
     Ok(())
