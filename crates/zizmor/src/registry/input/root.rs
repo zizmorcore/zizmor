@@ -92,7 +92,7 @@ impl Root {
             // Submodules and linked worktrees use a `.git` file instead of a directory.
             if candidate.join(".git").exists() {
                 return Some(Self {
-                    _request_is_root: &candidate == path,
+                    _request_is_root: candidate == path,
                     path: candidate,
                 });
             }
