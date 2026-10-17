@@ -498,16 +498,16 @@ impl From<ColorMode> for anstream::ColorChoice {
 /// How `zizmor` collects inputs from local and remote repository sources.
 ///
 /// When `zizmor` is given a local directory, this mode is also affected
-/// by whether that directory is a repository is a Git root (e.g. `zizmor .`
+/// by whether that directory is a Git repository root (e.g. `zizmor .`
 /// where `.` is the Git root).
 ///
 /// When a source is a Git root, `zizmor` collects that source's inputs
-/// in a "smarter" mode. In particular, instead of walking the entire
-/// directory tree, the only the following root-relative patterns are collected:
-/// - `{root}/.github/workflows/*.ya?ml`
-/// - `{root}/**/action.ya?ml`
-/// - `{root}/.pre-commit-config.yaml`
-/// - `{root}/.pre-commit-hooks.yaml`
+/// in "root-aware" mode. Only the following root-relative patterns are collected:
+/// - `{root}/.github/workflows/*.{yml,yaml}`
+/// - `{root}/**/action.{yml,yaml}`
+/// - `{root}/.github/dependabot.{yml,yaml}`
+/// - `{root}/.pre-commit-config.{yml,yaml}`
+/// - `{root}/.pre-commit-hooks.{yml,yaml}`
 ///
 /// Those patterns are also subject to the mode itself. For example, actions will not
 /// be collected if the mode does not specify them, regardless of whether the

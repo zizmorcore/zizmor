@@ -587,25 +587,39 @@ impl InputGroup {
         Ok(group)
     }
 
-    /// Collect inputs from a repository root.
+    /// Collect inputs in "root-aware" mode.
     ///
-    /// This collection logic is "smarter" than the generic directory collection
-    /// in [`Self::collect_from_generic_dir`], since it doesn't traverse the
-    /// entire source tree to discover inputs of any given type.
-    /// Instead, it remains anchored to the root.
+    /// Workflows, Dependabot, and pre-commit inputs are anchored to the root.
+    /// Only action discovery requires traversing the entire source tree.
     async fn collect_from_repo_root(
         path: &Utf8Path,
         options: &CollectionOptions,
         root: Root,
     ) -> Result<Self, CollectionError> {
-        let config =
-            Config::discover(options, || Config::discover_local(path, Some(&root))).await?;
-        let mut group = Self::new(config, Some(root));
+        tracing::debug!("performing root-aware collection because '{path}' is a Git root");
 
-        todo!()
+        let mut walker = Self::directory_walker(path, options);
+        let workflows = options.mode_set.workflows();
+        let actions = options.mode_set.actions();
+        let dependabot = options.mode_set.dependabot();
+        let dotgithub = path.join(".github");
+        let workflows_dir = dotgithub.join("workflows");
+
+        // Prune directories before descent while leaving ignore-file handling
+        // to the walker. Actions can occur anywhere, so their discovery still
+        // requires a recursive walk.
+        walker.filter_entry(move |entry| {
+            !entry.file_type().is_some_and(|kind| kind.is_dir())
+                || entry.depth() == 0
+                || actions
+                || ((workflows || dependabot) && entry.path() == dotgithub.as_std_path())
+                || (workflows && entry.path() == workflows_dir.as_std_path())
+        });
+
+        Self::collect_from_walk(path, options, Some(root), walker).await
     }
 
-    /// Collect auditable inputs from a "generic" directory.
+    /// Collect auditable inputs from a directory, i.e. in non-root-aware mode.
     ///
     /// The given directory is "generic" in the sense that it isn't
     /// a repository root. However, it might be *inside* of a repository
@@ -619,13 +633,17 @@ impl InputGroup {
         options: &CollectionOptions,
         root: Option<Root>,
     ) -> Result<Self, CollectionError> {
-        let config =
-            Config::discover(options, || Config::discover_local(path, root.as_ref())).await?;
-        let mut group = Self::new(config, root);
+        tracing::debug!(
+            "performing generic directory collection because '{path}' is not a Git root"
+        );
+        Self::collect_from_walk(path, options, root, Self::directory_walker(path, options)).await
+    }
 
+    /// Build a directory walker with the requested Git ignore behavior.
+    fn directory_walker(path: &Utf8Path, options: &CollectionOptions) -> ignore::WalkBuilder {
         // Start with all filters disabled, i.e. walk everything.
         let mut walker = ignore::WalkBuilder::new(path);
-        let walker = walker.standard_filters(false);
+        walker.standard_filters(false);
 
         // If the user wants to respect `.gitignore` files, then we need to
         // explicitly enable it. This also enables filtering by a global
@@ -646,6 +664,24 @@ impl InputGroup {
                 .git_exclude(true);
         }
 
+        walker
+    }
+
+    /// Load inputs from a configured walk, preserving the original request's
+    /// configuration, input keys, and repository-relative collection rules.
+    async fn collect_from_walk(
+        path: &Utf8Path,
+        options: &CollectionOptions,
+        root: Option<Root>,
+        walker: ignore::WalkBuilder,
+    ) -> Result<Self, CollectionError> {
+        let config =
+            Config::discover(options, || Config::discover_local(path, root.as_ref())).await?;
+        let is_repo_root = root.as_ref().is_some_and(|root| root.request_is_root);
+        let mut group = Self::new(config, root);
+        let dotgithub = path.join(".github");
+        let workflows_dir = dotgithub.join("workflows");
+
         for entry in walker.build() {
             let entry = entry?;
             let entry = <&Utf8Path>::try_from(entry.path())
@@ -657,6 +693,7 @@ impl InputGroup {
             if options.mode_set.workflows()
                 && entry_is_file
                 && matches!(entry.extension(), Some("yml" | "yaml"))
+                && (!is_repo_root || entry.parent() == Some(workflows_dir.as_path()))
                 && camino::absolute_utf8(entry)?
                     .parent()
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
@@ -699,6 +736,7 @@ impl InputGroup {
 
             if options.mode_set.dependabot()
                 && entry_is_file
+                && (!is_repo_root || entry.parent() == Some(dotgithub.as_path()))
                 && matches!(
                     entry.file_name(),
                     Some("dependabot.yml" | "dependabot.yaml")
@@ -720,7 +758,10 @@ impl InputGroup {
                 group.register(InputKind::Dependabot, contents, key, options.strict)?;
             }
 
-            if options.mode_set.pre_commit() && entry_is_file {
+            if options.mode_set.pre_commit()
+                && entry_is_file
+                && (!is_repo_root || entry.parent() == Some(path))
+            {
                 if matches!(
                     entry.file_name(),
                     Some(".pre-commit-config.yml" | ".pre-commit-config.yaml")
@@ -772,13 +813,9 @@ impl InputGroup {
 
         match root {
             Some(root) if root.request_is_root => {
-                tracing::debug!("collect_from_dir: '{path}' is also a repository root");
                 Self::collect_from_repo_root(path, options, root).await
             }
-            _ => {
-                tracing::debug!("collect_from_dir: generic collection from '{path}' directory");
-                Self::collect_from_generic_dir(path, options, root).await
-            }
+            _ => Self::collect_from_generic_dir(path, options, root).await,
         }
     }
 
