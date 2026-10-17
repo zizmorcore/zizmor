@@ -39,12 +39,12 @@ jobs:
           commit-message: "[BOT] update JSON schemas from SchemaStore"
           branch: refresh-schemas
           branch-suffix: timestamp
-          title: "[BOT] update JSON schemas from SchemaStore"
+          title: "[BOT] update JSON schemas"
           body: |
             :robot: :warning: :robot:
 
             This is an automated pull request, updating the embedded JSON
-            schemas after a SchemaStore change was detected.
+            schemas after a change was detected.
 
             Please review manually before merging.
           assignees: ${{ env.PR_ASSIGNEES }}
