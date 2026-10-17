@@ -260,6 +260,43 @@ foo:
 }
 
 #[test]
+fn test_rewrite_scalar_fragment() {
+    for route in [route!(), route!("foo")] {
+        let document = yamlpath::Document::new("foo: 'prefix it''s old' # preserved\n").unwrap();
+        let result = apply_yaml_patches(
+            &document,
+            &[Patch {
+                route,
+                operation: Op::RewriteScalarFragment {
+                    from: subfeature::Subfeature::new(0, "it''s old"),
+                    to: "it's new".into(),
+                },
+            }],
+        )
+        .unwrap();
+        assert_eq!(result.source(), "foo: 'prefix it''s new' # preserved\n");
+    }
+}
+
+#[test]
+fn test_rewrite_scalar_fragment_boundaries() {
+    let document = yamlpath::Document::new("foo: 'bar'\nbaz: quux").unwrap();
+    for fragment in ["'bar'", "bar'\nbaz"] {
+        let result = apply_yaml_patches(
+            &document,
+            &[Patch {
+                route: route!(),
+                operation: Op::RewriteScalarFragment {
+                    from: subfeature::Subfeature::new(0, fragment),
+                    to: "replacement".into(),
+                },
+            }],
+        );
+        assert!(result.is_err());
+    }
+}
+
+#[test]
 fn test_rewrite_fragment_single_line() {
     let original = r#"
 foo:
