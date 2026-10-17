@@ -12,14 +12,21 @@ There are four input sources that `zizmor` knows about:
 
 1. Individual input files, e.g. `foo.yml`, `my-action/action.yml`,
    and `.pre-commit-config.yaml`;
-2. "Local" repositories in the form of a directory, e.g. `my-repo/`;
+2. "Local" directories, e.g. `my-repo/`;
+
+    !!! note
+
+        As of zizmor `v1.32.0`, local directories are collected differently
+        depending on whether or not they're a Git repository.
+        See below for more information.
+
 3. "Remote" (GitHub) repositories in the form of a "slug", e.g.
    `pypa/sampleproject`;
 
     !!! tip
 
         By default, a remote repository will be audited from the `HEAD`
-        of the default branch. To control this, you can append a `git`
+        of the default branch. To control this, you can append a Git
         reference to the slug:
 
         ```bash
@@ -105,6 +112,25 @@ zizmor --collect=pre-commit example/example
 # collect both workflows and actions, but nothing else
 zizmor --collect=workflows,actions example/example
 ```
+
+!!! tip
+
+    As of `v1.32.0`, zizmor specializes its local directory collection
+    depending on whether the input is a Git root.
+
+    This changes which inputs are collected by default by limiting
+    zizmor to only inputs that would actually be used, rather than
+    trying to discover every possible valid workflow, pre-commit config,
+    etc.
+
+    For example, if `zizmor foo/` is invoked and `foo/` is a Git repository
+    root, then zizmor will collect `foo/.github/workflows/ci.yml` but **not**
+    `foo/third_party/bar/.github/workflows/ci.yml`, since the latter would
+    not actually be used by GitHub Actions.
+
+    However, if `zizmor foo/third_party/` is invoked then all nested
+    inputs *will* be collected, since `foo/third_pary/` is not itself
+    a Git root.
 
 !!! tip
 

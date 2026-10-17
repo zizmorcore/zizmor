@@ -9,6 +9,15 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* zizmor's input collection is not "root-aware" by default,
+  meaning that invocations like `zizmor .` will no longer collect inputs
+  unless they would actually be used by GitHub Actions, etc.
+  This should eliminate spurious findings from (e.g.) workflow
+  definitions in vendored directories. See the [input collection]
+  documentation for more information. (#2454)
+
 ## 1.31.1
 
 ### Bug Fixes 🐛
@@ -2173,3 +2182,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 <!-- advisories -->
 
 [GHSA-f42p-wjw5-97qh]: https://github.com/zizmorcore/zizmor/security/advisories/GHSA-f42p-wjw5-97qh
+
+<!-- useful doc links -->
+
+[input collection]: ./usage.md#input-collection
