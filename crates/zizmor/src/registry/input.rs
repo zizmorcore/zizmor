@@ -587,19 +587,41 @@ impl InputGroup {
         Ok(group)
     }
 
-    async fn collect_from_dir(
+    /// Collect inputs from a repository root.
+    ///
+    /// This collection logic is "smarter" than the generic directory collection
+    /// in [`Self::collect_from_generic_dir`], since it doesn't traverse the
+    /// entire source tree to discover inputs of any given type.
+    /// Instead, it remains anchored to the root.
+    async fn collect_from_repo_root(
         path: &Utf8Path,
         options: &CollectionOptions,
+        root: Root,
     ) -> Result<Self, CollectionError> {
-        let root = Root::discover(path);
+        let config =
+            Config::discover(options, || Config::discover_local(path, Some(&root))).await?;
+        let mut group = Self::new(config, Some(root));
+
+        todo!()
+    }
+
+    /// Collect auditable inputs from a "generic" directory.
+    ///
+    /// The given directory is "generic" in the sense that it isn't
+    /// a repository root. However, it might be *inside* of a repository
+    /// root.
+    ///
+    /// For example, if `foo/` is a repository, `zizmor foo/bar/` will
+    /// take the [`Self::collect_from_generic_dir`] route, but
+    /// `zizmor foo/` will be loaded via [`Self::collect_from_repo_root`].
+    async fn collect_from_generic_dir(
+        path: &Utf8Path,
+        options: &CollectionOptions,
+        root: Option<Root>,
+    ) -> Result<Self, CollectionError> {
         let config =
             Config::discover(options, || Config::discover_local(path, root.as_ref())).await?;
-
         let mut group = Self::new(config, root);
-
-        if group.root.as_ref().is_some_and(|r| r.request_is_root) {
-            tracing::debug!("'{path}' is also a repository root");
-        }
 
         // Start with all filters disabled, i.e. walk everything.
         let mut walker = ignore::WalkBuilder::new(path);
@@ -740,6 +762,24 @@ impl InputGroup {
         }
 
         Ok(group)
+    }
+
+    async fn collect_from_dir(
+        path: &Utf8Path,
+        options: &CollectionOptions,
+    ) -> Result<Self, CollectionError> {
+        let root = Root::discover(path);
+
+        match root {
+            Some(root) if root.request_is_root => {
+                tracing::debug!("collect_from_dir: '{path}' is also a repository root");
+                Self::collect_from_repo_root(path, options, root).await
+            }
+            _ => {
+                tracing::debug!("collect_from_dir: generic collection from '{path}' directory");
+                Self::collect_from_generic_dir(path, options, root).await
+            }
+        }
     }
 
     async fn collect_from_repo_slug(
