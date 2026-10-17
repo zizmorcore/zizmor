@@ -8,10 +8,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  superfluous-actions:
+  superfluous-actions-standard-runner:
     name: superfluous-actions
     runs-on: ubuntu-latest
     steps:
+      # NOT OK on standard runners
       - name: setup rust
         uses: dtolnay/rust-toolchain@086dfa4efe372cfb6b375460a56e26a62a873d2e # 1.93.1
 
@@ -21,4 +22,15 @@ jobs:
       # the ignore comment works on `name:` because every superfluous-actions finding
       # has a hidden span for the entire step.
       - name: test ignore # zizmor: ignore[superfluous-actions]
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
+
+  superfluous-actions-self-runner:
+    name: superfluous-actions
+    runs-on: [self-hosted, arm, linux]
+    steps:
+      # OK on self-hosted
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@086dfa4efe372cfb6b375460a56e26a62a873d2e # 1.93.1
+
+      - name: update comment
         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
