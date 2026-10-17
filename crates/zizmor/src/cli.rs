@@ -202,6 +202,10 @@ pub(crate) struct NetworkArgs {
     #[arg(long, env, hide = true, value_parser = GitHubToken::new)]
     pub(crate) zizmor_github_token: Option<GitHubToken>,
 
+    /// The GitHub.com API token to use as a fallback [env: GITHUB_COM_TOKEN]
+    #[arg(long, env, hide_env = true, value_parser = GitHubToken::new)]
+    pub(crate) github_com_token: Option<GitHubToken>,
+
     /// The GitHub Server Hostname. Defaults to github.com
     #[arg(long, env = "GH_HOST", default_value_t)]
     pub(crate) gh_hostname: GitHubHost,
