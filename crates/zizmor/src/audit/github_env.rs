@@ -291,8 +291,9 @@ impl GitHubEnv {
             .context("failed to set pwsh language for parser")
             .map_err(Self::err)?;
 
+        let source = utils::mask_fenced_expressions(script_body);
         let tree = parser
-            .parse(script_body, None)
+            .parse(source.as_bytes(), None)
             .context("failed to parse `run:` body as pwsh")
             .map_err(Self::err)?;
 
@@ -304,7 +305,7 @@ impl GitHubEnv {
             let destination = query
                 .capture_index_for_name("destination")
                 .expect("internal error: missing capture index for 'destination' in pwsh query");
-            let matches = self.query(query, &mut cursor, &tree, script_body);
+            let matches = self.query(query, &mut cursor, &tree, &source);
             matches.for_each(|mat| {
                 let span = mat
                     .captures()
@@ -649,6 +650,9 @@ mod tests {
             // Both queries must also match GITHUB_PATH.
             ("foo >> $env:GITHUB_PATH", true),
             ("foo | Tee-Object -FilePath \"$env:GITHUB_PATH\"", true),
+            // Expressions must not hide redirections or supply shell syntax.
+            (r#"echo "${{ env.VALUE }}" >> $env:GITHUB_ENV"#, true),
+            (r#"Out-File "${{ '$env:GITHUB_ENV' }}""#, false),
             // Extras must not interrupt destination matching.
             ("foo >> <# destination #> $env:GITHUB_ENV", true),
             ("foo | Out-File `\n  -FilePath $env:GITHUB_ENV", true),

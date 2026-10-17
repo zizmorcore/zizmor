@@ -139,13 +139,14 @@ impl AdhocPackages {
         shell: &str,
     ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         let normalized = utils::normalize_shell(shell);
+        let source = utils::mask_fenced_expressions(run);
 
         let mut cursor = tree_sitter::QueryCursor::new();
         let (query, tree) = match normalized {
             "bash" | "sh" | "zsh" => {
                 let mut parser = utils::bash_parser();
                 let tree = parser
-                    .parse(run, None)
+                    .parse(source.as_bytes(), None)
                     .context("failed to parse `run:` body as bash")
                     .map_err(Self::err)?;
                 (&self.bash_command_query, tree)
@@ -153,7 +154,7 @@ impl AdhocPackages {
             "pwsh" | "powershell" => {
                 let mut parser = utils::pwsh_parser();
                 let tree = parser
-                    .parse(run, None)
+                    .parse(source.as_bytes(), None)
                     .context("failed to parse `run:` body as pwsh")
                     .map_err(Self::err)?;
                 (&self.pwsh_command_query, tree)
@@ -164,7 +165,7 @@ impl AdhocPackages {
             }
         };
 
-        let matches = self.query(query, &mut cursor, &tree, run);
+        let matches = self.query(query, &mut cursor, &tree, &source);
         let cmd_idx = query
             .capture_index_for_name("cmd")
             .expect("internal error: missing capture index for 'cmd'");
@@ -308,6 +309,10 @@ mod tests {
             ("npm install lodash --% > install.log", true),
             // A quoted argument must not be split into a subcommand and package.
             ("npm 'install lodash'", false),
+            // Expressions remain arguments, with their original source spans.
+            (r#"npm install "${{ env.PACKAGE }}""#, true),
+            ("npm install ${{\n env.PACKAGE || '🦀'\n}}", true),
+            ("npm ${{ env.COMMAND }} lodash", false),
         ] {
             // Check command boundaries and byte offsets as well as classification.
             let run = format!("Write-Host '🦀'\n{case}\nWrite-Host done");
