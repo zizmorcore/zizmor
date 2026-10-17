@@ -591,6 +591,7 @@ impl InputGroup {
     ///
     /// Workflows, Dependabot, and pre-commit inputs are anchored to the root.
     /// Only action discovery requires traversing the entire source tree.
+    #[tracing::instrument(skip(options))]
     async fn collect_from_repo_root(
         path: &Utf8Path,
         options: &CollectionOptions,
@@ -628,6 +629,7 @@ impl InputGroup {
     /// For example, if `foo/` is a repository, `zizmor foo/bar/` will
     /// take the [`Self::collect_from_generic_dir`] route, but
     /// `zizmor foo/` will be loaded via [`Self::collect_from_repo_root`].
+    #[tracing::instrument(skip(options))]
     async fn collect_from_generic_dir(
         path: &Utf8Path,
         options: &CollectionOptions,
@@ -805,6 +807,7 @@ impl InputGroup {
         Ok(group)
     }
 
+    #[tracing::instrument(skip(options))]
     async fn collect_from_dir(
         path: &Utf8Path,
         options: &CollectionOptions,
