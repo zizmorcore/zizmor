@@ -591,10 +591,9 @@ impl Config {
     /// Discover a [`Config`] appropriate for the given directory (as `path`).
     ///
     /// This uses the following discovery procedure:
-    /// 1. If we have a root directory (i.e. a respository root discovered
-    ///    by [`crate::registry::input::InputGroup::discover_root`]),
-    ///    then we try `{root}/.github/zizmor.ya?ml` and `{root}/zizmor.ya?ml`
-    ///    in that order. If none is found, config search ends here.
+    /// 1. If we have a Git root, then we try `{root}/.github/zizmor.ya?ml`
+    ///    and `{root}/zizmor.ya?ml` in that order. If none is found, config
+    ///    search ends here.
     /// 2. If we don't have a root directory, we search relative to
     ///    the given directory.
     /// 3. If the given directory is `blahblah/.github/workflows/`,
