@@ -172,10 +172,32 @@
             },
             "oneOf": [
               {
-                "required": ["run", "shell"]
+                "anyOf": [
+                  {
+                    "not": {
+                      "properties": {
+                        "run": true
+                      },
+                      "required": ["run"]
+                    }
+                  },
+                  {
+                    "not": {
+                      "properties": {
+                        "shell": true
+                      },
+                      "required": ["shell"]
+                    }
+                  }
+                ]
               },
               {
-                "required": ["uses"]
+                "not": {
+                  "properties": {
+                    "uses": true
+                  },
+                  "required": ["uses"]
+                }
               }
             ],
             "additionalProperties": false
@@ -318,6 +340,7 @@
   "if": {
     "properties": {
       "runs": {
+        "type": "object",
         "properties": {
           "using": {
             "const": "composite"
