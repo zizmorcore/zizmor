@@ -10,16 +10,17 @@ use crate::{
     state::AuditState,
 };
 
-pub(crate) struct HardcodedContainerCredentials;
+pub(crate) struct HardcodedCredentials;
 
 audit_meta!(
-    HardcodedContainerCredentials,
-    "hardcoded-container-credentials",
-    "hardcoded credential in GitHub Actions container configurations"
+    HardcodedCredentials,
+    "hardcoded-credentials",
+    "hardcoded credential is present",
+    &["hardcoded-container-credentials"]
 );
 
 #[async_trait::async_trait]
-impl Audit for HardcodedContainerCredentials {
+impl Audit for HardcodedCredentials {
     fn new(_state: &AuditState) -> Result<Self, AuditLoadError>
     where
         Self: Sized,
