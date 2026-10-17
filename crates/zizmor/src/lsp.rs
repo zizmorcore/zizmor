@@ -319,7 +319,8 @@ impl Backend {
         // Note: we don't bother discovering the root directory
         // for LSP inputs, since LSP diagnostics are always tied
         // to a specific file, identified by an opaque URI.
-        let mut group = InputGroup::new(config, None);
+        // TODO: We need to do this now, for lockfiles.
+        let mut group = InputGroup::new(config, None, None);
         group.register_input(input)?;
         let mut input_registry = InputRegistry::new();
         input_registry.groups.insert("lsp".into(), group);

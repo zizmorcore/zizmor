@@ -8,6 +8,7 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
+use github_actions_models::lock::Lock;
 use itertools::Itertools as _;
 use serde::Serialize;
 use thiserror::Error;
@@ -473,15 +474,18 @@ pub(crate) struct InputGroup {
     config: Config,
     /// The group's root directory (as an absolute path), if applicable and inferable.
     root: Option<Root>,
+    /// The group's GitHub Actions lockfile, if it has one.
+    lock: Option<Lock>,
     /// The collected inputs.
     inputs: BTreeMap<InputKey, AuditInput>,
 }
 
 impl InputGroup {
-    pub(crate) fn new(config: Config, root: Option<Root>) -> Self {
+    pub(crate) fn new(config: Config, root: Option<Root>, lock: Option<Lock>) -> Self {
         Self {
             config,
             root,
+            lock,
             inputs: Default::default(),
         }
     }
@@ -548,7 +552,8 @@ impl InputGroup {
             .parent()
             .is_some_and(|parent| parent.ends_with(".github/workflows"));
 
-        let mut group = Self::new(config, root);
+        // TODO(ww): use `root` to discover the lockfile here.
+        let mut group = Self::new(config, root, None);
 
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
@@ -680,7 +685,8 @@ impl InputGroup {
         let config =
             Config::discover(options, || Config::discover_local(path, root.as_ref())).await?;
         let is_repo_root = root.as_ref().is_some_and(|root| root.request_is_root);
-        let mut group = Self::new(config, root);
+        // TODO(ww): use `root` to discover the lockfile here.
+        let mut group = Self::new(config, root, None);
         let dotgithub = path.join(".github");
         let workflows_dir = dotgithub.join("workflows");
 
@@ -830,7 +836,9 @@ impl InputGroup {
         let client = gh_client.ok_or_else(|| CollectionError::NoGitHubClient(slug.clone()))?;
 
         let config = Config::discover(options, || Config::discover_remote(client, &slug)).await?;
-        let mut group = Self::new(config, None);
+        // TODO(ww): We need `Root::Remote` or similar here, which we'll then use as
+        // another state for lockfile discovery.
+        let mut group = Self::new(config, None, None);
 
         if options.mode_set.workflows_only() {
             // Performance: if we're *only* collecting workflows, then we
@@ -862,7 +870,8 @@ impl InputGroup {
             .map_err(CollectionError::Io)?;
 
         // TODO: This should probably honor the global config, if passed by the user?
-        let mut group = Self::new(Config::default(), None);
+        // NOTE: stdin inputs have no obvious lockfile.
+        let mut group = Self::new(Config::default(), None, None);
         let key = InputKey::stdin();
 
         // Infer the input type by trying each parser in order.
