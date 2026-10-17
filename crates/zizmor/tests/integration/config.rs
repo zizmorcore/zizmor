@@ -17,9 +17,9 @@ fn test_discovers_config_in_root() -> anyhow::Result<()> {
             .output(OutputMode::Both)
             .run()?,
         @r#"
-    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some(Root { _request_is_root: false, path: "@@INPUT@@" })`)
-    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: false, path: "@@INPUT@@" })}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some(Root { _request_is_root: false, path: "@@INPUT@@" })`)
-    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: false, path: "@@INPUT@@" })}:happy path: zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some(Root { _request_is_root: true, path: "@@INPUT@@" })`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: true, path: "@@INPUT@@" })}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some(Root { _request_is_root: true, path: "@@INPUT@@" })`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: true, path: "@@INPUT@@" })}:happy path: zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "#
     );
@@ -157,9 +157,9 @@ fn test_discovers_config_in_dotgithub() -> anyhow::Result<()> {
             .output(OutputMode::Both)
             .run()?,
         @r#"
-    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some(Root { _request_is_root: false, path: "@@INPUT@@" })`)
-    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: false, path: "@@INPUT@@" })}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some(Root { _request_is_root: false, path: "@@INPUT@@" })`)
-    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: false, path: "@@INPUT@@" })}:happy path: zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yml`
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some(Root { _request_is_root: true, path: "@@INPUT@@" })`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: true, path: "@@INPUT@@" })}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some(Root { _request_is_root: true, path: "@@INPUT@@" })`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: true, path: "@@INPUT@@" })}:happy path: zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "#,
     );
@@ -187,9 +187,9 @@ fn test_discovers_dotyaml_config_in_dotgithub() -> anyhow::Result<()> {
             .output(OutputMode::Both)
             .run()?,
         @r#"
-    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some(Root { _request_is_root: false, path: "@@INPUT@@" })`)
-    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: false, path: "@@INPUT@@" })}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some(Root { _request_is_root: false, path: "@@INPUT@@" })`)
-    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: false, path: "@@INPUT@@" })}:happy path: zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yaml`
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some(Root { _request_is_root: true, path: "@@INPUT@@" })`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: true, path: "@@INPUT@@" })}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some(Root { _request_is_root: true, path: "@@INPUT@@" })`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: true, path: "@@INPUT@@" })}:happy path: zizmor::config: found config candidate at `@@INPUT@@/.github/zizmor.yaml`
     No findings to report. Good job! (1 ignored, 1 suppressed)
     "#,
     );
@@ -247,9 +247,9 @@ fn test_discovers_config_when_repo_is_named_workflows() -> anyhow::Result<()> {
             .output(OutputMode::Stderr)
             .run()?,
         @r#"
-    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some(Root { _request_is_root: false, path: "@@INPUT@@" })`)
-    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: false, path: "@@INPUT@@" })}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some(Root { _request_is_root: false, path: "@@INPUT@@" })`)
-    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: false, path: "@@INPUT@@" })}:happy path: zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
+    DEBUG zizmor::config: discovering config for local input `@@INPUT@@` (root: `Some(Root { _request_is_root: true, path: "@@INPUT@@" })`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: true, path: "@@INPUT@@" })}: zizmor::config: attempting config discovery for `@@INPUT@@` (root: `Some(Root { _request_is_root: true, path: "@@INPUT@@" })`)
+    DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { _request_is_root: true, path: "@@INPUT@@" })}:happy path: zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
     fatal: no audit was performed
     error: no inputs collected
       |

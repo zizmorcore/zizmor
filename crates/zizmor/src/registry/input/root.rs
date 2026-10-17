@@ -77,13 +77,13 @@ impl Root {
         };
 
         let mut candidate = if canonical.is_file() {
-            canonical.parent()?.to_path_buf()
+            canonical.as_path().parent()?
         } else {
-            canonical
+            canonical.as_path()
         };
 
         loop {
-            if ceilings.contains(&candidate) {
+            if ceilings.contains(candidate) {
                 tracing::trace!("hit a GIT_CEILING_DIRECTORIES entry at {candidate}");
                 break;
             }
@@ -92,13 +92,13 @@ impl Root {
             // Submodules and linked worktrees use a `.git` file instead of a directory.
             if candidate.join(".git").exists() {
                 return Some(Self {
-                    _request_is_root: candidate == path,
-                    path: candidate,
+                    _request_is_root: candidate == canonical,
+                    path: candidate.into(),
                 });
             }
 
             if let Some(parent) = candidate.parent() {
-                candidate = parent.to_path_buf();
+                candidate = parent;
             } else {
                 break;
             }
