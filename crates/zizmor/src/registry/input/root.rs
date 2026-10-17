@@ -41,10 +41,10 @@ static GIT_CEILING_DIRECTORIES: LazyLock<HashSet<Utf8PathBuf>> = LazyLock::new(|
 /// root is discovered relative to the group's original input request.
 #[derive(Clone, Debug)]
 pub(crate) struct Root {
-    /// Whether the original `zizmor` input request itself pointed to the root
+    /// Whether the original `zizmor` input request itself points to the root
     /// repository. For example, if the user runs `zizmor .` (or `zizmor foo/`)
-    /// and `./.git` or `foo/.git` is present, then [`Root::request_is_root`] holds.
-    pub(crate) _request_is_root: bool,
+    /// and `./.git` (or `foo/.git`) is present, then [`Root::request_is_root`] holds.
+    pub(crate) request_is_root: bool,
 
     /// A canonical path to the Git repository root.
     path: Utf8PathBuf,
@@ -92,7 +92,7 @@ impl Root {
             // Submodules and linked worktrees use a `.git` file instead of a directory.
             if candidate.join(".git").exists() {
                 return Some(Self {
-                    _request_is_root: candidate == canonical,
+                    request_is_root: candidate == canonical,
                     path: candidate.into(),
                 });
             }
@@ -137,7 +137,7 @@ mod tests {
 
         let Some(Root {
             path,
-            _request_is_root: false,
+            request_is_root: false,
         }) = Root::discover_with_ceilings(&child, &HashSet::new())
         else {
             panic!();
@@ -161,7 +161,7 @@ mod tests {
         // No ceiling: the walk finds the fake repo.
         let Some(Root {
             path,
-            _request_is_root: false,
+            request_is_root: false,
         }) = Root::discover_with_ceilings(&child, &HashSet::new())
         else {
             panic!();
@@ -177,7 +177,7 @@ mod tests {
         let parent_ceiling = temp_path.parent().unwrap().to_path_buf();
         let Some(Root {
             path,
-            _request_is_root: false,
+            request_is_root: false,
         }) = Root::discover_with_ceilings(&child, &HashSet::from([parent_ceiling]))
         else {
             panic!();
@@ -191,7 +191,7 @@ mod tests {
 
         let Some(Root {
             path,
-            _request_is_root: false,
+            request_is_root: false,
         }) = Root::discover_with_ceilings(&workflow_file, &HashSet::new())
         else {
             panic!();

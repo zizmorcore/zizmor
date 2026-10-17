@@ -597,6 +597,10 @@ impl InputGroup {
 
         let mut group = Self::new(config, root);
 
+        if group.root.as_ref().is_some_and(|r| r.request_is_root) {
+            tracing::debug!("'{path}' is also a repository root");
+        }
+
         // Start with all filters disabled, i.e. walk everything.
         let mut walker = ignore::WalkBuilder::new(path);
         let walker = walker.standard_filters(false);
