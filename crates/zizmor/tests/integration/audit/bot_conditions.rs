@@ -225,7 +225,7 @@ on:
 jobs:
   test:
     if: github.actor == 'dependabot[bot]'
-    uses: example/example/.github/workflows/reusable.yml@d8a8d9c5b3e1a2f4c6b7e8d9a0b1c2d3e4f5a6b7 # v1.0.0
+    uses: example/example/.github/workflows/reusable.yml@abcdef1234567890abcdef1234567890abcdef12
 "#,
     );
 
@@ -243,7 +243,7 @@ jobs:
        test:
     -    if: github.actor == 'dependabot[bot]'
     +    if: github.event.pull_request.user.login == 'dependabot[bot]'
-         uses: example/example/.github/workflows/reusable.yml@d8a8d9c5b3e1a2f4c6b7e8d9a0b1c2d3e4f5a6b7 # v1.0.0
+         uses: example/example/.github/workflows/reusable.yml@abcdef1234567890abcdef1234567890abcdef12
     "
     );
 
