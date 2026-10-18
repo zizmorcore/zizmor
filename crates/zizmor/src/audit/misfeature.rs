@@ -3,7 +3,6 @@ use subfeature::Subfeature;
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::{
         StepBodyCommon, StepCommon, action::CompositeStep, uses::RepositoryUsesExt as _,
@@ -128,7 +127,7 @@ impl Audit for Misfeature {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }

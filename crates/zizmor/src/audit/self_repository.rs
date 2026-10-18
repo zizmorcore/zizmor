@@ -4,7 +4,6 @@ use yamlpatch::{Op, Patch};
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    config::Config,
     finding::{
         Confidence, Finding, Fix, FixDisposition, Severity,
         location::{Locatable, Routable as _},
@@ -90,7 +89,7 @@ impl Audit for SelfRepository {
     async fn audit_reusable_job<'doc>(
         &self,
         job: &ReusableWorkflowCallJob<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let (parent, uses) = (job, &job.uses);
         self.audit_common(parent, uses).await
@@ -99,7 +98,7 @@ impl Audit for SelfRepository {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let (parent, uses) = match step.uses() {
             Some(uses) => (step, uses),

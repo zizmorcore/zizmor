@@ -307,7 +307,7 @@ impl Audit for UnpinnedImages {
     async fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> anyhow::Result<Vec<Finding<'doc>>, AuditError> {
         let mut image_refs: Vec<(Image<'doc>, SymbolicLocation<'doc>)> = vec![];
 

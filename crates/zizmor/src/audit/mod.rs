@@ -5,7 +5,6 @@ use tracing::instrument;
 use yamlpath::Document;
 
 use crate::{
-    config::Config,
     finding::{
         Finding, FindingBuilder,
         location::{Routable, SymbolicLocation},
@@ -311,7 +310,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_step<'doc>(
         &self,
         _step: &Step<'doc>,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -319,11 +318,11 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_normal_job<'doc>(
         &self,
         job: &NormalJob<'doc>,
-        config: &Config,
+        group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
         for step in job.steps() {
-            results.extend(self.audit_step(&step, config).await?);
+            results.extend(self.audit_step(&step, group).await?);
         }
         Ok(results)
     }
@@ -331,7 +330,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_reusable_job<'doc>(
         &self,
         _job: &ReusableWorkflowCallJob<'doc>,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -346,10 +345,10 @@ pub(crate) trait Audit: AuditCore {
         for job in workflow.jobs() {
             match job {
                 Job::NormalJob(normal) => {
-                    results.extend(self.audit_normal_job(&normal, group.config()).await?);
+                    results.extend(self.audit_normal_job(&normal, group).await?);
                 }
                 Job::ReusableWorkflowCallJob(reusable) => {
-                    results.extend(self.audit_reusable_job(&reusable, group.config()).await?);
+                    results.extend(self.audit_reusable_job(&reusable, group).await?);
                 }
             }
         }

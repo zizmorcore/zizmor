@@ -9,7 +9,6 @@ use typomania::{
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    config::Config,
     finding::{Confidence, Finding, FindingBuilder, Persona, Severity, location::Locatable as _},
     github::Client,
     models::{
@@ -216,7 +215,7 @@ impl Audit for TyposquatUses {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
@@ -270,7 +269,7 @@ impl Audit for TyposquatUses {
     async fn audit_reusable_job<'doc>(
         &self,
         job: &ReusableWorkflowCallJob<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

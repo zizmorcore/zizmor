@@ -271,7 +271,7 @@ impl Audit for AdhocPackages {
     async fn audit_step<'doc>(
         &self,
         step: &crate::models::workflow::Step<'doc>,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }

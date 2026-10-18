@@ -236,9 +236,9 @@ impl Audit for UnpinnedUses {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step, config).await
+        self.process_step(step, group.config()).await
     }
 
     async fn audit_composite_step<'a>(
@@ -252,10 +252,10 @@ impl Audit for UnpinnedUses {
     async fn audit_reusable_job<'doc>(
         &self,
         job: &ReusableWorkflowCallJob<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(self
-            .process_uses(&job.uses, job, config)
+            .process_uses(&job.uses, job, group.config())
             .await?
             .into_iter()
             .collect())

@@ -5,7 +5,6 @@ use yamlpatch::{Op, Patch};
 use crate::{
     Confidence, Severity,
     audit::AuditError,
-    config::Config,
     finding::{
         Finding, Fix, FixDisposition, Persona,
         location::{Feature, Location, Routable as _},
@@ -329,7 +328,7 @@ impl Audit for Obfuscation {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }

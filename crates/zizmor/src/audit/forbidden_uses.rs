@@ -85,9 +85,9 @@ impl Audit for ForbiddenUses {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step, config)
+        self.process_step(step, group.config())
     }
 
     async fn audit_composite_step<'doc>(

@@ -4,7 +4,6 @@ use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 
 use crate::audit::{Audit, AuditError, audit_meta};
-use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::{
     StepBodyCommon, StepCommon,
@@ -187,7 +186,7 @@ impl Audit for UnpinnedTools {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }
