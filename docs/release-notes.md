@@ -18,6 +18,8 @@ of `zizmor`.
   definitions in vendored directories. See the [input collection]
   documentation for more information. (#2454)
 
+* zizmor's LSP now honors the `didChangeWorkspaceFolders` event (#2461)
+
 ## 1.31.1
 
 ### Bug Fixes 🐛

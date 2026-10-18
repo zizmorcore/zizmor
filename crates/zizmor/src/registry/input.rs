@@ -20,6 +20,7 @@ use crate::{
     models::{
         action::Action,
         dependabot::Dependabot,
+        lock::Lock,
         pre_commit::{PreCommitConfig, PreCommitHooks},
         repo_ref::Slug,
         workflow::Workflow,
@@ -471,17 +472,23 @@ impl From<&InputSlug> for Group {
 pub(crate) struct InputGroup {
     /// The configuration for this group.
     config: Config,
-    /// The group's root directory (as an absolute path), if applicable and inferable.
+    /// The group's local root directory, if applicable and inferable.
+    ///
+    /// Note that this will be `None` for remote inputs, even though remote inputs
+    /// on GitHub have a Git root by definition, since it's for local inputs only.
     root: Option<Root>,
+    /// The group's GitHub Actions lockfile, if it has one.
+    lock: Option<Lock>,
     /// The collected inputs.
     inputs: BTreeMap<InputKey, AuditInput>,
 }
 
 impl InputGroup {
-    pub(crate) fn new(config: Config, root: Option<Root>) -> Self {
+    pub(crate) fn new(config: Config, root: Option<Root>, lock: Option<Lock>) -> Self {
         Self {
             config,
             root,
+            lock,
             inputs: Default::default(),
         }
     }
@@ -503,7 +510,7 @@ impl InputGroup {
         key: InputKey,
         strict: bool,
     ) -> Result<(), CollectionError> {
-        tracing::debug!("registering {kind} input as with key {key}");
+        tracing::debug!("registering {kind} input with key {key}");
 
         let input: Result<AuditInput, CollectionError> = match kind {
             InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(Into::into),
@@ -548,7 +555,12 @@ impl InputGroup {
             .parent()
             .is_some_and(|parent| parent.ends_with(".github/workflows"));
 
-        let mut group = Self::new(config, root);
+        let lock = root
+            .as_ref()
+            .and_then(|root| Lock::discover_local(root).transpose())
+            .transpose()?;
+
+        let mut group = Self::new(config, root, lock);
 
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
@@ -680,7 +692,11 @@ impl InputGroup {
         let config =
             Config::discover(options, || Config::discover_local(path, root.as_ref())).await?;
         let is_repo_root = root.as_ref().is_some_and(|root| root.request_is_root);
-        let mut group = Self::new(config, root);
+        let lock = root
+            .as_ref()
+            .and_then(|root| Lock::discover_local(root).transpose())
+            .transpose()?;
+        let mut group = Self::new(config, root, lock);
         let dotgithub = path.join(".github");
         let workflows_dir = dotgithub.join("workflows");
 
@@ -829,8 +845,15 @@ impl InputGroup {
     ) -> Result<Self, CollectionError> {
         let client = gh_client.ok_or_else(|| CollectionError::NoGitHubClient(slug.clone()))?;
 
-        let config = Config::discover(options, || Config::discover_remote(client, &slug)).await?;
-        let mut group = Self::new(config, None);
+        let (config, lock) = {
+            let config = Config::discover(options, || Config::discover_remote(client, &slug));
+            let lock = Lock::discover_remote(client, &slug);
+            tokio::join!(config, lock)
+        };
+
+        // Observe that a remote input does not have a root (because there's no local Git repo),
+        // but *can* have a lockfile.
+        let mut group = Self::new(config?, None, lock?);
 
         if options.mode_set.workflows_only() {
             // Performance: if we're *only* collecting workflows, then we
@@ -845,11 +868,7 @@ impl InputGroup {
             let after = group.len();
             let len = after - before;
 
-            tracing::info!(
-                "collected {len} inputs from {owner}/{repo}",
-                owner = slug.owner,
-                repo = slug.repo
-            );
+            tracing::info!("collected {len} inputs from {slug}");
         }
 
         Ok(group)
@@ -862,7 +881,8 @@ impl InputGroup {
             .map_err(CollectionError::Io)?;
 
         // TODO: This should probably honor the global config, if passed by the user?
-        let mut group = Self::new(Config::default(), None);
+        // NOTE: stdin inputs have no obvious lockfile.
+        let mut group = Self::new(Config::default(), None, None);
         let key = InputKey::stdin();
 
         // Infer the input type by trying each parser in order.
@@ -908,20 +928,41 @@ impl InputGroup {
         options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
-        if request == "-" {
-            return Self::collect_from_stdin().await;
-        }
+        let group = match request {
+            "-" => {
+                tracing::debug!("collecting one input from stdin");
+                Self::collect_from_stdin().await
+            }
+            request => {
+                let path = Utf8Path::new(request);
 
-        let path = Utf8Path::new(request);
+                match path.metadata() {
+                    Ok(metadata) => {
+                        if metadata.is_dir() {
+                            tracing::debug!("collecting all eligible inputs under '{path}'");
+                            Self::collect_from_dir(path, options).await
+                        } else {
+                            tracing::debug!("collecting one input from '{path}'");
+                            Self::collect_from_file(path, options).await
+                        }
+                    }
+                    Err(err) if matches!(err.kind(), std::io::ErrorKind::NotFound) => {
+                        let slug = InputSlug::from_str(request)?;
+                        tracing::debug!("collecting all eligible inputs from remote '{slug}'");
+                        Self::collect_from_repo_slug(slug, options, gh_client).await
+                    }
+                    Err(err) => Err(err.into()),
+                }
+            }
+        }?;
 
-        if path.is_file() {
-            Self::collect_from_file(path, options).await
-        } else if path.is_dir() {
-            Self::collect_from_dir(path, options).await
-        } else {
-            let slug = InputSlug::from_str(request)?;
-            Self::collect_from_repo_slug(slug, options, gh_client).await
-        }
+        tracing::debug!(
+            "collected a group with {n} inputs (actions lockfile={lock})",
+            n = group.inputs.len(),
+            lock = group.lock.is_some()
+        );
+
+        Ok(group)
     }
 
     pub(crate) fn len(&self) -> usize {

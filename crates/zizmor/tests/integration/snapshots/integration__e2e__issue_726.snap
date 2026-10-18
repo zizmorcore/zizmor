@@ -1,9 +1,9 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
-expression: "zizmor().offline(false).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw-experiments/zizmor-bug-726@a038d1a35\").run()?"
+expression: "Zizmor::cargo_bin().offline(NetworkMode::AssertOnline).output(OutputMode::Both).args([\"--no-online-audits\"]).input(\"woodruffw-experiments/zizmor-bug-726@a038d1a35\").run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
- INFO collect_inputs: zizmor::registry::input: collected 6 inputs from woodruffw-experiments/zizmor-bug-726
+ INFO collect_inputs: zizmor::registry::input: collected 6 inputs from @@INPUT@@
  INFO audit: zizmor: 🌈 completed .github/actions/custom-action/action.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/actions/custom-action/action.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/custom-action/action.yml

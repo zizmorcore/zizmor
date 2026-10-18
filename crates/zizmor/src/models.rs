@@ -43,6 +43,7 @@ pub(crate) mod action;
 pub(crate) mod coordinate;
 pub(crate) mod dependabot;
 pub(crate) mod inputs;
+pub(crate) mod lock;
 pub(crate) mod pre_commit;
 pub(crate) mod repo_ref;
 pub(crate) mod uses;

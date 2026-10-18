@@ -895,7 +895,7 @@ fn issue_2182() -> Result<()> {
             .run()?,
         @"
     INFO zizmor: 🌈 zizmor v@@VERSION@@
-    INFO collect_inputs: zizmor::registry::input: collected 1 inputs from woodruffw-experiments/zizmor-issue-2182
+    INFO collect_inputs: zizmor::registry::input: collected 1 inputs from @@INPUT@@
     INFO audit: zizmor: 🌈 completed dummy/action.yml
     "
     );

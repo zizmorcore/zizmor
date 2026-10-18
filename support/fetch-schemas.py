@@ -12,13 +12,13 @@
 # dereferenced (local-only) schema for use.
 
 import functools
-import sys
 import json
-import urllib3
-import referencing
-
-from referencing.jsonschema import DRAFT7
+import sys
 from pathlib import Path
+
+import referencing
+import urllib3
+from referencing.jsonschema import DRAFT7
 
 _SCHEMAS: list[tuple[str, str]] = [
     ("https://www.schemastore.org/github-workflow.json", "github-workflow.json"),
@@ -26,12 +26,17 @@ _SCHEMAS: list[tuple[str, str]] = [
     ("https://www.schemastore.org/dependabot-2.0.json", "dependabot-2.0.json"),
     ("https://www.schemastore.org/pre-commit-config.json", "pre-commit-config.json"),
     ("https://www.schemastore.org/pre-commit-hooks.json", "pre-commit-hooks.json"),
+    (
+        "https://raw.githubusercontent.com/github/actions-lockfile/refs/heads/main/schema/lockfile-v0.0.3.json",
+        "github-lock.json",
+    ),
 ]
 
-_HERE = Path(__file__).parent # .../support dir
+_HERE = Path(__file__).parent  # .../support dir
 _TARGET_DIR = _HERE.parent / "crates/zizmor/src/data"
 
 assert _TARGET_DIR.is_dir()
+
 
 def _log(msg: str) -> None:
     print(f"[+] {msg}", file=sys.stderr)
