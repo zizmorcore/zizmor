@@ -8,7 +8,6 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
-use github_actions_models::lock::Lock;
 use itertools::Itertools as _;
 use serde::Serialize;
 use thiserror::Error;
@@ -21,6 +20,7 @@ use crate::{
     models::{
         action::Action,
         dependabot::Dependabot,
+        lock::Lock,
         pre_commit::{PreCommitConfig, PreCommitHooks},
         repo_ref::Slug,
         workflow::Workflow,
@@ -472,20 +472,23 @@ impl From<&InputSlug> for Group {
 pub(crate) struct InputGroup {
     /// The configuration for this group.
     config: Config,
-    /// The group's root directory (as an absolute path), if applicable and inferable.
+    /// The group's local root directory, if applicable and inferable.
+    ///
+    /// Note that this will be `None` for remote inputs, even though remote inputs
+    /// on GitHub have a Git root by definition, since it's for local inputs only.
     root: Option<Root>,
     /// The group's GitHub Actions lockfile, if it has one.
-    lock: Option<Lock>,
+    _lock: Option<Lock>,
     /// The collected inputs.
     inputs: BTreeMap<InputKey, AuditInput>,
 }
 
 impl InputGroup {
-    pub(crate) fn new(config: Config, root: Option<Root>, lock: Option<Lock>) -> Self {
+    pub(crate) fn new(config: Config, root: Option<Root>, _lock: Option<Lock>) -> Self {
         Self {
             config,
             root,
-            lock,
+            _lock,
             inputs: Default::default(),
         }
     }
@@ -552,8 +555,12 @@ impl InputGroup {
             .parent()
             .is_some_and(|parent| parent.ends_with(".github/workflows"));
 
-        // TODO(ww): use `root` to discover the lockfile here.
-        let mut group = Self::new(config, root, None);
+        let lock = root
+            .as_ref()
+            .and_then(|root| Lock::discover_local(root).transpose())
+            .transpose()?;
+
+        let mut group = Self::new(config, root, lock);
 
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
@@ -685,8 +692,11 @@ impl InputGroup {
         let config =
             Config::discover(options, || Config::discover_local(path, root.as_ref())).await?;
         let is_repo_root = root.as_ref().is_some_and(|root| root.request_is_root);
-        // TODO(ww): use `root` to discover the lockfile here.
-        let mut group = Self::new(config, root, None);
+        let lock = root
+            .as_ref()
+            .and_then(|root| Lock::discover_local(root).transpose())
+            .transpose()?;
+        let mut group = Self::new(config, root, lock);
         let dotgithub = path.join(".github");
         let workflows_dir = dotgithub.join("workflows");
 

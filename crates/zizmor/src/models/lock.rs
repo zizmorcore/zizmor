@@ -6,9 +6,13 @@
 use std::sync::LazyLock;
 
 use github_actions_models::lock;
-use thiserror::Error;
 
-use crate::models::Validatable;
+use crate::{
+    models::Validatable,
+    registry::input::{CollectionError, root::Root},
+};
+
+const LOCKFILE_PATH: &str = ".github/workflows/actions.lock";
 
 static LOCK_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
     jsonschema::validator_for(
@@ -17,10 +21,6 @@ static LOCK_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
     )
     .expect("internal error: failed to load workflow schema")
 });
-
-/// Errors that can occur when loading a GitHub Actions lockfile.
-#[derive(Debug, Error)]
-pub(crate) enum LockError {}
 
 /// Represents a GitHub Actions lockfile.
 pub(crate) struct Lock {
@@ -46,7 +46,25 @@ impl std::ops::Deref for Lock {
 }
 
 impl Lock {
-    pub(crate) fn from_string(contents: String) -> Result<Self, LockError> {
-        todo!()
+    /// Load an Actions lockfile from the given string.
+    ///
+    /// Fails if the lockfile is malformed.
+    // TODO(ww): `CollectionError` is a slightly weird error type here, but
+    // we'd need to first refactor `Validatable` to not use `CollectionError`.
+    pub(crate) fn from_string(contents: String) -> Result<Self, CollectionError> {
+        Self::validate(&contents).map(|lock| Self { inner: lock })
+    }
+
+    /// Discover an Actions lockfile, relative to the given Git repo root.
+    ///
+    /// Returns `None` if the lockfile does not exist.
+    pub(crate) fn discover_local(root: &Root) -> Result<Option<Self>, CollectionError> {
+        let lockfile_path = root.path().join(LOCKFILE_PATH);
+
+        match std::fs::read_to_string(lockfile_path) {
+            Ok(contents) => Ok(Some(Self::from_string(contents)?)),
+            Err(err) if matches!(err.kind(), std::io::ErrorKind::NotFound) => Ok(None),
+            Err(err) => Err(err.into()),
+        }
     }
 }
