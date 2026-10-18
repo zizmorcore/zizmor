@@ -348,13 +348,9 @@ impl Backend {
         let mut registry =
             FindingRegistry::new(&input_registry, None, None, self.options.persona, false);
 
-        for (input_key, input) in input_registry.iter_inputs() {
+        for (group, _, input) in input_registry.iter_inputs() {
             for (ident, audit) in self.audit_registry.iter_audits() {
-                registry.extend(
-                    audit
-                        .audit(ident, input, input_registry.get_config(input_key.group()))
-                        .await?,
-                );
+                registry.extend(audit.audit(ident, input, group.config()).await?);
             }
         }
 

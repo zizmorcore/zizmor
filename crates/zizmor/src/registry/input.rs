@@ -493,6 +493,10 @@ impl InputGroup {
         }
     }
 
+    pub(crate) fn config(&self) -> &Config {
+        &self.config
+    }
+
     pub(crate) fn register_input(&mut self, input: AuditInput) -> Result<(), CollectionError> {
         if self.inputs.contains_key(input.key()) {
             return Err(CollectionError::DuplicateInput(input.key().clone()));
@@ -1007,9 +1011,19 @@ impl InputRegistry {
         Ok(())
     }
 
-    /// Return an iterator over all inputs in all groups in this registry.
-    pub(crate) fn iter_inputs(&self) -> impl Iterator<Item = (&InputKey, &AuditInput)> {
-        self.groups.values().flat_map(|group| group.inputs.iter())
+    /// Return an iterator over every input in the registry, along with the group it belongs to.
+    pub(crate) fn iter_inputs(
+        &self,
+    ) -> impl Iterator<Item = (&InputGroup, &InputKey, &AuditInput)> {
+        self.groups
+            .values()
+            .map(move |group| {
+                group
+                    .inputs
+                    .iter()
+                    .map(move |(key, input)| (group, key, input))
+            })
+            .flatten()
     }
 
     /// Get a reference to a registered input by its key.
