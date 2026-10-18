@@ -8,8 +8,9 @@ use std::sync::LazyLock;
 use github_actions_models::lock;
 
 use crate::{
+    github::Client,
     models::Validatable,
-    registry::input::{CollectionError, root::Root},
+    registry::input::{CollectionError, InputSlug, root::Root},
 };
 
 const LOCKFILE_PATH: &str = ".github/workflows/actions.lock";
@@ -64,6 +65,20 @@ impl Lock {
         match std::fs::read_to_string(lockfile_path) {
             Ok(contents) => Ok(Some(Self::from_string(contents)?)),
             Err(err) if matches!(err.kind(), std::io::ErrorKind::NotFound) => Ok(None),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    /// Discover an Actions lockfile for a repository slug.
+    ///
+    /// Returns `None` if the lockfile does not exist.
+    pub(crate) async fn discover_remote(
+        client: &Client,
+        slug: &InputSlug,
+    ) -> Result<Option<Self>, CollectionError> {
+        match client.fetch_single_file(slug, LOCKFILE_PATH).await {
+            Ok(Some(contents)) => Ok(Some(Self::from_string(contents)?)),
+            Ok(None) => Ok(None),
             Err(err) => Err(err.into()),
         }
     }
