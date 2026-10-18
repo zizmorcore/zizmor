@@ -243,7 +243,7 @@ impl Audit for TyposquatUses {
     async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
@@ -297,7 +297,7 @@ impl Audit for TyposquatUses {
     async fn audit_pre_commit_config<'doc>(
         &self,
         pre_commit: &'doc PreCommitConfig,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

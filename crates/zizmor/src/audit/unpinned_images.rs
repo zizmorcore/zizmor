@@ -289,7 +289,7 @@ impl Audit for UnpinnedImages {
     async fn audit_docker_action<'doc>(
         &self,
         docker: &DockerAction<'doc>,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> anyhow::Result<Vec<Finding<'doc>>, AuditError> {
         // Nothing to do if the action references its own intrinsic 'Dockerfile'
         // rather than an external image.

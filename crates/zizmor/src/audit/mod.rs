@@ -360,7 +360,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_docker_action<'doc>(
         &self,
         _docker: &DockerAction<'doc>,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -368,7 +368,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_composite_step<'doc>(
         &self,
         _step: &CompositeStep<'doc>,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -381,12 +381,12 @@ pub(crate) trait Audit: AuditCore {
         let mut results = vec![];
 
         if let Some(docker) = action.docker() {
-            results.extend(self.audit_docker_action(&docker, group.config()).await?);
+            results.extend(self.audit_docker_action(&docker, group).await?);
         }
 
         if let Some(steps) = action.steps() {
             for step in steps {
-                results.extend(self.audit_composite_step(&step, group.config()).await?);
+                results.extend(self.audit_composite_step(&step, group).await?);
             }
         }
 
@@ -412,12 +412,15 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_pre_commit_config<'doc>(
         &self,
         pre_commit: &'doc PreCommitConfig,
-        config: &Config,
+        group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         for repo in pre_commit.repos() {
-            results.extend(self.audit_pre_commit_config_repo(&repo, config).await?);
+            results.extend(
+                self.audit_pre_commit_config_repo(&repo, group.config())
+                    .await?,
+            );
         }
 
         Ok(results)
@@ -473,8 +476,7 @@ pub(crate) trait Audit: AuditCore {
                 self.audit_dependabot(dependabot, group.config()).await
             }
             AuditInput::PreCommitConfig(pre_commit) => {
-                self.audit_pre_commit_config(pre_commit, group.config())
-                    .await
+                self.audit_pre_commit_config(pre_commit, group).await
             }
             AuditInput::PreCommitHooks(hooks) => {
                 self.audit_pre_commit_hooks(hooks, group.config()).await

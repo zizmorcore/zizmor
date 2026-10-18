@@ -440,7 +440,7 @@ impl Audit for GitHubEnv {
     async fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

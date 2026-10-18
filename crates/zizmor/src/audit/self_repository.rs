@@ -112,7 +112,7 @@ impl Audit for SelfRepository {
     async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let (parent, uses) = match step.uses() {
             Some(uses) => (step, uses),

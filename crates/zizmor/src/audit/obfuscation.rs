@@ -337,7 +337,7 @@ impl Audit for Obfuscation {
     async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step)
     }
