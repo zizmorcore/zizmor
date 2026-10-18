@@ -845,11 +845,15 @@ impl InputGroup {
     ) -> Result<Self, CollectionError> {
         let client = gh_client.ok_or_else(|| CollectionError::NoGitHubClient(slug.clone()))?;
 
-        let config = Config::discover(options, || Config::discover_remote(client, &slug)).await?;
-        let lock = Lock::discover_remote(client, &slug).await?;
+        let (config, lock) = {
+            let config = Config::discover(options, || Config::discover_remote(client, &slug));
+            let lock = Lock::discover_remote(client, &slug);
+            tokio::join!(config, lock)
+        };
+
         // Observe that a remote input does not have a root (because there's no local Git repo),
         // but *can* have a lockfile.
-        let mut group = Self::new(config, None, lock);
+        let mut group = Self::new(config?, None, lock?);
 
         if options.mode_set.workflows_only() {
             // Performance: if we're *only* collecting workflows, then we
