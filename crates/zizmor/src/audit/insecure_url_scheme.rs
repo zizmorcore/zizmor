@@ -4,7 +4,6 @@ use subfeature::Subfeature;
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    config::Config,
     finding::{Confidence, Finding, Severity, location::Locatable as _},
     models::pre_commit,
     state::AuditState,
@@ -42,7 +41,7 @@ impl Audit for InsecureURLScheme {
     async fn audit_pre_commit_config_repo<'doc>(
         &self,
         repo: &pre_commit::Repo<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

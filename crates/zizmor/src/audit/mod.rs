@@ -404,7 +404,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_pre_commit_config_repo<'doc>(
         &self,
         _repo: &pre_commit::Repo<'doc>,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -417,10 +417,7 @@ pub(crate) trait Audit: AuditCore {
         let mut results = vec![];
 
         for repo in pre_commit.repos() {
-            results.extend(
-                self.audit_pre_commit_config_repo(&repo, group.config())
-                    .await?,
-            );
+            results.extend(self.audit_pre_commit_config_repo(&repo, group).await?);
         }
 
         Ok(results)
@@ -429,7 +426,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_pre_commit_hooks<'doc>(
         &self,
         _hooks: &'doc PreCommitHooks,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -437,7 +434,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_raw<'doc>(
         &self,
         _input: &'doc AuditInput,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -476,12 +473,10 @@ pub(crate) trait Audit: AuditCore {
             AuditInput::PreCommitConfig(pre_commit) => {
                 self.audit_pre_commit_config(pre_commit, group).await
             }
-            AuditInput::PreCommitHooks(hooks) => {
-                self.audit_pre_commit_hooks(hooks, group.config()).await
-            }
+            AuditInput::PreCommitHooks(hooks) => self.audit_pre_commit_hooks(hooks, group).await,
         }?;
 
-        results.extend(self.audit_raw(input, group.config()).await?);
+        results.extend(self.audit_raw(input, group).await?);
 
         Ok(results)
     }

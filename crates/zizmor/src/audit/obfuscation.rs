@@ -260,7 +260,7 @@ impl Audit for Obfuscation {
     async fn audit_raw<'doc>(
         &self,
         input: &'doc AuditInput,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
