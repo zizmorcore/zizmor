@@ -4,7 +4,6 @@ use github_actions_models::workflow::job::{Step, UsesStep};
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::audit::AuditError;
-use crate::config::Config;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::uses::RepositoryUsesExt as _;
 use crate::models::workflow::Workflow;
@@ -49,7 +48,7 @@ impl Audit for DangerousTriggers {
     async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

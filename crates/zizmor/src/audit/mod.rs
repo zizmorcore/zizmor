@@ -17,7 +17,7 @@ use crate::{
         pre_commit::{self, PreCommitConfig, PreCommitHooks},
         workflow::{Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
     },
-    registry::input::InputKey,
+    registry::input::{InputGroup, InputKey},
     state::AuditState,
 };
 
@@ -339,17 +339,17 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
-        config: &Config,
+        group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
             match job {
                 Job::NormalJob(normal) => {
-                    results.extend(self.audit_normal_job(&normal, config).await?);
+                    results.extend(self.audit_normal_job(&normal, group.config()).await?);
                 }
                 Job::ReusableWorkflowCallJob(reusable) => {
-                    results.extend(self.audit_reusable_job(&reusable, config).await?);
+                    results.extend(self.audit_reusable_job(&reusable, group.config()).await?);
                 }
             }
         }
@@ -451,14 +451,14 @@ pub(crate) trait Audit: AuditCore {
     ///
     /// TODO: This also means we effectively run the disablement check on every
     /// single input in a group, rather than just once per group.
-    #[instrument(skip(self, config))]
+    #[instrument(skip(self, group))]
     async fn audit<'doc>(
         &self,
         ident: &'static str,
         input: &'doc AuditInput,
-        config: &Config,
+        group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        if config.disables(ident) {
+        if group.config().disables(ident) {
             tracing::debug!(
                 "skipping: {ident} is disabled in config for group {group:?}",
                 group = input.key().group()
@@ -467,16 +467,21 @@ pub(crate) trait Audit: AuditCore {
         }
 
         let mut results = match input {
-            AuditInput::Workflow(workflow) => self.audit_workflow(workflow, config).await,
-            AuditInput::Action(action) => self.audit_action(action, config).await,
-            AuditInput::Dependabot(dependabot) => self.audit_dependabot(dependabot, config).await,
-            AuditInput::PreCommitConfig(pre_commit) => {
-                self.audit_pre_commit_config(pre_commit, config).await
+            AuditInput::Workflow(workflow) => self.audit_workflow(workflow, group).await,
+            AuditInput::Action(action) => self.audit_action(action, group.config()).await,
+            AuditInput::Dependabot(dependabot) => {
+                self.audit_dependabot(dependabot, group.config()).await
             }
-            AuditInput::PreCommitHooks(hooks) => self.audit_pre_commit_hooks(hooks, config).await,
+            AuditInput::PreCommitConfig(pre_commit) => {
+                self.audit_pre_commit_config(pre_commit, group.config())
+                    .await
+            }
+            AuditInput::PreCommitHooks(hooks) => {
+                self.audit_pre_commit_hooks(hooks, group.config()).await
+            }
         }?;
 
-        results.extend(self.audit_raw(input, config).await?);
+        results.extend(self.audit_raw(input, group.config()).await?);
 
         Ok(results)
     }

@@ -369,7 +369,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             for (ident, audit) in audit_registry.iter_audits() {
                 tracing::debug!("scheduling {ident} on {input}", input = input.key());
 
-                completion_stream.push_back(audit.audit(ident, input, group.config()));
+                completion_stream.push_back(audit.audit(ident, input, group));
             }
 
             while let Some(findings) = completion_stream.next().await {

@@ -350,7 +350,7 @@ impl Backend {
 
         for (group, _, input) in input_registry.iter_inputs() {
             for (ident, audit) in self.audit_registry.iter_audits() {
-                registry.extend(audit.audit(ident, input, group.config()).await?);
+                registry.extend(audit.audit(ident, input, group).await?);
             }
         }
 

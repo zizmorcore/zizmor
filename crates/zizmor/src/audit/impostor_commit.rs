@@ -286,7 +286,7 @@ impl Audit for ImpostorCommit {
     async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
