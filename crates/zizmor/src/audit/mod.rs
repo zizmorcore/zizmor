@@ -396,7 +396,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_dependabot<'doc>(
         &self,
         _dependabot: &'doc Dependabot,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -472,9 +472,7 @@ pub(crate) trait Audit: AuditCore {
         let mut results = match input {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow, group).await,
             AuditInput::Action(action) => self.audit_action(action, group).await,
-            AuditInput::Dependabot(dependabot) => {
-                self.audit_dependabot(dependabot, group.config()).await
-            }
+            AuditInput::Dependabot(dependabot) => self.audit_dependabot(dependabot, group).await,
             AuditInput::PreCommitConfig(pre_commit) => {
                 self.audit_pre_commit_config(pre_commit, group).await
             }
