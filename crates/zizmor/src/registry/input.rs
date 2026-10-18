@@ -928,20 +928,35 @@ impl InputGroup {
         options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
-        if request == "-" {
-            return Self::collect_from_stdin().await;
-        }
+        let group = match request {
+            "-" => {
+                tracing::debug!("collecting one input from stdin");
+                Self::collect_from_stdin().await
+            }
+            request => {
+                let path = Utf8Path::new(request);
 
-        let path = Utf8Path::new(request);
+                match path.metadata() {
+                    Ok(metadata) => {
+                        if metadata.is_dir() {
+                            tracing::debug!("collecting all eligible inputs under '{path}'");
+                            Self::collect_from_dir(path, options).await
+                        } else {
+                            tracing::debug!("collecting one input from '{path}'");
+                            Self::collect_from_file(path, options).await
+                        }
+                    }
+                    Err(err) if matches!(err.kind(), std::io::ErrorKind::NotFound) => {
+                        let slug = InputSlug::from_str(request)?;
+                        tracing::debug!("collecting all eligible inputs from remote '{slug}'");
+                        Self::collect_from_repo_slug(slug, options, gh_client).await
+                    }
+                    Err(err) => Err(err.into()),
+                }
+            }
+        }?;
 
-        if path.is_file() {
-            Self::collect_from_file(path, options).await
-        } else if path.is_dir() {
-            Self::collect_from_dir(path, options).await
-        } else {
-            let slug = InputSlug::from_str(request)?;
-            Self::collect_from_repo_slug(slug, options, gh_client).await
-        }
+        Ok(group)
     }
 
     pub(crate) fn len(&self) -> usize {
