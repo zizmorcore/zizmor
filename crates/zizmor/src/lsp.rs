@@ -72,13 +72,7 @@ impl LanguageServer for Backend {
                     continue;
                 }
 
-                let path = Utf8PathBuf::from_str(path.as_str()).map_err(|_| {
-                    // TODO: Log warning instead of erroring here?
-                    tower_lsp_server::jsonrpc::Error::invalid_params(format!(
-                        "workspace folder path is not valid UTF-8: {:?}",
-                        workspace.uri
-                    ))
-                })?;
+                let path = Utf8PathBuf::from(path.as_str());
 
                 // TODO: Can this actually happen?
                 if !path.is_dir() {
@@ -130,6 +124,7 @@ impl LanguageServer for Backend {
                 scheme: None,
                 pattern: Some("**/.github/dependabot.{yml,yaml}".into()),
             },
+            // TODO: pre-commit patterns are missing here.
             // Config files.
             // TODO: Right now these are disabled, but at some point we might want to independently
             // monitor these and only reload the configuration when they change.
@@ -256,6 +251,28 @@ impl LanguageServer for Backend {
             })
             .await;
         }
+    }
+
+    async fn did_change_workspace_folders(
+        &self,
+        params: ls_types::DidChangeWorkspaceFoldersParams,
+    ) {
+        // A client (user) can update the list of workspace folders dynamically,
+        // e.g. in their IDE's UI.
+        let mut dirs = self.workspace_dirs.write().await;
+
+        dirs.retain(|dir| {
+            !params
+                .event
+                .removed
+                .iter()
+                .any(|removed| removed.uri.path().as_str() == dir)
+        });
+
+        dirs.extend(params.event.added.iter().filter_map(|added| {
+            let path = Utf8PathBuf::from(&added.uri.path().as_str());
+            path.is_dir().then_some(path)
+        }));
     }
 }
 
