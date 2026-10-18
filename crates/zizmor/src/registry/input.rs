@@ -1015,15 +1015,12 @@ impl InputRegistry {
     pub(crate) fn iter_inputs(
         &self,
     ) -> impl Iterator<Item = (&InputGroup, &InputKey, &AuditInput)> {
-        self.groups
-            .values()
-            .map(move |group| {
-                group
-                    .inputs
-                    .iter()
-                    .map(move |(key, input)| (group, key, input))
-            })
-            .flatten()
+        self.groups.values().flat_map(move |group| {
+            group
+                .inputs
+                .iter()
+                .map(move |(key, input)| (group, key, input))
+        })
     }
 
     /// Get a reference to a registered input by its key.
