@@ -52,7 +52,7 @@ impl Lock {
     /// Fails if the lockfile is malformed.
     // TODO(ww): `CollectionError` is a slightly weird error type here, but
     // we'd need to first refactor `Validatable` to not use `CollectionError`.
-    pub(crate) fn from_string(contents: String) -> Result<Self, CollectionError> {
+    fn from_string(contents: String) -> Result<Self, CollectionError> {
         Self::validate(&contents).map(|lock| Self { inner: lock })
     }
 
