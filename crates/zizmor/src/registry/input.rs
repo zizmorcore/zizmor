@@ -478,17 +478,17 @@ pub(crate) struct InputGroup {
     /// on GitHub have a Git root by definition, since it's for local inputs only.
     root: Option<Root>,
     /// The group's GitHub Actions lockfile, if it has one.
-    _lock: Option<Lock>,
+    lock: Option<Lock>,
     /// The collected inputs.
     inputs: BTreeMap<InputKey, AuditInput>,
 }
 
 impl InputGroup {
-    pub(crate) fn new(config: Config, root: Option<Root>, _lock: Option<Lock>) -> Self {
+    pub(crate) fn new(config: Config, root: Option<Root>, lock: Option<Lock>) -> Self {
         Self {
             config,
             root,
-            _lock,
+            lock,
             inputs: Default::default(),
         }
     }
@@ -510,7 +510,7 @@ impl InputGroup {
         key: InputKey,
         strict: bool,
     ) -> Result<(), CollectionError> {
-        tracing::debug!("registering {kind} input as with key {key}");
+        tracing::debug!("registering {kind} input with key {key}");
 
         let input: Result<AuditInput, CollectionError> = match kind {
             InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(Into::into),
@@ -864,11 +864,7 @@ impl InputGroup {
             let after = group.len();
             let len = after - before;
 
-            tracing::info!(
-                "collected {len} inputs from {owner}/{repo}",
-                owner = slug.owner,
-                repo = slug.repo
-            );
+            tracing::info!("collected {len} inputs from {slug}");
         }
 
         Ok(group)
@@ -955,6 +951,12 @@ impl InputGroup {
                 }
             }
         }?;
+
+        tracing::debug!(
+            "collected a group with {n} inputs (actions lockfile={lock})",
+            n = group.inputs.len(),
+            lock = group.lock.is_some()
+        );
 
         Ok(group)
     }

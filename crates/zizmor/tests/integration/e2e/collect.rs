@@ -150,3 +150,28 @@ fn generic_dir_collection_is_recursive() -> Result<()> {
     );
     Ok(())
 }
+
+/// When a remote input contains an actions lockfile, we include it during collection.
+#[cfg_attr(not(feature = "gh-token-tests"), ignore)]
+#[test]
+fn remote_collection_includes_lockfile() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .offline(zizmor_dev::NetworkMode::AssertOnline)
+            .input("github/actions-lockfile@ac15883476")
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "zizmor::registry::input=debug")
+            .run()?,
+        @"
+    DEBUG zizmor::registry::input: collecting all eligible inputs from remote '@@INPUT@@'
+    DEBUG zizmor::registry::input: registering dependabot config input with key https://github.com/github/actions-lockfile/blob/ac15883476/.github/dependabot.yml
+    DEBUG zizmor::registry::input: registering workflow input with key https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/ci.yml
+    DEBUG zizmor::registry::input: registering workflow input with key https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/dependency-review.yml
+    DEBUG zizmor::registry::input: registering workflow input with key https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/release.yml
+     INFO zizmor::registry::input: collected 4 inputs from @@INPUT@@
+    DEBUG zizmor::registry::input: collected a group with 4 inputs (actions lockfile=true)
+    "
+    );
+
+    Ok(())
+}
