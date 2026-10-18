@@ -376,17 +376,17 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_action<'doc>(
         &self,
         action: &'doc Action,
-        config: &Config,
+        group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         if let Some(docker) = action.docker() {
-            results.extend(self.audit_docker_action(&docker, config).await?);
+            results.extend(self.audit_docker_action(&docker, group.config()).await?);
         }
 
         if let Some(steps) = action.steps() {
             for step in steps {
-                results.extend(self.audit_composite_step(&step, config).await?);
+                results.extend(self.audit_composite_step(&step, group.config()).await?);
             }
         }
 
@@ -468,7 +468,7 @@ pub(crate) trait Audit: AuditCore {
 
         let mut results = match input {
             AuditInput::Workflow(workflow) => self.audit_workflow(workflow, group).await,
-            AuditInput::Action(action) => self.audit_action(action, group.config()).await,
+            AuditInput::Action(action) => self.audit_action(action, group).await,
             AuditInput::Dependabot(dependabot) => {
                 self.audit_dependabot(dependabot, group.config()).await
             }

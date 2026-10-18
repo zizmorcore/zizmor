@@ -173,7 +173,7 @@ impl Audit for UnsoundCondition {
     async fn audit_action<'doc>(
         &self,
         action: &'doc crate::models::action::Action,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         self.process_conditions(action, action.conditions())
     }
