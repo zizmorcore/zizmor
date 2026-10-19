@@ -257,6 +257,7 @@ impl Audit for UnpinnedUses {
         // NOTE: observe that we have no lockfile check here,
         // since action definitions cannot be directly locked
         // yet.
+        // See: <https://github.com/github/gh-actions-lock/issues/183>
         self.process_step(step, group.config()).await
     }
 
@@ -267,6 +268,7 @@ impl Audit for UnpinnedUses {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         // NOTE: GitHub's lockfile does not support reusable workflows
         // yet, so we have no lockfile check here.
+        // See: <https://github.com/github/gh-actions-lock/issues/179>
         Ok(self
             .process_uses(&job.uses, job, group.config())
             .await?
