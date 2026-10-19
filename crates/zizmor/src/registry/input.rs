@@ -218,7 +218,7 @@ impl std::fmt::Display for InputSlug {
 pub(crate) struct LocalKey {
     /// The group this input belongs to.
     #[serde(skip)]
-    group: Group,
+    group: GroupID,
 
     /// The input's path prefix.
     ///
@@ -281,7 +281,7 @@ impl LocalKey {
 pub(crate) struct RemoteKey {
     /// The group this input belongs to.
     #[serde(skip)]
-    group: Group,
+    group: GroupID,
     slug: InputSlug,
     /// The path to the input file within the repository.
     path: Utf8PathBuf,
@@ -291,7 +291,7 @@ pub(crate) struct RemoteKey {
 pub(crate) struct StdinKey {
     /// The group this input belongs to.
     #[serde(skip)]
-    group: Group,
+    group: GroupID,
 }
 
 /// A unique identifying "key" for an input in a given run of zizmor.
@@ -333,7 +333,7 @@ impl InputKey {
     /// `prefix` and `root` are used to derive the input's
     /// "best" relative path for output rendering purposes.
     pub(crate) fn local<P: AsRef<Utf8Path>>(
-        group: Group,
+        group: GroupID,
         verbatim_path: P,
         prefix: Option<P>,
         root: Option<Root>,
@@ -368,7 +368,7 @@ impl InputKey {
 
     pub(crate) fn stdin() -> Self {
         Self::Stdin(StdinKey {
-            group: Group::from("-"),
+            group: GroupID::from("-"),
         })
     }
 
@@ -421,7 +421,7 @@ impl InputKey {
     }
 
     /// Returns the group this input belongs to.
-    pub(crate) fn group(&self) -> &Group {
+    pub(crate) fn group(&self) -> &GroupID {
         match self {
             Self::Local(local) => &local.group,
             Self::Remote(remote) => &remote.group,
@@ -432,15 +432,15 @@ impl InputKey {
 
 /// An opaque identifier for a group of inputs.
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
-pub(crate) struct Group(String);
+pub(crate) struct GroupID(String);
 
-impl From<&str> for Group {
+impl From<&str> for GroupID {
     fn from(value: &str) -> Self {
         Self(value.to_string())
     }
 }
 
-impl From<&InputSlug> for Group {
+impl From<&InputSlug> for GroupID {
     fn from(value: &InputSlug) -> Self {
         Self(value.to_string())
     }
@@ -551,23 +551,48 @@ impl InputGroup {
             // The only way this could be wrong is if the user does something
             // bizarre like `.github/workflows/.pre-commit-{config,hooks}.yml`.
             (Some(".pre-commit-config"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(Group(path.as_str().into()), path, None, group.root.clone()),
+                InputKey::local(
+                    GroupID(path.as_str().into()),
+                    path,
+                    None,
+                    group.root.clone(),
+                ),
                 InputKind::PreCommitConfig,
             ),
             (Some(".pre-commit-hooks"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(Group(path.as_str().into()), path, None, group.root.clone()),
+                InputKey::local(
+                    GroupID(path.as_str().into()),
+                    path,
+                    None,
+                    group.root.clone(),
+                ),
                 InputKind::PreCommitHooks,
             ),
             (Some("dependabot"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(Group(path.as_str().into()), path, None, group.root.clone()),
+                InputKey::local(
+                    GroupID(path.as_str().into()),
+                    path,
+                    None,
+                    group.root.clone(),
+                ),
                 InputKind::Dependabot,
             ),
             (Some("action"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(Group(path.as_str().into()), path, None, group.root.clone()),
+                InputKey::local(
+                    GroupID(path.as_str().into()),
+                    path,
+                    None,
+                    group.root.clone(),
+                ),
                 InputKind::Action,
             ),
             (Some(_), Some("yml" | "yaml")) => (
-                InputKey::local(Group(path.as_str().into()), path, None, group.root.clone()),
+                InputKey::local(
+                    GroupID(path.as_str().into()),
+                    path,
+                    None,
+                    group.root.clone(),
+                ),
                 InputKind::Workflow,
             ),
             _ => return Err(CollectionError::InvalidExtension),
@@ -699,7 +724,7 @@ impl InputGroup {
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
                 let key = InputKey::local(
-                    Group(path.as_str().into()),
+                    GroupID(path.as_str().into()),
                     entry,
                     Some(path),
                     group.root.clone(),
@@ -719,7 +744,7 @@ impl InputGroup {
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
                 let key = InputKey::local(
-                    Group(path.as_str().into()),
+                    GroupID(path.as_str().into()),
                     entry,
                     Some(path),
                     group.root.clone(),
@@ -743,7 +768,7 @@ impl InputGroup {
                 )
             {
                 let key = InputKey::local(
-                    Group(path.as_str().into()),
+                    GroupID(path.as_str().into()),
                     entry,
                     Some(path),
                     group.root.clone(),
@@ -767,7 +792,7 @@ impl InputGroup {
                     Some(".pre-commit-config.yml" | ".pre-commit-config.yaml")
                 ) {
                     let key = InputKey::local(
-                        Group(path.as_str().into()),
+                        GroupID(path.as_str().into()),
                         entry,
                         Some(path),
                         group.root.clone(),
@@ -785,7 +810,7 @@ impl InputGroup {
                     Some(".pre-commit-hooks.yml" | ".pre-commit-hooks.yaml")
                 ) {
                     let key = InputKey::local(
-                        Group(path.as_str().into()),
+                        GroupID(path.as_str().into()),
                         entry,
                         Some(path),
                         group.root.clone(),
@@ -957,7 +982,7 @@ pub(crate) struct InputRegistry {
     // iterate in a deterministic order. This saves us a lot of pain
     // while snapshot testing across multiple input files, and makes
     // the user experience more predictable.
-    pub(crate) groups: BTreeMap<Group, InputGroup>,
+    pub(crate) groups: BTreeMap<GroupID, InputGroup>,
 }
 
 impl InputRegistry {
@@ -982,7 +1007,7 @@ impl InputRegistry {
         // If the group has already been registered, then the user probably
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
-        if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.into())) {
+        if let btree_map::Entry::Vacant(e) = self.groups.entry(GroupID(name.into())) {
             e.insert(InputGroup::collect(name, options, gh_client).await?);
         }
 
@@ -1010,7 +1035,7 @@ impl InputRegistry {
     }
 
     /// Get a reference to the configuration for a given input group.
-    pub(crate) fn get_config(&self, group: &Group) -> &Config {
+    pub(crate) fn get_config(&self, group: &GroupID) -> &Config {
         &self
             .groups
             .get(group)
