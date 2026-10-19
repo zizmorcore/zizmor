@@ -220,6 +220,14 @@ pub(crate) struct LocalKey {
     #[serde(skip)]
     group: Group,
 
+    /// The input's path prefix.
+    ///
+    /// This is not necessarily the same as the root. For example, if the user
+    /// runs `zizmor .github/` then the prefix will be `.github/` while the root
+    /// will be the parent directory of `.github/`.
+    #[serde(skip)]
+    prefix: Option<Utf8PathBuf>,
+
     /// The verbatim path to the input, exactly as the user supplied it.
     /// This can be absolute or relative.
     verbatim_path: Utf8PathBuf,
@@ -232,17 +240,13 @@ pub(crate) struct LocalKey {
     #[serde(skip)]
     native_path: Utf8PathBuf,
 
-    /// The "best" identifier for this input.
+    /// The path to this input, relative to the input's Git root (if it's in a Git repository).
     ///
-    /// This will always be a relative path (unless the input itself was absolute),
-    /// and is the "best" in the sense that it attempts to be relative to the repository
-    /// root (if present), rather than whatever relative path the user actually supplied.
+    /// This path always uses Unix path separators.
     ///
-    /// This identifier always uses Unix-style path separators.
-    ///
-    /// See [`InputKey::best_identifier`] for more information.
+    /// This may or may not be the same as [`Self::verbatim_path`].
     #[serde(skip)]
-    best_identifier: String,
+    root_relative_path: Option<Utf8PathBuf>,
 }
 
 impl LocalKey {
@@ -253,45 +257,23 @@ impl LocalKey {
         &self.verbatim_path
     }
 
-    /// Produce the "best" relative path for a given path.
-    ///
-    /// This path is the "best" in the sense that it's intended to be maximally
-    /// compatible with the assumptions that consumers make. Specifically, many
-    /// consumers (like GitHub's "Advanced Security") expect paths to be relative
-    /// to the root of the repository, even if the user supplied them to the tool
-    /// as absolute or relative to some other directory.
-    ///
-    /// NOTE: The path returned by this API is *not* guaranteed to be relative to
-    /// the current directory, if the current directory is not the same as the
-    /// repository root. As such, consumers of this API *must not* assume that they
-    /// can naively test these paths for existence, etc. without first resolving
-    /// them against the repository root.
-    fn best_relative_path<P: AsRef<Utf8Path>>(
-        given_path: P,
-        prefix: Option<P>,
-        root: Option<Root>,
-    ) -> Utf8PathBuf {
-        // Happy path: we have a root directory and the input
-        // is relative to it once canonicalized.
-        if let Some(root) = root
-            && let Ok(canonical) = given_path.as_ref().canonicalize_utf8()
-            && let Ok(relative) = canonical.strip_prefix(root.path())
+    /// Returns the "best" identifier for this [`LocalKey`].
+    fn best_identifier(&self) -> &str {
+        if let Some(path) = &self.root_relative_path {
+            // Happiest path: we have a root and our input is known to
+            // be relative to it.
+            path.as_str()
+        } else if let Some(prefix) = &self.prefix
+            && let Ok(path) = self.verbatim_path.strip_prefix(prefix)
         {
-            return relative.to_owned();
+            // Semi-happy path: we don't have a root, but we have a known
+            // prefix that we can strip from the verbatim path.
+            path.as_str()
+        } else {
+            // Sad path: no root or known prefix, so we return
+            // the verbatim path as-is and hope for the best.
+            self.verbatim_path.as_str()
         }
-
-        // Semi-happy path: we don't have a root directory,
-        // but we have a known prefix that we can strip from the
-        // input path.
-        if let Some(prefix) = prefix
-            && let Ok(stripped) = given_path.as_ref().strip_prefix(prefix.as_ref())
-        {
-            return stripped.to_owned();
-        }
-
-        // Sad path: no root or known prefix, so we return the
-        // given path as-is and hope for the best.
-        given_path.as_ref().to_owned()
     }
 }
 
@@ -358,25 +340,21 @@ impl InputKey {
     ) -> Self {
         let verbatim_path = verbatim_path.as_ref();
 
-        let best_identifier = {
-            let best_relative_path =
-                LocalKey::best_relative_path(verbatim_path, prefix.as_ref().map(P::as_ref), root);
-
-            if best_relative_path.is_relative() {
-                best_relative_path.components().join("/")
-            } else {
-                // Stupid edge case: if user supplied an absolute path and
-                // we couldn't make it relative, then there's no sane normalization
-                // we can perform. Just return it as-is.
-                best_relative_path.into()
-            }
+        let root_relative_path = if let Some(root) = root
+            && let Ok(canonical) = verbatim_path.canonicalize_utf8()
+            && let Ok(relative) = canonical.strip_prefix(root.path())
+        {
+            Some(relative.components().join("/").into())
+        } else {
+            None
         };
 
         Self::Local(LocalKey {
             group,
+            prefix: prefix.map(|p| p.as_ref().into()),
             verbatim_path: verbatim_path.to_path_buf(),
             native_path: verbatim_path.components().collect(),
-            best_identifier,
+            root_relative_path,
         })
     }
 
@@ -404,7 +382,7 @@ impl InputKey {
             // Local keys: always use the "best" relative path,
             // which is opportunistically relative to the repo root
             // if possible.
-            Self::Local(local) => local.best_identifier.as_str(),
+            Self::Local(local) => local.best_identifier(),
             // Remote keys: always use the path within the repository,
             // which is always relative.
             Self::Remote(remote) => remote.path.as_str(),
