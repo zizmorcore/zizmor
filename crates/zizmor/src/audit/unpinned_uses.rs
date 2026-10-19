@@ -238,6 +238,14 @@ impl Audit for UnpinnedUses {
         step: &Step<'doc>,
         group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        // If we have a lockfile and this step's workflow is present in it,
+        // then all steps are pinned regardless of their `uses:` form.
+        if let Some(lock) = group.lock()
+            && lock.is_locked(step)
+        {
+            return Ok(vec![]);
+        }
+
         self.process_step(step, group.config()).await
     }
 
@@ -246,6 +254,9 @@ impl Audit for UnpinnedUses {
         step: &CompositeStep<'a>,
         group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
+        // NOTE: observe that we have no lockfile check here,
+        // since action definitions cannot be directly locked
+        // yet.
         self.process_step(step, group.config()).await
     }
 
@@ -254,6 +265,8 @@ impl Audit for UnpinnedUses {
         job: &ReusableWorkflowCallJob<'doc>,
         group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        // NOTE: GitHub's lockfile does not support reusable workflows
+        // yet, so we have no lockfile check here.
         Ok(self
             .process_uses(&job.uses, job, group.config())
             .await?

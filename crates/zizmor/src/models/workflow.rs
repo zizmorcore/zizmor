@@ -564,6 +564,12 @@ impl<'doc> std::ops::Deref for Step<'doc> {
     }
 }
 
+impl<'doc> AsRef<InputKey> for Step<'doc> {
+    fn as_ref(&self) -> &InputKey {
+        &self.parent.parent.key
+    }
+}
+
 impl<'doc> Locatable<'doc> for Step<'doc> {
     /// This step's [`SymbolicLocation`].
     fn location(&self) -> SymbolicLocation<'doc> {

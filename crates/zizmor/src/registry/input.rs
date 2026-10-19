@@ -257,6 +257,10 @@ impl LocalKey {
         &self.verbatim_path
     }
 
+    pub(crate) fn root_relative_path(&self) -> Option<&Utf8Path> {
+        self.root_relative_path.as_deref()
+    }
+
     /// Returns the "best" identifier for this [`LocalKey`].
     fn best_identifier(&self) -> &str {
         if let Some(path) = &self.root_relative_path {
@@ -285,6 +289,12 @@ pub(crate) struct RemoteKey {
     slug: InputSlug,
     /// The path to the input file within the repository.
     path: Utf8PathBuf,
+}
+
+impl RemoteKey {
+    pub(crate) fn path(&self) -> &Utf8Path {
+        &self.path
+    }
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
@@ -473,6 +483,10 @@ impl InputGroup {
 
     pub(crate) fn config(&self) -> &Config {
         &self.config
+    }
+
+    pub(crate) fn lock(&self) -> Option<&Lock> {
+        self.lock.as_ref()
     }
 
     pub(crate) fn register_input(&mut self, input: AuditInput) -> Result<(), CollectionError> {
