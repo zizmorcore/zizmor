@@ -264,8 +264,16 @@ impl Audit for RefVersionMismatch {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _group: &crate::registry::input::InputGroup,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        // If we have a lockfile and this step's workflow is present in it,
+        // then there are no possible mismatches.
+        if let Some(lock) = group.lock()
+            && lock.is_locked(step)
+        {
+            return Ok(vec![]);
+        }
+
         Ok(self.process_step(step).await?.into_iter().collect())
     }
 
