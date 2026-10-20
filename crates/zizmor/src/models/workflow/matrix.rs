@@ -405,7 +405,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -448,7 +448,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -491,7 +491,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -534,7 +534,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -577,7 +577,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -620,7 +620,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -663,7 +663,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -709,7 +709,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -755,7 +755,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -801,7 +801,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -847,7 +847,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -893,7 +893,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -939,7 +939,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
@@ -988,7 +988,7 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
                             prefix: None,
