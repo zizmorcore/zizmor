@@ -26,6 +26,7 @@ use crate::{
         workflow::Workflow,
     },
     registry::input::root::Root,
+    utils::once::warn_once,
 };
 
 pub(crate) mod root;
@@ -982,6 +983,12 @@ impl InputGroup {
             n = group.inputs.len(),
             lock = group.lock.is_some()
         );
+
+        if group.lock().is_some() {
+            warn_once!(
+                "one or more inputs uses a GitHub Actions workflow lockfile; see https://docs.zizmor.sh/usage/#workflow-lockfiles for details"
+            );
+        }
 
         Ok(group)
     }

@@ -170,6 +170,7 @@ fn remote_collection_includes_lockfile() -> anyhow::Result<()> {
     DEBUG zizmor::registry::input: registering workflow input with key https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/release.yml
      INFO zizmor::registry::input: collected 4 inputs from @@INPUT@@
     DEBUG zizmor::registry::input: collected a group with 4 inputs (actions lockfile=true)
+     WARN zizmor::registry::input: one or more inputs uses a GitHub Actions workflow lockfile; see https://docs.zizmor.sh/usage/#workflow-lockfiles for details
     "
     );
 

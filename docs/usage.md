@@ -1163,7 +1163,7 @@ step _should_ also be flagged if nested inside a `#!yaml parallel:` block.
 
 [supports parallel steps]: https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/
 
-### GitHub Actions workflow lockfiles
+### GitHub Actions workflow lockfiles { #workflow-lockfiles }
 
 !!! tip
 
