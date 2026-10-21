@@ -308,6 +308,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         mode_set: collection_mode_set,
         strict: app.input.strict_collection,
         no_config: app.args.no_config,
+        ignore_lockfile: app.input.ignore_lockfile,
         global_config,
     };
 

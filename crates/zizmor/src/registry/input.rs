@@ -950,7 +950,7 @@ impl InputGroup {
         options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
-        let group = match request {
+        let mut group = match request {
             "-" => {
                 tracing::debug!("collecting one input from stdin");
                 Self::collect_from_stdin().await
@@ -983,6 +983,11 @@ impl InputGroup {
             n = group.inputs.len(),
             lock = group.lock.is_some()
         );
+
+        if options.ignore_lockfile {
+            tracing::debug!("explicitly ignoring a lockfile that was loaded for this group");
+            group.lock = None;
+        }
 
         if group.lock().is_some() {
             warn_once!(
