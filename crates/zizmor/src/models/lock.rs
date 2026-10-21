@@ -1,4 +1,4 @@
-//! GitHub Actions lock models.
+//! GitHub Actions workflow lockfile models.
 //!
 //! These models enrich the models under [`github_actions_models::lock`],
 //! providing higher-level APIs for zizmor to use.
