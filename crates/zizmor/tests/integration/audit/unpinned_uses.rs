@@ -627,6 +627,45 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
     Ok(())
 }
 
+/// The `unpinned-uses` audit should honor a lockfile and not flag `uses:` clauses
+/// that are locked through it, even if they aren't hash-pinned inline.
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_honors_lockfile() -> anyhow::Result<()> {
+    use zizmor_dev::NetworkMode;
+
+    insta::assert_snapshot!(
+    Zizmor::cargo_bin()
+        .offline(NetworkMode::AssertOnline)
+        .input("woodruffw-experiments/actions-lockfile-experiments@155d4cc")
+        .run()?,
+    @"No findings to report. Good job!"
+    );
+
+    // Passing `--ignore-lockfile` brings the unpinned-uses findings back.
+    insta::assert_snapshot!(
+    Zizmor::cargo_bin()
+        .offline(NetworkMode::AssertOnline)
+        .input("woodruffw-experiments/actions-lockfile-experiments@155d4cc")
+        .args(["--ignore-lockfile"])
+        .run()?,
+    @"
+    error[unpinned-uses]: unpinned action reference
+      --> .github/workflows/neutral.yml:18:15
+       |
+    18 |       - uses: actions/checkout@v7.0.1
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
 #[cfg(feature = "gh-token-tests")]
 #[test]
 fn test_fix() -> anyhow::Result<()> {
