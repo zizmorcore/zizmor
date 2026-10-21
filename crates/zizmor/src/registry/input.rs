@@ -442,17 +442,17 @@ impl InputKey {
 
 /// An opaque identifier for a group of inputs.
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
-pub(crate) struct GroupID(String);
+pub(crate) struct GroupID(Box<str>);
 
 impl From<&str> for GroupID {
     fn from(value: &str) -> Self {
-        Self(value.to_string())
+        Self(value.into())
     }
 }
 
 impl From<&InputSlug> for GroupID {
     fn from(value: &InputSlug) -> Self {
-        Self(value.to_string())
+        Self(value.to_string().into())
     }
 }
 
