@@ -65,6 +65,7 @@ yamlpath.workspace = true
 zizmor-sarif.workspace = true
 
 [dev-dependencies]
+indoc.workspace = true
 insta.workspace = true
 tempfile.workspace = true
 zizmor-dev.workspace = true
