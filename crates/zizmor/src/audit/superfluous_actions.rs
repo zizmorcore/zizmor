@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 
+use crate::models::workflow::runners::Runner;
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
     config::Config,
@@ -31,9 +32,26 @@ impl Audit for SuperfluousActions {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step).await
+        let included_runners = &config.self_hosted_runner_config.deny_runners;
+        let excluded_groups = &config.self_hosted_runner_config.allow_groups;
+
+        // note : suboptimal since `NormalJob#runners` recomputes values
+        // each time it's invoked
+        let runs_on_self_hosted =
+            step.job()
+                .runners(included_runners, excluded_groups)
+                .any(|runner| match runner {
+                    Runner::SelfHosted { .. } => true,
+                    Runner::Indeterminate {
+                        self_hosted_evidence,
+                        ..
+                    } => self_hosted_evidence,
+                    _ => false,
+                });
+
+        self.process_step(step, runs_on_self_hosted).await
     }
 
     async fn audit_composite_step<'doc>(
@@ -41,127 +59,161 @@ impl Audit for SuperfluousActions {
         step: &CompositeStep<'doc>,
         _config: &Config,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step).await
+        self.process_step(step, false).await
     }
 }
 
-#[allow(clippy::unwrap_used)]
-static SUPERFLUOUS_ACTIONS: LazyLock<Vec<(RepositoryUsesPattern, &str, Persona, Confidence)>> =
-    LazyLock::new(|| {
-        vec![
-            (
-                "ncipollo/release-action".parse().unwrap(),
-                "use `gh release` in a script step",
-                Persona::Regular,
-                Confidence::High,
-            ),
-            (
-                "softprops/action-gh-release".parse().unwrap(),
-                "use `gh release` in a script step",
-                Persona::Regular,
-                Confidence::High,
-            ),
-            (
-                "elgohr/Github-Release-Action".parse().unwrap(),
-                "use `gh release` in a script step",
-                Persona::Regular,
-                Confidence::High,
-            ),
-            (
-                "peter-evans/create-pull-request".parse().unwrap(),
-                "use `gh pr create` in a script step",
-                // NOTE(ww): Currently pedantic because creating a PR
-                // with just `gh` and `git` is pretty cumbersome.
-                Persona::Pedantic,
-                Confidence::Low,
-            ),
-            (
-                "peter-evans/create-or-update-comment".parse().unwrap(),
-                "use `gh pr comment` or `gh issue comment` in a script step",
-                // NOTE(ww): Currently pedantic because `gh` doesn't support
-                // editing a comment by ID.
-                // See: <https://github.com/cli/cli/issues/3613>
-                Persona::Pedantic,
-                Confidence::Low,
-            ),
-            (
-                "dacbd/create-issue-action".parse().unwrap(),
-                "use `gh issue create` in a script step",
-                Persona::Regular,
-                Confidence::High,
-            ),
-            (
-                "actions-ecosystem/action-add-labels".parse().unwrap(),
-                "use `gh issue edit --add-label` or `gh pr edit --add-label` in a script step",
-                Persona::Regular,
-                Confidence::High,
-            ),
-            (
-                "actions-ecosystem/action-remove-labels".parse().unwrap(),
-                "use `gh issue edit --remove-label` or `gh pr edit --remove-label` in a script step",
-                Persona::Regular,
-                Confidence::High,
-            ),
-            (
-                "svenstaro/upload-release-action".parse().unwrap(),
-                "use `gh release create` and `gh release upload` in a script step",
-                Persona::Regular,
-                Confidence::High,
-            ),
-            (
-                "addnab/docker-run-action".parse().unwrap(),
-                "use `docker run` in a script step, or use a container step",
-                Persona::Regular,
-                Confidence::High,
-            ),
-            (
-                "sergeysova/jq-action".parse().unwrap(),
-                "use `jq` in a script step",
-                Persona::Regular,
-                Confidence::High,
-            ),
-            (
-                "dtolnay/rust-toolchain".parse().unwrap(),
-                "use `rustup` and/or `cargo` in a script step",
-                // NOTE(ww): Currently pedantic because this action does
-                // some additional environment setup, and users find the
-                // finding here disruptive.
-                // See: <https://github.com/zizmorcore/zizmor/issues/1817>
-                Persona::Pedantic,
-                Confidence::Medium,
-            ),
-            (
-                "stefanzweifel/git-auto-commit-action".parse().unwrap(),
-                "use `git add`, `git commit`, and `git push` in a script step",
-                // NOTE: Currently pedantic because replicating this action's
-                // full behaviour (empty commit detection, auth setup, etc.)
-                // requires multiple git commands and some care.
-                Persona::Pedantic,
-                Confidence::Low,
-            ),
-            (
-                "EndBug/add-and-commit".parse().unwrap(),
-                "use `git add`, `git commit`, and `git push` in a script step",
-                // NOTE: Currently pedantic because replicating this action's
-                // full behaviour (empty commit detection, auth setup, etc.)
-                // requires multiple git commands and some care.
-                Persona::Pedantic,
-                Confidence::Low,
-            ),
-        ]
-    });
+#[derive(PartialEq)]
+enum SkipCriteria {
+    Never,
+    SelfHostedRunner,
+}
+
+#[allow(clippy::unwrap_used, clippy::type_complexity)]
+static SUPERFLUOUS_ACTIONS: LazyLock<
+    Vec<(
+        RepositoryUsesPattern,
+        &str,
+        Persona,
+        Confidence,
+        SkipCriteria,
+    )>,
+> = LazyLock::new(|| {
+    vec![
+        (
+            "ncipollo/release-action".parse().unwrap(),
+            "use `gh release` in a script step",
+            Persona::Regular,
+            Confidence::High,
+            SkipCriteria::Never,
+        ),
+        (
+            "softprops/action-gh-release".parse().unwrap(),
+            "use `gh release` in a script step",
+            Persona::Regular,
+            Confidence::High,
+            SkipCriteria::Never,
+        ),
+        (
+            "elgohr/Github-Release-Action".parse().unwrap(),
+            "use `gh release` in a script step",
+            Persona::Regular,
+            Confidence::High,
+            SkipCriteria::Never,
+        ),
+        (
+            "peter-evans/create-pull-request".parse().unwrap(),
+            "use `gh pr create` in a script step",
+            // NOTE(ww): Currently pedantic because creating a PR
+            // with just `gh` and `git` is pretty cumbersome.
+            Persona::Pedantic,
+            Confidence::Low,
+            SkipCriteria::Never,
+        ),
+        (
+            "peter-evans/create-or-update-comment".parse().unwrap(),
+            "use `gh pr comment` or `gh issue comment` in a script step",
+            // NOTE(ww): Currently pedantic because `gh` doesn't support
+            // editing a comment by ID.
+            // See: <https://github.com/cli/cli/issues/3613>
+            Persona::Pedantic,
+            Confidence::Low,
+            SkipCriteria::Never,
+        ),
+        (
+            "dacbd/create-issue-action".parse().unwrap(),
+            "use `gh issue create` in a script step",
+            Persona::Regular,
+            Confidence::High,
+            SkipCriteria::Never,
+        ),
+        (
+            "actions-ecosystem/action-add-labels".parse().unwrap(),
+            "use `gh issue edit --add-label` or `gh pr edit --add-label` in a script step",
+            Persona::Regular,
+            Confidence::High,
+            SkipCriteria::Never,
+        ),
+        (
+            "actions-ecosystem/action-remove-labels".parse().unwrap(),
+            "use `gh issue edit --remove-label` or `gh pr edit --remove-label` in a script step",
+            Persona::Regular,
+            Confidence::High,
+            SkipCriteria::Never,
+        ),
+        (
+            "svenstaro/upload-release-action".parse().unwrap(),
+            "use `gh release create` and `gh release upload` in a script step",
+            Persona::Regular,
+            Confidence::High,
+            SkipCriteria::Never,
+        ),
+        (
+            "addnab/docker-run-action".parse().unwrap(),
+            "use `docker run` in a script step, or use a container step",
+            Persona::Regular,
+            Confidence::High,
+            SkipCriteria::Never,
+        ),
+        (
+            "sergeysova/jq-action".parse().unwrap(),
+            "use `jq` in a script step",
+            Persona::Regular,
+            Confidence::High,
+            SkipCriteria::Never,
+        ),
+        (
+            "dtolnay/rust-toolchain".parse().unwrap(),
+            "use `rustup` and/or `cargo` in a script step",
+            // NOTE(ww): Currently pedantic because this action does
+            // some additional environment setup, and users find the
+            // finding here disruptive.
+            // See: <https://github.com/zizmorcore/zizmor/issues/1817>
+            Persona::Pedantic,
+            Confidence::Medium,
+            SkipCriteria::SelfHostedRunner,
+        ),
+        (
+            "stefanzweifel/git-auto-commit-action".parse().unwrap(),
+            "use `git add`, `git commit`, and `git push` in a script step",
+            // NOTE: Currently pedantic because replicating this action's
+            // full behaviour (empty commit detection, auth setup, etc.)
+            // requires multiple git commands and some care.
+            Persona::Pedantic,
+            Confidence::Low,
+            SkipCriteria::Never,
+        ),
+        (
+            "EndBug/add-and-commit".parse().unwrap(),
+            "use `git add`, `git commit`, and `git push` in a script step",
+            // NOTE: Currently pedantic because replicating this action's
+            // full behaviour (empty commit detection, auth setup, etc.)
+            // requires multiple git commands and some care.
+            Persona::Pedantic,
+            Confidence::Low,
+            SkipCriteria::Never,
+        ),
+    ]
+});
 
 impl SuperfluousActions {
     async fn process_step<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
+        runs_on_self_hosted_runner: bool,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let Some(Uses::Repository(uses)) = step.uses() else {
             return Ok(vec![]);
         };
 
         let mut findings = vec![];
-        for (pattern, recommendation, persona, confidence) in SUPERFLUOUS_ACTIONS.iter() {
+        for (pattern, recommendation, persona, confidence, skip_criteria) in
+            SUPERFLUOUS_ACTIONS.iter()
+        {
+            if *skip_criteria == SkipCriteria::SelfHostedRunner && runs_on_self_hosted_runner {
+                continue;
+            }
+
             if pattern.matches(&uses.into()) {
                 findings.push(
                     Self::finding()
