@@ -28,7 +28,7 @@ impl Audit for AnonymousDefinition {
     async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc crate::models::workflow::Workflow,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

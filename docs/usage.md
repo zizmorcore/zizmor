@@ -1162,3 +1162,66 @@ steps are handled. In other words: anything that _would_ be flagged in a serial
 step _should_ also be flagged if nested inside a `#!yaml parallel:` block.
 
 [supports parallel steps]: https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/
+
+### GitHub Actions workflow lockfiles { #workflow-lockfiles }
+
+!!! tip
+
+    Support for workflow lockfiles is available in `v1.32.0` and later.
+
+!!! warning "Experimental"
+
+    `zizmor`'s support for workflow lockfiles is currently **experimental**.
+    You will probably encounter bugs if you run `zizmor` on a repository
+    that uses a lockfile; please
+    [report any issues you have](https://github.com/zizmorcore/zizmor/issues/new)!
+
+As of October 2026, GitHub Actions [supports lockfiles for workflows].
+
+Workflow lockfiles are currently a "public preview" feature on GitHub itself,
+meaning that they're subject to change before GitHub decides to stabilize them.
+zizmor makes a best-effort attempt to remain compatible with whatever the current
+state of the public preview is, but will not retain backwards compatibility
+beyond what GitHub decides to support.
+
+If you decide to experiment with workflow lockfiles (and `zizmor`'s support
+for them), we **strongly encourage** you to read GitHub's [workflow dependency lockfiles]
+documentation and be aware of some current limitations:
+
+- Workflow lockfiles cannot currently lock reusable workflow calls.
+
+    If you have reusable workflow calls, you currently need to hash-pin them
+    manually. `zizmor`'s [unpinned-uses] audit will flag this.
+
+    !!! tip
+
+        See github/gh-actions-lock#179 for more information.
+
+- Workflow lockfiles cannot currently lock composite actions themselves (i.e.
+  `action.yml` definitions). Composite actions are locked indirectly when _used_
+  by a workflow, but not on their own yet.
+
+    If you have composite action definitions, you currently need to hash-pin them
+    manually. `zizmor`'s [unpinned-uses] audit will flag this.
+
+    !!! tip
+
+        See github/gh-actions-lock#183 for more information.
+
+- Workflow lockfiles cannot currently lock some other forms of action mutability,
+  including Docker images.
+
+    If you have Docker image references, you currently need to hash-pin them
+    manually. `zizmor`'s [unpinned-images] audit will flag this.
+
+    !!! tip
+
+        See github/gh-actions-lock#128 for more information.
+
+[supports lockfiles for workflows]: https://github.blog/changelog/2026-10-14-github-actions-workflow-lockfiles-in-public-preview/
+
+[workflow dependency lockfiles]: https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles
+
+[unpinned-uses]: ./audits.md#unpinned-uses
+
+[unpinned-images]: ./audits.md#unpinned-images

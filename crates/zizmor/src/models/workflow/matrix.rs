@@ -405,12 +405,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -447,12 +448,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -489,12 +491,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -531,12 +534,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -573,12 +577,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -615,12 +620,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -657,12 +663,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -702,12 +709,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -747,12 +755,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -792,12 +801,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -837,12 +847,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -882,12 +893,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -927,12 +939,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",
@@ -975,12 +988,13 @@ jobs:
                 location: SymbolicLocation {
                     key: Local(
                         LocalKey {
-                            group: Group(
+                            group: GroupID(
                                 "fakegroup",
                             ),
+                            prefix: None,
                             verbatim_path: "test.yml",
                             native_path: "test.yml",
-                            best_identifier: "test.yml",
+                            root_relative_path: None,
                         },
                     ),
                     annotation: "this expansion",

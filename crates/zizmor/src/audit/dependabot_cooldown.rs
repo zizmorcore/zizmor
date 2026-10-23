@@ -91,11 +91,11 @@ impl Audit for DependabotCooldown {
     async fn audit_dependabot<'doc>(
         &self,
         dependabot: &'doc dependabot::Dependabot,
-        config: &crate::config::Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        let minimum_days = config.dependabot_cooldown_config.days.get() as u64;
+        let minimum_days = group.config().dependabot_cooldown_config.days.get() as u64;
 
         for update in dependabot.updates() {
             // If not set, `cooldown.default-days` is 3.

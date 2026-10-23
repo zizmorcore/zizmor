@@ -83,6 +83,14 @@ pub(crate) struct InputArgs {
     /// in collected inputs.
     #[arg(long)]
     pub(crate) strict_collection: bool,
+
+    /// Ignore each collected input's lockfile, if present.
+    /// This does not stop lockfile loading, it just stops zizmor from using
+    /// the lockfile's state from informing audit results.
+    ///
+    /// NOTE: This is an experimental flag, and may be removed at any point.
+    #[arg(long, hide = true)]
+    pub(crate) ignore_lockfile: bool,
 }
 
 #[derive(Debug, Args)]
@@ -638,6 +646,7 @@ pub(crate) struct CollectionOptions {
     pub(crate) mode_set: CollectionModeSet,
     pub(crate) strict: bool,
     pub(crate) no_config: bool,
+    pub(crate) ignore_lockfile: bool,
     /// Global configuration, if any.
     pub(crate) global_config: Option<Config>,
 }

@@ -8,7 +8,7 @@ use std::fmt;
 use self::location::{Location, SymbolicLocation};
 use crate::{
     InputKey, audit::AuditError, finding::location::LocationKind, models::AsDocument,
-    registry::input::Group,
+    registry::input::GroupID,
 };
 use yamlpatch::{self, Patch};
 
@@ -176,7 +176,7 @@ impl Finding<'_> {
     ///
     /// We assume that all locations in a finding belong to the same group,
     /// if not the same file within that group.
-    pub(crate) fn input_group(&self) -> &Group {
+    pub(crate) fn input_group(&self) -> &GroupID {
         self.primary_location().symbolic.key.group()
     }
 }

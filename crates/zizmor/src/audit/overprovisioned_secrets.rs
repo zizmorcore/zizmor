@@ -37,7 +37,7 @@ impl Audit for OverprovisionedSecrets {
     async fn audit_raw<'doc>(
         &self,
         input: &'doc AuditInput,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

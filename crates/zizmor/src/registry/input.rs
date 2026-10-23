@@ -26,6 +26,7 @@ use crate::{
         workflow::Workflow,
     },
     registry::input::root::Root,
+    utils::once::warn_once,
 };
 
 pub(crate) mod root;
@@ -218,7 +219,15 @@ impl std::fmt::Display for InputSlug {
 pub(crate) struct LocalKey {
     /// The group this input belongs to.
     #[serde(skip)]
-    group: Group,
+    group: GroupID,
+
+    /// The input's path prefix.
+    ///
+    /// This is not necessarily the same as the root. For example, if the user
+    /// runs `zizmor .github/` then the prefix will be `.github/` while the root
+    /// will be the parent directory of `.github/`.
+    #[serde(skip)]
+    prefix: Option<Utf8PathBuf>,
 
     /// The verbatim path to the input, exactly as the user supplied it.
     /// This can be absolute or relative.
@@ -232,17 +241,13 @@ pub(crate) struct LocalKey {
     #[serde(skip)]
     native_path: Utf8PathBuf,
 
-    /// The "best" identifier for this input.
+    /// The path to this input, relative to the input's Git root (if it's in a Git repository).
     ///
-    /// This will always be a relative path (unless the input itself was absolute),
-    /// and is the "best" in the sense that it attempts to be relative to the repository
-    /// root (if present), rather than whatever relative path the user actually supplied.
+    /// This path always uses Unix path separators.
     ///
-    /// This identifier always uses Unix-style path separators.
-    ///
-    /// See [`InputKey::best_identifier`] for more information.
+    /// This may or may not be the same as [`Self::verbatim_path`].
     #[serde(skip)]
-    best_identifier: String,
+    root_relative_path: Option<Utf8PathBuf>,
 }
 
 impl LocalKey {
@@ -253,45 +258,27 @@ impl LocalKey {
         &self.verbatim_path
     }
 
-    /// Produce the "best" relative path for a given path.
-    ///
-    /// This path is the "best" in the sense that it's intended to be maximally
-    /// compatible with the assumptions that consumers make. Specifically, many
-    /// consumers (like GitHub's "Advanced Security") expect paths to be relative
-    /// to the root of the repository, even if the user supplied them to the tool
-    /// as absolute or relative to some other directory.
-    ///
-    /// NOTE: The path returned by this API is *not* guaranteed to be relative to
-    /// the current directory, if the current directory is not the same as the
-    /// repository root. As such, consumers of this API *must not* assume that they
-    /// can naively test these paths for existence, etc. without first resolving
-    /// them against the repository root.
-    fn best_relative_path<P: AsRef<Utf8Path>>(
-        given_path: P,
-        prefix: Option<P>,
-        root: Option<Root>,
-    ) -> Utf8PathBuf {
-        // Happy path: we have a root directory and the input
-        // is relative to it once canonicalized.
-        if let Some(root) = root
-            && let Ok(canonical) = given_path.as_ref().canonicalize_utf8()
-            && let Ok(relative) = canonical.strip_prefix(root.path())
-        {
-            return relative.to_owned();
-        }
+    pub(crate) fn root_relative_path(&self) -> Option<&Utf8Path> {
+        self.root_relative_path.as_deref()
+    }
 
-        // Semi-happy path: we don't have a root directory,
-        // but we have a known prefix that we can strip from the
-        // input path.
-        if let Some(prefix) = prefix
-            && let Ok(stripped) = given_path.as_ref().strip_prefix(prefix.as_ref())
+    /// Returns the "best" identifier for this [`LocalKey`].
+    fn best_identifier(&self) -> &str {
+        if let Some(path) = &self.root_relative_path {
+            // Happiest path: we have a root and our input is known to
+            // be relative to it.
+            path.as_str()
+        } else if let Some(prefix) = &self.prefix
+            && let Ok(path) = self.verbatim_path.strip_prefix(prefix)
         {
-            return stripped.to_owned();
+            // Semi-happy path: we don't have a root, but we have a known
+            // prefix that we can strip from the verbatim path.
+            path.as_str()
+        } else {
+            // Sad path: no root or known prefix, so we return
+            // the verbatim path as-is and hope for the best.
+            self.verbatim_path.as_str()
         }
-
-        // Sad path: no root or known prefix, so we return the
-        // given path as-is and hope for the best.
-        given_path.as_ref().to_owned()
     }
 }
 
@@ -299,17 +286,23 @@ impl LocalKey {
 pub(crate) struct RemoteKey {
     /// The group this input belongs to.
     #[serde(skip)]
-    group: Group,
+    group: GroupID,
     slug: InputSlug,
     /// The path to the input file within the repository.
     path: Utf8PathBuf,
+}
+
+impl RemoteKey {
+    pub(crate) fn path(&self) -> &Utf8Path {
+        &self.path
+    }
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, PartialOrd, Ord)]
 pub(crate) struct StdinKey {
     /// The group this input belongs to.
     #[serde(skip)]
-    group: Group,
+    group: GroupID,
 }
 
 /// A unique identifying "key" for an input in a given run of zizmor.
@@ -351,32 +344,28 @@ impl InputKey {
     /// `prefix` and `root` are used to derive the input's
     /// "best" relative path for output rendering purposes.
     pub(crate) fn local<P: AsRef<Utf8Path>>(
-        group: Group,
+        group: GroupID,
         verbatim_path: P,
         prefix: Option<P>,
         root: Option<Root>,
     ) -> Self {
         let verbatim_path = verbatim_path.as_ref();
 
-        let best_identifier = {
-            let best_relative_path =
-                LocalKey::best_relative_path(verbatim_path, prefix.as_ref().map(P::as_ref), root);
-
-            if best_relative_path.is_relative() {
-                best_relative_path.components().join("/")
-            } else {
-                // Stupid edge case: if user supplied an absolute path and
-                // we couldn't make it relative, then there's no sane normalization
-                // we can perform. Just return it as-is.
-                best_relative_path.into()
-            }
+        let root_relative_path = if let Some(root) = root
+            && let Ok(canonical) = verbatim_path.canonicalize_utf8()
+            && let Ok(relative) = canonical.strip_prefix(root.path())
+        {
+            Some(relative.components().join("/").into())
+        } else {
+            None
         };
 
         Self::Local(LocalKey {
             group,
+            prefix: prefix.map(|p| p.as_ref().into()),
             verbatim_path: verbatim_path.to_path_buf(),
             native_path: verbatim_path.components().collect(),
-            best_identifier,
+            root_relative_path,
         })
     }
 
@@ -390,7 +379,7 @@ impl InputKey {
 
     pub(crate) fn stdin() -> Self {
         Self::Stdin(StdinKey {
-            group: Group::from("-"),
+            group: GroupID::from("-"),
         })
     }
 
@@ -404,7 +393,7 @@ impl InputKey {
             // Local keys: always use the "best" relative path,
             // which is opportunistically relative to the repo root
             // if possible.
-            Self::Local(local) => local.best_identifier.as_str(),
+            Self::Local(local) => local.best_identifier(),
             // Remote keys: always use the path within the repository,
             // which is always relative.
             Self::Remote(remote) => remote.path.as_str(),
@@ -443,7 +432,7 @@ impl InputKey {
     }
 
     /// Returns the group this input belongs to.
-    pub(crate) fn group(&self) -> &Group {
+    pub(crate) fn group(&self) -> &GroupID {
         match self {
             Self::Local(local) => &local.group,
             Self::Remote(remote) => &remote.group,
@@ -454,17 +443,17 @@ impl InputKey {
 
 /// An opaque identifier for a group of inputs.
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
-pub(crate) struct Group(String);
+pub(crate) struct GroupID(Box<str>);
 
-impl From<&str> for Group {
+impl From<&str> for GroupID {
     fn from(value: &str) -> Self {
-        Self(value.to_string())
+        Self(value.into())
     }
 }
 
-impl From<&InputSlug> for Group {
+impl From<&InputSlug> for GroupID {
     fn from(value: &InputSlug) -> Self {
-        Self(value.to_string())
+        Self(value.to_string().into())
     }
 }
 
@@ -491,6 +480,14 @@ impl InputGroup {
             lock,
             inputs: Default::default(),
         }
+    }
+
+    pub(crate) fn config(&self) -> &Config {
+        &self.config
+    }
+
+    pub(crate) fn lock(&self) -> Option<&Lock> {
+        self.lock.as_ref()
     }
 
     pub(crate) fn register_input(&mut self, input: AuditInput) -> Result<(), CollectionError> {
@@ -569,23 +566,48 @@ impl InputGroup {
             // The only way this could be wrong is if the user does something
             // bizarre like `.github/workflows/.pre-commit-{config,hooks}.yml`.
             (Some(".pre-commit-config"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(Group(path.as_str().into()), path, None, group.root.clone()),
+                InputKey::local(
+                    GroupID(path.as_str().into()),
+                    path,
+                    None,
+                    group.root.clone(),
+                ),
                 InputKind::PreCommitConfig,
             ),
             (Some(".pre-commit-hooks"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(Group(path.as_str().into()), path, None, group.root.clone()),
+                InputKey::local(
+                    GroupID(path.as_str().into()),
+                    path,
+                    None,
+                    group.root.clone(),
+                ),
                 InputKind::PreCommitHooks,
             ),
             (Some("dependabot"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(Group(path.as_str().into()), path, None, group.root.clone()),
+                InputKey::local(
+                    GroupID(path.as_str().into()),
+                    path,
+                    None,
+                    group.root.clone(),
+                ),
                 InputKind::Dependabot,
             ),
             (Some("action"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(Group(path.as_str().into()), path, None, group.root.clone()),
+                InputKey::local(
+                    GroupID(path.as_str().into()),
+                    path,
+                    None,
+                    group.root.clone(),
+                ),
                 InputKind::Action,
             ),
             (Some(_), Some("yml" | "yaml")) => (
-                InputKey::local(Group(path.as_str().into()), path, None, group.root.clone()),
+                InputKey::local(
+                    GroupID(path.as_str().into()),
+                    path,
+                    None,
+                    group.root.clone(),
+                ),
                 InputKind::Workflow,
             ),
             _ => return Err(CollectionError::InvalidExtension),
@@ -717,7 +739,7 @@ impl InputGroup {
                     .is_some_and(|dir| dir.ends_with(".github/workflows"))
             {
                 let key = InputKey::local(
-                    Group(path.as_str().into()),
+                    GroupID(path.as_str().into()),
                     entry,
                     Some(path),
                     group.root.clone(),
@@ -737,7 +759,7 @@ impl InputGroup {
                 && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
             {
                 let key = InputKey::local(
-                    Group(path.as_str().into()),
+                    GroupID(path.as_str().into()),
                     entry,
                     Some(path),
                     group.root.clone(),
@@ -761,7 +783,7 @@ impl InputGroup {
                 )
             {
                 let key = InputKey::local(
-                    Group(path.as_str().into()),
+                    GroupID(path.as_str().into()),
                     entry,
                     Some(path),
                     group.root.clone(),
@@ -785,7 +807,7 @@ impl InputGroup {
                     Some(".pre-commit-config.yml" | ".pre-commit-config.yaml")
                 ) {
                     let key = InputKey::local(
-                        Group(path.as_str().into()),
+                        GroupID(path.as_str().into()),
                         entry,
                         Some(path),
                         group.root.clone(),
@@ -803,7 +825,7 @@ impl InputGroup {
                     Some(".pre-commit-hooks.yml" | ".pre-commit-hooks.yaml")
                 ) {
                     let key = InputKey::local(
-                        Group(path.as_str().into()),
+                        GroupID(path.as_str().into()),
                         entry,
                         Some(path),
                         group.root.clone(),
@@ -928,7 +950,7 @@ impl InputGroup {
         options: &CollectionOptions,
         gh_client: Option<&Client>,
     ) -> Result<Self, CollectionError> {
-        let group = match request {
+        let mut group = match request {
             "-" => {
                 tracing::debug!("collecting one input from stdin");
                 Self::collect_from_stdin().await
@@ -962,6 +984,17 @@ impl InputGroup {
             lock = group.lock.is_some()
         );
 
+        if options.ignore_lockfile {
+            tracing::debug!("explicitly ignoring a lockfile that was loaded for this group");
+            group.lock = None;
+        }
+
+        if group.lock().is_some() {
+            warn_once!(
+                "one or more inputs uses a GitHub Actions workflow lockfile; see https://docs.zizmor.sh/usage/#workflow-lockfiles for details"
+            );
+        }
+
         Ok(group)
     }
 
@@ -975,7 +1008,7 @@ pub(crate) struct InputRegistry {
     // iterate in a deterministic order. This saves us a lot of pain
     // while snapshot testing across multiple input files, and makes
     // the user experience more predictable.
-    pub(crate) groups: BTreeMap<Group, InputGroup>,
+    pub(crate) groups: BTreeMap<GroupID, InputGroup>,
 }
 
 impl InputRegistry {
@@ -1000,16 +1033,23 @@ impl InputRegistry {
         // If the group has already been registered, then the user probably
         // duplicated the input multiple times on the command line by accident.
         // We just ignore any duplicate registrations.
-        if let btree_map::Entry::Vacant(e) = self.groups.entry(Group(name.into())) {
+        if let btree_map::Entry::Vacant(e) = self.groups.entry(GroupID(name.into())) {
             e.insert(InputGroup::collect(name, options, gh_client).await?);
         }
 
         Ok(())
     }
 
-    /// Return an iterator over all inputs in all groups in this registry.
-    pub(crate) fn iter_inputs(&self) -> impl Iterator<Item = (&InputKey, &AuditInput)> {
-        self.groups.values().flat_map(|group| group.inputs.iter())
+    /// Return an iterator over every input in the registry, along with the group it belongs to.
+    pub(crate) fn iter_inputs(
+        &self,
+    ) -> impl Iterator<Item = (&InputGroup, &InputKey, &AuditInput)> {
+        self.groups.values().flat_map(move |group| {
+            group
+                .inputs
+                .iter()
+                .map(move |(key, input)| (group, key, input))
+        })
     }
 
     /// Get a reference to a registered input by its key.
@@ -1021,7 +1061,7 @@ impl InputRegistry {
     }
 
     /// Get a reference to the configuration for a given input group.
-    pub(crate) fn get_config(&self, group: &Group) -> &Config {
+    pub(crate) fn get_config(&self, group: &GroupID) -> &Config {
         &self
             .groups
             .get(group)

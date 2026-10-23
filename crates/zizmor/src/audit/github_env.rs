@@ -9,7 +9,6 @@ use tree_sitter::{
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::audit::AuditError;
-use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Severity};
 use crate::models::StepCommon as _;
@@ -389,7 +388,7 @@ impl Audit for GitHubEnv {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
@@ -440,7 +439,7 @@ impl Audit for GitHubEnv {
     async fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

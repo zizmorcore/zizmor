@@ -10,7 +10,6 @@ use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BranchFilters, OptionalBody};
 
 use crate::audit::{Audit, AuditError, audit_meta};
-use crate::config::Config;
 use crate::finding::location::{Locatable as _, Routable as _};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Persona, Severity};
 use crate::models::coordinate::{
@@ -860,7 +859,7 @@ impl Audit for CachePoisoning {
     async fn audit_normal_job<'doc>(
         &self,
         job: &NormalJob<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
         let steps = job.steps();
@@ -896,7 +895,7 @@ impl Audit for CachePoisoning {
     async fn audit_reusable_job<'doc>(
         &self,
         job: &ReusableWorkflowCallJob<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         if let Some(finding) = self.dangerous_trigger_writes_cache(job)? {
             Ok(vec![finding])

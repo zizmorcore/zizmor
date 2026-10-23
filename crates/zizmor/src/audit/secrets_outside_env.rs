@@ -3,7 +3,6 @@ use subfeature::Subfeature;
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    config::Config,
     finding::{
         Confidence, Finding, Persona, Severity,
         location::{Feature, Locatable as _, Location},
@@ -33,7 +32,7 @@ impl Audit for SecretsOutsideEnvironment {
     async fn audit_normal_job<'doc>(
         &self,
         job: &NormalJob<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         if job.parent().workflow_call().is_some() {
             // Reusable workflows and environments don't interact well, and are more or less
@@ -74,7 +73,8 @@ impl Audit for SecretsOutsideEnvironment {
                 // Check to see whether we allow this secret. The policy always includes
                 // GITHUB_TOKEN, since it's always latently available.
                 if let Some(secret_name) = context.single_tail()
-                    && config
+                    && group
+                        .config()
                         .secrets_outside_env_policy
                         .allow
                         .contains(&secret_name.to_ascii_lowercase())

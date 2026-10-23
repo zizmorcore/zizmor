@@ -272,7 +272,7 @@ impl Audit for Artipacked {
     async fn audit_action<'doc>(
         &self,
         action: &'doc crate::models::action::Action,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let Some(steps) = action.steps() else {
             return Ok(vec![]);
@@ -284,7 +284,7 @@ impl Audit for Artipacked {
     async fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_steps(job.steps()).await
     }

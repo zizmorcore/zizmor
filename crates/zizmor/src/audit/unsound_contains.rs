@@ -50,7 +50,7 @@ impl Audit for UnsoundContains {
     async fn audit_normal_job<'w>(
         &self,
         job: &super::NormalJob<'w>,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<super::Finding<'w>>, AuditError> {
         let conditions = job.conditions().filter_map(|(cond, loc)| {
             if let If::Expr(expr) = cond {

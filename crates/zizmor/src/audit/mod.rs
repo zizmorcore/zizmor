@@ -5,7 +5,6 @@ use tracing::instrument;
 use yamlpath::Document;
 
 use crate::{
-    config::Config,
     finding::{
         Finding, FindingBuilder,
         location::{Routable, SymbolicLocation},
@@ -17,7 +16,7 @@ use crate::{
         pre_commit::{self, PreCommitConfig, PreCommitHooks},
         workflow::{Job, NormalJob, ReusableWorkflowCallJob, Step, Workflow},
     },
-    registry::input::InputKey,
+    registry::input::{InputGroup, InputKey},
     state::AuditState,
 };
 
@@ -311,7 +310,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_step<'doc>(
         &self,
         _step: &Step<'doc>,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -319,11 +318,11 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_normal_job<'doc>(
         &self,
         job: &NormalJob<'doc>,
-        config: &Config,
+        group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
         for step in job.steps() {
-            results.extend(self.audit_step(&step, config).await?);
+            results.extend(self.audit_step(&step, group).await?);
         }
         Ok(results)
     }
@@ -331,7 +330,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_reusable_job<'doc>(
         &self,
         _job: &ReusableWorkflowCallJob<'doc>,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -339,17 +338,17 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
-        config: &Config,
+        group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         for job in workflow.jobs() {
             match job {
                 Job::NormalJob(normal) => {
-                    results.extend(self.audit_normal_job(&normal, config).await?);
+                    results.extend(self.audit_normal_job(&normal, group).await?);
                 }
                 Job::ReusableWorkflowCallJob(reusable) => {
-                    results.extend(self.audit_reusable_job(&reusable, config).await?);
+                    results.extend(self.audit_reusable_job(&reusable, group).await?);
                 }
             }
         }
@@ -360,7 +359,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_docker_action<'doc>(
         &self,
         _docker: &DockerAction<'doc>,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -368,7 +367,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_composite_step<'doc>(
         &self,
         _step: &CompositeStep<'doc>,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -376,17 +375,17 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_action<'doc>(
         &self,
         action: &'doc Action,
-        config: &Config,
+        group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         if let Some(docker) = action.docker() {
-            results.extend(self.audit_docker_action(&docker, config).await?);
+            results.extend(self.audit_docker_action(&docker, group).await?);
         }
 
         if let Some(steps) = action.steps() {
             for step in steps {
-                results.extend(self.audit_composite_step(&step, config).await?);
+                results.extend(self.audit_composite_step(&step, group).await?);
             }
         }
 
@@ -396,7 +395,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_dependabot<'doc>(
         &self,
         _dependabot: &'doc Dependabot,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -404,7 +403,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_pre_commit_config_repo<'doc>(
         &self,
         _repo: &pre_commit::Repo<'doc>,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -412,12 +411,12 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_pre_commit_config<'doc>(
         &self,
         pre_commit: &'doc PreCommitConfig,
-        config: &Config,
+        group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
         for repo in pre_commit.repos() {
-            results.extend(self.audit_pre_commit_config_repo(&repo, config).await?);
+            results.extend(self.audit_pre_commit_config_repo(&repo, group).await?);
         }
 
         Ok(results)
@@ -426,7 +425,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_pre_commit_hooks<'doc>(
         &self,
         _hooks: &'doc PreCommitHooks,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -434,7 +433,7 @@ pub(crate) trait Audit: AuditCore {
     async fn audit_raw<'doc>(
         &self,
         _input: &'doc AuditInput,
-        _config: &Config,
+        _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(vec![])
     }
@@ -451,14 +450,14 @@ pub(crate) trait Audit: AuditCore {
     ///
     /// TODO: This also means we effectively run the disablement check on every
     /// single input in a group, rather than just once per group.
-    #[instrument(skip(self, config))]
+    #[instrument(skip(self, group))]
     async fn audit<'doc>(
         &self,
         ident: &'static str,
         input: &'doc AuditInput,
-        config: &Config,
+        group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        if config.disables(ident) {
+        if group.config().disables(ident) {
             tracing::debug!(
                 "skipping: {ident} is disabled in config for group {group:?}",
                 group = input.key().group()
@@ -467,16 +466,16 @@ pub(crate) trait Audit: AuditCore {
         }
 
         let mut results = match input {
-            AuditInput::Workflow(workflow) => self.audit_workflow(workflow, config).await,
-            AuditInput::Action(action) => self.audit_action(action, config).await,
-            AuditInput::Dependabot(dependabot) => self.audit_dependabot(dependabot, config).await,
+            AuditInput::Workflow(workflow) => self.audit_workflow(workflow, group).await,
+            AuditInput::Action(action) => self.audit_action(action, group).await,
+            AuditInput::Dependabot(dependabot) => self.audit_dependabot(dependabot, group).await,
             AuditInput::PreCommitConfig(pre_commit) => {
-                self.audit_pre_commit_config(pre_commit, config).await
+                self.audit_pre_commit_config(pre_commit, group).await
             }
-            AuditInput::PreCommitHooks(hooks) => self.audit_pre_commit_hooks(hooks, config).await,
+            AuditInput::PreCommitHooks(hooks) => self.audit_pre_commit_hooks(hooks, group).await,
         }?;
 
-        results.extend(self.audit_raw(input, config).await?);
+        results.extend(self.audit_raw(input, group).await?);
 
         Ok(results)
     }

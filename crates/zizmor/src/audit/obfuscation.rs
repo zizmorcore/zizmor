@@ -5,7 +5,6 @@ use yamlpatch::{Op, Patch};
 use crate::{
     Confidence, Severity,
     audit::AuditError,
-    config::Config,
     finding::{
         Finding, Fix, FixDisposition, Persona,
         location::{Feature, Location, Routable as _},
@@ -260,7 +259,7 @@ impl Audit for Obfuscation {
     async fn audit_raw<'doc>(
         &self,
         input: &'doc AuditInput,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
@@ -329,7 +328,7 @@ impl Audit for Obfuscation {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }
@@ -337,7 +336,7 @@ impl Audit for Obfuscation {
     async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step)
     }

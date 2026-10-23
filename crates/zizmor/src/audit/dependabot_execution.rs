@@ -44,7 +44,7 @@ impl Audit for DependabotExecution {
     async fn audit_dependabot<'doc>(
         &self,
         dependabot: &'doc crate::models::dependabot::Dependabot,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

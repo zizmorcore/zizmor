@@ -8,7 +8,6 @@ use yamlpatch::{Op, Patch};
 
 use super::{AuditLoadError, Job, audit_meta};
 use crate::audit::{Audit, AuditError};
-use crate::config::Config;
 use crate::finding::location::Locatable as _;
 use crate::finding::{
     Confidence, Finding, Fix, FixDisposition, Persona, Severity, location::SymbolicLocation,
@@ -124,7 +123,7 @@ impl Audit for InsecureCommands {
     async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut results = vec![];
 
@@ -162,7 +161,7 @@ impl Audit for InsecureCommands {
     async fn audit_composite_step<'doc>(
         &self,
         step: &super::CompositeStep<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

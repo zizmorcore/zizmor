@@ -1,4 +1,4 @@
-//! GitHub Actions lock models.
+//! GitHub Actions workflow lockfile models.
 //!
 //! These models enrich the models under [`github_actions_models::lock`],
 //! providing higher-level APIs for zizmor to use.
@@ -10,7 +10,7 @@ use github_actions_models::lock;
 use crate::{
     github::Client,
     models::Validatable,
-    registry::input::{CollectionError, InputSlug, root::Root},
+    registry::input::{CollectionError, InputKey, InputSlug, root::Root},
 };
 
 const LOCKFILE_PATH: &str = ".github/workflows/actions.lock";
@@ -80,6 +80,26 @@ impl Lock {
             Ok(Some(contents)) => Ok(Some(Self::from_string(contents)?)),
             Ok(None) => Ok(None),
             Err(err) => Err(err.into()),
+        }
+    }
+
+    /// Test whether the given input is locked, i.e. is present
+    /// in the lockfile.
+    pub(crate) fn is_locked(&self, input: &impl AsRef<InputKey>) -> bool {
+        let input = input.as_ref();
+
+        match input {
+            InputKey::Local(key) => {
+                if let Some(path) = key.root_relative_path() {
+                    self.inner.workflows.contains_key(path.as_str())
+                } else {
+                    false
+                }
+            }
+            InputKey::Remote(key) => self.inner.workflows.contains_key(key.path().as_str()),
+            // We have no meaningful way to determine whether a `stdin`
+            // input is present in the lockfile.
+            InputKey::Stdin(_) => false,
         }
     }
 }

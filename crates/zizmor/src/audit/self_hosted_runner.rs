@@ -6,7 +6,6 @@
 //! whether self-hosted runners are ephemeral or not.
 
 use super::{Audit, AuditLoadError, audit_meta};
-use crate::config::Config;
 use crate::finding::Finding;
 use crate::finding::location::Locatable as _;
 use crate::models::workflow::runners::{Runner, RunnerEvidence};
@@ -37,10 +36,10 @@ impl Audit for SelfHostedRunner {
     async fn audit_normal_job<'doc>(
         &self,
         job: &NormalJob<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        let included_runners = &config.self_hosted_runner_config.deny_runners;
-        let excluded_groups = &config.self_hosted_runner_config.allow_groups;
+        let included_runners = &group.config().self_hosted_runner_config.deny_runners;
+        let excluded_groups = &group.config().self_hosted_runner_config.allow_groups;
 
         let self_hosted_runners = job
             .runners(included_runners, excluded_groups)
