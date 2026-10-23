@@ -222,14 +222,14 @@ fn local_collection_includes_lockfile() -> anyhow::Result<()> {
     // as expected.
     insta::assert_snapshot!(
         Zizmor::cargo_bin()
-            .input(workspace.path().join(".github/"))
+            .input(workspace.path().join(".github"))
             .output(OutputMode::Both)
             .setenv("RUST_LOG", "zizmor::registry::input=debug")
             .run()?,
         @r#"
     DEBUG zizmor::registry::input: collecting all eligible inputs under '@@INPUT@@'
     DEBUG collect_from_dir{path="@@INPUT@@"}:collect_from_generic_dir{path="@@INPUT@@" root=Some(Root { request_is_root: false, path: "@@REPO_ROOT@@" })}: zizmor::registry::input: performing generic directory collection because '@@INPUT@@' is not a Git root
-    DEBUG collect_from_dir{path="@@INPUT@@"}:collect_from_generic_dir{path="@@INPUT@@" root=Some(Root { request_is_root: false, path: "@@REPO_ROOT@@" })}: zizmor::registry::input: registering workflow input with key file://@@INPUT@@workflows/example.yml
+    DEBUG collect_from_dir{path="@@INPUT@@"}:collect_from_generic_dir{path="@@INPUT@@" root=Some(Root { request_is_root: false, path: "@@REPO_ROOT@@" })}: zizmor::registry::input: registering workflow input with key file://@@INPUT@@/workflows/example.yml
     DEBUG zizmor::registry::input: collected a group with 1 inputs (actions lockfile=true)
      WARN zizmor::registry::input: one or more inputs uses a GitHub Actions workflow lockfile; see https://docs.zizmor.sh/usage/#workflow-lockfiles for details
     No findings to report. Good job!
