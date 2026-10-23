@@ -1015,7 +1015,7 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 
 [[package]]
 name = "github-actions-expressions"
-version = "1.31.1"
+version = "1.32.0-rc1"
 dependencies = [
  "insta",
  "serde",
@@ -1026,7 +1026,7 @@ dependencies = [
 
 [[package]]
 name = "github-actions-models"
-version = "1.31.1"
+version = "1.32.0-rc1"
 dependencies = [
  "indexmap",
  "insta",
@@ -2055,7 +2055,7 @@ checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
 
 [[package]]
 name = "pre-commit-models"
-version = "1.31.1"
+version = "1.32.0-rc1"
 dependencies = [
  "indexmap",
  "serde",
@@ -2789,7 +2789,7 @@ dependencies = [
 
 [[package]]
 name = "subfeature"
-version = "1.31.1"
+version = "1.32.0-rc1"
 dependencies = [
  "memchr",
  "regex",
@@ -3303,7 +3303,7 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-iter"
-version = "1.31.1"
+version = "1.32.0-rc1"
 dependencies = [
  "tree-sitter",
  "tree-sitter-yaml",
@@ -4211,7 +4211,7 @@ dependencies = [
 
 [[package]]
 name = "yamlpatch"
-version = "1.31.1"
+version = "1.32.0-rc1"
 dependencies = [
  "indexmap",
  "insta",
@@ -4225,7 +4225,7 @@ dependencies = [
 
 [[package]]
 name = "yamlpath"
-version = "1.31.1"
+version = "1.32.0-rc1"
 dependencies = [
  "line-index",
  "self_cell",
@@ -4343,7 +4343,7 @@ dependencies = [
 
 [[package]]
 name = "zizmor"
-version = "1.31.1"
+version = "1.32.0-rc1"
 dependencies = [
  "annotate-snippets",
  "anstream",
@@ -4405,7 +4405,7 @@ dependencies = [
 
 [[package]]
 name = "zizmor-dev"
-version = "1.31.1"
+version = "1.32.0-rc1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -4418,7 +4418,7 @@ dependencies = [
 
 [[package]]
 name = "zizmor-sarif"
-version = "1.31.1"
+version = "1.32.0-rc1"
 dependencies = [
  "serde",
  "serde_json",
