@@ -1,0 +1,21 @@
+name: quotes
+on: push
+
+permissions: {}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+        env:
+          FOO: '${{ ''foo'' }}'
+          APOSTROPHE: '${{ ''don''''t'' }}'
+          TERNARY: '${{ github.ref == ''main'' && '''' || ''fallback'' }}'
+          SECRET: '${{ secrets[''TOKEN''] }}'
+          UNREDACTED: '${{ fromJSON(secrets[''TOKEN'']) }}'
+          ALL_SECRETS: '${{ format(''{0}'', toJSON(secrets)) }}'

@@ -9,7 +9,7 @@ use crate::{
         Finding, Fix, FixDisposition, Persona,
         location::{Feature, Location, Routable as _},
     },
-    models::{StepCommon, action::CompositeStep, workflow::Step},
+    models::{AsDocument as _, StepCommon, action::CompositeStep, workflow::Step},
     utils::parse_fenced_expressions_from_routable,
 };
 use subfeature::Subfeature;
@@ -121,7 +121,7 @@ impl Obfuscation {
     /// Creates a fix for constant-reducible expressions.
     fn create_expression_fix<'doc>(
         &self,
-        expr: &SpannedExpr<'doc>,
+        expr: &SpannedExpr<'_>,
         input: &'doc crate::audit::AuditInput,
         after: usize,
         raw: &'doc str,
@@ -136,7 +136,7 @@ impl Obfuscation {
             disposition: FixDisposition::Safe,
             patches: vec![Patch {
                 route: input.location().route,
-                operation: Op::RewriteFragment {
+                operation: Op::RewriteScalarFragment {
                     from: Subfeature::new(after, raw),
                     to: evaluated.into(),
                 },
@@ -268,8 +268,8 @@ impl Audit for Obfuscation {
         }
 
         for (expr, expr_span) in parse_fenced_expressions_from_routable(input) {
-            let Ok(parsed) = Expr::parse(expr.as_bare()) else {
-                tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_bare());
+            let Ok(parsed) = Expr::parse(expr.text()) else {
+                tracing::warn!("couldn't parse expression: {expr}", expr = expr.text());
                 continue;
             };
 
@@ -282,21 +282,24 @@ impl Audit for Obfuscation {
 
                 // Add all annotations as locations
                 for (annotation, origin, persona) in &obfuscated_annotations {
-                    let after = expr_span.start + origin.span.start;
-                    let subfeature = Subfeature::new(after, origin.raw);
+                    let span = expr.source_span(origin.span.as_range());
 
                     finding_builder =
                         finding_builder
                             .persona(*persona)
                             .add_raw_location(Location::new(
                                 input.location().annotated(*annotation).primary(),
-                                Feature::from_subfeature(&subfeature, input),
+                                Feature::from_span(&span, input),
                             ));
                 }
 
                 if parsed.constant_reducible()
-                    && let Some(fix) =
-                        self.create_expression_fix(&parsed, input, expr_span.start, expr.as_raw())
+                    && let Some(fix) = self.create_expression_fix(
+                        &parsed,
+                        input,
+                        expr_span.start,
+                        &input.as_document().source()[expr_span.clone()],
+                    )
                 {
                     // If the entire expression is constant reducible we need to replace the whole thing,
                     // including its fencing, to avoid leaving behind a semantically different fenced expression.
@@ -306,11 +309,12 @@ impl Audit for Obfuscation {
                 } else {
                     // Check for constant-reducible subexpressions
                     for subexpr in parsed.constant_reducible_subexprs() {
+                        let span = subexpr.origin.span.as_range();
                         if let Some(fix) = self.create_expression_fix(
                             subexpr,
                             input,
-                            expr_span.start + subexpr.origin.span.start,
-                            subexpr.origin.raw,
+                            expr.source_span(span.clone()).start,
+                            expr.source_text(span),
                         ) {
                             finding_builder = finding_builder.fix(fix);
                             break; // Only apply one fix at a time to avoid conflicts
