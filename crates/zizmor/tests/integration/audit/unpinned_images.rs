@@ -376,6 +376,82 @@ fn test_docker_action() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_matrix_container_mapping_pedantic() -> anyhow::Result<()> {
+    // Regression test for #2475: a matrix `container` given as a mapping
+    // (`container: {image: ..., env: ...}`) must be flagged exactly like
+    // the plain-string form. The hash-pinned mapping job stays silent.
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test(
+                "unpinned-images/matrix-container-mapping.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @"
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:33:5
+       |
+    24 |       matrix:
+       |       ------ this matrix
+    ...
+    27 |             container: rockylinux:9
+       |             ----------------------- this expansion of matrix.container
+    ...
+    33 |     container: ${{ matrix.container }}
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:33:5
+       |
+    24 |       matrix:
+       |       ------ this matrix
+    ...
+    30 |             container: rockylinux/rockylinux:10
+       |             ----------------------------------- this expansion of matrix.container
+    ...
+    33 |     container: ${{ matrix.container }}
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:54:5
+       |
+    41 |       matrix:
+       |       ------ this matrix
+    ...
+    45 |               image: rockylinux:9
+       |               ------------------- this expansion of matrix.container.image
+    ...
+    54 |     container: ${{ matrix.container }}
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:54:5
+       |
+    41 |       matrix:
+       |       ------ this matrix
+    ...
+    49 |               image: rockylinux/rockylinux:10
+       |               ------------------------------- this expansion of matrix.container.image
+    ...
+    54 |     container: ${{ matrix.container }}
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    4 findings: 0 informational, 0 low, 0 medium, 4 high
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_issue_2097_repro() -> anyhow::Result<()> {
     // `${{ matrix.mysql || '' }}` expands to either a hash-pinned image or an
     // empty (absent) container, so there's nothing to report.
