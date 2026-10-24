@@ -1,0 +1,70 @@
+# Regression test for https://github.com/zizmorcore/zizmor/issues/2475:
+# `unpinned-images` flagged static matrix values when `container:` was a
+# plain string, but silently missed the identical images when `container:`
+# was a mapping (needed to also pass `env` and friends).
+# The string-container and mapping-container jobs below are the issue's
+# reproduction workflow; the mapping-container-pinned job pins its mapping
+# images by hash and must stay silent.
+
+name: unpinned-images
+
+on: push
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # `zizmor --persona=pedantic` flags `unpinned-images` for both matrix items.
+  string-container:
+    name: string-container (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            container: rockylinux:9
+            # ^^^^^^^^^^^^^^^^^ FLAGGED
+          - arch: arm64
+            container: rockylinux/rockylinux:10
+            # ^^^^^^^^^^^^^^^^^ FLAGGED
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - run: cat /etc/os-release
+
+  # Same images, but as `container` mappings - must be flagged too.
+  mapping-container:
+    name: mapping-container (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            container:
+              image: rockylinux:9
+              # ^^^^^^^^^^^^^^^^^ SHOULD BE FLAGGED
+          - arch: arm64
+            container:
+              image: rockylinux/rockylinux:10
+              # ^^^^^^^^^^^^^^^^^ SHOULD BE FLAGGED
+              env:
+                PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - run: cat /etc/os-release
+
+  # Same shape, but hash-pinned: must NOT be flagged.
+  mapping-container-pinned:
+    name: mapping-container-pinned (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            container:
+              image: rockylinux:9@sha256:bfadbbcb25fd75c30c295843f1a861414f46c080f0f1d0c5cd93843c88edabcf
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - run: cat /etc/os-release

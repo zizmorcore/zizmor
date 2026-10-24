@@ -12,7 +12,7 @@ use crate::{
     state::AuditState,
 };
 
-use github_actions_expressions::{Expr, SpannedExpr, literal::Literal};
+use github_actions_expressions::{Expr, SpannedExpr, context::Context, literal::Literal};
 use github_actions_models::{
     action::DockerActionUses,
     common::{
@@ -158,6 +158,32 @@ fn collect_candidates<'doc>(
     }
 }
 
+/// Whether the given expansion path is the `image` field of the matrix
+/// value referenced by `context`.
+///
+/// A matrix reference like `${{ matrix.container }}` can denote a whole
+/// container mapping rather than a bare image string: each matrix row's
+/// `container` may itself be a mapping, e.g.
+/// `container: {image: rockylinux:9, env: ...}`. In that case the image
+/// lives one level deeper, at `<context>.image`, while the matrix
+/// expansion machinery only records the leaf paths (e.g.
+/// `matrix.container.image`). Matching just that `image` child — and not
+/// the mapping's other children, like `env` — keeps the expansion
+/// precise: only the image reference is analyzed as an image.
+fn is_container_image_expansion(context: &Context, expansion_path: &str) -> bool {
+    let Some(context) = context.as_pattern() else {
+        return false;
+    };
+    let Some(expansion) = Context::parse(expansion_path) else {
+        return false;
+    };
+    let Some(expansion) = expansion.as_pattern() else {
+        return false;
+    };
+
+    expansion == format!("{context}.image")
+}
+
 /// Collect candidate image references from a single leaf expression.
 fn candidates_for_leaf<'doc>(
     leaf: &SpannedExpr<'_>,
@@ -191,7 +217,10 @@ fn candidates_for_leaf<'doc>(
             // First: evaluate candidates from static expansions
             let mut candidates = expansions
                 .iter()
-                .filter(|expansion| context.matches(expansion.path.as_str()))
+                .filter(|expansion| {
+                    context.matches(expansion.path.as_str())
+                        || is_container_image_expansion(context, expansion.path.as_str())
+                })
                 .filter(|expansion| expansion.is_static())
                 .filter_map(|expansion| {
                     let annotations = vec![
