@@ -101,7 +101,7 @@ impl Audit for BotConditions {
     async fn audit_reusable_job<'doc>(
         &self,
         job: &super::ReusableWorkflowCallJob<'doc>,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         // Reusable workflow calls have no steps, only a job-level condition.
         let conds = match &job.r#if {
