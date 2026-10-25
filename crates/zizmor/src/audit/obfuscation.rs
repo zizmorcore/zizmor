@@ -137,18 +137,15 @@ impl Obfuscation {
         }
     }
 
-    /// Creates a fix for an expression whose evaluation can be substituted.
+    /// Creates a fix from a rendered replacement.
     fn create_expression_fix<'doc>(
         &self,
-        evaluation: &Evaluation,
+        replacement: String,
         input: &'doc crate::audit::AuditInput,
         after: usize,
         raw: &'doc str,
-        is_subexpr: bool,
-    ) -> Option<Fix<'doc>> {
-        let evaluated = Self::expression_replacement(evaluation, is_subexpr)?;
-
-        Some(Fix {
+    ) -> Fix<'doc> {
+        Fix {
             title: "replace with evaluated constant".into(),
             key: input.location().key,
             disposition: FixDisposition::Safe,
@@ -156,43 +153,60 @@ impl Obfuscation {
                 route: input.location().route,
                 operation: Op::RewriteFragment {
                     from: Subfeature::new(after, raw),
-                    to: evaluated.into(),
+                    to: replacement.into(),
                 },
             }],
-        })
+        }
     }
 
-    fn obfuscated_exprs<'src>(
+    fn obfuscated_exprs<'doc>(
         &self,
-        expr: &SpannedExpr<'src>,
-    ) -> Vec<(&'static str, Origin<'src>, Persona)> {
+        expr: &SpannedExpr<'doc>,
+        input: &'doc AuditInput,
+        after: usize,
+        raw: &'doc str,
+    ) -> (
+        Vec<(&'static str, Origin<'doc>, Persona)>,
+        Option<Fix<'doc>>,
+    ) {
         let mut annotations = vec![];
+        let mut fix = None;
 
         // Check for some common expression obfuscation patterns.
 
         // Expressions that can be constant reduced should be simplified to
         // their evaluated form.
-        if expr
+        if let Some(replacement) = expr
             .consteval()
             .and_then(|evaluation| Self::expression_replacement(&evaluation, false))
-            .is_some()
         {
             annotations.push((
                 "can be replaced by its static evaluation",
                 expr.origin,
                 Persona::Regular,
             ));
+            // Replace the fencing too: `${{ 'foo' }}` simplifies to `foo`.
+            fix = Some(self.create_expression_fix(replacement, input, after, raw));
         } else {
             // Check for subexpressions that can be simplified.
             for (subexpr, evaluation) in expr.consteval_subexprs() {
-                if Self::expression_replacement(&evaluation, true).is_none() {
+                let Some(replacement) = Self::expression_replacement(&evaluation, true) else {
                     continue;
-                }
+                };
                 annotations.push((
                     "can be reduced to a constant",
                     subexpr.origin,
                     Persona::Regular,
                 ));
+                // Only apply one fix at a time to avoid conflicts.
+                if fix.is_none() {
+                    fix = Some(self.create_expression_fix(
+                        replacement,
+                        input,
+                        after + subexpr.origin.span.start,
+                        subexpr.origin.raw,
+                    ));
+                }
             }
         }
 
@@ -206,7 +220,7 @@ impl Obfuscation {
 
         // TODO: calculate call breadth/depth and flag above thresholds.
 
-        annotations
+        (annotations, fix)
     }
 
     fn process_step<'doc>(
@@ -297,7 +311,8 @@ impl Audit for Obfuscation {
                 continue;
             };
 
-            let obfuscated_annotations = self.obfuscated_exprs(&parsed);
+            let (obfuscated_annotations, fix) =
+                self.obfuscated_exprs(&parsed, input, expr_span.start, expr.as_raw());
 
             if !obfuscated_annotations.is_empty() {
                 let mut finding_builder = Self::finding()
@@ -318,34 +333,8 @@ impl Audit for Obfuscation {
                             ));
                 }
 
-                if let Some(fix) = parsed.consteval().and_then(|evaluation| {
-                    self.create_expression_fix(
-                        &evaluation,
-                        input,
-                        expr_span.start,
-                        expr.as_raw(),
-                        false,
-                    )
-                }) {
-                    // If the entire expression is constant reducible we need to replace the whole thing,
-                    // including its fencing, to avoid leaving behind a semantically different fenced expression.
-                    // For example, `${{ 'foo' }}` is equivalent to `foo`, but if we only replaced the inner
-                    // expression we'd end up with `${{ foo }}`, which is not.
+                if let Some(fix) = fix {
                     finding_builder = finding_builder.fix(fix);
-                } else {
-                    // Check for subexpressions with replaceable evaluations.
-                    for (subexpr, evaluation) in parsed.consteval_subexprs() {
-                        if let Some(fix) = self.create_expression_fix(
-                            &evaluation,
-                            input,
-                            expr_span.start + subexpr.origin.span.start,
-                            subexpr.origin.raw,
-                            true,
-                        ) {
-                            finding_builder = finding_builder.fix(fix);
-                            break; // Only apply one fix at a time to avoid conflicts
-                        }
-                    }
                 }
 
                 findings.push(finding_builder.build(input).map_err(Self::err)?);
