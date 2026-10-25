@@ -9,6 +9,13 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* zizmor now has **experimental** support for GitHub Actions workflow lockfiles.
+  Please see [the limitations documentation](./usage.md#workflow-lockfiles)
+  for more information about the current implementation and its limitations
+  (#2463)
+
 ### Enhancements 🌱
 
 * zizmor's input collection is not "root-aware" by default,
@@ -24,7 +31,7 @@ of `zizmor`.
 
 * Fixed a bug where the [bot-conditions] audit did not properly flag
   `if:` condition of jobs that call a reusable workflow (#2457)
-  
+
 ## 1.31.1
 
 ### Bug Fixes 🐛
