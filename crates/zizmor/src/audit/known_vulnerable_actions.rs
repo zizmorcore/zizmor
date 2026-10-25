@@ -330,16 +330,16 @@ impl Audit for KnownVulnerableActions {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step, config).await
+        self.process_step(step, group.config()).await
     }
 
     async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step, config).await
+        self.process_step(step, group.config()).await
     }
 }

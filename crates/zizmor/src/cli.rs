@@ -83,6 +83,14 @@ pub(crate) struct InputArgs {
     /// in collected inputs.
     #[arg(long)]
     pub(crate) strict_collection: bool,
+
+    /// Ignore each collected input's lockfile, if present.
+    /// This does not stop lockfile loading, it just stops zizmor from using
+    /// the lockfile's state from informing audit results.
+    ///
+    /// NOTE: This is an experimental flag, and may be removed at any point.
+    #[arg(long, hide = true)]
+    pub(crate) ignore_lockfile: bool,
 }
 
 #[derive(Debug, Args)]
@@ -496,16 +504,32 @@ impl From<ColorMode> for anstream::ColorChoice {
 }
 
 /// How `zizmor` collects inputs from local and remote repository sources.
+///
+/// When `zizmor` is given a local directory, this mode is also affected
+/// by whether that directory is a Git repository root (e.g. `zizmor .`
+/// where `.` is the Git root).
+///
+/// When a source is a Git root, `zizmor` collects that source's inputs
+/// in "root-aware" mode. Only the following root-relative patterns are collected:
+/// - `{root}/.github/workflows/*.{yml,yaml}`
+/// - `{root}/**/action.{yml,yaml}`
+/// - `{root}/.github/dependabot.{yml,yaml}`
+/// - `{root}/.pre-commit-config.{yml,yaml}`
+/// - `{root}/.pre-commit-hooks.{yml,yaml}`
+///
+/// Those patterns are also subject to the mode itself. For example, actions will not
+/// be collected if the mode does not specify them, regardless of whether the
+/// directory source is a repository root or not.
 #[derive(Copy, Clone, Debug, Default, ValueEnum, Eq, PartialEq, Hash)]
 pub(crate) enum CliCollectionMode {
     /// Collect all possible inputs, ignoring `.gitignore` files.
     All,
-    /// Collect all possible inputs, respecting `.gitignore` files.
+    /// Collect all inputs, respecting `.gitignore` files.
     #[default]
     Default,
-    /// Collect workflows.
+    /// Collect GitHub Actions workflows.
     Workflows,
-    /// Collect action definitions (i.e. `action.yml`).
+    /// Collect GitHub Actions action definitions (i.e. `action.yml`).
     Actions,
     /// Collect Dependabot configuration files (i.e. `dependabot.yml`).
     Dependabot,
@@ -622,6 +646,7 @@ pub(crate) struct CollectionOptions {
     pub(crate) mode_set: CollectionModeSet,
     pub(crate) strict: bool,
     pub(crate) no_config: bool,
+    pub(crate) ignore_lockfile: bool,
     /// Global configuration, if any.
     pub(crate) global_config: Option<Config>,
 }

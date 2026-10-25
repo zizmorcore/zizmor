@@ -85,27 +85,27 @@ impl Audit for ForbiddenUses {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step, config)
+        self.process_step(step, group.config())
     }
 
     async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step, config)
+        self.process_step(step, group.config())
     }
 
     async fn audit_pre_commit_config<'doc>(
         &self,
         pre_commit: &'doc PreCommitConfig,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        let Some(config) = config.forbidden_uses_config.as_ref() else {
+        let Some(config) = group.config().forbidden_uses_config.as_ref() else {
             tracing::trace!("no forbidden-uses config for this input; skipping");
             return Ok(findings);
         };

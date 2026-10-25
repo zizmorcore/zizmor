@@ -2,7 +2,6 @@ use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::finding::location::Locatable as _;
 use crate::{
     audit::AuditError,
-    config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::workflow::Workflow,
     state::AuditState,
@@ -26,7 +25,7 @@ impl Audit for ConcurrencyLimits {
     async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

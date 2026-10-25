@@ -5,7 +5,6 @@ use yamlpatch::{Op, Patch};
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, AuditState, audit_meta},
-    config::Config,
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
         location::{Comment, Feature, Locatable, Location, Routable as _},
@@ -265,15 +264,23 @@ impl Audit for RefVersionMismatch {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        // If we have a lockfile and this step's workflow is present in it,
+        // then there are no possible mismatches.
+        if let Some(lock) = group.lock()
+            && lock.is_locked(step)
+        {
+            return Ok(vec![]);
+        }
+
         Ok(self.process_step(step).await?.into_iter().collect())
     }
 
     async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         Ok(self.process_step(step).await?.into_iter().collect())
     }
@@ -281,7 +288,7 @@ impl Audit for RefVersionMismatch {
     async fn audit_reusable_job<'doc>(
         &self,
         job: &ReusableWorkflowCallJob<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let Uses::Repository(uses) = &job.uses else {
             return Ok(vec![]);

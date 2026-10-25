@@ -70,7 +70,7 @@ impl Audit for BotConditions {
     async fn audit_normal_job<'doc>(
         &self,
         job: &super::NormalJob<'doc>,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         // Track conditions with explicit categorization
         let mut conds = vec![];

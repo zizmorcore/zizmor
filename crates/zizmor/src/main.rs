@@ -308,6 +308,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
         mode_set: collection_mode_set,
         strict: app.input.strict_collection,
         no_config: app.args.no_config,
+        ignore_lockfile: app.input.ignore_lockfile,
         global_config,
     };
 
@@ -356,8 +357,8 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             );
         }
 
-        for (input_key, input) in registry.iter_inputs() {
-            Span::current().pb_set_message(input.key().filename());
+        for (group, input_key, input) in registry.iter_inputs() {
+            Span::current().pb_set_message(input_key.presentation_path());
 
             if input.as_document().has_anchors() {
                 warn_once!(
@@ -366,11 +367,10 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             }
 
             let mut completion_stream = FuturesOrdered::new();
-            let config = registry.get_config(input_key.group());
             for (ident, audit) in audit_registry.iter_audits() {
                 tracing::debug!("scheduling {ident} on {input}", input = input.key());
 
-                completion_stream.push_back(audit.audit(ident, input, config));
+                completion_stream.push_back(audit.audit(ident, input, group));
             }
 
             while let Some(findings) = completion_stream.next().await {
@@ -387,7 +387,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
             tracing::info!(
                 "🌈 completed {input}",
-                input = input.key().presentation_path()
+                input = input_key.presentation_path()
             );
         }
     }

@@ -1,12 +1,13 @@
-//! Data models for GitHub Actions lockfiles.
+//! Data models for GitHub Actions workflow lockfiles.
 //!
 //! Resources:
 //! * <https://github.com/github/actions-lockfile>
+//! * <https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles>
 
 use indexmap::IndexMap;
 use serde::Deserialize;
 
-/// Represents a GitHub Actions lockfile.
+/// Represents a GitHub Actions workflow lockfile.
 #[derive(Deserialize, Debug)]
 pub struct Lock {
     /// The lockfile's version.

@@ -613,10 +613,10 @@
           "description": "All explicitly defined dependencies."
         },
         "indirect": {
-          "description": "Dependencies of direct dependencies (also known as sub-dependencies, or transient dependencies)."
+          "description": "Dependencies of direct dependencies (also known as sub-dependencies, or transitive dependencies). Supported by bundler, pip, composer, cargo, gomod, and uv."
         },
         "all": {
-          "description": "All explicitly defined dependencies. For bundler, pip, composer, cargo, also the dependencies of direct dependencies."
+          "description": "All explicitly defined dependencies. For bundler, pip, composer, cargo, gomod, and uv, also the dependencies of direct dependencies."
         },
         "production": {
           "description": "Only dependencies in the 'Product dependency group'."
@@ -1214,20 +1214,6 @@
               "required": ["directory"]
             }
           ]
-        },
-        {
-          "$comment": "If multi-ecosystem-group is specified, patterns is required",
-          "if": {
-            "required": ["multi-ecosystem-group"]
-          },
-          "then": {
-            "properties": {
-              "patterns": {
-                "$ref": "#/definitions/update/properties/patterns"
-              }
-            },
-            "required": ["patterns"]
-          }
         }
       ]
     },

@@ -236,26 +236,41 @@ impl Audit for UnpinnedUses {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        self.process_step(step, config).await
+        // If we have a lockfile and this step's workflow is present in it,
+        // then all steps are pinned regardless of their `uses:` form.
+        if let Some(lock) = group.lock()
+            && lock.is_locked(step)
+        {
+            return Ok(vec![]);
+        }
+
+        self.process_step(step, group.config()).await
     }
 
     async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
-        self.process_step(step, config).await
+        // NOTE: observe that we have no lockfile check here,
+        // since action definitions cannot be directly locked
+        // yet.
+        // See: <https://github.com/github/gh-actions-lock/issues/183>
+        self.process_step(step, group.config()).await
     }
 
     async fn audit_reusable_job<'doc>(
         &self,
         job: &ReusableWorkflowCallJob<'doc>,
-        config: &Config,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        // NOTE: GitHub's lockfile does not support reusable workflows
+        // yet, so we have no lockfile check here.
+        // See: <https://github.com/github/gh-actions-lock/issues/179>
         Ok(self
-            .process_uses(&job.uses, job, config)
+            .process_uses(&job.uses, job, group.config())
             .await?
             .into_iter()
             .collect())

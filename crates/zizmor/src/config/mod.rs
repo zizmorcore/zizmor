@@ -18,7 +18,6 @@ use thiserror::Error;
 #[cfg(feature = "schema")]
 pub mod schema;
 
-use crate::audit::self_hosted_runner::SelfHostedRunner;
 use crate::{
     App, CollectionOptions,
     audit::{
@@ -31,6 +30,7 @@ use crate::{
     models::uses::RepositoryUsesPattern,
     registry::input::InputSlug,
 };
+use crate::{audit::self_hosted_runner::SelfHostedRunner, registry::input::root::Root};
 
 const CONFIG_CANDIDATES: &[&str] = &[
     ".github/zizmor.yml",
@@ -591,10 +591,9 @@ impl Config {
     /// Discover a [`Config`] appropriate for the given directory (as `path`).
     ///
     /// This uses the following discovery procedure:
-    /// 1. If we have a root directory (i.e. a respository root discovered
-    ///    by [`crate::registry::input::InputGroup::discover_root`]),
-    ///    then we try `{root}/.github/zizmor.ya?ml` and `{root}/zizmor.ya?ml`
-    ///    in that order. If none is found, config search ends here.
+    /// 1. If we have a Git root, then we try `{root}/.github/zizmor.ya?ml`
+    ///    and `{root}/zizmor.ya?ml` in that order. If none is found, config
+    ///    search ends here.
     /// 2. If we don't have a root directory, we search relative to
     ///    the given directory.
     /// 3. If the given directory is `blahblah/.github/workflows/`,
@@ -609,7 +608,7 @@ impl Config {
     #[tracing::instrument]
     fn discover_in_dir(
         path: &Utf8Path,
-        root: Option<&Utf8Path>,
+        root: Option<&Root>,
     ) -> Result<Option<Self>, ConfigErrorInner> {
         tracing::debug!("attempting config discovery for `{path}` (root: `{root:?}`)");
 
@@ -618,7 +617,7 @@ impl Config {
             let _span = tracing::span!(tracing::Level::DEBUG, "happy path").entered();
 
             for candidate in CONFIG_CANDIDATES {
-                let candidate_path = root.join(candidate);
+                let candidate_path = root.path().join(candidate);
 
                 if candidate_path.is_file() {
                     tracing::debug!("found config candidate at `{candidate_path}`");
@@ -687,7 +686,7 @@ impl Config {
     /// `zizmor.yml` in the directory itself.
     pub(crate) async fn discover_local(
         path: &Utf8Path,
-        root: Option<&Utf8Path>,
+        root: Option<&Root>,
     ) -> Result<Option<Self>, ConfigError> {
         tracing::debug!("discovering config for local input `{path}` (root: `{root:?}`)");
 

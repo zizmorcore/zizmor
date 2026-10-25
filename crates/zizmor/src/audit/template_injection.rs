@@ -25,7 +25,6 @@ use itertools::Itertools as _;
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     audit::AuditError,
-    config::Config,
     finding::{
         Confidence, Finding, Fix, Persona, Severity,
         location::{Routable as _, SymbolicLocation},
@@ -625,7 +624,7 @@ impl Audit for TemplateInjection {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }
@@ -633,7 +632,7 @@ impl Audit for TemplateInjection {
     async fn audit_composite_step<'a>(
         &self,
         step: &CompositeStep<'a>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step)
     }

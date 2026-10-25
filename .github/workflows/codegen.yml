@@ -26,6 +26,8 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
       - name: try to refresh schemas
         run: |
           make refresh-schemas
@@ -37,12 +39,12 @@ jobs:
           commit-message: "[BOT] update JSON schemas from SchemaStore"
           branch: refresh-schemas
           branch-suffix: timestamp
-          title: "[BOT] update JSON schemas from SchemaStore"
+          title: "[BOT] update JSON schemas"
           body: |
             :robot: :warning: :robot:
 
             This is an automated pull request, updating the embedded JSON
-            schemas after a SchemaStore change was detected.
+            schemas after a change was detected.
 
             Please review manually before merging.
           assignees: ${{ env.PR_ASSIGNEES }}
@@ -63,7 +65,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: try to refresh context capabilities
         run: |
@@ -101,7 +103,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: try to refresh CodeQL injection sinks
         run: |
@@ -140,7 +142,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: try to refresh expression tests
         run: |

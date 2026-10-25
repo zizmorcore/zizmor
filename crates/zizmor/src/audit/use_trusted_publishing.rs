@@ -445,7 +445,7 @@ impl Audit for UseTrustedPublishing {
     async fn audit_step<'doc>(
         &self,
         step: &crate::models::workflow::Step<'doc>,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = self.process_step(step)?;
 
@@ -505,7 +505,7 @@ impl Audit for UseTrustedPublishing {
     async fn audit_composite_step<'doc>(
         &self,
         step: &crate::models::action::CompositeStep<'doc>,
-        _config: &crate::config::Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step)
     }

@@ -12,14 +12,21 @@ There are four input sources that `zizmor` knows about:
 
 1. Individual input files, e.g. `foo.yml`, `my-action/action.yml`,
    and `.pre-commit-config.yaml`;
-2. "Local" repositories in the form of a directory, e.g. `my-repo/`;
+2. "Local" directories, e.g. `my-repo/`;
+
+    !!! note
+
+        As of zizmor `v1.32.0`, local directories are collected differently
+        depending on whether or not they're a Git repository.
+        See below for more information.
+
 3. "Remote" (GitHub) repositories in the form of a "slug", e.g.
    `pypa/sampleproject`;
 
     !!! tip
 
         By default, a remote repository will be audited from the `HEAD`
-        of the default branch. To control this, you can append a `git`
+        of the default branch. To control this, you can append a Git
         reference to the slug:
 
         ```bash
@@ -105,6 +112,25 @@ zizmor --collect=pre-commit example/example
 # collect both workflows and actions, but nothing else
 zizmor --collect=workflows,actions example/example
 ```
+
+!!! tip
+
+    As of `v1.32.0`, zizmor specializes its local directory collection
+    depending on whether the input is a Git root.
+
+    This changes which inputs are collected by default by limiting
+    zizmor to only inputs that would actually be used, rather than
+    trying to discover every possible valid workflow, pre-commit config,
+    etc.
+
+    For example, if `zizmor foo/` is invoked and `foo/` is a Git repository
+    root, then zizmor will collect `foo/.github/workflows/ci.yml` but **not**
+    `foo/third_party/bar/.github/workflows/ci.yml`, since the latter would
+    not actually be used by GitHub Actions.
+
+    However, if `zizmor foo/third_party/` is invoked then all nested
+    inputs *will* be collected, since `foo/third_pary/` is not itself
+    a Git root.
 
 !!! tip
 
@@ -1136,3 +1162,66 @@ steps are handled. In other words: anything that _would_ be flagged in a serial
 step _should_ also be flagged if nested inside a `#!yaml parallel:` block.
 
 [supports parallel steps]: https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/
+
+### GitHub Actions workflow lockfiles { #workflow-lockfiles }
+
+!!! tip
+
+    Support for workflow lockfiles is available in `v1.32.0` and later.
+
+!!! warning "Experimental"
+
+    `zizmor`'s support for workflow lockfiles is currently **experimental**.
+    You will probably encounter bugs if you run `zizmor` on a repository
+    that uses a lockfile; please
+    [report any issues you have](https://github.com/zizmorcore/zizmor/issues/new)!
+
+As of October 2026, GitHub Actions [supports lockfiles for workflows].
+
+Workflow lockfiles are currently a "public preview" feature on GitHub itself,
+meaning that they're subject to change before GitHub decides to stabilize them.
+zizmor makes a best-effort attempt to remain compatible with whatever the current
+state of the public preview is, but will not retain backwards compatibility
+beyond what GitHub decides to support.
+
+If you decide to experiment with workflow lockfiles (and `zizmor`'s support
+for them), we **strongly encourage** you to read GitHub's [workflow dependency lockfiles]
+documentation and be aware of some current limitations:
+
+- Workflow lockfiles cannot currently lock reusable workflow calls.
+
+    If you have reusable workflow calls, you currently need to hash-pin them
+    manually. `zizmor`'s [unpinned-uses] audit will flag this.
+
+    !!! tip
+
+        See github/gh-actions-lock#179 for more information.
+
+- Workflow lockfiles cannot currently lock composite actions themselves (i.e.
+  `action.yml` definitions). Composite actions are locked indirectly when _used_
+  by a workflow, but not on their own yet.
+
+    If you have composite action definitions, you currently need to hash-pin them
+    manually. `zizmor`'s [unpinned-uses] audit will flag this.
+
+    !!! tip
+
+        See github/gh-actions-lock#183 for more information.
+
+- Workflow lockfiles cannot currently lock some other forms of action mutability,
+  including Docker images.
+
+    If you have Docker image references, you currently need to hash-pin them
+    manually. `zizmor`'s [unpinned-images] audit will flag this.
+
+    !!! tip
+
+        See github/gh-actions-lock#128 for more information.
+
+[supports lockfiles for workflows]: https://github.blog/changelog/2026-10-14-github-actions-workflow-lockfiles-in-public-preview/
+
+[workflow dependency lockfiles]: https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles
+
+[unpinned-uses]: ./audits.md#unpinned-uses
+
+[unpinned-images]: ./audits.md#unpinned-images

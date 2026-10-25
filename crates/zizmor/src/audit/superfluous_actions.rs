@@ -5,7 +5,6 @@ use subfeature::Subfeature;
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    config::Config,
     finding::{Confidence, Finding, Persona, Severity},
     models::{StepCommon, action::CompositeStep, uses::RepositoryUsesPattern, workflow::Step},
     state::AuditState,
@@ -31,7 +30,7 @@ impl Audit for SuperfluousActions {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step).await
     }
@@ -39,7 +38,7 @@ impl Audit for SuperfluousActions {
     async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         self.process_step(step).await
     }

@@ -15,6 +15,8 @@
             "dotnet",
             "fail",
             "golang",
+            "haskell",
+            "julia",
             "lua",
             "node",
             "perl",
@@ -388,7 +390,7 @@
         "default": false
       },
       "fail_fast": {
-        "description": "(optional) if true this hook will run even if there are no matching files.",
+        "description": "(optional) if true pre-commit will stop running hooks if this hook fails.",
         "type": "boolean",
         "default": false
       },

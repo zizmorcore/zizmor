@@ -14,7 +14,9 @@ use crate::finding::location::Point;
 use crate::finding::{Persona, Severity};
 use crate::models::action::Action;
 use crate::models::dependabot::Dependabot;
+use crate::models::lock::Lock;
 use crate::models::workflow::Workflow;
+use crate::registry::input::root::Root;
 use crate::registry::input::{InputGroup, InputRegistry};
 use crate::registry::{FindingRegistry, input::InputKey};
 use crate::{AuditRegistry, AuditState};
@@ -56,6 +58,7 @@ impl LanguageServer for Backend {
         params: ls_types::InitializeParams,
     ) -> tower_lsp_server::jsonrpc::Result<ls_types::InitializeResult> {
         if let Some(workspaces) = params.workspace_folders {
+            let mut workspace_dirs = self.workspace_dirs.write().await;
             for workspace in workspaces {
                 let path = workspace.uri.path();
                 if path.is_empty() {
@@ -71,13 +74,7 @@ impl LanguageServer for Backend {
                     continue;
                 }
 
-                let path = Utf8PathBuf::from_str(path.as_str()).map_err(|_| {
-                    // TODO: Log warning instead of erroring here?
-                    tower_lsp_server::jsonrpc::Error::invalid_params(format!(
-                        "workspace folder path is not valid UTF-8: {:?}",
-                        workspace.uri
-                    ))
-                })?;
+                let path = Utf8PathBuf::from(path.as_str());
 
                 // TODO: Can this actually happen?
                 if !path.is_dir() {
@@ -93,7 +90,7 @@ impl LanguageServer for Backend {
                     continue;
                 }
 
-                self.workspace_dirs.write().await.push(path);
+                workspace_dirs.push(path);
             }
         }
 
@@ -129,6 +126,7 @@ impl LanguageServer for Backend {
                 scheme: None,
                 pattern: Some("**/.github/dependabot.{yml,yaml}".into()),
             },
+            // TODO: pre-commit patterns are missing here.
             // Config files.
             // TODO: Right now these are disabled, but at some point we might want to independently
             // monitor these and only reload the configuration when they change.
@@ -256,6 +254,28 @@ impl LanguageServer for Backend {
             .await;
         }
     }
+
+    async fn did_change_workspace_folders(
+        &self,
+        params: ls_types::DidChangeWorkspaceFoldersParams,
+    ) {
+        // A client (user) can update the list of workspace folders dynamically,
+        // e.g. in their IDE's UI.
+        let mut dirs = self.workspace_dirs.write().await;
+
+        dirs.retain(|dir| {
+            !params
+                .event
+                .removed
+                .iter()
+                .any(|removed| removed.uri.path().as_str() == dir)
+        });
+
+        dirs.extend(params.event.added.iter().filter_map(|added| {
+            let path = Utf8PathBuf::from(&added.uri.path().as_str());
+            path.is_dir().then_some(path)
+        }));
+    }
 }
 
 impl Backend {
@@ -281,43 +301,46 @@ impl Backend {
             anyhow::bail!("asked to audit unexpected file: {path}");
         };
 
-        // Try to find a configuration file for this audit.
-        // The approach below is probably wrong: we scan each workspace directory
-        // in order and use the first configuration we find. Instead, we should
-        // probably find the configuration file that is in the "closest"
-        // workspace to the file being audited.
-        let config = {
-            let mut config = Config::default();
+        // Try to find the repo root for the "most correct" workspace
+        // directory corresponding to the audit input.
+        // LSP allows workspace directories to overlap, so we approximate
+        // this by looking for the directory with the longest matching
+        // prefix.
+        let root = {
             let workspace_dirs = self.workspace_dirs.read().await;
 
-            for dir in workspace_dirs.as_slice() {
-                match Config::discover_local(dir.as_path(), Some(dir.as_path())).await {
-                    Ok(Some(cfg)) => {
-                        config = cfg;
-                        break;
-                    }
-                    Ok(None) => continue,
-                    Err(e) => {
-                        self.client
-                            .log_message(
-                                ls_types::MessageType::WARNING,
-                                format!(
-                                    "failed to load configuration from workspace dir {}: {e}",
-                                    dir.as_str()
-                                ),
-                            )
-                            .await;
-                    }
-                }
-            }
-
-            config
+            workspace_dirs
+                .iter()
+                .filter(|dir| path.starts_with(dir))
+                .max_by_key(|dir| dir.as_str().len())
+                .and_then(|dir| Root::discover(dir))
         };
 
-        // Note: we don't bother discovering the root directory
-        // for LSP inputs, since LSP diagnostics are always tied
-        // to a specific file, identified by an opaque URI.
-        let mut group = InputGroup::new(config, None);
+        let config = {
+            match Config::discover_local(path, root.as_ref()).await {
+                Ok(Some(config)) => config,
+                Ok(None) => Config::default(),
+                Err(err) => {
+                    self.client
+                        .log_message(
+                            ls_types::MessageType::WARNING,
+                            format!("failed to load configuration for {path}: {err}",),
+                        )
+                        .await;
+
+                    Config::default()
+                }
+            }
+        };
+
+        let lock = root
+            .as_ref()
+            .and_then(|root| Lock::discover_local(root).transpose())
+            .transpose()
+            .ok() // TODO: propagate lockfile discovery failures as a warning log
+            .flatten();
+
+        let mut group = InputGroup::new(config, root, lock);
         group.register_input(input)?;
         let mut input_registry = InputRegistry::new();
         input_registry.groups.insert("lsp".into(), group);
@@ -325,13 +348,9 @@ impl Backend {
         let mut registry =
             FindingRegistry::new(&input_registry, None, None, self.options.persona, false);
 
-        for (input_key, input) in input_registry.iter_inputs() {
+        for (group, _, input) in input_registry.iter_inputs() {
             for (ident, audit) in self.audit_registry.iter_audits() {
-                registry.extend(
-                    audit
-                        .audit(ident, input, input_registry.get_config(input_key.group()))
-                        .await?,
-                );
+                registry.extend(audit.audit(ident, input, group).await?);
             }
         }
 

@@ -6,7 +6,6 @@ use subfeature::Subfeature;
 
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
-    config::Config,
     finding::{Confidence, Finding, FindingBuilder, Persona, Severity, location::Locatable as _},
     models::{
         StepCommon as _,
@@ -67,7 +66,7 @@ impl Audit for ArchivedUses {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
@@ -94,7 +93,7 @@ impl Audit for ArchivedUses {
     async fn audit_composite_step<'doc>(
         &self,
         step: &CompositeStep<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
@@ -121,7 +120,7 @@ impl Audit for ArchivedUses {
     async fn audit_reusable_job<'doc>(
         &self,
         job: &ReusableWorkflowCallJob<'doc>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
@@ -148,7 +147,7 @@ impl Audit for ArchivedUses {
     async fn audit_pre_commit_config<'doc>(
         &self,
         pre_commit: &'doc PreCommitConfig,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 

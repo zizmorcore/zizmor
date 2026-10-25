@@ -14,7 +14,6 @@ use subfeature::Subfeature;
 use super::{Audit, AuditLoadError, Job, audit_meta};
 use crate::{
     audit::AuditError,
-    config::Config,
     finding::{Confidence, Finding, Severity, location::Locatable as _},
     github::{self, ComparisonStatus},
     models::{
@@ -286,7 +285,7 @@ impl Audit for ImpostorCommit {
     async fn audit_workflow<'doc>(
         &self,
         workflow: &'doc Workflow,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
@@ -348,7 +347,7 @@ impl Audit for ImpostorCommit {
     async fn audit_composite_step<'a>(
         &self,
         step: &super::CompositeStep<'a>,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
         let mut findings = vec![];
         let Some(Uses::Repository(uses)) = step.uses() else {
@@ -377,7 +376,7 @@ impl Audit for ImpostorCommit {
     async fn audit_pre_commit_config<'doc>(
         &self,
         pre_commit: &'doc PreCommitConfig,
-        _config: &Config,
+        _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
