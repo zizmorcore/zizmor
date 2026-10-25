@@ -23,7 +23,7 @@ of `zizmor`.
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [bot-conditions] audit did not properly flag
-  `if:` condition of jobs that call a reusable workflow (#2455)
+  `if:` condition of jobs that call a reusable workflow (#2457)
   
 ## 1.31.1
 
