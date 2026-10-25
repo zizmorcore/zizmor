@@ -1331,9 +1331,6 @@ This audit detects a variety of obfuscated usages, including:
   `fromJSON(toJSON(...))` and calls to `format(...)` where all
   arguments are literal values.
 
-The audit skips constant arrays and objects, which have no expression literal
-syntax, and strings containing `${{`.
-
 !!! note
 
     Prior to `v1.21.1`, this audit also detected uses of the Windows CMD shell.
