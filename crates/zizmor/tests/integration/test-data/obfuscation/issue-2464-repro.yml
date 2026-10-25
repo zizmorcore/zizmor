@@ -13,3 +13,4 @@ jobs:
       - name: repro
         run: |
           echo 'some text with ${{ '${{' }} in it'
+          echo 'some text with ${{ format('{0}{1}', '$', '{{') }} in it'

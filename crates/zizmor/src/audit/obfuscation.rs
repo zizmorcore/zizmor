@@ -1,4 +1,4 @@
-use github_actions_expressions::{Expr, Origin, SpannedExpr};
+use github_actions_expressions::{Evaluation, Expr, Origin, SpannedExpr};
 use github_actions_models::common::{RepositoryUses, Uses, expr::LoE};
 use yamlpatch::{Op, Patch};
 
@@ -118,17 +118,34 @@ impl Obfuscation {
         })
     }
 
-    /// Creates a fix for constant-reducible expressions.
+    /// Renders template text when replacing a whole `${{ ... }}` expression,
+    /// or an expression literal when replacing a subexpression.
+    /// Returns `None` for arrays, objects, and strings containing `${{`.
+    fn expression_replacement(evaluation: &Evaluation, is_subexpr: bool) -> Option<String> {
+        match (evaluation, is_subexpr) {
+            // Aggregates have no expression literal syntax. Stringifying them
+            // as `Array` or `Object` would change their meaning (see #1177).
+            (Evaluation::Array(_) | Evaluation::Object(_), _) => None,
+            // Bug #2464: expanding these strings could introduce an unpaired
+            // expression fence or turn verbatim text into an active expression.
+            (Evaluation::String(value), _) if value.contains("${{") => None,
+            (Evaluation::String(value), true) => Some(format!("'{}'", value.replace('\'', "''"))),
+            (Evaluation::Null, true) => Some("null".into()),
+            (Evaluation::Number(value), true) if value.is_finite() => Some(value.to_string()),
+            _ => Some(evaluation.sema().to_string()),
+        }
+    }
+
+    /// Creates a fix for an expression whose evaluation can be substituted.
     fn create_expression_fix<'doc>(
         &self,
-        expr: &SpannedExpr<'doc>,
+        evaluation: &Evaluation,
         input: &'doc crate::audit::AuditInput,
         after: usize,
         raw: &'doc str,
+        is_subexpr: bool,
     ) -> Option<Fix<'doc>> {
-        let evaluated = expr
-            .consteval()
-            .map(|evaluation| evaluation.sema().to_string())?;
+        let evaluated = Self::expression_replacement(evaluation, is_subexpr)?;
 
         Some(Fix {
             title: "replace with evaluated constant".into(),
@@ -154,16 +171,22 @@ impl Obfuscation {
 
         // Expressions that can be constant reduced should be simplified to
         // their evaluated form.
-        if expr.consteval().is_some() {
+        if expr
+            .consteval()
+            .and_then(|evaluation| Self::expression_replacement(&evaluation, false))
+            .is_some()
+        {
             annotations.push((
                 "can be replaced by its static evaluation",
                 expr.origin,
                 Persona::Regular,
             ));
         } else {
-            // Even if an expression is not itself constant reducible,
-            // it might contains reducible sub-expressions.
-            for subexpr in expr.constant_reducible_subexprs() {
+            // Check for subexpressions that can be simplified.
+            for (subexpr, evaluation) in expr.consteval_subexprs() {
+                if Self::expression_replacement(&evaluation, true).is_none() {
+                    continue;
+                }
                 annotations.push((
                     "can be reduced to a constant",
                     subexpr.origin,
@@ -294,23 +317,29 @@ impl Audit for Obfuscation {
                             ));
                 }
 
-                if parsed.constant_reducible()
-                    && let Some(fix) =
-                        self.create_expression_fix(&parsed, input, expr_span.start, expr.as_raw())
-                {
+                if let Some(fix) = parsed.consteval().and_then(|evaluation| {
+                    self.create_expression_fix(
+                        &evaluation,
+                        input,
+                        expr_span.start,
+                        expr.as_raw(),
+                        false,
+                    )
+                }) {
                     // If the entire expression is constant reducible we need to replace the whole thing,
                     // including its fencing, to avoid leaving behind a semantically different fenced expression.
                     // For example, `${{ 'foo' }}` is equivalent to `foo`, but if we only replaced the inner
                     // expression we'd end up with `${{ foo }}`, which is not.
                     finding_builder = finding_builder.fix(fix);
                 } else {
-                    // Check for constant-reducible subexpressions
-                    for subexpr in parsed.constant_reducible_subexprs() {
+                    // Check for subexpressions with replaceable evaluations.
+                    for (subexpr, evaluation) in parsed.consteval_subexprs() {
                         if let Some(fix) = self.create_expression_fix(
-                            subexpr,
+                            &evaluation,
                             input,
                             expr_span.start + subexpr.origin.span.start,
                             subexpr.origin.raw,
+                            true,
                         ) {
                             finding_builder = finding_builder.fix(fix);
                             break; // Only apply one fix at a time to avoid conflicts
@@ -339,5 +368,38 @@ impl Audit for Obfuscation {
         _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'a>>, AuditError> {
         self.process_step(step)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_subexpression_replacement() {
+        for (evaluation, expected) in [
+            (Evaluation::String("it's".into()), "'it''s'"),
+            (Evaluation::Null, "null"),
+            (Evaluation::Number(1.2345678901234567), "1.2345678901234567"),
+            (Evaluation::Number(1e20), "100000000000000000000"),
+        ] {
+            assert_eq!(
+                Obfuscation::expression_replacement(&evaluation, true).as_deref(),
+                Some(expected),
+            );
+        }
+    }
+
+    #[test]
+    fn test_unreplaceable_evaluations_are_not_obfuscation() {
+        for source in [
+            "fromJSON('[1, 2]')",
+            "fromJSON('{\"foo\": 1}')",
+            "format('{0} {1}', inputs.foo, format('{0}', '${{'))",
+            "format('{1}', 'foo')",
+        ] {
+            let expr = Expr::parse(source).unwrap();
+            assert!(Obfuscation.obfuscated_exprs(&expr).is_empty(), "{source}");
+        }
     }
 }

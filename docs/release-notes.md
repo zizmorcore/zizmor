@@ -34,7 +34,8 @@ of `zizmor`.
 
 * Fixed a bug where the [obfuscation] audit would incorrectly flag
   (and suggest an incorrect auto-fix for) expressions that constant-reduce
-  to other expressions (#2483)
+  to other expressions. Fixes within larger expressions also preserve string
+  quoting and `null` values. (#2483)
 
 ## 1.31.1
 

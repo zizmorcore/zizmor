@@ -1,6 +1,4 @@
 use anyhow::Result;
-use github_actions_models::workflow;
-use indoc::indoc;
 use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
