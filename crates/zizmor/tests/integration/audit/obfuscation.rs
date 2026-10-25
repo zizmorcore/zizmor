@@ -268,7 +268,7 @@ fn test_issue_2464() -> Result<()> {
     insta::assert_snapshot!(
         Zizmor::cargo_bin()
         .input(input_under_test("obfuscation/issue-2464-repro.yml")).run()?,
-        @"No findings to report. Good job! (1 suppressed)"
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())
