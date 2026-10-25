@@ -327,6 +327,42 @@ jobs:
 }
 
 #[test]
+fn test_fix_multiple_subexpressions() -> Result<()> {
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+    workspace.add_file(
+        ".github/workflows/test.yml",
+        r#"name: Test Workflow
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ${{ format('{0} {1} {2}', github.run_id, format('{0}', 'abc'), format('{0}', 'abc')) }}
+"#,
+    );
+
+    insta::assert_snapshot!(
+        workspace.diff(".github/workflows/test.yml", |workspace| {
+            Zizmor::cargo_bin()
+                .args(["--fix=safe"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @r#"
+    @@ -5,4 +5,4 @@
+       test:
+         runs-on: ubuntu-latest
+         steps:
+    -      - run: echo ${{ format('{0} {1} {2}', github.run_id, format('{0}', 'abc'), format('{0}', 'abc')) }}
+    +      - run: echo ${{ format('{0} {1} {2}', github.run_id, 'abc', 'abc') }}
+    "#
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_fix_uses_path_empty_components() -> anyhow::Result<()> {
     let workflow_content = r#"
 name: Test Workflow

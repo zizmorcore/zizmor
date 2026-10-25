@@ -165,12 +165,9 @@ impl Obfuscation {
         input: &'doc AuditInput,
         after: usize,
         raw: &'doc str,
-    ) -> (
-        Vec<(&'static str, Origin<'doc>, Persona)>,
-        Option<Fix<'doc>>,
-    ) {
+    ) -> (Vec<(&'static str, Origin<'doc>, Persona)>, Vec<Fix<'doc>>) {
         let mut annotations = vec![];
-        let mut fix = None;
+        let mut fixes = vec![];
 
         // Check for some common expression obfuscation patterns.
 
@@ -186,7 +183,7 @@ impl Obfuscation {
                 Persona::Regular,
             ));
             // Replace the fencing too: `${{ 'foo' }}` simplifies to `foo`.
-            fix = Some(self.create_expression_fix(replacement, input, after, raw));
+            fixes.push(self.create_expression_fix(replacement, input, after, raw));
         } else {
             // Check for subexpressions that can be simplified.
             for (subexpr, evaluation) in expr.consteval_subexprs() {
@@ -198,15 +195,12 @@ impl Obfuscation {
                     subexpr.origin,
                     Persona::Regular,
                 ));
-                // Only apply one fix at a time to avoid conflicts.
-                if fix.is_none() {
-                    fix = Some(self.create_expression_fix(
-                        replacement,
-                        input,
-                        after + subexpr.origin.span.start,
-                        subexpr.origin.raw,
-                    ));
-                }
+                fixes.push(self.create_expression_fix(
+                    replacement,
+                    input,
+                    after + subexpr.origin.span.start,
+                    subexpr.origin.raw,
+                ));
             }
         }
 
@@ -220,7 +214,11 @@ impl Obfuscation {
 
         // TODO: calculate call breadth/depth and flag above thresholds.
 
-        (annotations, fix)
+        // Subexpressions are collected in source order. Apply fixes from the
+        // end so that replacements preserve the offsets of earlier fixes.
+        fixes.reverse();
+
+        (annotations, fixes)
     }
 
     fn process_step<'doc>(
@@ -311,7 +309,7 @@ impl Audit for Obfuscation {
                 continue;
             };
 
-            let (obfuscated_annotations, fix) =
+            let (obfuscated_annotations, fixes) =
                 self.obfuscated_exprs(&parsed, input, expr_span.start, expr.as_raw());
 
             if !obfuscated_annotations.is_empty() {
@@ -333,7 +331,7 @@ impl Audit for Obfuscation {
                             ));
                 }
 
-                if let Some(fix) = fix {
+                for fix in fixes {
                     finding_builder = finding_builder.fix(fix);
                 }
 
