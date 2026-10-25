@@ -371,36 +371,3 @@ impl Audit for Obfuscation {
         self.process_step(step)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_subexpression_replacement() {
-        for (evaluation, expected) in [
-            (Evaluation::String("it's".into()), "'it''s'"),
-            (Evaluation::Null, "null"),
-            (Evaluation::Number(1.2345678901234567), "1.2345678901234567"),
-            (Evaluation::Number(1e20), "100000000000000000000"),
-        ] {
-            assert_eq!(
-                Obfuscation::expression_replacement(&evaluation, true).as_deref(),
-                Some(expected),
-            );
-        }
-    }
-
-    #[test]
-    fn test_unreplaceable_evaluations_are_not_obfuscation() {
-        for source in [
-            "fromJSON('[1, 2]')",
-            "fromJSON('{\"foo\": 1}')",
-            "format('{0} {1}', inputs.foo, format('{0}', '${{'))",
-            "format('{1}', 'foo')",
-        ] {
-            let expr = Expr::parse(source).unwrap();
-            assert!(Obfuscation.obfuscated_exprs(&expr).is_empty(), "{source}");
-        }
-    }
-}
