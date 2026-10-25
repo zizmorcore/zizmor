@@ -250,16 +250,15 @@ impl<'a> SpannedExpr<'a> {
         index_exprs
     }
 
-    /// Like [`Expr::constant_reducible`], but for all subexpressions
-    /// rather than the top-level expression.
+    /// Returns all non-literal subexpressions within this expression
+    /// that can be constant-evaluated, along with their evaluations.
     ///
-    /// This has slightly different semantics than `constant_reducible`:
-    /// it doesn't include "trivially" reducible expressions like literals,
-    /// since flagging these as reducible within a larger expression
-    /// would be misleading.
-    pub fn constant_reducible_subexprs(&self) -> Vec<&Self> {
-        if !self.is_literal() && self.constant_reducible() {
-            return vec![self];
+    /// Literals are skipped because they are already simplified.
+    pub fn consteval_subexprs(&self) -> Vec<(&Self, Evaluation)> {
+        if !self.is_literal()
+            && let Some(evaluation) = self.consteval()
+        {
+            return vec![(self, evaluation)];
         }
 
         let mut subexprs = vec![];
@@ -267,23 +266,22 @@ impl<'a> SpannedExpr<'a> {
         match self.deref() {
             Expr::Call(Call { func: _, args }) => {
                 for arg in args {
-                    subexprs.extend(arg.constant_reducible_subexprs());
+                    subexprs.extend(arg.consteval_subexprs());
                 }
             }
             Expr::Context(ctx) => {
-                // contexts themselves are never reducible, but they might
-                // contains reducible index subexpressions.
+                // Context indices may contain constant subexpressions.
                 for part in &ctx.parts {
-                    subexprs.extend(part.constant_reducible_subexprs());
+                    subexprs.extend(part.consteval_subexprs());
                 }
             }
             Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {
-                subexprs.extend(lhs.constant_reducible_subexprs());
-                subexprs.extend(rhs.constant_reducible_subexprs());
+                subexprs.extend(lhs.consteval_subexprs());
+                subexprs.extend(rhs.consteval_subexprs());
             }
-            Expr::UnExpr { op: _, expr } => subexprs.extend(expr.constant_reducible_subexprs()),
+            Expr::UnExpr { op: _, expr } => subexprs.extend(expr.consteval_subexprs()),
 
-            Expr::Index(expr) => subexprs.extend(expr.constant_reducible_subexprs()),
+            Expr::Index(expr) => subexprs.extend(expr.consteval_subexprs()),
             _ => {}
         }
 
@@ -351,58 +349,6 @@ impl<'src> Expr<'src> {
     /// Returns whether the expression is a literal.
     pub fn is_literal(&self) -> bool {
         matches!(self, Expr::Literal(_))
-    }
-
-    /// Returns whether the expression is constant reducible.
-    ///
-    /// "Constant reducible" is similar to "constant foldable" but with
-    /// meta-evaluation semantics: the expression `5` would not be
-    /// constant foldable in a normal program (because it's already
-    /// an atom), but is "constant reducible" in a GitHub Actions expression
-    /// because an expression containing it (e.g. `${{ 5 }}`) can be elided
-    /// entirely and replaced with `5`.
-    ///
-    /// There are three kinds of reducible expressions:
-    ///
-    /// 1. Literals, which reduce to their literal value;
-    /// 2. Binops/unops with reducible subexpressions, which reduce
-    ///    to their evaluation;
-    /// 3. Select function calls where the semantics of the function
-    ///    mean that reducible arguments make the call itself reducible.
-    ///
-    /// NOTE: This implementation is sound but not complete.
-    pub fn constant_reducible(&self) -> bool {
-        match self {
-            // Literals are always reducible.
-            Expr::Literal(_) => true,
-            // Binops are reducible if their LHS and RHS are reducible.
-            Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {
-                lhs.constant_reducible() && rhs.constant_reducible()
-            }
-            // Unops are reducible if their interior expression is reducible.
-            Expr::UnExpr { op: _, expr } => expr.constant_reducible(),
-            Expr::Call(Call { func, args }) => {
-                // These functions are reducible if their arguments are reducible.
-                // TODO(ww): `fromJSON` *is* frequently reducible, but
-                // doing so soundly with subexpressions is annoying.
-                // We overapproximate for now and consider it non-reducible.
-                if matches!(
-                    func,
-                    Function::Contains
-                        | Function::StartsWith
-                        | Function::EndsWith
-                        | Function::Format
-                        | Function::ToJSON
-                        | Function::Join // | Function::FromJSON
-                ) {
-                    args.iter().all(|e| e.constant_reducible())
-                } else {
-                    false
-                }
-            }
-            // Everything else is presumed non-reducible.
-            _ => false,
-        }
     }
 
     /// Parses the given string into an expression.
@@ -745,11 +691,8 @@ impl std::fmt::Display for EvaluationSema<'_> {
 }
 
 impl<'src> Expr<'src> {
-    /// Evaluates a constant-reducible expression to its literal value.
-    ///
-    /// Returns `Some(Evaluation)` if the expression can be constant-evaluated,
-    /// or `None` if the expression contains non-constant elements (like contexts or
-    /// non-reducible function calls).
+    /// Attempts to const-evaluate an expression, returning the evaluation
+    /// if successful.
     ///
     /// This implementation follows GitHub Actions' evaluation semantics as documented at:
     /// https://docs.github.com/en/actions/reference/workflows-and-actions/expressions
@@ -2071,42 +2014,13 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_constant_reducible() -> Result<(), Error> {
-        for (expr, reducible) in &[
-            ("'foo'", true),
-            ("1", true),
-            ("true", true),
-            ("null", true),
-            // boolean and unary expressions of all literals are
-            // always reducible.
-            ("!true", true),
-            ("!null", true),
-            ("true && false", true),
-            ("true || false", true),
-            ("null && !null && true", true),
-            // formats/contains/startsWith/endsWith are reducible
-            // if all of their arguments are reducible.
-            ("format('{0} {1}', 'foo', 'bar')", true),
-            ("format('{0} {1}', 1, 2)", true),
-            ("format('{0} {1}', 1, '2')", true),
-            ("contains('foo', 'bar')", true),
-            ("startsWith('foo', 'bar')", true),
-            ("endsWith('foo', 'bar')", true),
-            ("startsWith(some.context, 'bar')", false),
-            ("endsWith(some.context, 'bar')", false),
-            // Nesting works as long as the nested call is also reducible.
-            ("format('{0} {1}', '1', format('{0}', null))", true),
-            ("format('{0} {1}', '1', startsWith('foo', 'foo'))", true),
-            ("format('{0} {1}', '1', startsWith(foo.bar, 'foo'))", false),
-            ("foo", false),
-            ("foo.bar", false),
-            ("foo.bar[1]", false),
-            ("foo.bar == 'bar'", false),
-            ("foo.bar || bar || baz", false),
-            ("foo.bar && bar && baz", false),
+    fn test_expr_consteval_nonconstant() -> Result<(), Error> {
+        for source in [
+            "foo.bar",
+            "foo.bar == 'bar'",
+            "startsWith(some.context, 'bar')",
         ] {
-            let expr = Expr::parse(expr)?;
-            assert_eq!(expr.constant_reducible(), *reducible);
+            assert!(Expr::parse(source)?.consteval().is_none(), "{source}");
         }
 
         Ok(())
@@ -2436,22 +2350,54 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_has_constant_reducible_subexpr() -> Result<(), Error> {
-        for (expr, reducible) in &[
-            // Literals are not considered reducible subexpressions.
-            ("'foo'", false),
-            ("1", false),
-            ("true", false),
-            ("null", false),
-            // Non-reducible expressions with reducible subexpressions
+    fn test_expr_consteval_subexprs() -> Result<(), Error> {
+        use crate::Evaluation;
+
+        for (source, expected) in [
+            // Literals cannot be simplified further.
+            ("'foo'", vec![]),
+            // Return only the outermost evaluable expression in each subtree.
             (
-                "format('{0}, {1}', github.event.number, format('{0}', 'abc'))",
-                true,
+                "format('{0}, {1}', github.event.number, format('{0}', fromJSON('\"abc\"')))",
+                vec![(
+                    "format('{0}', fromJSON('\"abc\"'))",
+                    Evaluation::String("abc".into()),
+                )],
             ),
-            ("foobar[format('{0}', 'event')]", true),
+            (
+                "foobar[format('{0}', 'event')]",
+                vec![("format('{0}', 'event')", Evaluation::String("event".into()))],
+            ),
+            (
+                "foo && fromJSON('false') || case(true, 1, 2)",
+                vec![
+                    ("fromJSON('false')", Evaluation::Boolean(false)),
+                    ("case(true, 1, 2)", Evaluation::Number(1.0)),
+                ],
+            ),
+            (
+                "contains(fromJSON('[1]'), foo)",
+                vec![(
+                    "fromJSON('[1]')",
+                    Evaluation::Array(vec![Evaluation::Number(1.0)]),
+                )],
+            ),
+            (
+                "format('{0}{1}', '$', '{{')",
+                vec![(
+                    "format('{0}{1}', '$', '{{')",
+                    Evaluation::String("${{".into()),
+                )],
+            ),
+            ("format('{1}', 'foo')", vec![]),
         ] {
-            let expr = Expr::parse(expr)?;
-            assert_eq!(!expr.constant_reducible_subexprs().is_empty(), *reducible);
+            let expr = Expr::parse(source)?;
+            let actual = expr
+                .consteval_subexprs()
+                .into_iter()
+                .map(|(expr, evaluation)| (expr.origin.raw, evaluation))
+                .collect::<Vec<_>>();
+            assert_eq!(actual, expected, "{source}");
         }
         Ok(())
     }

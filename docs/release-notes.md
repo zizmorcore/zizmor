@@ -32,6 +32,13 @@ of `zizmor`.
 * Fixed a bug where the [bot-conditions] audit did not properly flag
   `if:` condition of jobs that call a reusable workflow (#2457)
 
+* Fixed a bug where the [obfuscation] audit would incorrectly flag
+  (and suggest an incorrect auto-fix for) expressions that constant-reduce
+  to other expressions (#2483)
+
+* Fixed a class of bugs in the [obfuscation] audit where a constant-reducible
+  subexpression would not be replaced with a contextually correct form (#2483)
+
 ## 1.31.1
 
 ### Bug Fixes 🐛

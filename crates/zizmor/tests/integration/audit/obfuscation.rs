@@ -261,6 +261,19 @@ fn test_issue_1769() -> Result<()> {
     Ok(())
 }
 
+/// Bug #2464: we should not flag expressions that would expand to other expressions
+/// (or fragments thereof) as obfuscation findings.
+#[test]
+fn test_issue_2464() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+        .input(input_under_test("obfuscation/issue-2464-repro.yml")).run()?,
+        @"No findings to report. Good job! (2 suppressed)"
+    );
+
+    Ok(())
+}
+
 /// Test that we correctly replace `${{ 'foo' }}` with `foo` instead of `${{ foo }}`.
 ///
 /// Reproducer for #1578; see: <https://github.com/zizmorcore/zizmor/issues/1578>.
@@ -307,6 +320,42 @@ jobs:
          outputs:
     -      iac/terraform/attribution.tfm--release_created: ${{ 'steps.release.outputs.iac/terraform/attribution.tfm--release_created' }}
     +      iac/terraform/attribution.tfm--release_created: steps.release.outputs.iac/terraform/attribution.tfm--release_created
+    "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_fix_multiple_subexpressions() -> Result<()> {
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+    workspace.add_file(
+        ".github/workflows/test.yml",
+        r#"name: Test Workflow
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ${{ format('{0} {1} {2}', github.run_id, format('{0}', 'abc'), format('{0}', 'abc')) }}
+"#,
+    );
+
+    insta::assert_snapshot!(
+        workspace.diff(".github/workflows/test.yml", |workspace| {
+            Zizmor::cargo_bin()
+                .args(["--fix=safe"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @r#"
+    @@ -5,4 +5,4 @@
+       test:
+         runs-on: ubuntu-latest
+         steps:
+    -      - run: echo ${{ format('{0} {1} {2}', github.run_id, format('{0}', 'abc'), format('{0}', 'abc')) }}
+    +      - run: echo ${{ format('{0} {1} {2}', github.run_id, 'abc', 'abc') }}
     "#
     );
 

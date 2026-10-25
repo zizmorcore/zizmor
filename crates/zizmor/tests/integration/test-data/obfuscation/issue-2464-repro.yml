@@ -1,0 +1,16 @@
+name: issue-2464-repro
+on: [push]
+concurrency:
+  group: ${{ github.run_id }}
+
+permissions: {}
+
+jobs:
+  repro:
+    name: repro
+    runs-on: ubuntu-latest
+    steps:
+      - name: repro
+        run: |
+          echo 'some text with ${{ '${{' }} in it'
+          echo 'some text with ${{ format('{0}{1}', '$', '{{') }} in it'

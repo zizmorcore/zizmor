@@ -75,7 +75,7 @@ impl Audit for UnsoundTernary {
 
 impl UnsoundTernary {
     fn unsound_true_values<'src>(expr: &'src SpannedExpr<'src>) -> Vec<&'src SpannedExpr<'src>> {
-        if expr.constant_reducible() {
+        if expr.consteval().is_some() {
             return vec![];
         }
 
@@ -128,7 +128,7 @@ impl UnsoundTernary {
     fn or_operands<'src>(expr: &'src SpannedExpr<'src>) -> Vec<&'src SpannedExpr<'src>> {
         let mut operands = vec![];
 
-        if !expr.constant_reducible()
+        if expr.consteval().is_none()
             && let Expr::BinExpr(BinExpr {
                 lhs,
                 op: BinOp::Or,
@@ -183,5 +183,12 @@ mod tests {
         case("foo && 'bar' || ''", &[]);
         case("foo || bar && ''", &[]);
         case("true && '' || 'bar'", &[]);
+        case("true && fromJSON('false') || 'bar'", &[]);
+        case("foo || (true && fromJSON('false') || 'bar')", &[]);
+        case("true && '' || '${{'", &[]);
+        case(
+            "foo && contains('${{', 'missing') || 'bar'",
+            &["contains('${{', 'missing')"],
+        );
     }
 }
