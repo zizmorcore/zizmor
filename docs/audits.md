@@ -1142,9 +1142,9 @@ In general, users should use [GitHub Actions environment files]
 
 | Type             | Examples                       | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |------------------|--------------------------------|---------------|----------------|--------------------| ---------------|
-| pre-commit | [insecure-url-scheme/.pre-commit-config.yml] | v1.29.0        | ✅             |  ❌                | ❌  |
+| pre-commit | [insecure-url-scheme/.pre-commit-config.yaml] | v1.29.0        | ✅             |  ❌                | ❌  |
 
-[insecure-url-scheme/.pre-commit-config.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/insecure-url-scheme/.pre-commit-config.yml
+[insecure-url-scheme/.pre-commit-config.yaml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/insecure-url-scheme/.pre-commit-config.yaml
 
 !!! important
 

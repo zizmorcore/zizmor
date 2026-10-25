@@ -514,8 +514,8 @@ impl From<ColorMode> for anstream::ColorChoice {
 /// - `{root}/.github/workflows/*.{yml,yaml}`
 /// - `{root}/**/action.{yml,yaml}`
 /// - `{root}/.github/dependabot.{yml,yaml}`
-/// - `{root}/.pre-commit-config.{yml,yaml}`
-/// - `{root}/.pre-commit-hooks.{yml,yaml}`
+/// - `{root}/.pre-commit-config.yaml`
+/// - `{root}/.pre-commit-hooks.yaml`
 ///
 /// Those patterns are also subject to the mode itself. For example, actions will not
 /// be collected if the mode does not specify them, regardless of whether the
@@ -534,7 +534,7 @@ pub(crate) enum CliCollectionMode {
     /// Collect Dependabot configuration files (i.e. `dependabot.yml`).
     Dependabot,
     /// Collect pre-commit configuration and hooks files,
-    /// i.e. `.pre-commit-config.yml` and `.pre-commit-hooks.yml`.
+    /// i.e. `.pre-commit-config.yaml` and `.pre-commit-hooks.yaml`.
     PreCommit,
 }
 

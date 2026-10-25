@@ -236,7 +236,7 @@ fn test_pre_commit() -> anyhow::Result<()> {
     let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
     workspace.copy(
         &*input_under_test("forbidden-uses/pre-commit/basic.yml"),
-        ".pre-commit-config.yml",
+        ".pre-commit-config.yaml",
     );
     workspace.add_file(
         "zizmor.yml",
@@ -255,7 +255,7 @@ rules:
             .run()?,
         @"
     error[forbidden-uses]: forbidden action or repository used
-     --> @@INPUT@@/.pre-commit-config.yml:2:11
+     --> @@INPUT@@/.pre-commit-config.yaml:2:11
       |
     2 |   - repo: https://github.com/zizmorcore/zizmor-pre-commit
       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ use of this repository is forbidden

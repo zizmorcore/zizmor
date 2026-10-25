@@ -1,4 +1,4 @@
-//! Pre-commit configuration models, i.e. for `.pre-commit-config.yml`.
+//! Pre-commit configuration models, i.e. for `.pre-commit-config.yaml`.
 //!
 //! See: <https://pre-commit.com/#plugins>
 

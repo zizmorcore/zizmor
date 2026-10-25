@@ -126,7 +126,16 @@ impl LanguageServer for Backend {
                 scheme: None,
                 pattern: Some("**/.github/dependabot.{yml,yaml}".into()),
             },
-            // TODO: pre-commit patterns are missing here.
+            ls_types::DocumentFilter {
+                language: Some("yaml".into()),
+                scheme: None,
+                pattern: Some("**/.pre-commit-config.yaml".into()),
+            },
+            ls_types::DocumentFilter {
+                language: Some("yaml".into()),
+                scheme: None,
+                pattern: Some("**/.pre-commit-hooks.yaml".into()),
+            },
             // Config files.
             // TODO: Right now these are disabled, but at some point we might want to independently
             // monitor these and only reload the configuration when they change.

@@ -139,9 +139,9 @@ pub(crate) enum InputKind {
     Action,
     /// A Dependabot configuration file.
     Dependabot,
-    /// A `.pre-commit-config.yml` file.
+    /// A `.pre-commit-config.yaml` file.
     PreCommitConfig,
-    /// A `.pre-commit-hooks.yml` file.
+    /// A `.pre-commit-hooks.yaml` file.
     PreCommitHooks,
 }
 
@@ -564,8 +564,8 @@ impl InputGroup {
         let (key, kind) = match (path.file_stem(), path.extension()) {
             // TODO: Do we need the `is_workflow_path` disambiguation here?
             // The only way this could be wrong is if the user does something
-            // bizarre like `.github/workflows/.pre-commit-{config,hooks}.yml`.
-            (Some(".pre-commit-config"), Some("yml" | "yaml")) if !is_workflow_path => (
+            // bizarre like `.github/workflows/.pre-commit-{config,hooks}.yaml`.
+            (Some(".pre-commit-config"), Some("yaml")) if !is_workflow_path => (
                 InputKey::local(
                     GroupID(path.as_str().into()),
                     path,
@@ -574,7 +574,7 @@ impl InputGroup {
                 ),
                 InputKind::PreCommitConfig,
             ),
-            (Some(".pre-commit-hooks"), Some("yml" | "yaml")) if !is_workflow_path => (
+            (Some(".pre-commit-hooks"), Some("yaml")) if !is_workflow_path => (
                 InputKey::local(
                     GroupID(path.as_str().into()),
                     path,
@@ -802,10 +802,7 @@ impl InputGroup {
                 && entry_is_file
                 && (!is_repo_root || entry.parent() == Some(path))
             {
-                if matches!(
-                    entry.file_name(),
-                    Some(".pre-commit-config.yml" | ".pre-commit-config.yaml")
-                ) {
+                if matches!(entry.file_name(), Some(".pre-commit-config.yaml")) {
                     let key = InputKey::local(
                         GroupID(path.as_str().into()),
                         entry,
@@ -820,10 +817,7 @@ impl InputGroup {
                         )
                     })?;
                     group.register(InputKind::PreCommitConfig, contents, key, options.strict)?;
-                } else if matches!(
-                    entry.file_name(),
-                    Some(".pre-commit-hooks.yml" | ".pre-commit-hooks.yaml")
-                ) {
+                } else if matches!(entry.file_name(), Some(".pre-commit-hooks.yaml")) {
                     let key = InputKey::local(
                         GroupID(path.as_str().into()),
                         entry,

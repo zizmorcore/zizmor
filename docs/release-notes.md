@@ -158,7 +158,7 @@ of `zizmor`.
 
 ### Bug Fixes 🐛
 
-* Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
+* Fixed a bug where `zizmor` would reject a `.pre-commit-config.yaml`
   input containing a `prek`-specific `builtin` section (#2259)
 
 * Fixed a bug where the [unpinned-uses] audit would fail to honor
