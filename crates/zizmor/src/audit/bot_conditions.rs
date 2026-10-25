@@ -11,7 +11,10 @@ use github_actions_models::{common::If, workflow::event::BareEvent};
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
-    finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
+    finding::{
+        Confidence, Fix, FixDisposition, Severity,
+        location::{Locatable as _, SymbolicLocation},
+    },
     models::workflow::{JobCommon as _, Workflow},
     utils::{self, ExtractedExpr},
 };
@@ -69,8 +72,6 @@ impl Audit for BotConditions {
         job: &super::NormalJob<'doc>,
         _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
-        let mut findings = vec![];
-
         // Track conditions with explicit categorization
         let mut conds = vec![];
 
@@ -93,6 +94,35 @@ impl Audit for BotConditions {
                 ));
             }
         }
+
+        Self::process_conditions(job.parent(), conds)
+    }
+
+    async fn audit_reusable_job<'doc>(
+        &self,
+        job: &super::ReusableWorkflowCallJob<'doc>,
+        _group: &crate::registry::input::InputGroup,
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
+        // Reusable workflow calls have no steps, only a job-level condition.
+        let conds = match &job.r#if {
+            Some(If::Expr(expr)) => vec![(
+                expr,
+                job.location_with_grip(),
+                job.location().with_keys(["if".into()]),
+            )],
+            _ => vec![],
+        };
+
+        Self::process_conditions(job.parent(), conds)
+    }
+}
+
+impl BotConditions {
+    fn process_conditions<'doc>(
+        workflow: &'doc Workflow,
+        conds: Vec<(&'doc String, SymbolicLocation<'doc>, SymbolicLocation<'doc>)>,
+    ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
+        let mut findings = vec![];
 
         for (expr, parent, if_loc) in conds {
             // Handle a fenced `if:` by extracting it explicitly.
@@ -123,19 +153,17 @@ impl Audit for BotConditions {
                             .annotated("actor context may be spoofable"),
                     );
 
-                if let Some(fix) = Self::attempt_fix(job.parent(), actor_context, if_route) {
+                if let Some(fix) = Self::attempt_fix(workflow, actor_context, if_route) {
                     finding_builder = finding_builder.fix(fix);
                 }
 
-                findings.push(finding_builder.build(job.parent())?);
+                findings.push(finding_builder.build(workflow)?);
             }
         }
 
         Ok(findings)
     }
-}
 
-impl BotConditions {
     /// Get appropriate user context paths based on workflow trigger events.
     /// Returns (actor_name_context, actor_id_context) for the given workflow.
     fn get_user_contexts_for_triggers(workflow: &Workflow) -> Option<(&str, &str)> {

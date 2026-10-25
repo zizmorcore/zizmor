@@ -20,6 +20,11 @@ of `zizmor`.
 
 * zizmor's LSP now honors the `didChangeWorkspaceFolders` event (#2461)
 
+### Bug Fixes 🐛
+
+* Fixed a bug where the [bot-conditions] audit did not properly flag
+  `if:` condition of jobs that call a reusable workflow (#2457)
+  
 ## 1.31.1
 
 ### Bug Fixes 🐛
