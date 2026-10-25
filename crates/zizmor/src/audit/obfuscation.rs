@@ -118,9 +118,8 @@ impl Obfuscation {
         })
     }
 
-    /// Renders template text when replacing a whole `${{ ... }}` expression,
-    /// or an expression literal when replacing a subexpression.
-    /// Returns `None` for arrays, objects, and strings containing `${{`.
+    /// Renders template text when replacing an expression (or subexpression).
+    /// Returns `None` if there isn't a sound replacement.
     fn expression_replacement(evaluation: &Evaluation, is_subexpr: bool) -> Option<String> {
         match (evaluation, is_subexpr) {
             // Aggregates have no expression literal syntax. Stringifying them
@@ -129,6 +128,8 @@ impl Obfuscation {
             // Bug #2464: expanding these strings could introduce an unpaired
             // expression fence or turn verbatim text into an active expression.
             (Evaluation::String(value), _) if value.contains("${{") => None,
+            // When we're in a subexpression, we can't use EvaluationSema's form
+            // since it assumes expansion *outside* of an expression.
             (Evaluation::String(value), true) => Some(format!("'{}'", value.replace('\'', "''"))),
             (Evaluation::Null, true) => Some("null".into()),
             (Evaluation::Number(value), true) if value.is_finite() => Some(value.to_string()),
