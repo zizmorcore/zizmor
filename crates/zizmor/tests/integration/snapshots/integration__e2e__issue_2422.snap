@@ -1,0 +1,82 @@
+---
+source: crates/zizmor/tests/integration/e2e.rs
+expression: "zizmor().output(OutputMode::Both).args([\"--persona=auditor\"]).input(input_under_test(\"issue-2422.yml\")).run()?"
+---
+ INFO zizmor: 🌈 zizmor v@@VERSION@@
+ INFO audit: zizmor: 🌈 completed @@INPUT@@
+help[unsound-ternary]: unsound pseudo-ternary expression
+  --> @@INPUT@@:18:51
+   |
+18 |           TERNARY: '${{ github.ref == ''main'' && '''' || ''fallback'' }}'
+   |                                                   ^^^^ pseudo-ternary has falsy true value
+   |
+   = note: audit confidence → High
+
+warning[overprovisioned-secrets]: excessively provisioned secrets
+  --> @@INPUT@@:21:25
+   |
+21 |           ALL_SECRETS: '${{ format(''{0}'', toJSON(secrets)) }}'
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ injects the entire secrets context into the runner
+   |
+   = note: audit confidence → High
+
+warning[unredacted-secrets]: leaked secret values
+  --> @@INPUT@@:20:24
+   |
+20 |           UNREDACTED: '${{ fromJSON(secrets[''TOKEN'']) }}'
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ bypasses secret redaction
+   |
+   = note: audit confidence → High
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:16:21
+   |
+16 |           FOO: '${{ ''foo'' }}'
+   |                     ^^^^^^^ can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+help[obfuscation]: obfuscated usage of GitHub Actions features
+  --> @@INPUT@@:17:28
+   |
+17 |           APOSTROPHE: '${{ ''don''''t'' }}'
+   |                            ^^^^^^^^^^^^ can be replaced by its static evaluation
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> @@INPUT@@:19:24
+   |
+10 |   test:
+   |   ---- this job
+...
+19 |           SECRET: '${{ secrets[''TOKEN''] }}'
+   |                        ^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> @@INPUT@@:20:37
+   |
+10 |   test:
+   |   ---- this job
+...
+20 |           UNREDACTED: '${{ fromJSON(secrets[''TOKEN'']) }}'
+   |                                     ^^^^^^^^^^^^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+warning[secrets-outside-env]: secrets referenced without a dedicated environment
+  --> @@INPUT@@:21:52
+   |
+10 |   test:
+   |   ---- this job
+...
+21 |           ALL_SECRETS: '${{ format(''{0}'', toJSON(secrets)) }}'
+   |                                                    ^^^^^^^ secret is accessed outside of a dedicated environment
+   |
+   = note: audit confidence → High
+
+8 findings (2 safe fixes): 0 informational, 3 low, 5 medium, 0 high
