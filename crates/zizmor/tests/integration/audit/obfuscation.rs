@@ -1,4 +1,6 @@
 use anyhow::Result;
+use github_actions_models::workflow;
+use indoc::indoc;
 use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
@@ -256,6 +258,19 @@ fn test_issue_1769() -> Result<()> {
 
     1 finding: 1 informational, 0 low, 0 medium, 0 high
     "
+    );
+
+    Ok(())
+}
+
+/// Bug #2464: we should not flag expressions that would expand to other expressions
+/// (or fragments thereof) as obfuscation findings.
+#[test]
+fn test_issue_2464() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+        .input(input_under_test("obfuscation/issue-2464-repro.yml")).run()?,
+        @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())

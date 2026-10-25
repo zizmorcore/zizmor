@@ -768,7 +768,7 @@ impl<'src> Expr<'src> {
     /// assert_eq!(result, Evaluation::Boolean(false));
     /// ```
     pub fn consteval(&self) -> Option<Evaluation> {
-        match self {
+        let eval = match self {
             Expr::Literal(literal) => Some(literal.consteval()),
 
             Expr::BinExpr(BinExpr { lhs, op, rhs }) => {
@@ -812,6 +812,18 @@ impl<'src> Expr<'src> {
 
             // Non-constant expressions
             _ => None,
+        }?;
+
+        // Bug #2464: `${{ '${{' }}` and similar are trivially const-evaluable,
+        // but this would break GHA by introducing an unpaired expression fence
+        // start.
+        //
+        // Similarly, we never want to expand something like `${{ '${{ github.ref }}' }}`
+        // into `'${{ github.ref }}'`, since GHA would then evaluate that expression
+        // and not its verbatim form, which is what the user intended.
+        match eval {
+            Evaluation::String(eval) if eval.contains("${{") => None,
+            _ => Some(eval),
         }
     }
 }

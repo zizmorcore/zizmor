@@ -154,7 +154,7 @@ impl Obfuscation {
 
         // Expressions that can be constant reduced should be simplified to
         // their evaluated form.
-        if expr.constant_reducible() {
+        if let Some(_) = expr.consteval() {
             annotations.push((
                 "can be replaced by its static evaluation",
                 expr.origin,
