@@ -707,6 +707,64 @@
         "vcpkg"
       ]
     },
+    "pull-request-branch-name": {
+      "description": "How Dependabot generates branch names for pull requests",
+      "type": "object",
+      "properties": {
+        "separator": {
+          "description": "Specify a character to use in place of / between branch name segments.",
+          "type": "string",
+          "default": "/",
+          "enum": ["-", "_", "/"]
+        },
+        "prefix": {
+          "description": "A custom string to use at the start of the branch name instead of the default.",
+          "type": "string",
+          "default": "dependabot",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "max-length": {
+          "description": "The maximum allowed length for generated branch names. When a branch name exceeds this limit, it is truncated and a hash suffix is appended to preserve uniqueness",
+          "type": "integer",
+          "default": 100,
+          "minimum": 20,
+          "maximum": 244
+        },
+        "word-separator": {
+          "description": "A character to replace underscores (_) in all branch name content after the prefix—including package manager names, dependency names, group names, and directory paths.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1
+        },
+        "branch-name-case": {
+          "description": "The case to use for all branch name content after the prefix—including package manager names, dependency names, group names, and directory paths.",
+          "type": "string",
+          "enum": ["lowercase", "uppercase"]
+        },
+        "template": {
+          "description": "A custom branch name format using placeholders.",
+          "type": "string",
+          "minLength": 1,
+          "allOf": [
+            {
+              "description": "Must not contain spaces, ~, ^, :, ?, *, [ or \\.",
+              "not": { "pattern": "[ ~^:?*\\[\\\\]" }
+            },
+            {
+              "description": "Must not contain '..'.",
+              "not": { "pattern": "\\.\\." }
+            },
+            {
+              "description": "Must not contain '@{'.",
+              "not": { "pattern": "@\\{" }
+            }
+          ]
+        }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    },
     "schedule-day": {
       "type": "string",
       "enum": [
@@ -1064,18 +1122,7 @@
           ]
         },
         "pull-request-branch-name": {
-          "description": "Pull request branch name preferences",
-          "type": "object",
-          "properties": {
-            "separator": {
-              "description": "Change separator for PR branch name",
-              "type": "string",
-              "default": "/",
-              "enum": ["-", "_", "/"]
-            }
-          },
-          "required": ["separator"],
-          "additionalProperties": false
+          "$ref": "#/definitions/pull-request-branch-name"
         },
         "rebase-strategy": {
           "description": "Disable automatic rebasing. 'auto' is the default and Dependabot will rebase open pull requests when changes are detected. 'disabled' will disable automatic rebasing.",
@@ -1480,18 +1527,7 @@
           "additionalProperties": false
         },
         "pull-request-branch-name": {
-          "description": "Pull request branch name preferences for the group",
-          "type": "object",
-          "properties": {
-            "separator": {
-              "description": "Change separator for PR branch name",
-              "type": "string",
-              "default": "/",
-              "enum": ["-", "_", "/"]
-            }
-          },
-          "required": ["separator"],
-          "additionalProperties": false
+          "$ref": "#/definitions/pull-request-branch-name"
         },
         "open-pull-requests-limit": {
           "description": "Limit number of open pull requests for version updates.",
@@ -1561,6 +1597,7 @@
   },
   "required": ["version", "updates"],
   "title": "GitHub Dependabot v2 config",
+  "description": "Schema for GitHub dependabot.yml configuration files using the v2 format.",
   "type": "object",
   "allOf": [
     {
