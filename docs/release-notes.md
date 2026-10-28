@@ -27,6 +27,8 @@ of `zizmor`.
 
 * zizmor's LSP now honors the `didChangeWorkspaceFolders` event (#2461)
 
+* zizmor's LSP now audits pre-commit inputs (#2485)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [bot-conditions] audit did not properly flag
@@ -38,6 +40,9 @@ of `zizmor`.
 
 * Fixed a class of bugs in the [obfuscation] audit where a constant-reducible
   subexpression would not be replaced with a contextually correct form (#2483)
+
+* Fixed a bug where zizmor would incorrectly audit pre-commit inputs that
+  ended with `.yml`, despite pre-commit requiring the `.yaml` suffix (#2485)
 
 ## 1.31.1
 
@@ -158,7 +163,7 @@ of `zizmor`.
 
 ### Bug Fixes 🐛
 
-* Fixed a bug where `zizmor` would reject a `.pre-commit-config.yml`
+* Fixed a bug where `zizmor` would reject a `.pre-commit-config.yaml`
   input containing a `prek`-specific `builtin` section (#2259)
 
 * Fixed a bug where the [unpinned-uses] audit would fail to honor

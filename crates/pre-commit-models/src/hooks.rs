@@ -1,4 +1,4 @@
-//! Pre-commit hook definition models, i.e. for `.pre-commit-hooks.yml`.
+//! Pre-commit hook definition models, i.e. for `.pre-commit-hooks.yaml`.
 //!
 //! See: <https://pre-commit.com/#new-hooks>
 
@@ -8,11 +8,11 @@ use crate::common::{self, FilePattern, LanguageVersion};
 #[derive(Debug, serde::Deserialize)]
 pub struct Hooks(#[serde(deserialize_with = "common::non_empty_vec")] pub Vec<HookDefinition>);
 
-/// A single hook definition within a `.pre-commit-hooks.yml` file.
+/// A single hook definition within a `.pre-commit-hooks.yaml` file.
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct HookDefinition {
-    /// The ID of the hook, as used in `.pre-commit-config.yml`.
+    /// The ID of the hook, as used in `.pre-commit-config.yaml`.
     pub id: String,
 
     /// The name of the hook, shown during execution.

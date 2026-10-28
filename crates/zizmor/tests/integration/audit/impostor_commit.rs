@@ -51,7 +51,7 @@ fn test_peels_tag_sha_to_commit_sha() -> anyhow::Result<()> {
 fn test_pre_commit() -> anyhow::Result<()> {
     insta::assert_snapshot!(
     Zizmor::cargo_bin()
-        .input(input_under_test("impostor-commit/.pre-commit-config.yml"))
+        .input(input_under_test("impostor-commit/.pre-commit-config.yaml"))
         .offline(NetworkMode::AssertOnline)
         .run()?,
     @"
