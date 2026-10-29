@@ -212,6 +212,7 @@ impl RefVersionMismatch {
         let mut builder = Self::finding()
             .severity(Severity::Medium)
             .confidence(Confidence::High)
+            .add_location(parent.location().hidden())
             .add_raw_location(comment_location);
 
         if let Some(suggestion) = self
