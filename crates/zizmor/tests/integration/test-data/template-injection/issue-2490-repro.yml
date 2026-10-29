@@ -1,0 +1,19 @@
+# See: https://github.com/zizmorcore/zizmor/issues/2490
+#
+# `fromJSON(toJSON(x))` evaluates to `x`, so attacker-controllable contexts
+# inside it should still be flagged.
+
+name: issue-2490-repro
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  repro:
+    name: Repro
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ fromJSON(toJSON(github.event.issue.title)) }}"

@@ -147,8 +147,13 @@ impl<'a> SpannedExpr<'a> {
             Expr::Call(Call { func, args }) => {
                 // These functions, when evaluated, produce an evaluation
                 // that includes some or all of the contexts listed in
-                // their arguments.
-                if matches!(func, Function::ToJSON | Function::Format | Function::Join) {
+                // their arguments. `fromJSON` is included because
+                // `fromJSON(toJSON(x))` evaluates to `x`, and `fromJSON(x)`
+                // evaluates to whatever (attacker-controllable) JSON `x` holds.
+                if matches!(
+                    func,
+                    Function::ToJSON | Function::FromJSON | Function::Format | Function::Join
+                ) {
                     for arg in args {
                         contexts.extend(arg.dataflow_contexts());
                     }
@@ -2507,6 +2512,16 @@ mod tests {
                 .map(|t| t.1.raw)
                 .collect::<Vec<_>>(),
             ["foo.bar", "github", "github"]
+        );
+
+        // fromJSON(toJSON(x)) round-trips to x, so x flows into the evaluation.
+        let expr = Expr::parse("fromJSON(toJSON(github.event.issue.title))")?;
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.1.raw)
+                .collect::<Vec<_>>(),
+            ["github.event.issue.title"]
         );
 
         Ok(())
