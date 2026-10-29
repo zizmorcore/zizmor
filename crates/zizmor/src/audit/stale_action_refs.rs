@@ -56,6 +56,7 @@ impl StaleActionRefs {
                     .confidence(Confidence::High)
                     .severity(Severity::Low)
                     .persona(Persona::Pedantic)
+                    .add_location(parent.location().hidden())
                     .add_location(
                         parent
                             .location()
