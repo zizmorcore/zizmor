@@ -44,6 +44,12 @@ of `zizmor`.
 * Fixed a bug where zizmor would incorrectly audit pre-commit inputs that
   ended with `.yml`, despite pre-commit requiring the `.yaml` suffix (#2485)
 
+* Fixed a bug where zizmor would not honor some ignore comments for
+  the [stale-action-refs] audit (#2494)
+
+* Fixed a bug where zizmor would not honor some ignore comments for
+  the [ref-version-mismatch] audit (#2494)
+
 ## 1.31.1
 
 ### Bug Fixes 🐛
