@@ -841,6 +841,58 @@ fn test_show_urls() -> Result<()> {
     Ok(())
 }
 
+/// Ensures that `--summary` shows the number of findings for each file.
+#[test]
+fn test_summary() -> Result<()> {
+    let output = Zizmor::cargo_bin()
+        .args(["--summary"])
+        .input(input_under_test("summary"))
+        .run()?;
+
+    let start = output
+        .find("Findings per file:")
+        .expect("expected a summary table");
+
+    insta::assert_snapshot!(&output[start..], @"
+    Findings per file:
+      @@INPUT@@/.github/workflows/many-findings.yml     3
+      @@INPUT@@/.github/workflows/also-one-finding.yml  1
+      @@INPUT@@/.github/workflows/one-finding.yml       1
+    ");
+
+    Ok(())
+}
+
+/// Ensures that `--summary` shows no table when there are no findings.
+#[test]
+fn test_summary_no_findings() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .args(["--summary"])
+            .input(input_under_test("ignore.yml"))
+            .run()?,
+        @"No findings to report. Good job! (1 ignored)"
+    );
+
+    Ok(())
+}
+
+/// Ensures that we warn when `--summary` is used with a non-plain format.
+#[test]
+fn warn_on_summary_non_plain() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .output(OutputMode::Stderr)
+            .setenv("RUST_LOG", "warn")
+            .args(["--summary", "--format=sarif"])
+            .input(input_under_test("e2e-menagerie"))
+            .run()?,
+        @" WARN zizmor: --summary only applies to --format=plain; ignoring"
+    );
+
+    Ok(())
+}
+
 #[test]
 fn test_no_ignores() -> Result<()> {
     // By default, the only finding should be ignored.

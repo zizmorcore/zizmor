@@ -1,6 +1,7 @@
 //! "plain" (i.e. cargo-style) output.
 
 use itertools::Itertools as _;
+use std::cmp::Reverse;
 use std::collections::{HashMap, hash_map::Entry};
 
 use annotate_snippets::{Annotation, AnnotationKind, Group, Level, Renderer, Snippet};
@@ -104,6 +105,7 @@ pub(crate) fn render_findings(
     show_urls_mode: &ShowAuditUrls,
     render_links_mode: &RenderLinks,
     naches_mode: bool,
+    summary_mode: bool,
 ) {
     for finding in findings.findings() {
         render_finding(registry, finding, show_urls_mode, render_links_mode);
@@ -205,6 +207,33 @@ pub(crate) fn render_findings(
                 .unwrap_or(&0)
                 .red(),
         );
+
+        if summary_mode {
+            render_summary(findings);
+        }
+    }
+}
+
+fn render_summary(findings: &FindingRegistry) {
+    let counts = findings
+        .findings()
+        .iter()
+        .map(|finding| finding.primary_location().symbolic.key)
+        .counts();
+
+    let mut rows: Vec<_> = counts.into_iter().collect();
+    rows.sort_by_key(|(key, count)| (Reverse(*count), key.presentation_path()));
+
+    let width = rows
+        .iter()
+        .map(|(key, _)| key.presentation_path().len())
+        .max()
+        .unwrap_or(0);
+
+    println!();
+    println!("{}", "Findings per file:".bold());
+    for (key, count) in rows {
+        println!("  {path:<width$}  {count}", path = key.presentation_path());
     }
 }
 
