@@ -594,9 +594,11 @@ impl CachePoisoning {
         let LoE::Literal(inputs) = inputs else {
             return None;
         };
+
         let PublishingScenario::UsingReleaseTriggers(triggers) = scenario else {
             return None;
         };
+
         // TODO: Account for more precise trigger constraints, e.g. tag patterns.
         if !triggers
             .iter()
