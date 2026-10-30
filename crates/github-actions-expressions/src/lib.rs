@@ -144,20 +144,24 @@ impl<'a> SpannedExpr<'a> {
         let mut contexts = vec![];
 
         match self.deref() {
-            Expr::Call(Call { func, args }) => {
+            Expr::Call(Call { func, args }) => match func {
                 // These functions, when evaluated, produce an evaluation
                 // that includes some or all of the contexts listed in
                 // their arguments.
-                // TODO: Handle `case()` here as well.
-                if matches!(
-                    func,
-                    Function::ToJSON | Function::FromJSON | Function::Format | Function::Join
-                ) {
+                Function::ToJSON | Function::FromJSON | Function::Format | Function::Join => {
                     for arg in args {
                         contexts.extend(arg.dataflow_contexts());
                     }
                 }
-            }
+                // `case(pred1, val1, ..., default)` evaluates to one of its
+                // values or its default; the predicates are booleans.
+                Function::Case => {
+                    for arg in args.iter().skip(1).step_by(2).chain(args.last()) {
+                        contexts.extend(arg.dataflow_contexts());
+                    }
+                }
+                _ => (),
+            },
             // NOTE: We intentionally don't handle the `func(...).foo.bar`
             // case differently here, since a call followed by a
             // context access *can* flow into the evaluation.
@@ -2521,6 +2525,22 @@ mod tests {
                 .map(|t| t.1.raw)
                 .collect::<Vec<_>>(),
             ["github.event.issue.title"]
+        );
+
+        // case(...): only the values and the default flow into the evaluation.
+        let expr = Expr::parse(
+            "case(foo.a == 'x', github.event.issue.title, foo.b, github.event.issue.body, foo.c)",
+        )?;
+        assert_eq!(
+            expr.dataflow_contexts()
+                .iter()
+                .map(|t| t.1.raw)
+                .collect::<Vec<_>>(),
+            [
+                "github.event.issue.title",
+                "github.event.issue.body",
+                "foo.c"
+            ]
         );
 
         Ok(())
