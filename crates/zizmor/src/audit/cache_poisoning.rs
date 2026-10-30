@@ -4,8 +4,7 @@ use github_actions_expressions::call::{Call, Function};
 use github_actions_expressions::literal::Literal;
 use github_actions_expressions::op::{BinExpr, BinOp, UnOp};
 use github_actions_expressions::{Expr, SpannedExpr};
-use github_actions_models::common::expr::LoE;
-use github_actions_models::common::{CacheMode, EnvValue};
+use github_actions_models::common::{CacheMode, Env, EnvValue, expr::LoE};
 use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BranchFilters, OptionalBody};
 
@@ -462,36 +461,6 @@ impl CacheControlExpr {
     }
 }
 
-struct CacheControlField<'a> {
-    toggle: Toggle,
-    raw_value: &'a EnvValue,
-}
-
-impl<'a> CacheControlField<'a> {
-    fn extract(coord: &'a ActionCoordinate, step: &'a impl StepCommon<'a>) -> Option<Self> {
-        if let ActionCoordinate::Configurable { control, .. } = coord
-            && let ControlExpr::Field {
-                toggle,
-                field_name,
-                field_type: ControlFieldType::Boolean,
-                ..
-            } = control
-            && let Some(StepBodyCommon::Uses {
-                with: LoE::Literal(with),
-                ..
-            }) = step.body()
-            && let Some(raw_value) = with.get(*field_name)
-        {
-            Some(CacheControlField {
-                toggle: *toggle,
-                raw_value,
-            })
-        } else {
-            None
-        }
-    }
-}
-
 pub(crate) struct CachePoisoning;
 
 audit_meta!(
@@ -616,13 +585,52 @@ impl CachePoisoning {
         Some(PublishingScenario::UsingReleaseAction(well_know_publisher))
     }
 
+    /// Refine inputs for tag-based publishing without changing the source workflow.
+    /// Returns `None` when the heuristic does not apply.
+    fn refine_cache_inputs(
+        inputs: &LoE<Env>,
+        scenario: &PublishingScenario<'_>,
+    ) -> Option<LoE<Env>> {
+        let LoE::Literal(inputs) = inputs else {
+            return None;
+        };
+        let PublishingScenario::UsingReleaseTriggers(triggers) = scenario else {
+            return None;
+        };
+        // TODO: Account for more precise trigger constraints, e.g. tag patterns.
+        if !triggers
+            .iter()
+            .all(|t| matches!(t, ReleaseTrigger::TagPush | ReleaseTrigger::ReleaseEvent))
+        {
+            return None;
+        }
+
+        let mut refined = inputs.clone();
+        for value in refined.values_mut() {
+            if let Some(expr) = CacheControlExpr::parse(&value.to_string()) {
+                *value = EnvValue::Boolean(expr.eval_for_tag_push());
+            }
+        }
+        Some(LoE::Literal(refined))
+    }
+
     fn evaluate_cache_usage<'doc>(
         &self,
         step: &impl StepCommon<'doc>,
+        scenario: &PublishingScenario<'doc>,
     ) -> Option<(&'static CacheAwareAction, Usage)> {
-        KNOWN_CACHE_AWARE_ACTIONS
-            .iter()
-            .find_map(|action| action.coordinate.usage(step).map(|usage| (action, usage)))
+        let StepBodyCommon::Uses { with, .. } = step.body()? else {
+            return None;
+        };
+        let refined = Self::refine_cache_inputs(with, scenario);
+        let inputs = refined.as_ref().unwrap_or(with);
+
+        KNOWN_CACHE_AWARE_ACTIONS.iter().find_map(|action| {
+            action
+                .coordinate
+                .usage_with_inputs(step, inputs)
+                .map(|usage| (action, usage))
+        })
     }
 
     fn create_cache_disable_fix<'doc>(
@@ -652,69 +660,12 @@ impl CachePoisoning {
         })
     }
 
-    /// Apply heuristics to a [`Usage::Conditional`] to attempt to refine it into
-    /// a more precise usage.
-    ///
-    /// Returns `None` if the heuristics determine that caching is effectively disabled.
-    fn conditional_cache_usage_heuristics<'doc>(
-        &self,
-        coord: &ActionCoordinate,
-        step: &Step<'doc>,
-        scenario: &PublishingScenario<'doc>,
-        cache_usage: Usage,
-    ) -> Option<Usage> {
-        // Heuristic: if our release workflow is triggered by (only) a tag push and the
-        // cache control field is driven by an expression like `${{ startsWith(github.ref, 'refs/tags/') }}`,
-        // then we can infer that caching is effectively enabled in this workflow, and upgrade the usage
-        // confidence accordingly.
-        // TODO: We probably need to make this even more precise, e.g. for pushes with tag patterns.
-        if let PublishingScenario::UsingReleaseTriggers(triggers) = scenario
-            && triggers
-                .iter()
-                .all(|t| matches!(t, ReleaseTrigger::TagPush | ReleaseTrigger::ReleaseEvent))
-            && let Some(control) = CacheControlField::extract(coord, step)
-            && let Some(expr) = CacheControlExpr::parse(&control.raw_value.to_string())
-        {
-            let control_value = expr.eval_for_tag_push();
-
-            let cache_enabled = match control.toggle {
-                Toggle::OptIn => control_value,
-                Toggle::OptOut => !control_value,
-            };
-
-            if cache_enabled {
-                // Caching is enabled; upgrade the confidence.
-                Some(match cache_usage {
-                    Usage::Conditional(origins) => Usage::Enabled(origins),
-                    usage => usage,
-                })
-            } else {
-                // Caching is disabled; rule out this usage.
-                None
-            }
-        } else {
-            // No heuristics apply; return the original usage.
-            Some(cache_usage)
-        }
-    }
-
     fn uses_cache_aware_step<'doc>(
         &self,
         step: &Step<'doc>,
         scenario: &PublishingScenario<'doc>,
     ) -> Result<Option<Finding<'doc>>, AuditError> {
-        let Some((action, cache_usage)) = self.evaluate_cache_usage(step) else {
-            return Ok(None);
-        };
-        let coord = &action.coordinate;
-
-        let cache_usage = if matches!(&cache_usage, Usage::Conditional(_)) {
-            self.conditional_cache_usage_heuristics(coord, step, scenario, cache_usage)
-        } else {
-            Some(cache_usage)
-        };
-
-        let Some(cache_usage) = cache_usage else {
+        let Some((action, cache_usage)) = self.evaluate_cache_usage(step, scenario) else {
             return Ok(None);
         };
 
@@ -902,5 +853,55 @@ impl Audit for CachePoisoning {
         } else {
             Ok(vec![])
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use github_actions_models::common::{Env, EnvValue, expr::LoE};
+
+    use super::{CachePoisoning, PublishingScenario, ReleaseTrigger};
+
+    #[test]
+    fn test_refine_cache_inputs() -> anyhow::Result<()> {
+        let inputs: LoE<Env> = yaml_serde::from_str(
+            r#"
+disabled: ${{ !startsWith(github.ref, 'refs/tags/') }}
+enabled: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+unknown: ${{ inputs.cache }}
+literal: npm
+"#,
+        )?;
+        let scenario = PublishingScenario::UsingReleaseTriggers(vec![ReleaseTrigger::TagPush]);
+        let refined = CachePoisoning::refine_cache_inputs(&inputs, &scenario);
+        let LoE::Literal(original) = &inputs else {
+            panic!("expected literal inputs");
+        };
+        let mut expected = original.clone();
+        expected.insert("disabled".into(), EnvValue::Boolean(false));
+        expected.insert("enabled".into(), EnvValue::Boolean(true));
+        assert_eq!(refined, Some(LoE::Literal(expected)));
+        assert_eq!(
+            original["disabled"],
+            EnvValue::String("${{ !startsWith(github.ref, 'refs/tags/') }}".into())
+        );
+
+        let scenario = PublishingScenario::UsingReleaseTriggers(vec![
+            ReleaseTrigger::TagPush,
+            ReleaseTrigger::ReleaseBranchPush,
+        ]);
+        assert_eq!(
+            CachePoisoning::refine_cache_inputs(&inputs, &scenario),
+            None
+        );
+
+        let opaque: LoE<Env> = yaml_serde::from_str("${{ inputs.options }}")?;
+        let scenario = PublishingScenario::UsingReleaseTriggers(vec![ReleaseTrigger::TagPush]);
+        assert_eq!(
+            CachePoisoning::refine_cache_inputs(&opaque, &scenario),
+            None
+        );
+
+        Ok(())
     }
 }

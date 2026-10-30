@@ -15,7 +15,7 @@
 
 use std::ops::{BitAnd, BitOr, Not};
 
-use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
+use github_actions_models::common::{Env, EnvValue, RepositoryUses, Uses, expr::LoE};
 use indexmap::{IndexMap, IndexSet, indexset};
 
 use crate::{
@@ -51,12 +51,26 @@ impl ActionCoordinate {
     /// enabled, or explicitly enabled, or potentially enabled by a template expansion that
     /// can't be directly analyzed).
     pub(crate) fn usage<'doc>(&self, step: &impl StepCommon<'doc>) -> Option<Usage> {
+        let StepBodyCommon::Uses { with, .. } = step.body()? else {
+            return None;
+        };
+        self.usage_with_inputs(step, with)
+    }
+
+    /// Like [`Self::usage`], but evaluates the supplied inputs. Callers may refine
+    /// input values while retaining their keys so origins still refer to the
+    /// original step. The step's version and source locations are unchanged.
+    pub(crate) fn usage_with_inputs<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+        inputs: &LoE<Env>,
+    ) -> Option<Usage> {
         let uses_pattern = self.uses_pattern();
 
         // Only `uses:` clauses are analyzed at the moment.
         let Some(StepBodyCommon::Uses {
             uses: Uses::Repository(uses),
-            with,
+            ..
         }) = step.body()
         else {
             return None;
@@ -79,7 +93,7 @@ impl ActionCoordinate {
                 uses_pattern: _,
                 control,
             } => {
-                let LoE::Literal(with) = with else {
+                let LoE::Literal(with) = inputs else {
                     return Some(Usage::Conditional(indexset! {
                         ControlOrigin::WithExpression
                     }));
@@ -417,7 +431,7 @@ pub(crate) enum Usage {
 mod tests {
     use std::str::FromStr as _;
 
-    use github_actions_models::common::{EnvValue, RepositoryUses};
+    use github_actions_models::common::{EnvValue, RepositoryUses, expr::LoE};
     use indexmap::{IndexMap, indexset};
 
     use super::{
@@ -676,6 +690,17 @@ mod tests {
         // Coordinate `uses:` matches but is explicitly toggled off.
         let step = &steps[5];
         assert_eq!(coord.usage(step), None);
+
+        // Analyzed inputs affect usage without changing the original step or origins.
+        let analyzed = LoE::Literal(IndexMap::from([("set-me".into(), EnvValue::Boolean(true))]));
+        assert_eq!(
+            coord.usage_with_inputs(step, &analyzed),
+            Some(Usage::Enabled(indexset! {
+                ControlOrigin::Input { field: "set-me" }
+            }))
+        );
+        assert_eq!(coord.usage(step), None);
+        assert_eq!(coord.usage_with_inputs(&steps[3], &analyzed), None);
 
         // Coordinate `uses:` matches and is enabled by default.
         let coord = ActionCoordinate::Configurable {

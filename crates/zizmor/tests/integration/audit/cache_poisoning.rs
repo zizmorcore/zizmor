@@ -693,6 +693,19 @@ fn test_issue_2320() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Bug #2496: tag heuristics must refine fields inside compound cache controls.
+#[test]
+fn test_issue_2496() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("cache-poisoning/issue-2496-repro.yml"))
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
+
 #[test]
 fn test_trigger_heuristics_tag_only() -> anyhow::Result<()> {
     insta::assert_snapshot!(
