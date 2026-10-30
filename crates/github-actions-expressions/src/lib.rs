@@ -147,9 +147,7 @@ impl<'a> SpannedExpr<'a> {
             Expr::Call(Call { func, args }) => {
                 // These functions, when evaluated, produce an evaluation
                 // that includes some or all of the contexts listed in
-                // their arguments. `fromJSON` is included because
-                // `fromJSON(toJSON(x))` evaluates to `x`, and `fromJSON(x)`
-                // evaluates to whatever (attacker-controllable) JSON `x` holds.
+                // their arguments.
                 if matches!(
                     func,
                     Function::ToJSON | Function::FromJSON | Function::Format | Function::Join
