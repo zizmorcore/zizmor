@@ -3,21 +3,22 @@ use std::sync::LazyLock;
 use github_actions_expressions::call::{Call, Function};
 use github_actions_expressions::literal::Literal;
 use github_actions_expressions::op::{BinExpr, BinOp, UnOp};
-use github_actions_expressions::{Expr, SpannedExpr};
-use github_actions_models::common::{CacheMode, Env, EnvValue, expr::LoE};
+use github_actions_expressions::{Evaluation, Expr, SpannedExpr};
+use github_actions_models::common::CacheMode;
 use github_actions_models::workflow::Trigger;
 use github_actions_models::workflow::event::{BranchFilters, OptionalBody};
 
 use crate::audit::{Audit, AuditError, audit_meta};
 use crate::finding::location::{Locatable as _, Routable as _};
 use crate::finding::{Confidence, Finding, Fix, FixDisposition, Persona, Severity};
+use crate::models::StepCommon;
 use crate::models::coordinate::{
-    ActionCoordinate, ControlExpr, ControlFieldType, ControlOrigin, Toggle, Usage, VersionBound,
+    ActionCoordinate, ControlExpr, ControlFieldType, ControlOrigin, ExpressionEvaluator, Toggle,
+    Usage, VersionBound,
 };
 use crate::models::version::Version;
 use crate::models::workflow::cache_mode::{EffectiveCacheMode, HasEffectiveCacheMode as _};
 use crate::models::workflow::{JobCommon, NormalJob, ReusableWorkflowCallJob, Step, Steps};
-use crate::models::{StepBodyCommon, StepCommon};
 use crate::state::AuditState;
 use crate::utils::ExtractedExpr;
 
@@ -386,10 +387,52 @@ enum ReleaseTrigger {
     ReleaseEvent,
 }
 
+/// Facts shared by every inferred publishing trigger.
+/// `None` means the triggers disagree or no trigger is known.
+struct PublishingFacts {
+    is_tag_ref: Option<bool>,
+    is_tag_push: Option<bool>,
+}
+
+impl PublishingFacts {
+    fn from_triggers(triggers: &[ReleaseTrigger]) -> Self {
+        let has_tag_push = triggers
+            .iter()
+            .any(|t| matches!(t, ReleaseTrigger::TagPush));
+        let has_release = triggers
+            .iter()
+            .any(|t| matches!(t, ReleaseTrigger::ReleaseEvent));
+        let has_branch_push = triggers
+            .iter()
+            .any(|t| matches!(t, ReleaseTrigger::ReleaseBranchPush));
+
+        Self {
+            is_tag_ref: match (has_tag_push || has_release, has_branch_push) {
+                (true, false) => Some(true),
+                (false, true) => Some(false),
+                _ => None,
+            },
+            is_tag_push: match (has_tag_push, has_release || has_branch_push) {
+                (true, false) => Some(true),
+                (false, true) => Some(false),
+                _ => None,
+            },
+        }
+    }
+}
+
+impl ExpressionEvaluator for PublishingFacts {
+    fn evaluate(&self, expression: &str) -> Option<Evaluation> {
+        CacheControlExpr::parse(expression)?
+            .eval(self)
+            .map(Evaluation::Boolean)
+    }
+}
+
 /// The release 'scenario' in which a cache-aware step is used.
 enum PublishingScenario<'doc> {
     /// The surrounding workflow is triggered by event(s) typically used for creating releases.
-    UsingReleaseTriggers(Vec<ReleaseTrigger>),
+    UsingReleaseTriggers(PublishingFacts),
     /// The release is performed by a well-known action like `pypa/gh-action-pypi-publish`.
     UsingReleaseAction(Step<'doc>),
 }
@@ -451,27 +494,13 @@ impl CacheControlExpr {
         }
     }
 
-    fn eval_for_trigger(&self, trigger: &ReleaseTrigger) -> bool {
+    fn eval(&self, facts: &PublishingFacts) -> Option<bool> {
         match self {
-            Self::Bool(value) => *value,
-            Self::Not(expr) => !expr.eval_for_trigger(trigger),
-            Self::StartsWithGithubRefTagPrefix => {
-                matches!(
-                    trigger,
-                    ReleaseTrigger::TagPush | ReleaseTrigger::ReleaseEvent
-                )
-            }
-            Self::RefTypeTagPush => matches!(trigger, ReleaseTrigger::TagPush),
+            Self::Bool(value) => Some(*value),
+            Self::Not(expr) => expr.eval(facts).map(|value| !value),
+            Self::StartsWithGithubRefTagPrefix => facts.is_tag_ref,
+            Self::RefTypeTagPush => facts.is_tag_push,
         }
-    }
-
-    /// Return a constant value only when every represented trigger agrees.
-    fn eval_for_triggers(&self, triggers: &[ReleaseTrigger]) -> Option<bool> {
-        let (first, rest) = triggers.split_first()?;
-        let value = self.eval_for_trigger(first);
-        rest.iter()
-            .all(|trigger| self.eval_for_trigger(trigger) == value)
-            .then_some(value)
     }
 }
 
@@ -592,45 +621,13 @@ impl CachePoisoning {
     ) -> Option<PublishingScenario<'doc>> {
         let triggers = self.triggers_used_when_publishing_artifacts(trigger);
         if !triggers.is_empty() {
-            return Some(PublishingScenario::UsingReleaseTriggers(triggers));
+            return Some(PublishingScenario::UsingReleaseTriggers(
+                PublishingFacts::from_triggers(&triggers),
+            ));
         };
 
         let well_know_publisher = Self::detected_well_known_publisher_step(steps)?;
         Some(PublishingScenario::UsingReleaseAction(well_know_publisher))
-    }
-
-    /// Refine inputs for tag-based publishing without changing the source workflow.
-    /// Returns `None` when the heuristic does not apply.
-    fn refine_cache_inputs(
-        inputs: &LoE<Env>,
-        scenario: &PublishingScenario<'_>,
-    ) -> Option<LoE<Env>> {
-        let LoE::Literal(inputs) = inputs else {
-            return None;
-        };
-
-        let PublishingScenario::UsingReleaseTriggers(triggers) = scenario else {
-            return None;
-        };
-
-        // TODO: Account for more precise trigger constraints, e.g. tag patterns.
-        if !triggers
-            .iter()
-            .all(|t| matches!(t, ReleaseTrigger::TagPush | ReleaseTrigger::ReleaseEvent))
-        {
-            return None;
-        }
-
-        let mut refined = inputs.clone();
-        for value in refined.values_mut() {
-            if let Some(expr) = CacheControlExpr::parse(&value.to_string())
-                && let Some(resolved) = expr.eval_for_triggers(triggers)
-            {
-                *value = EnvValue::Boolean(resolved);
-            }
-        }
-
-        Some(LoE::Literal(refined))
     }
 
     fn evaluate_cache_usage<'doc>(
@@ -638,16 +635,15 @@ impl CachePoisoning {
         step: &impl StepCommon<'doc>,
         scenario: &PublishingScenario<'doc>,
     ) -> Option<(&'static CacheAwareAction, Usage)> {
-        let StepBodyCommon::Uses { with, .. } = step.body()? else {
-            return None;
+        let expressions: &dyn ExpressionEvaluator = match scenario {
+            PublishingScenario::UsingReleaseTriggers(facts) => facts,
+            PublishingScenario::UsingReleaseAction(_) => &(),
         };
-        let refined = Self::refine_cache_inputs(with, scenario);
-        let inputs = refined.as_ref().unwrap_or(with);
 
         KNOWN_CACHE_AWARE_ACTIONS.iter().find_map(|action| {
             action
                 .coordinate
-                .usage_with_inputs(step, inputs)
+                .usage_with_evaluator(step, expressions)
                 .map(|usage| (action, usage))
         })
     }
@@ -877,71 +873,39 @@ impl Audit for CachePoisoning {
 
 #[cfg(test)]
 mod tests {
-    use github_actions_models::common::{Env, EnvValue, expr::LoE};
+    use github_actions_expressions::Evaluation;
 
-    use super::{CachePoisoning, PublishingScenario, ReleaseTrigger};
+    use super::PublishingFacts;
+    use super::ReleaseTrigger::{ReleaseBranchPush, ReleaseEvent, TagPush};
+    use crate::models::coordinate::ExpressionEvaluator;
 
     #[test]
-    fn test_refine_cache_inputs() -> anyhow::Result<()> {
-        let inputs: LoE<Env> = yaml_serde::from_str(
-            r#"
-disabled: ${{ !startsWith(github.ref, 'refs/tags/') }}
-enabled: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-negated: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}
-constant: ${{ true }}
-unknown: ${{ inputs.cache }}
-literal: npm
-"#,
-        )?;
-        let LoE::Literal(original) = &inputs else {
-            panic!("expected literal inputs");
-        };
-        for (triggers, tag_push) in [
-            (vec![ReleaseTrigger::TagPush], Some(true)),
-            (vec![ReleaseTrigger::ReleaseEvent], Some(false)),
-            (
-                vec![ReleaseTrigger::TagPush, ReleaseTrigger::ReleaseEvent],
-                None,
-            ),
-            (
-                vec![ReleaseTrigger::ReleaseEvent, ReleaseTrigger::TagPush],
-                None,
-            ),
+    fn test_publishing_expressions() {
+        for (triggers, expected) in [
+            (vec![TagPush], (Some(true), Some(true))),
+            (vec![ReleaseEvent], (Some(true), Some(false))),
+            (vec![ReleaseBranchPush], (Some(false), Some(false))),
+            (vec![TagPush, ReleaseEvent], (Some(true), None)),
+            (vec![TagPush, ReleaseBranchPush], (None, None)),
+            (vec![ReleaseEvent, ReleaseBranchPush], (None, Some(false))),
+            (vec![], (None, None)),
         ] {
-            let scenario = PublishingScenario::UsingReleaseTriggers(triggers);
-            let mut expected = original.clone();
-            expected.insert("disabled".into(), EnvValue::Boolean(false));
-            expected.insert("constant".into(), EnvValue::Boolean(true));
-            if let Some(value) = tag_push {
-                expected.insert("enabled".into(), EnvValue::Boolean(value));
-                expected.insert("negated".into(), EnvValue::Boolean(!value));
-            }
+            let facts = PublishingFacts::from_triggers(&triggers);
             assert_eq!(
-                CachePoisoning::refine_cache_inputs(&inputs, &scenario),
-                Some(LoE::Literal(expected))
+                facts.evaluate("${{ startsWith(github.ref, 'refs/tags/') }}"),
+                expected.0.map(Evaluation::Boolean)
+            );
+            assert_eq!(
+                facts.evaluate("${{ github.event_name == 'push' && github.ref_type == 'tag' }}"),
+                expected.1.map(Evaluation::Boolean)
             );
         }
-        assert_eq!(
-            original["disabled"],
-            EnvValue::String("${{ !startsWith(github.ref, 'refs/tags/') }}".into())
-        );
 
-        let scenario = PublishingScenario::UsingReleaseTriggers(vec![
-            ReleaseTrigger::TagPush,
-            ReleaseTrigger::ReleaseBranchPush,
-        ]);
+        let facts = PublishingFacts::from_triggers(&[]);
         assert_eq!(
-            CachePoisoning::refine_cache_inputs(&inputs, &scenario),
-            None
+            facts.evaluate("${{ true }}"),
+            Some(Evaluation::Boolean(true))
         );
-
-        let opaque: LoE<Env> = yaml_serde::from_str("${{ inputs.options }}")?;
-        let scenario = PublishingScenario::UsingReleaseTriggers(vec![ReleaseTrigger::TagPush]);
-        assert_eq!(
-            CachePoisoning::refine_cache_inputs(&opaque, &scenario),
-            None
-        );
-
-        Ok(())
+        assert_eq!(facts.evaluate("${{ inputs.cache }}"), None);
     }
 }

@@ -79,7 +79,7 @@ pub type Env = IndexMap<String, EnvValue>;
 /// This type also gets used for other places where GitHub Actions
 /// contextually reinterprets a YAML value as a string, e.g. trigger
 /// input values.
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum EnvValue {
     // Missing values are empty strings.
