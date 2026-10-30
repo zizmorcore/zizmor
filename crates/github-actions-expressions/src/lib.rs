@@ -148,6 +148,7 @@ impl<'a> SpannedExpr<'a> {
                 // These functions, when evaluated, produce an evaluation
                 // that includes some or all of the contexts listed in
                 // their arguments.
+                // TODO: Handle `case()` here as well.
                 if matches!(
                     func,
                     Function::ToJSON | Function::FromJSON | Function::Format | Function::Join
