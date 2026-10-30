@@ -29,6 +29,10 @@ of `zizmor`.
 
 * zizmor's LSP now audits pre-commit inputs (#2485)
 
+* zizmor now has a `--summary` flag, which shows the number of findings
+  for each file in the plain output format. See the [per-file summary]
+  documentation for more information. (#1117)
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [bot-conditions] audit did not properly flag
@@ -2222,3 +2226,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 <!-- useful doc links -->
 
 [input collection]: ./usage.md#input-collection
+[per-file summary]: ./usage.md#per-file-summary

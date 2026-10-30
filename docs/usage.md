@@ -299,6 +299,27 @@ zizmor --show-audit-urls=always ...
 zizmor --show-audit-urls=never ...
 ```
 
+#### Per-file summary
+
+Users can supply the `--summary` flag to show the number of findings
+for each file after the findings. The file with the most findings
+comes first.
+
+```console
+$ zizmor --summary .
+...
+5 findings: 0 informational, 0 low, 0 medium, 5 high
+
+Findings per file:
+  ./.github/workflows/release.yml  3
+  ./.github/workflows/ci.yml       2
+```
+
+The summary does not include ignored or suppressed findings.
+
+`--summary` only applies to `--format=plain`. With other formats,
+`zizmor` ignores the flag and shows a warning.
+
 !!! note
 
     `--show-audit-urls=...` is available in `v1.19.0` and later.

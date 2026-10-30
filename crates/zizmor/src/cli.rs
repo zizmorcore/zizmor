@@ -179,6 +179,12 @@ pub(crate) struct OutputArgs {
     )]
     pub(crate) show_audit_urls: CliShowAuditUrls,
 
+    /// Show the number of findings for each file after the findings.
+    ///
+    /// Only affects `--format=plain` (the default).
+    #[arg(long)]
+    pub(crate) summary: bool,
+
     /// Disable all error codes besides success and tool failure.
     #[arg(long)]
     pub(crate) no_exit_codes: bool,
