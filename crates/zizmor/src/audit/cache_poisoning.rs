@@ -451,13 +451,27 @@ impl CacheControlExpr {
         }
     }
 
-    fn eval_for_tag_push(&self) -> bool {
+    fn eval_for_trigger(&self, trigger: &ReleaseTrigger) -> bool {
         match self {
             Self::Bool(value) => *value,
-            Self::Not(expr) => !expr.eval_for_tag_push(),
-            Self::StartsWithGithubRefTagPrefix => true,
-            Self::RefTypeTagPush => true,
+            Self::Not(expr) => !expr.eval_for_trigger(trigger),
+            Self::StartsWithGithubRefTagPrefix => {
+                matches!(
+                    trigger,
+                    ReleaseTrigger::TagPush | ReleaseTrigger::ReleaseEvent
+                )
+            }
+            Self::RefTypeTagPush => matches!(trigger, ReleaseTrigger::TagPush),
         }
+    }
+
+    /// Return a constant value only when every represented trigger agrees.
+    fn eval_for_triggers(&self, triggers: &[ReleaseTrigger]) -> Option<bool> {
+        let (first, rest) = triggers.split_first()?;
+        let value = self.eval_for_trigger(first);
+        rest.iter()
+            .all(|trigger| self.eval_for_trigger(trigger) == value)
+            .then_some(value)
     }
 }
 
@@ -609,8 +623,10 @@ impl CachePoisoning {
 
         let mut refined = inputs.clone();
         for value in refined.values_mut() {
-            if let Some(expr) = CacheControlExpr::parse(&value.to_string()) {
-                *value = EnvValue::Boolean(expr.eval_for_tag_push());
+            if let Some(expr) = CacheControlExpr::parse(&value.to_string())
+                && let Some(resolved) = expr.eval_for_triggers(triggers)
+            {
+                *value = EnvValue::Boolean(resolved);
             }
         }
 
@@ -871,19 +887,40 @@ mod tests {
             r#"
 disabled: ${{ !startsWith(github.ref, 'refs/tags/') }}
 enabled: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+negated: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}
+constant: ${{ true }}
 unknown: ${{ inputs.cache }}
 literal: npm
 "#,
         )?;
-        let scenario = PublishingScenario::UsingReleaseTriggers(vec![ReleaseTrigger::TagPush]);
-        let refined = CachePoisoning::refine_cache_inputs(&inputs, &scenario);
         let LoE::Literal(original) = &inputs else {
             panic!("expected literal inputs");
         };
-        let mut expected = original.clone();
-        expected.insert("disabled".into(), EnvValue::Boolean(false));
-        expected.insert("enabled".into(), EnvValue::Boolean(true));
-        assert_eq!(refined, Some(LoE::Literal(expected)));
+        for (triggers, tag_push) in [
+            (vec![ReleaseTrigger::TagPush], Some(true)),
+            (vec![ReleaseTrigger::ReleaseEvent], Some(false)),
+            (
+                vec![ReleaseTrigger::TagPush, ReleaseTrigger::ReleaseEvent],
+                None,
+            ),
+            (
+                vec![ReleaseTrigger::ReleaseEvent, ReleaseTrigger::TagPush],
+                None,
+            ),
+        ] {
+            let scenario = PublishingScenario::UsingReleaseTriggers(triggers);
+            let mut expected = original.clone();
+            expected.insert("disabled".into(), EnvValue::Boolean(false));
+            expected.insert("constant".into(), EnvValue::Boolean(true));
+            if let Some(value) = tag_push {
+                expected.insert("enabled".into(), EnvValue::Boolean(value));
+                expected.insert("negated".into(), EnvValue::Boolean(!value));
+            }
+            assert_eq!(
+                CachePoisoning::refine_cache_inputs(&inputs, &scenario),
+                Some(LoE::Literal(expected))
+            );
+        }
         assert_eq!(
             original["disabled"],
             EnvValue::String("${{ !startsWith(github.ref, 'refs/tags/') }}".into())
