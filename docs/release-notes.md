@@ -31,7 +31,7 @@ of `zizmor`.
 
 * zizmor now has a `--summary` flag, which shows the number of findings
   for each file in the plain output format. See the [per-file summary]
-  documentation for more information. (#1117)
+  documentation for more information. (#2503)
 
 ### Bug Fixes 🐛
 
