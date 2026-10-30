@@ -717,6 +717,32 @@ fn test_issue_2197() -> Result<()> {
     Ok(())
 }
 
+/// Repro case for #2490: contexts wrapped in `fromJSON(...)` should still be
+/// considered for injection.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/2490>
+#[test]
+fn test_issue_2490() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("template-injection/issue-2490-repro.yml"))
+            .run()?,
+        @r#"
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:19:40
+       |
+    19 |       - run: echo "${{ fromJSON(toJSON(github.event.issue.title)) }}"
+       |         --- this run block             ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |
+       = note: audit confidence → High
+
+    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    "#
+    );
+
+    Ok(())
+}
+
 #[test]
 fn test_fix_github_ref_name() -> anyhow::Result<()> {
     let workflow_content = r#"
