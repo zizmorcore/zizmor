@@ -314,7 +314,7 @@ $ zizmor --summary .
 ...
 5 findings: 0 informational, 0 low, 0 medium, 5 high
 
-Findings per file:
+Findings per file (excluding ignored and suppressed):
   ./.github/workflows/release.yml  3
   ./.github/workflows/ci.yml       2
 ```

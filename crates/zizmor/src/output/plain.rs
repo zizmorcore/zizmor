@@ -231,7 +231,10 @@ fn render_summary(findings: &FindingRegistry) {
         .unwrap_or(0);
 
     println!();
-    println!("{}", "Findings per file:".bold());
+    println!(
+        "{}",
+        "Findings per file (excluding ignored and suppressed):".bold()
+    );
     for (key, count) in rows {
         println!("  {path:<width$}  {count}", path = key.presentation_path());
     }

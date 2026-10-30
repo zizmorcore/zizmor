@@ -850,11 +850,11 @@ fn test_summary() -> Result<()> {
         .run()?;
 
     let start = output
-        .find("Findings per file:")
+        .find("Findings per file")
         .expect("expected a summary table");
 
     insta::assert_snapshot!(&output[start..], @"
-    Findings per file:
+    Findings per file (excluding ignored and suppressed):
       @@INPUT@@/.github/workflows/many-findings.yml     3
       @@INPUT@@/.github/workflows/also-one-finding.yml  1
       @@INPUT@@/.github/workflows/one-finding.yml       1
