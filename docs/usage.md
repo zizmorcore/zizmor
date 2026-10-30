@@ -299,6 +299,10 @@ zizmor --show-audit-urls=always ...
 zizmor --show-audit-urls=never ...
 ```
 
+!!! note
+
+    `--show-audit-urls=...` is available in `v1.19.0` and later.
+
 #### Per-file summary
 
 Users can supply the `--summary` flag to show the number of findings
@@ -319,10 +323,6 @@ The summary does not include ignored or suppressed findings.
 
 `--summary` only applies to `--format=plain`. With other formats,
 `zizmor` ignores the flag and shows a warning.
-
-!!! note
-
-    `--show-audit-urls=...` is available in `v1.19.0` and later.
 
 #### Color customization
 
