@@ -611,6 +611,7 @@ impl CachePoisoning {
                 *value = EnvValue::Boolean(expr.eval_for_tag_push());
             }
         }
+
         Some(LoE::Literal(refined))
     }
 
