@@ -13,6 +13,10 @@ use crate::state::AuditState;
 static ACTIONS_LABELER: LazyLock<ActionCoordinate> =
     LazyLock::new(|| ActionCoordinate::NotConfigurable("actions/labeler".parse().unwrap()));
 
+#[allow(clippy::unwrap_used)]
+static GITHUB_BRANCH_DEPLOY: LazyLock<ActionCoordinate> =
+    LazyLock::new(|| ActionCoordinate::NotConfigurable("github/branch-deploy".parse().unwrap()));
+
 pub(crate) struct DangerousTriggers;
 
 audit_meta!(
@@ -26,15 +30,32 @@ impl DangerousTriggers {
         // If a workflow has exactly one job, that job has exactly one step,
         // and that step is `actions/labeler`, then we suppress any
         // finding for `pull_request_target`. Our rationale for this is
-        // that it's a blessed and pre  sumed-secure use of an otherwise
+        // that it's a blessed and presumed-secure use of an otherwise
         // fundamentally insecure trigger.
         if let Ok(Job::NormalJob(job)) = workflow.jobs().exactly_one()
             && let Ok(step) = job.steps().exactly_one()
             && ACTIONS_LABELER.usage(&step).is_some()
         {
-            return true;
+            true
+        } else {
+            false
         }
-        false
+    }
+
+    fn is_branch_deploy_exception(workflow: &Workflow) -> bool {
+        // If a workflow has exactly one job, that job has exactly one step,
+        // and that step is `github/branch-deploy`, then we suppress any finding
+        // for `issue_comment`. Like the `pull_request_target` exemption above,
+        // the rationale here is that it's a blessed first-party action
+        // and is presumed to be secure on an otherwise insecure trigger.
+        if let Ok(Job::NormalJob(job)) = workflow.jobs().exactly_one()
+            && let Ok(step) = job.steps().exactly_one()
+            && GITHUB_BRANCH_DEPLOY.usage(&step).is_some()
+        {
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -88,7 +109,9 @@ impl Audit for DangerousTriggers {
             );
         }
 
-        if let Some(location) = workflow.issue_comment() {
+        if let Some(location) = workflow.issue_comment()
+            && !Self::is_branch_deploy_exception(workflow)
+        {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::Medium)
