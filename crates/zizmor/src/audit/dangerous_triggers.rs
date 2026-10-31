@@ -26,31 +26,12 @@ audit_meta!(
 );
 
 impl DangerousTriggers {
-    fn is_labeler_exception(workflow: &Workflow) -> bool {
-        // If a workflow has exactly one job, that job has exactly one step,
-        // and that step is `actions/labeler`, then we suppress any
-        // finding for `pull_request_target`. Our rationale for this is
-        // that it's a blessed and presumed-secure use of an otherwise
-        // fundamentally insecure trigger.
+    /// Tests whether the given workflow is (1) a single job, (2) that single job has a single
+    /// step, and (3) that single step matches the given action coordinate.
+    fn is_single_step_workflow(workflow: &Workflow, coord: &ActionCoordinate) -> bool {
         if let Ok(Job::NormalJob(job)) = workflow.jobs().exactly_one()
             && let Ok(step) = job.steps().exactly_one()
-            && ACTIONS_LABELER.usage(&step).is_some()
-        {
-            true
-        } else {
-            false
-        }
-    }
-
-    fn is_branch_deploy_exception(workflow: &Workflow) -> bool {
-        // If a workflow has exactly one job, that job has exactly one step,
-        // and that step is `github/branch-deploy`, then we suppress any finding
-        // for `issue_comment`. Like the `pull_request_target` exemption above,
-        // the rationale here is that it's a blessed first-party action
-        // and is presumed to be secure on an otherwise insecure trigger.
-        if let Ok(Job::NormalJob(job)) = workflow.jobs().exactly_one()
-            && let Ok(step) = job.steps().exactly_one()
-            && GITHUB_BRANCH_DEPLOY.usage(&step).is_some()
+            && coord.usage(&step).is_some()
         {
             true
         } else {
@@ -77,8 +58,11 @@ impl Audit for DangerousTriggers {
         // the `on:` block stopped getting suppressions.
         let on_location = workflow.location().with_keys(["on".into()]);
 
+        // We don't flag `pull_request_target` if the only step in the workflow
+        // is `actions/labeler`, since it's a blessed first-party action and
+        // is presumed secure for this trigger.
         if let Some(location) = workflow.pull_request_target()
-            && !Self::is_labeler_exception(workflow)
+            && !Self::is_single_step_workflow(workflow, &ACTIONS_LABELER)
         {
             findings.push(
                 Self::finding()
@@ -109,8 +93,10 @@ impl Audit for DangerousTriggers {
             );
         }
 
+        // Similarly to `pull_request_target`, we don't flag `issue_comment` if only
+        // a single blessed `github/branch-deploy` step is present.
         if let Some(location) = workflow.issue_comment()
-            && !Self::is_branch_deploy_exception(workflow)
+            && !Self::is_single_step_workflow(workflow, &GITHUB_BRANCH_DEPLOY)
         {
             findings.push(
                 Self::finding()
