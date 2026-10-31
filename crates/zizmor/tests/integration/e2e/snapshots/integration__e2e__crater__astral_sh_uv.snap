@@ -404,6 +404,15 @@ info[anonymous-definition]: workflow or action definition without a name
   = note: audit confidence → High
   = tip: use 'name: ...' to give this job a name
 
+error[known-vulnerable-actions]: action has a known vulnerability
+   --> .github/workflows/ci.yml:317:9
+    |
+317 |         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ GHSA-5xjx-3w67-w9x9
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+
 help[undocumented-permissions]: permissions without explanatory comments
    --> .github/workflows/ci.yml:160:7
     |
@@ -1693,4 +1702,4 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-154 findings (2 suppressed): 24 informational, 105 low, 16 medium, 7 high
+155 findings (2 suppressed): 24 informational, 105 low, 16 medium, 8 high
