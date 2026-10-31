@@ -1,13 +1,17 @@
-use github_actions_models::common::Uses;
-use github_actions_models::workflow::Job;
-use github_actions_models::workflow::job::{Step, UsesStep};
+use std::sync::LazyLock;
+
+use itertools::Itertools;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::audit::AuditError;
 use crate::finding::{Confidence, Finding, Severity};
-use crate::models::uses::RepositoryUsesExt as _;
-use crate::models::workflow::Workflow;
+use crate::models::coordinate::ActionCoordinate;
+use crate::models::workflow::{Job, Workflow};
 use crate::state::AuditState;
+
+#[allow(clippy::unwrap_used)]
+static ACTIONS_LABELER: LazyLock<ActionCoordinate> =
+    LazyLock::new(|| ActionCoordinate::NotConfigurable("actions/labeler".parse().unwrap()));
 
 pub(crate) struct DangerousTriggers;
 
@@ -22,16 +26,11 @@ impl DangerousTriggers {
         // If a workflow has exactly one job, that job has exactly one step,
         // and that step is `actions/labeler`, then we suppress any
         // finding for `pull_request_target`. Our rationale for this is
-        // that it's a blessed and presumed-secure use of an otherwise
+        // that it's a blessed and pre  sumed-secure use of an otherwise
         // fundamentally insecure trigger.
-        if workflow.jobs.len() == 1
-            && let Some((_, Job::NormalJob(job))) = workflow.jobs.get_index(0)
-            && let [step] = job.steps.as_slice()
-            && let Step::Uses(UsesStep {
-                uses: Uses::Repository(uses),
-                ..
-            }) = &step
-            && uses.matches("actions/labeler")
+        if let Ok(Job::NormalJob(job)) = workflow.jobs().exactly_one()
+            && let Ok(step) = job.steps().exactly_one()
+            && ACTIONS_LABELER.usage(&step).is_some()
         {
             return true;
         }
