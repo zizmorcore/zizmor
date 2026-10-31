@@ -707,6 +707,15 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
+error[known-vulnerable-actions]: action has a known vulnerability
+  --> .github/workflows/pypi-publish.yml:55:9
+   |
+55 |         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e  # v1.13.0
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ GHSA-5xjx-3w67-w9x9
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
 help[undocumented-permissions]: permissions without explanatory comments
   --> .github/workflows/pypi-publish.yml:32:7
    |
@@ -1001,4 +1010,4 @@ info[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → Low
 
-99 findings (9 suppressed): 19 informational, 56 low, 5 medium, 10 high
+100 findings (9 suppressed): 19 informational, 56 low, 5 medium, 11 high
