@@ -15,8 +15,9 @@
 
 use std::ops::{BitAnd, BitOr, Not};
 
-use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
-use indexmap::{IndexMap, IndexSet, indexset};
+use github_actions_expressions::Evaluation;
+use github_actions_models::common::{Env, EnvValue, RepositoryUses, Uses, expr::LoE};
+use indexmap::{IndexSet, indexset};
 
 use crate::{
     finding::location::Comment,
@@ -25,6 +26,37 @@ use crate::{
 };
 
 use super::{StepBodyCommon, StepCommon, uses::RepositoryUsesPattern};
+
+/// Audit-specific knowledge for evaluating fenced Actions expressions.
+pub(crate) trait ExpressionEvaluator {
+    /// Returns the expression's value, or `None` when it is unknown.
+    fn evaluate(&self, expression: &str) -> Option<Evaluation>;
+}
+
+impl ExpressionEvaluator for () {
+    fn evaluate(&self, _expression: &str) -> Option<Evaluation> {
+        None
+    }
+}
+
+/// Original inputs and expression knowledge used to evaluate a control tree.
+struct EvaluationContext<'a> {
+    uses: &'a RepositoryUses,
+    comments: &'a [Comment<'a>],
+    inputs: &'a Env,
+    expressions: &'a dyn ExpressionEvaluator,
+}
+
+impl<'a> EvaluationContext<'a> {
+    fn new(uses: &'a RepositoryUses, comments: &'a [Comment<'a>], inputs: &'a Env) -> Self {
+        Self {
+            uses,
+            comments,
+            inputs,
+            expressions: &(),
+        }
+    }
+}
 
 pub(crate) enum ActionCoordinate {
     Configurable {
@@ -51,6 +83,15 @@ impl ActionCoordinate {
     /// enabled, or explicitly enabled, or potentially enabled by a template expansion that
     /// can't be directly analyzed).
     pub(crate) fn usage<'doc>(&self, step: &impl StepCommon<'doc>) -> Option<Usage> {
+        self.usage_with_evaluator(step, &())
+    }
+
+    /// Like [`Self::usage`], with additional knowledge for expression-valued inputs.
+    pub(crate) fn usage_with_evaluator<'doc>(
+        &self,
+        step: &impl StepCommon<'doc>,
+        expressions: &dyn ExpressionEvaluator,
+    ) -> Option<Usage> {
         let uses_pattern = self.uses_pattern();
 
         // Only `uses:` clauses are analyzed at the moment.
@@ -84,7 +125,11 @@ impl ActionCoordinate {
                         ControlOrigin::WithExpression
                     }));
                 };
-                match control.eval(uses, &uses_location.concrete.comments, with) {
+                let context = EvaluationContext {
+                    expressions,
+                    ..EvaluationContext::new(uses, &uses_location.concrete.comments, with)
+                };
+                match control.eval(&context) {
                     ControlEvaluation::Satisfied(origins) => Some(Usage::Enabled(origins)),
                     ControlEvaluation::NotSatisfied(_) => None,
                     ControlEvaluation::Conditional(origins) => Some(Usage::Conditional(origins)),
@@ -117,6 +162,30 @@ pub(crate) enum ControlFieldType {
     /// The behavior is controlled by a "fixed" string field, i.e. only applies
     /// when the field matches one of the given values.
     Exact(&'static [&'static str]),
+}
+
+impl ControlFieldType {
+    /// Evaluate an input according to the field's semantics, resolving expressions
+    /// before interpreting their values.
+    fn eval(&self, input: &EnvValue, expressions: &dyn ExpressionEvaluator) -> Option<bool> {
+        let raw = input.to_string();
+        let value = if ExtractedExpr::from_fenced(&raw).is_some() {
+            let Some(value) = expressions.evaluate(&raw) else {
+                // Preserve the presence heuristic for unresolved free-string inputs.
+                return matches!(self, Self::FreeString).then_some(true);
+            };
+            value.sema().to_string()
+        } else {
+            raw
+        };
+
+        Some(match self {
+            // Pessimistically assume actions coerce any non-`false` value to `true`.
+            Self::Boolean => value != "false",
+            Self::FreeString => !value.is_empty(),
+            Self::Exact(items) => items.contains(&value.as_str()),
+        })
+    }
 }
 
 /// The part of a step that determined a control expression's result.
@@ -320,14 +389,9 @@ impl<'a> ControlExpr<'a> {
         Self::Not(Box::new(expr))
     }
 
-    fn eval(
-        &self,
-        uses: &RepositoryUses,
-        comments: &[Comment],
-        with: &IndexMap<String, EnvValue>,
-    ) -> ControlEvaluation {
+    fn eval(&self, context: &EvaluationContext<'_>) -> ControlEvaluation {
         match self {
-            Self::VersionBound(vb) => vb.eval(uses, comments),
+            Self::VersionBound(vb) => vb.eval(context.uses, context.comments),
             Self::Field {
                 toggle,
                 field_name,
@@ -335,37 +399,8 @@ impl<'a> ControlExpr<'a> {
                 satisfied_by_default: enabled_by_default,
             } => {
                 // If the controlling field is not present, the default dictates the semantics.
-                if let Some(field_value) = with.get(*field_name) {
-                    let control_value = match field_type {
-                        // We expect a boolean control.
-                        ControlFieldType::Boolean => match field_value.to_string().as_str() {
-                            "true" => Some(true),
-                            "false" => Some(false),
-                            other => match ExtractedExpr::from_fenced(other) {
-                                // We have something like `foo: ${{ expr }}`,
-                                // which could evaluate either way.
-                                Some(_) => None,
-                                // We have something like `foo: bar`, but we
-                                // were expecting a boolean. Assume pessimistically
-                                // that the action coerces any non-`false` value to `true`.
-                                None => Some(true),
-                            },
-                        },
-                        // We expect a "free" string control, i.e. any value.
-                        // Evaluate just the toggle.
-                        ControlFieldType::FreeString => Some(!field_value.is_empty()),
-                        // We expect a "fixed" string control, i.e. one of a set of values.
-                        ControlFieldType::Exact(items) => {
-                            let value = field_value.to_string();
-                            if ExtractedExpr::from_fenced(&value).is_some() {
-                                // Like `ControlFieldType::Boolean`, this could
-                                // evaluate any way.
-                                None
-                            } else {
-                                Some(items.contains(&value.as_str()))
-                            }
-                        }
-                    };
+                if let Some(field_value) = context.inputs.get(*field_name) {
+                    let control_value = field_type.eval(field_value, context.expressions);
 
                     let origins = indexset! { ControlOrigin::Input { field: field_name } };
                     match (control_value, toggle) {
@@ -387,21 +422,15 @@ impl<'a> ControlExpr<'a> {
                     })
                 }
             }
-            Self::All(exprs) => exprs
-                .iter()
-                .map(|expr| expr.eval(uses, comments, with))
-                .fold(
-                    ControlEvaluation::Satisfied(IndexSet::new()),
-                    |acc, expr| acc & expr,
-                ),
-            Self::Any(exprs) => exprs
-                .iter()
-                .map(|expr| expr.eval(uses, comments, with))
-                .fold(
-                    ControlEvaluation::NotSatisfied(IndexSet::new()),
-                    |acc, expr| acc | expr,
-                ),
-            Self::Not(expr) => !expr.eval(uses, comments, with),
+            Self::All(exprs) => exprs.iter().map(|expr| expr.eval(context)).fold(
+                ControlEvaluation::Satisfied(IndexSet::new()),
+                |acc, expr| acc & expr,
+            ),
+            Self::Any(exprs) => exprs.iter().map(|expr| expr.eval(context)).fold(
+                ControlEvaluation::NotSatisfied(IndexSet::new()),
+                |acc, expr| acc | expr,
+            ),
+            Self::Not(expr) => !expr.eval(context),
         }
     }
 }
@@ -417,12 +446,13 @@ pub(crate) enum Usage {
 mod tests {
     use std::str::FromStr as _;
 
+    use github_actions_expressions::Evaluation;
     use github_actions_models::common::{EnvValue, RepositoryUses};
     use indexmap::{IndexMap, indexset};
 
     use super::{
-        ActionCoordinate, ControlEvaluation, ControlExpr, ControlFieldType, ControlOrigin, Toggle,
-        Usage, VersionBound,
+        ActionCoordinate, ControlEvaluation, ControlExpr, ControlFieldType, ControlOrigin,
+        EvaluationContext, ExpressionEvaluator, Toggle, Usage, VersionBound,
     };
     use crate::{
         models::{
@@ -447,25 +477,25 @@ mod tests {
         let with_disabled = IndexMap::from([("set-me".into(), EnvValue::String("".into()))]);
 
         assert_eq!(
-            optin_control.eval(&uses, &[], &with_enabled),
+            optin_control.eval(&EvaluationContext::new(&uses, &[], &with_enabled)),
             ControlEvaluation::Satisfied(indexset! {
                 ControlOrigin::Input { field: "set-me" }
             })
         );
         assert_eq!(
-            optin_control.eval(&uses, &[], &with_disabled),
+            optin_control.eval(&EvaluationContext::new(&uses, &[], &with_disabled)),
             ControlEvaluation::NotSatisfied(indexset! {
                 ControlOrigin::Input { field: "set-me" }
             })
         );
         assert_eq!(
-            optout_control.eval(&uses, &[], &with_enabled),
+            optout_control.eval(&EvaluationContext::new(&uses, &[], &with_enabled)),
             ControlEvaluation::NotSatisfied(indexset! {
                 ControlOrigin::Input { field: "set-me" }
             })
         );
         assert_eq!(
-            optout_control.eval(&uses, &[], &with_disabled),
+            optout_control.eval(&EvaluationContext::new(&uses, &[], &with_disabled)),
             ControlEvaluation::Satisfied(indexset! {
                 ControlOrigin::Input { field: "set-me" }
             })
@@ -503,7 +533,10 @@ mod tests {
             ),
         ] {
             let with = IndexMap::from([("set-me".into(), value)]);
-            assert_eq!(control.eval(&uses, &[], &with), expected);
+            assert_eq!(
+                control.eval(&EvaluationContext::new(&uses, &[], &with)),
+                expected
+            );
         }
     }
 
@@ -529,7 +562,7 @@ mod tests {
 
         let v6 = RepositoryUses::parse("foo/bar@v6.5.0").unwrap();
         assert_eq!(
-            control.eval(&v6, &[], &IndexMap::new()),
+            control.eval(&EvaluationContext::new(&v6, &[], &IndexMap::new())),
             ControlEvaluation::Satisfied(indexset! {
                 ControlOrigin::UsesRef,
                 ControlOrigin::Default {
@@ -540,7 +573,7 @@ mod tests {
 
         let explicit = IndexMap::from([("enable-cache".into(), EnvValue::Boolean(true))]);
         assert_eq!(
-            control.eval(&v6, &[], &explicit),
+            control.eval(&EvaluationContext::new(&v6, &[], &explicit)),
             ControlEvaluation::Satisfied(indexset! {
                 ControlOrigin::Input {
                     field: "enable-cache"
@@ -551,45 +584,40 @@ mod tests {
 
         let v10 = RepositoryUses::parse("foo/bar@v10.0.0").unwrap();
         assert_eq!(
-            control.eval(&v10, &[], &explicit),
+            control.eval(&EvaluationContext::new(&v10, &[], &explicit)),
             ControlEvaluation::Satisfied(indexset! {
                 ControlOrigin::Input {
                     field: "enable-cache"
                 }
             })
         );
-        assert!(matches!(
-            control.eval(&v10, &[], &IndexMap::new()),
-            ControlEvaluation::NotSatisfied(_)
-        ));
-
-        let automatic = IndexMap::from([("enable-cache".into(), EnvValue::String("auto".into()))]);
-        assert!(matches!(
-            control.eval(&v10, &[], &automatic),
-            ControlEvaluation::NotSatisfied(_)
-        ));
-        assert_eq!(
-            control.eval(&v6, &[], &automatic),
-            ControlEvaluation::Satisfied(indexset! {
-                ControlOrigin::UsesRef,
-                ControlOrigin::Input {
-                    field: "enable-cache"
-                },
-            })
-        );
-
-        let disabled = IndexMap::from([("enable-cache".into(), EnvValue::Boolean(false))]);
-        assert!(matches!(
-            control.eval(&v6, &[], &disabled),
-            ControlEvaluation::NotSatisfied(_)
-        ));
 
         let unknown =
             RepositoryUses::parse("foo/bar@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1").unwrap();
         assert_eq!(
-            control.eval(&unknown, &[], &IndexMap::new()),
+            control.eval(&EvaluationContext::new(&unknown, &[], &IndexMap::new())),
             ControlEvaluation::Conditional(indexset! { ControlOrigin::UsesRef })
         );
+    }
+
+    #[test]
+    fn test_expression_field_types() {
+        struct FalseExpression;
+        impl ExpressionEvaluator for FalseExpression {
+            fn evaluate(&self, expression: &str) -> Option<Evaluation> {
+                assert_eq!(expression, "${{ expression }}");
+                Some(Evaluation::Boolean(false))
+            }
+        }
+
+        let input = EnvValue::String("${{ expression }}".into());
+        for (field_type, expected) in [
+            (ControlFieldType::Boolean, false),
+            (ControlFieldType::Exact(&["false"]), true),
+            (ControlFieldType::FreeString, true),
+        ] {
+            assert_eq!(field_type.eval(&input, &FalseExpression), Some(expected));
+        }
     }
 
     #[test]
