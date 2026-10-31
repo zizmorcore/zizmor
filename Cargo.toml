@@ -82,7 +82,7 @@ tracing-subscriber = { version = "0.3.23" }
 tree-sitter = "0.27.0"
 tree-sitter-bash = "0.25.1"
 # Exact version because the PowerShell audit queries depend on the grammar's tree structure.
-tree-sitter-powershell = { package = "woodruffw-trough-tree-sitter-powershell", version = "=0.1.2" }
+tree-sitter-powershell = { package = "woodruffw-trough-tree-sitter-powershell", version = "=0.1.6" }
 tree-sitter-yaml = "0.7.2"
 typomania = { version = "0.2.0", default-features = false }
 url = { version = "2.5.8", features = ["serde"] }

@@ -4166,9 +4166,9 @@ dependencies = [
 
 [[package]]
 name = "woodruffw-trough-tree-sitter-powershell"
-version = "0.1.2"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec457ba421ac6313db72e5b5eb58392e3a273c1710e7cbffd258e1862afdc4e8"
+checksum = "5904ee65902fd293f2e7ce1ff4ddc73e1a4e1711318468f57ee0d3cb7d357f10"
 dependencies = [
  "cc",
  "tree-sitter-language",
