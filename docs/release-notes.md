@@ -42,6 +42,10 @@ of `zizmor`.
   attacker-controllable contexts wrapped in `fromJSON(...)`, such as
   `fromJSON(toJSON(github.event.issue.title))` (#2495)
 
+* Fixed a bug where the [template-injection] audit did not flag
+  attacker-controllable contexts in the values of `case(...)`, such as
+  `case(cond, github.event.issue.title, 'x')` (#2504)
+
 * Fixed a class of bugs in the [obfuscation] audit where a constant-reducible
   subexpression would not be replaced with a contextually correct form (#2483)
 

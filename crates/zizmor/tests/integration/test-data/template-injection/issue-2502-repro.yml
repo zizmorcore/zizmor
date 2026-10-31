@@ -1,0 +1,19 @@
+# See: https://github.com/zizmorcore/zizmor/issues/2502
+#
+# `case(pred, val, default)` evaluates to `val` or `default`, so
+# attacker-controllable contexts in those positions should still be flagged.
+
+name: issue-2502-repro
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  repro:
+    name: Repro
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ case(github.event.action == 'opened', github.event.issue.title, 'x') }}"

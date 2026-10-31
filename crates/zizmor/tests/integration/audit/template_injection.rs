@@ -743,6 +743,32 @@ fn test_issue_2490() -> Result<()> {
     Ok(())
 }
 
+/// Repro case for #2502: contexts in the value or default positions of
+/// `case(...)` should still be considered for injection.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/2502>
+#[test]
+fn test_issue_2502() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("template-injection/issue-2502-repro.yml"))
+            .run()?,
+        @r#"
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:19:62
+       |
+    19 |       - run: echo "${{ case(github.event.action == 'opened', github.event.issue.title, 'x') }}"
+       |         --- this run block                                   ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |
+       = note: audit confidence → High
+
+    2 findings (1 suppressed): 0 informational, 0 low, 0 medium, 1 high
+    "#
+    );
+
+    Ok(())
+}
+
 #[test]
 fn test_fix_github_ref_name() -> anyhow::Result<()> {
     let workflow_content = r#"
