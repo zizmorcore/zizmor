@@ -18,7 +18,7 @@ of `zizmor`.
 
 ### Enhancements 🌱
 
-* zizmor's input collection is not "root-aware" by default,
+* zizmor's input collection is now "root-aware" by default,
   meaning that invocations like `zizmor .` will no longer collect inputs
   unless they would actually be used by GitHub Actions, etc.
   This should eliminate spurious findings from (e.g.) workflow

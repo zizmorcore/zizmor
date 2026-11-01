@@ -865,8 +865,7 @@ impl Client {
         Ok(())
     }
 
-    /// Fetch all auditable inputs (both workflows and actions)
-    /// from the given remote repository slug.
+    /// Fetch all auditable inputs from the given remote repository slug.
     ///
     /// This is much slower than `fetch_workflows`, since it involves
     /// retrieving the entire repository archive and decompressing it.
@@ -933,9 +932,7 @@ impl Client {
 
             if options.mode_set.workflows()
                 && matches!(file_path.extension(), Some("yaml" | "yml"))
-                && file_path
-                    .parent()
-                    .is_some_and(|dir| dir.ends_with(".github/workflows"))
+                && file_path.parent() == Some(Utf8Path::new(".github/workflows"))
             {
                 let key = InputKey::remote(slug, file_path.to_string());
                 let mut contents = String::with_capacity(entry.size() as usize);
@@ -950,8 +947,8 @@ impl Client {
                 group.register(InputKind::Action, contents, key, options.strict)?;
             } else if options.mode_set.dependabot()
                 && matches!(
-                    file_path.file_name(),
-                    Some("dependabot.yml" | "dependabot.yaml")
+                    file_path.as_str(),
+                    ".github/dependabot.yml" | ".github/dependabot.yaml"
                 )
             {
                 let key = InputKey::remote(slug, file_path.to_string());
@@ -959,12 +956,12 @@ impl Client {
                 entry.read_to_string(&mut contents)?;
                 group.register(InputKind::Dependabot, contents, key, options.strict)?;
             } else if options.mode_set.pre_commit() {
-                if matches!(file_path.file_name(), Some(".pre-commit-config.yaml")) {
+                if file_path == ".pre-commit-config.yaml" {
                     let key = InputKey::remote(slug, file_path.to_string());
                     let mut contents = String::with_capacity(entry.size() as usize);
                     entry.read_to_string(&mut contents)?;
                     group.register(InputKind::PreCommitConfig, contents, key, options.strict)?;
-                } else if matches!(file_path.file_name(), Some(".pre-commit-hooks.yaml")) {
+                } else if file_path == ".pre-commit-hooks.yaml" {
                     let key = InputKey::remote(slug, file_path.to_string());
                     let mut contents = String::with_capacity(entry.size() as usize);
                     entry.read_to_string(&mut contents)?;
