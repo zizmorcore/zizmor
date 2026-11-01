@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use itertools::Itertools;
+use itertools::Itertools as _;
 
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::audit::AuditError;
@@ -12,10 +12,6 @@ use crate::state::AuditState;
 #[allow(clippy::unwrap_used)]
 static ACTIONS_LABELER: LazyLock<ActionCoordinate> =
     LazyLock::new(|| ActionCoordinate::NotConfigurable("actions/labeler".parse().unwrap()));
-
-#[allow(clippy::unwrap_used)]
-static GITHUB_BRANCH_DEPLOY: LazyLock<ActionCoordinate> =
-    LazyLock::new(|| ActionCoordinate::NotConfigurable("github/branch-deploy".parse().unwrap()));
 
 pub(crate) struct DangerousTriggers;
 
@@ -93,11 +89,7 @@ impl Audit for DangerousTriggers {
             );
         }
 
-        // Similarly to `pull_request_target`, we don't flag `issue_comment` if only
-        // a single blessed `github/branch-deploy` step is present.
-        if let Some(location) = workflow.issue_comment()
-            && !Self::is_single_step_workflow(workflow, &GITHUB_BRANCH_DEPLOY)
-        {
+        if let Some(location) = workflow.issue_comment() {
             findings.push(
                 Self::finding()
                     .confidence(Confidence::Medium)
