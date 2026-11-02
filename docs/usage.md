@@ -115,7 +115,8 @@ zizmor --collect=workflows,actions example/example
 
 !!! tip
 
-    As of `v1.32.0`, zizmor specializes its local directory collection
+    As of `v1.32.0`, zizmor's input collection is "root aware."
+    That means that zizmor specializes its local directory collection
     depending on whether the input is a Git root.
 
     This changes which inputs are collected by default by limiting
