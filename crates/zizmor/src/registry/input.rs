@@ -166,21 +166,13 @@ impl<'a> CollectionContext<'a> {
         Self::RepositoryRoot { path }
     }
 
-    /// Construct a recursive-directory context, asserting that the path is absolute.
+    /// Construct a recursive-directory context.
     pub(crate) fn recursive_directory(path: &'a Utf8Path) -> Self {
-        assert!(
-            path.is_absolute(),
-            "internal error: directory input paths must be absolute"
-        );
         Self::RecursiveDirectory { path }
     }
 
-    /// Construct an explicit-file context, asserting that the path is absolute.
+    /// Construct an explicit-file context.
     pub(crate) fn explicit_file(path: &'a Utf8Path) -> Self {
-        assert!(
-            path.is_absolute(),
-            "internal error: explicit input paths must be absolute"
-        );
         Self::ExplicitFile { path }
     }
 }
