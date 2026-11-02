@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.32.0
+
 ### New Features 🌈
 
 * zizmor now has **experimental** support for GitHub Actions workflow lockfiles.
