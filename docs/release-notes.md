@@ -29,6 +29,10 @@ of `zizmor`.
 
 * zizmor's LSP now audits pre-commit inputs (#2485)
 
+* zizmor now provides Windows ARM64 wheels on PyPI (#2424)
+
+    Many thanks to @ndabas for proposing and implementing this improvement!
+
 ### Bug Fixes 🐛
 
 * Fixed a bug where the [bot-conditions] audit did not properly flag
