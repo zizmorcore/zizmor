@@ -147,28 +147,62 @@ pub(crate) enum InputKind {
 
 /// The collection context used to classify an input path.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub(crate) enum CollectionContext {
-    /// Discovery from a repository root; paths must be root-relative.
-    RepositoryRoot,
-    /// Recursive discovery from a generic directory; paths must be absolute.
-    RecursiveDirectory,
-    /// An explicitly requested file or LSP document; paths must be absolute.
-    ExplicitFile,
+pub(crate) enum CollectionContext<'a> {
+    /// Discovery from a repository root.
+    RepositoryRoot { path: &'a Utf8Path },
+    /// Recursive discovery from a generic directory.
+    RecursiveDirectory { path: &'a Utf8Path },
+    /// An explicitly requested file or LSP document.
+    ExplicitFile { path: &'a Utf8Path },
+}
+
+impl<'a> CollectionContext<'a> {
+    /// Construct a repository-root context, asserting that the path is relative.
+    pub(crate) fn repository_root(path: &'a Utf8Path) -> Self {
+        assert!(
+            path.is_relative(),
+            "internal error: repository paths must be root-relative"
+        );
+        Self::RepositoryRoot { path }
+    }
+
+    /// Construct a recursive-directory context, asserting that the path is absolute.
+    pub(crate) fn recursive_directory(path: &'a Utf8Path) -> Self {
+        assert!(
+            path.is_absolute(),
+            "internal error: directory input paths must be absolute"
+        );
+        Self::RecursiveDirectory { path }
+    }
+
+    /// Construct an explicit-file context, asserting that the path is absolute.
+    pub(crate) fn explicit_file(path: &'a Utf8Path) -> Self {
+        assert!(
+            path.is_absolute(),
+            "internal error: explicit input paths must be absolute"
+        );
+        Self::ExplicitFile { path }
+    }
 }
 
 impl InputKind {
     /// Classify a normalized path using the source's collection rules.
-    pub(crate) fn from_path(path: &Utf8Path, context: CollectionContext) -> Option<Self> {
+    pub(crate) fn from_path(context: CollectionContext<'_>) -> Option<Self> {
+        let path = match context {
+            CollectionContext::RepositoryRoot { path }
+            | CollectionContext::RecursiveDirectory { path }
+            | CollectionContext::ExplicitFile { path } => path,
+        };
+
         if !matches!(path.extension(), Some("yml" | "yaml")) {
             return None;
         }
 
         let parent = path.parent()?;
         let filename = path.file_name()?;
-        let is_workflow = if context == CollectionContext::RepositoryRoot {
-            parent == ".github/workflows"
-        } else {
-            parent.ends_with(".github/workflows")
+        let is_workflow = match context {
+            CollectionContext::RepositoryRoot { .. } => parent == ".github/workflows",
+            _ => parent.ends_with(".github/workflows"),
         };
 
         if is_workflow {
@@ -181,16 +215,16 @@ impl InputKind {
             ".pre-commit-config.yaml" => Self::PreCommitConfig,
             ".pre-commit-hooks.yaml" => Self::PreCommitHooks,
             // Assume that any other explicitly passed file ending with `.ya?ml` is a workflow.
-            _ if context == CollectionContext::ExplicitFile => Self::Workflow,
+            _ if matches!(context, CollectionContext::ExplicitFile { .. }) => Self::Workflow,
             _ => return None,
         };
 
         let allowed = match (context, kind) {
-            (CollectionContext::RepositoryRoot, Self::Dependabot) => parent == ".github",
-            (CollectionContext::RepositoryRoot, Self::PreCommitConfig) => {
+            (CollectionContext::RepositoryRoot { .. }, Self::Dependabot) => parent == ".github",
+            (CollectionContext::RepositoryRoot { .. }, Self::PreCommitConfig) => {
                 path == ".pre-commit-config.yaml"
             }
-            (CollectionContext::RepositoryRoot, Self::PreCommitHooks) => {
+            (CollectionContext::RepositoryRoot { .. }, Self::PreCommitHooks) => {
                 path == ".pre-commit-hooks.yaml"
             }
             _ => true,
@@ -601,10 +635,9 @@ impl InputGroup {
         let config =
             Config::discover(options, || Config::discover_local(path, root.as_ref())).await?;
 
-        let kind = InputKind::from_path(
-            &camino::absolute_utf8(path)?,
-            CollectionContext::ExplicitFile,
-        )
+        let kind = InputKind::from_path(CollectionContext::explicit_file(&camino::absolute_utf8(
+            path,
+        )?))
         .ok_or(CollectionError::InvalidExtension)?;
 
         let lock = root
@@ -729,12 +762,6 @@ impl InputGroup {
             .and_then(|root| Lock::discover_local(root).transpose())
             .transpose()?;
         let mut group = Self::new(config, root, lock);
-        let context = if is_repo_root {
-            CollectionContext::RepositoryRoot
-        } else {
-            CollectionContext::RecursiveDirectory
-        };
-
         for entry in walker.build() {
             let entry = entry?;
             let entry = <&Utf8Path>::try_from(entry.path())
@@ -743,16 +770,19 @@ impl InputGroup {
                 continue;
             }
 
-            let classification_path = if is_repo_root {
-                entry
-                    .strip_prefix(path)
-                    .expect("walked entry must be within the requested directory")
-                    .to_owned()
+            let absolute_path;
+            let context = if is_repo_root {
+                CollectionContext::repository_root(
+                    entry
+                        .strip_prefix(path)
+                        .expect("walked entry must be within the requested directory"),
+                )
             } else {
-                camino::absolute_utf8(entry)?
+                absolute_path = camino::absolute_utf8(entry)?;
+                CollectionContext::recursive_directory(&absolute_path)
             };
-            let Some(kind) = InputKind::from_path(&classification_path, context)
-                .filter(|kind| options.mode_set.collects(*kind))
+            let Some(kind) =
+                InputKind::from_path(context).filter(|kind| options.mode_set.collects(*kind))
             else {
                 continue;
             };

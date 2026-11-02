@@ -846,10 +846,10 @@ impl Client {
             .map_err(ClientError::from)?;
 
         for file in resp {
-            let Some(kind) =
-                InputKind::from_path(Utf8Path::new(&file.path), CollectionContext::RepositoryRoot)
-                    .filter(|kind| options.mode_set.collects(*kind))
-            else {
+            let Some(kind) = InputKind::from_path(CollectionContext::repository_root(
+                Utf8Path::new(&file.path),
+            ))
+            .filter(|kind| options.mode_set.collects(*kind)) else {
                 continue;
             };
 
@@ -936,7 +936,7 @@ impl Client {
                     .map_err(|e| CollectionError::InvalidPath(e, entry_path.clone().into_owned()))?
             };
 
-            let Some(kind) = InputKind::from_path(file_path, CollectionContext::RepositoryRoot)
+            let Some(kind) = InputKind::from_path(CollectionContext::repository_root(file_path))
                 .filter(|kind| options.mode_set.collects(*kind))
             else {
                 continue;

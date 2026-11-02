@@ -287,10 +287,9 @@ impl Backend {
     async fn audit_inner(&self, params: LspDocumentCommon) -> anyhow::Result<()> {
         tracing::debug!("analyzing: {:?} (version={:?})", params.uri, params.version);
         let path = Utf8Path::new(params.uri.path().as_str());
-        let Some(kind) = InputKind::from_path(
+        let Some(kind) = InputKind::from_path(CollectionContext::explicit_file(
             &camino::absolute_utf8(path)?,
-            CollectionContext::ExplicitFile,
-        ) else {
+        )) else {
             anyhow::bail!("asked to audit unexpected file: {path}");
         };
         let input = kind.parse(params.text, InputKey::local("lsp".into(), path, None, None))?;
