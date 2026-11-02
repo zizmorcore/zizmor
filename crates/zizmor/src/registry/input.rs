@@ -145,7 +145,7 @@ pub(crate) enum InputKind {
     PreCommitHooks,
 }
 
-/// The source context used to classify an input path.
+/// The collection context used to classify an input path.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum CollectionContext {
     /// Discovery from a repository root; paths must be root-relative.
@@ -198,7 +198,7 @@ impl InputKind {
         }
     }
 
-    /// Parse input contents as this kind, without applying collection error policy.
+    /// Parse input contents as this kind.
     pub(crate) fn parse(
         self,
         contents: String,
