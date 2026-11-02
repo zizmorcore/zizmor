@@ -764,6 +764,10 @@ impl InputGroup {
 
             let absolute_path;
             let context = if is_repo_root {
+                // NOTE: The walker's paths use the same prefix as the walker itself,
+                // e.g. walking from a literal `.` means we might get `./foo/action.yml`.
+                // As a result we strip `path` as the prefix here rather than `root.path`,
+                // since the latter is canonical and absolute.
                 CollectionContext::repository_root(
                     entry
                         .strip_prefix(path)
