@@ -14,6 +14,7 @@ use etcetera::AppStrategy as _;
 use crate::config::Config;
 use crate::finding::Persona;
 use crate::github::{GitHubHost, GitHubToken};
+use crate::registry::input::InputKind;
 use crate::utils;
 
 const STYLES: Styles = Styles::styled()
@@ -570,6 +571,16 @@ impl From<&[CliCollectionMode]> for CollectionModeSet {
 }
 
 impl CollectionModeSet {
+    /// Should we collect an input after classifying its kind?
+    pub(crate) fn collects(&self, kind: InputKind) -> bool {
+        match kind {
+            InputKind::Workflow => self.workflows(),
+            InputKind::Action => self.actions(),
+            InputKind::Dependabot => self.dependabot(),
+            InputKind::PreCommitConfig | InputKind::PreCommitHooks => self.pre_commit(),
+        }
+    }
+
     /// Does our collection mode respect `.gitignore` files?
     pub(crate) fn respects_gitignore(&self) -> bool {
         // All modes except 'all' respect .gitignore files.

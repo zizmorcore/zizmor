@@ -145,6 +145,78 @@ pub(crate) enum InputKind {
     PreCommitHooks,
 }
 
+/// The source context used to classify an input path.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub(crate) enum CollectionContext {
+    /// Discovery from a repository root; paths must be root-relative.
+    RepositoryRoot,
+    /// Recursive discovery from a generic directory; paths must be absolute.
+    RecursiveDirectory,
+    /// An explicitly requested file or LSP document; paths must be absolute.
+    ExplicitFile,
+}
+
+impl InputKind {
+    /// Classify a normalized path using the source's collection rules.
+    ///
+    /// Workflow locations take precedence over reserved filenames. Collection
+    /// modes must be applied after classification so a workflow named
+    /// `action.yml` cannot be collected as an action.
+    pub(crate) fn from_path(path: &Utf8Path, context: CollectionContext) -> Option<Self> {
+        if !matches!(path.extension(), Some("yml" | "yaml")) {
+            return None;
+        }
+
+        let is_repo_root = context == CollectionContext::RepositoryRoot;
+        let is_workflow = if is_repo_root {
+            path.parent() == Some(Utf8Path::new(".github/workflows"))
+        } else {
+            path.parent()
+                .is_some_and(|parent| parent.ends_with(".github/workflows"))
+        };
+
+        if is_workflow {
+            return Some(Self::Workflow);
+        }
+
+        match path.file_name() {
+            Some("action.yml" | "action.yaml") => Some(Self::Action),
+            Some("dependabot.yml" | "dependabot.yaml")
+                if !is_repo_root || path.parent() == Some(Utf8Path::new(".github")) =>
+            {
+                Some(Self::Dependabot)
+            }
+            Some(".pre-commit-config.yaml")
+                if !is_repo_root || path.parent() == Some(Utf8Path::new("")) =>
+            {
+                Some(Self::PreCommitConfig)
+            }
+            Some(".pre-commit-hooks.yaml")
+                if !is_repo_root || path.parent() == Some(Utf8Path::new("")) =>
+            {
+                Some(Self::PreCommitHooks)
+            }
+            _ if context == CollectionContext::ExplicitFile => Some(Self::Workflow),
+            _ => None,
+        }
+    }
+
+    /// Parse input contents as this kind, without applying collection error policy.
+    pub(crate) fn parse(
+        self,
+        contents: String,
+        key: InputKey,
+    ) -> Result<AuditInput, CollectionError> {
+        match self {
+            Self::Workflow => Workflow::from_string(contents, key).map(Into::into),
+            Self::Action => Action::from_string(contents, key).map(Into::into),
+            Self::Dependabot => Dependabot::from_string(contents, key).map(Into::into),
+            Self::PreCommitConfig => PreCommitConfig::from_string(contents, key).map(Into::into),
+            Self::PreCommitHooks => PreCommitHooks::from_string(contents, key).map(Into::into),
+        }
+    }
+}
+
 impl std::fmt::Display for InputKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -509,19 +581,7 @@ impl InputGroup {
     ) -> Result<(), CollectionError> {
         tracing::debug!("registering {kind} input with key {key}");
 
-        let input: Result<AuditInput, CollectionError> = match kind {
-            InputKind::Workflow => Workflow::from_string(contents, key.clone()).map(Into::into),
-            InputKind::Action => Action::from_string(contents, key.clone()).map(Into::into),
-            InputKind::Dependabot => Dependabot::from_string(contents, key.clone()).map(Into::into),
-            InputKind::PreCommitConfig => {
-                PreCommitConfig::from_string(contents, key.clone()).map(Into::into)
-            }
-            InputKind::PreCommitHooks => {
-                PreCommitHooks::from_string(contents, key.clone()).map(Into::into)
-            }
-        };
-
-        match input {
+        match kind.parse(contents, key.clone()) {
             Ok(input) => self.register_input(input),
             Err(CollectionError::Syntax(e)) if !strict => {
                 tracing::warn!("failed to parse input: {e}");
@@ -543,14 +603,11 @@ impl InputGroup {
         let config =
             Config::discover(options, || Config::discover_local(path, root.as_ref())).await?;
 
-        // Workflows can be named anything, including `dependabot.yml`
-        // (overlapping with Dependabot configs) and `action.yml` (overlapping
-        // with action definitions). Consequently, we make a best effort
-        // disambiguate them by looking at their parent path.
-        // See: https://github.com/zizmorcore/zizmor/issues/1341
-        let is_workflow_path = camino::absolute_utf8(path)?
-            .parent()
-            .is_some_and(|parent| parent.ends_with(".github/workflows"));
+        let kind = InputKind::from_path(
+            &camino::absolute_utf8(path)?,
+            CollectionContext::ExplicitFile,
+        )
+        .ok_or(CollectionError::InvalidExtension)?;
 
         let lock = root
             .as_ref()
@@ -561,57 +618,12 @@ impl InputGroup {
 
         // When collecting individual files, we don't know which part
         // of the input path is the prefix.
-        let (key, kind) = match (path.file_stem(), path.extension()) {
-            // TODO: Do we need the `is_workflow_path` disambiguation here?
-            // The only way this could be wrong is if the user does something
-            // bizarre like `.github/workflows/.pre-commit-{config,hooks}.yaml`.
-            (Some(".pre-commit-config"), Some("yaml")) if !is_workflow_path => (
-                InputKey::local(
-                    GroupID(path.as_str().into()),
-                    path,
-                    None,
-                    group.root.clone(),
-                ),
-                InputKind::PreCommitConfig,
-            ),
-            (Some(".pre-commit-hooks"), Some("yaml")) if !is_workflow_path => (
-                InputKey::local(
-                    GroupID(path.as_str().into()),
-                    path,
-                    None,
-                    group.root.clone(),
-                ),
-                InputKind::PreCommitHooks,
-            ),
-            (Some("dependabot"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(
-                    GroupID(path.as_str().into()),
-                    path,
-                    None,
-                    group.root.clone(),
-                ),
-                InputKind::Dependabot,
-            ),
-            (Some("action"), Some("yml" | "yaml")) if !is_workflow_path => (
-                InputKey::local(
-                    GroupID(path.as_str().into()),
-                    path,
-                    None,
-                    group.root.clone(),
-                ),
-                InputKind::Action,
-            ),
-            (Some(_), Some("yml" | "yaml")) => (
-                InputKey::local(
-                    GroupID(path.as_str().into()),
-                    path,
-                    None,
-                    group.root.clone(),
-                ),
-                InputKind::Workflow,
-            ),
-            _ => return Err(CollectionError::InvalidExtension),
-        };
+        let key = InputKey::local(
+            GroupID(path.as_str().into()),
+            path,
+            None,
+            group.root.clone(),
+        );
 
         let contents = std::fs::read_to_string(path).map_err(|e| {
             CollectionError::Inner(CollectionError::Io(e).into(), key.to_string(), kind)
@@ -719,121 +731,45 @@ impl InputGroup {
             .and_then(|root| Lock::discover_local(root).transpose())
             .transpose()?;
         let mut group = Self::new(config, root, lock);
-        let dotgithub = path.join(".github");
-        let workflows_dir = dotgithub.join("workflows");
+        let context = if is_repo_root {
+            CollectionContext::RepositoryRoot
+        } else {
+            CollectionContext::RecursiveDirectory
+        };
 
         for entry in walker.build() {
             let entry = entry?;
             let entry = <&Utf8Path>::try_from(entry.path())
                 .map_err(|e| CollectionError::InvalidPath(e, entry.path().into()))?;
-            // Pre-compute file status so we don't call `stat()` once per mode
-            // check below.
-            let entry_is_file = entry.is_file();
-
-            if options.mode_set.workflows()
-                && entry_is_file
-                && matches!(entry.extension(), Some("yml" | "yaml"))
-                && (!is_repo_root || entry.parent() == Some(workflows_dir.as_path()))
-                && camino::absolute_utf8(entry)?
-                    .parent()
-                    .is_some_and(|dir| dir.ends_with(".github/workflows"))
-            {
-                let key = InputKey::local(
-                    GroupID(path.as_str().into()),
-                    entry,
-                    Some(path),
-                    group.root.clone(),
-                );
-                let contents = std::fs::read_to_string(entry).map_err(|e| {
-                    CollectionError::Inner(
-                        CollectionError::Io(e).into(),
-                        key.to_string(),
-                        InputKind::Workflow,
-                    )
-                })?;
-                group.register(InputKind::Workflow, contents, key, options.strict)?;
+            if !entry.is_file() {
+                continue;
             }
 
-            if options.mode_set.actions()
-                && entry_is_file
-                && matches!(entry.file_name(), Some("action.yml" | "action.yaml"))
-            {
-                let key = InputKey::local(
-                    GroupID(path.as_str().into()),
-                    entry,
-                    Some(path),
-                    group.root.clone(),
-                );
-                let contents = std::fs::read_to_string(entry).map_err(|e| {
-                    CollectionError::Inner(
-                        CollectionError::Io(e).into(),
-                        key.to_string(),
-                        InputKind::Action,
-                    )
-                })?;
-                group.register(InputKind::Action, contents, key, options.strict)?;
-            }
+            let classification_path = if is_repo_root {
+                entry
+                    .strip_prefix(path)
+                    .expect("walked entry must be within the requested directory")
+                    .to_owned()
+            } else {
+                camino::absolute_utf8(entry)?
+            };
+            let Some(kind) = InputKind::from_path(&classification_path, context)
+                .filter(|kind| options.mode_set.collects(*kind))
+            else {
+                continue;
+            };
 
-            if options.mode_set.dependabot()
-                && entry_is_file
-                && (!is_repo_root || entry.parent() == Some(dotgithub.as_path()))
-                && matches!(
-                    entry.file_name(),
-                    Some("dependabot.yml" | "dependabot.yaml")
-                )
-            {
-                let key = InputKey::local(
-                    GroupID(path.as_str().into()),
-                    entry,
-                    Some(path),
-                    group.root.clone(),
-                );
-                let contents = std::fs::read_to_string(entry).map_err(|e| {
-                    CollectionError::Inner(
-                        CollectionError::Io(e).into(),
-                        key.to_string(),
-                        InputKind::Dependabot,
-                    )
-                })?;
-                group.register(InputKind::Dependabot, contents, key, options.strict)?;
-            }
+            let key = InputKey::local(
+                GroupID(path.as_str().into()),
+                entry,
+                Some(path),
+                group.root.clone(),
+            );
+            let contents = std::fs::read_to_string(entry).map_err(|e| {
+                CollectionError::Inner(CollectionError::Io(e).into(), key.to_string(), kind)
+            })?;
 
-            if options.mode_set.pre_commit()
-                && entry_is_file
-                && (!is_repo_root || entry.parent() == Some(path))
-            {
-                if matches!(entry.file_name(), Some(".pre-commit-config.yaml")) {
-                    let key = InputKey::local(
-                        GroupID(path.as_str().into()),
-                        entry,
-                        Some(path),
-                        group.root.clone(),
-                    );
-                    let contents = std::fs::read_to_string(entry).map_err(|e| {
-                        CollectionError::Inner(
-                            CollectionError::Io(e).into(),
-                            key.to_string(),
-                            InputKind::PreCommitConfig,
-                        )
-                    })?;
-                    group.register(InputKind::PreCommitConfig, contents, key, options.strict)?;
-                } else if matches!(entry.file_name(), Some(".pre-commit-hooks.yaml")) {
-                    let key = InputKey::local(
-                        GroupID(path.as_str().into()),
-                        entry,
-                        Some(path),
-                        group.root.clone(),
-                    );
-                    let contents = std::fs::read_to_string(entry).map_err(|e| {
-                        CollectionError::Inner(
-                            CollectionError::Io(e).into(),
-                            key.to_string(),
-                            InputKind::PreCommitHooks,
-                        )
-                    })?;
-                    group.register(InputKind::PreCommitHooks, contents, key, options.strict)?;
-                }
-            }
+            group.register(kind, contents, key, options.strict)?;
         }
 
         Ok(group)
