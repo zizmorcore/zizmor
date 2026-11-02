@@ -158,10 +158,6 @@ pub(crate) enum CollectionContext {
 
 impl InputKind {
     /// Classify a normalized path using the source's collection rules.
-    ///
-    /// Workflow locations take precedence over reserved filenames. Collection
-    /// modes must be applied after classification so a workflow named
-    /// `action.yml` cannot be collected as an action.
     pub(crate) fn from_path(path: &Utf8Path, context: CollectionContext) -> Option<Self> {
         if !matches!(path.extension(), Some("yml" | "yaml")) {
             return None;
@@ -196,6 +192,7 @@ impl InputKind {
             {
                 Some(Self::PreCommitHooks)
             }
+            // Assume that any other explicitly passed file ending with `.ya?ml` is a workflow.
             _ if context == CollectionContext::ExplicitFile => Some(Self::Workflow),
             _ => None,
         }
