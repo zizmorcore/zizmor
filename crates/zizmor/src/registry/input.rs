@@ -163,35 +163,28 @@ impl InputKind {
             return None;
         }
 
+        let parent = path.parent()?;
+        let filename = path.file_name()?;
         let is_repo_root = context == CollectionContext::RepositoryRoot;
         let is_workflow = if is_repo_root {
-            path.parent() == Some(Utf8Path::new(".github/workflows"))
+            parent == ".github/workflows"
         } else {
-            path.parent()
-                .is_some_and(|parent| parent.ends_with(".github/workflows"))
+            parent.ends_with(".github/workflows")
         };
 
         if is_workflow {
             return Some(Self::Workflow);
         }
 
-        match path.file_name() {
-            Some("action.yml" | "action.yaml") => Some(Self::Action),
-            Some("dependabot.yml" | "dependabot.yaml")
-                if !is_repo_root || path.parent() == Some(Utf8Path::new(".github")) =>
-            {
+        match filename {
+            "action.yml" | "action.yaml" => Some(Self::Action),
+            "dependabot.yml" | "dependabot.yaml" if !is_repo_root || parent == ".github" => {
                 Some(Self::Dependabot)
             }
-            Some(".pre-commit-config.yaml")
-                if !is_repo_root || path.parent() == Some(Utf8Path::new("")) =>
-            {
+            ".pre-commit-config.yaml" if !is_repo_root || parent == "" => {
                 Some(Self::PreCommitConfig)
             }
-            Some(".pre-commit-hooks.yaml")
-                if !is_repo_root || path.parent() == Some(Utf8Path::new("")) =>
-            {
-                Some(Self::PreCommitHooks)
-            }
+            ".pre-commit-hooks.yaml" if !is_repo_root || parent == "" => Some(Self::PreCommitHooks),
             // Assume that any other explicitly passed file ending with `.ya?ml` is a workflow.
             _ if context == CollectionContext::ExplicitFile => Some(Self::Workflow),
             _ => None,
@@ -643,9 +636,9 @@ impl InputGroup {
         tracing::debug!("performing root-aware collection because '{path}' is a Git root");
 
         let mut walker = Self::directory_walker(path, options);
-        let workflows = options.mode_set.workflows();
-        let actions = options.mode_set.actions();
-        let dependabot = options.mode_set.dependabot();
+        let workflows = options.mode_set.collects(InputKind::Workflow);
+        let actions = options.mode_set.collects(InputKind::Action);
+        let dependabot = options.mode_set.collects(InputKind::Dependabot);
         let dotgithub = path.join(".github");
         let workflows_dir = dotgithub.join("workflows");
 

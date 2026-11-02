@@ -571,14 +571,18 @@ impl From<&[CliCollectionMode]> for CollectionModeSet {
 }
 
 impl CollectionModeSet {
-    /// Should we collect an input after classifying its kind?
+    /// Whether or not to collect the given kind of input.
     pub(crate) fn collects(&self, kind: InputKind) -> bool {
-        match kind {
-            InputKind::Workflow => self.workflows(),
-            InputKind::Action => self.actions(),
-            InputKind::Dependabot => self.dependabot(),
-            InputKind::PreCommitConfig | InputKind::PreCommitHooks => self.pre_commit(),
-        }
+        let mode = match kind {
+            InputKind::Workflow => CollectionMode::Workflows,
+            InputKind::Action => CollectionMode::Actions,
+            InputKind::Dependabot => CollectionMode::Dependabot,
+            InputKind::PreCommitConfig | InputKind::PreCommitHooks => CollectionMode::PreCommit,
+        };
+
+        self.0.contains(&CollectionMode::All)
+            || self.0.contains(&CollectionMode::Default)
+            || self.0.contains(&mode)
     }
 
     /// Does our collection mode respect `.gitignore` files?
@@ -587,49 +591,9 @@ impl CollectionModeSet {
         !self.0.contains(&CollectionMode::All)
     }
 
-    /// Should we collect workflows?
-    pub(crate) fn workflows(&self) -> bool {
-        self.0.iter().any(|mode| {
-            matches!(
-                mode,
-                CollectionMode::All | CollectionMode::Default | CollectionMode::Workflows
-            )
-        })
-    }
-
     /// Should we collect *only* workflows?
     pub(crate) fn workflows_only(&self) -> bool {
         self.0.len() == 1 && self.0.contains(&CollectionMode::Workflows)
-    }
-
-    /// Should we collect actions?
-    pub(crate) fn actions(&self) -> bool {
-        self.0.iter().any(|mode| {
-            matches!(
-                mode,
-                CollectionMode::All | CollectionMode::Default | CollectionMode::Actions
-            )
-        })
-    }
-
-    /// Should we collect Dependabot configuration files?
-    pub(crate) fn dependabot(&self) -> bool {
-        self.0.iter().any(|mode| {
-            matches!(
-                mode,
-                CollectionMode::All | CollectionMode::Default | CollectionMode::Dependabot
-            )
-        })
-    }
-
-    /// Shouldn we collect pre-commit files?
-    pub(crate) fn pre_commit(&self) -> bool {
-        self.0.iter().any(|mode| {
-            matches!(
-                mode,
-                CollectionMode::All | CollectionMode::Default | CollectionMode::PreCommit
-            )
-        })
     }
 }
 
