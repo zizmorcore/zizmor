@@ -38,7 +38,7 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor 🌈
-        uses: zizmorcore/zizmor-action@f9597c869b2e67095f9b527070297a13a6efe928 # v0.7.0
+        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
 ```
 
 See the action's [`inputs` documentation][inputs-documentation] for
@@ -83,7 +83,7 @@ GitHub Actions setup:
         branches: ["**"]
 
     env:
-      ZIZMOR_VERSION: 1.31.1
+      ZIZMOR_VERSION: 1.32.0
 
     permissions: {}
 
@@ -102,7 +102,7 @@ GitHub Actions setup:
               persist-credentials: false
 
           - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+            uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
           - name: Run zizmor 🌈
             run: uvx "zizmor@${ZIZMOR_VERSION}" --format=sarif . > results.sarif # (2)!
@@ -110,7 +110,7 @@ GitHub Actions setup:
               GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # (1)!
 
           - name: Upload SARIF file
-            uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+            uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
             with:
               sarif_file: results.sarif
               category: zizmor
@@ -159,7 +159,7 @@ GitHub Actions setup:
         branches: ["**"]
 
     env:
-      ZIZMOR_VERSION: 1.31.1
+      ZIZMOR_VERSION: 1.32.0
 
     jobs:
       zizmor:
@@ -174,7 +174,7 @@ GitHub Actions setup:
               persist-credentials: false
 
           - name: Install the latest version of uv
-            uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+            uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
           - name: Run zizmor 🌈
             run: uvx "zizmor@${ZIZMOR_VERSION}" --format=github . # (2)!
