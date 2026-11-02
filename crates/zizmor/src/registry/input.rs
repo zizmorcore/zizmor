@@ -165,8 +165,7 @@ impl InputKind {
 
         let parent = path.parent()?;
         let filename = path.file_name()?;
-        let is_repo_root = context == CollectionContext::RepositoryRoot;
-        let is_workflow = if is_repo_root {
+        let is_workflow = if context == CollectionContext::RepositoryRoot {
             parent == ".github/workflows"
         } else {
             parent.ends_with(".github/workflows")
@@ -176,19 +175,28 @@ impl InputKind {
             return Some(Self::Workflow);
         }
 
-        match filename {
-            "action.yml" | "action.yaml" => Some(Self::Action),
-            "dependabot.yml" | "dependabot.yaml" if !is_repo_root || parent == ".github" => {
-                Some(Self::Dependabot)
-            }
-            ".pre-commit-config.yaml" if !is_repo_root || parent == "" => {
-                Some(Self::PreCommitConfig)
-            }
-            ".pre-commit-hooks.yaml" if !is_repo_root || parent == "" => Some(Self::PreCommitHooks),
+        let kind = match filename {
+            "action.yml" | "action.yaml" => Self::Action,
+            "dependabot.yml" | "dependabot.yaml" => Self::Dependabot,
+            ".pre-commit-config.yaml" => Self::PreCommitConfig,
+            ".pre-commit-hooks.yaml" => Self::PreCommitHooks,
             // Assume that any other explicitly passed file ending with `.ya?ml` is a workflow.
-            _ if context == CollectionContext::ExplicitFile => Some(Self::Workflow),
-            _ => None,
-        }
+            _ if context == CollectionContext::ExplicitFile => Self::Workflow,
+            _ => return None,
+        };
+
+        let allowed = match (context, kind) {
+            (CollectionContext::RepositoryRoot, Self::Dependabot) => parent == ".github",
+            (CollectionContext::RepositoryRoot, Self::PreCommitConfig) => {
+                path == ".pre-commit-config.yaml"
+            }
+            (CollectionContext::RepositoryRoot, Self::PreCommitHooks) => {
+                path == ".pre-commit-hooks.yaml"
+            }
+            _ => true,
+        };
+
+        allowed.then_some(kind)
     }
 
     /// Parse input contents as this kind.
