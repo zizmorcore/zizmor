@@ -8,16 +8,12 @@ use thiserror::Error;
 use tower_lsp_server::ls_types::{self, TextDocumentSyncKind};
 use tower_lsp_server::{Client, LanguageServer, LspService, Server};
 
-use crate::audit::AuditInput;
 use crate::config::Config;
 use crate::finding::location::Point;
 use crate::finding::{Persona, Severity};
-use crate::models::action::Action;
-use crate::models::dependabot::Dependabot;
 use crate::models::lock::Lock;
-use crate::models::workflow::Workflow;
 use crate::registry::input::root::Root;
-use crate::registry::input::{InputGroup, InputRegistry};
+use crate::registry::input::{CollectionContext, InputGroup, InputKind, InputRegistry};
 use crate::registry::{FindingRegistry, input::InputKey};
 use crate::{AuditRegistry, AuditState};
 
@@ -291,24 +287,12 @@ impl Backend {
     async fn audit_inner(&self, params: LspDocumentCommon) -> anyhow::Result<()> {
         tracing::debug!("analyzing: {:?} (version={:?})", params.uri, params.version);
         let path = Utf8Path::new(params.uri.path().as_str());
-        let input = if matches!(path.file_name(), Some("action.yml" | "action.yaml")) {
-            AuditInput::from(Action::from_string(
-                params.text,
-                InputKey::local("lsp".into(), path, None, None),
-            )?)
-        } else if matches!(path.file_name(), Some("dependabot.yml" | "dependabot.yaml")) {
-            AuditInput::from(Dependabot::from_string(
-                params.text,
-                InputKey::local("lsp".into(), path, None, None),
-            )?)
-        } else if matches!(path.extension(), Some("yml" | "yaml")) {
-            AuditInput::from(Workflow::from_string(
-                params.text,
-                InputKey::local("lsp".into(), path, None, None),
-            )?)
-        } else {
+        let Some(kind) = InputKind::from_path(CollectionContext::explicit_file(
+            &camino::absolute_utf8(path)?,
+        )) else {
             anyhow::bail!("asked to audit unexpected file: {path}");
         };
+        let input = kind.parse(params.text, InputKey::local("lsp".into(), path, None, None))?;
 
         // Try to find the repo root for the "most correct" workspace
         // directory corresponding to the audit input.

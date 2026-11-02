@@ -14,6 +14,7 @@ use etcetera::AppStrategy as _;
 use crate::config::Config;
 use crate::finding::Persona;
 use crate::github::{GitHubHost, GitHubToken};
+use crate::registry::input::InputKind;
 use crate::utils;
 
 const STYLES: Styles = Styles::styled()
@@ -570,55 +571,29 @@ impl From<&[CliCollectionMode]> for CollectionModeSet {
 }
 
 impl CollectionModeSet {
+    /// Whether or not to collect the given kind of input.
+    pub(crate) fn collects(&self, kind: InputKind) -> bool {
+        let mode = match kind {
+            InputKind::Workflow => CollectionMode::Workflows,
+            InputKind::Action => CollectionMode::Actions,
+            InputKind::Dependabot => CollectionMode::Dependabot,
+            InputKind::PreCommitConfig | InputKind::PreCommitHooks => CollectionMode::PreCommit,
+        };
+
+        self.0.contains(&CollectionMode::All)
+            || self.0.contains(&CollectionMode::Default)
+            || self.0.contains(&mode)
+    }
+
     /// Does our collection mode respect `.gitignore` files?
     pub(crate) fn respects_gitignore(&self) -> bool {
         // All modes except 'all' respect .gitignore files.
         !self.0.contains(&CollectionMode::All)
     }
 
-    /// Should we collect workflows?
-    pub(crate) fn workflows(&self) -> bool {
-        self.0.iter().any(|mode| {
-            matches!(
-                mode,
-                CollectionMode::All | CollectionMode::Default | CollectionMode::Workflows
-            )
-        })
-    }
-
     /// Should we collect *only* workflows?
     pub(crate) fn workflows_only(&self) -> bool {
         self.0.len() == 1 && self.0.contains(&CollectionMode::Workflows)
-    }
-
-    /// Should we collect actions?
-    pub(crate) fn actions(&self) -> bool {
-        self.0.iter().any(|mode| {
-            matches!(
-                mode,
-                CollectionMode::All | CollectionMode::Default | CollectionMode::Actions
-            )
-        })
-    }
-
-    /// Should we collect Dependabot configuration files?
-    pub(crate) fn dependabot(&self) -> bool {
-        self.0.iter().any(|mode| {
-            matches!(
-                mode,
-                CollectionMode::All | CollectionMode::Default | CollectionMode::Dependabot
-            )
-        })
-    }
-
-    /// Shouldn we collect pre-commit files?
-    pub(crate) fn pre_commit(&self) -> bool {
-        self.0.iter().any(|mode| {
-            matches!(
-                mode,
-                CollectionMode::All | CollectionMode::Default | CollectionMode::PreCommit
-            )
-        })
     }
 }
 

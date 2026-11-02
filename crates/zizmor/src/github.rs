@@ -27,7 +27,9 @@ use tracing::instrument;
 use crate::{
     CollectionOptions,
     models::repo_ref::Slug,
-    registry::input::{CollectionError, InputGroup, InputKey, InputKind, InputSlug},
+    registry::input::{
+        CollectionContext, CollectionError, InputGroup, InputKey, InputKind, InputSlug,
+    },
     utils::ZIZMOR_AGENT,
 };
 
@@ -843,10 +845,14 @@ impl Client {
             .await
             .map_err(ClientError::from)?;
 
-        for file in resp
-            .into_iter()
-            .filter(|file| file.name.ends_with(".yml") || file.name.ends_with(".yaml"))
-        {
+        for file in resp {
+            let Some(kind) = InputKind::from_path(CollectionContext::repository_root(
+                Utf8Path::new(&file.path),
+            ))
+            .filter(|kind| options.mode_set.collects(*kind)) else {
+                continue;
+            };
+
             let Some(contents) = self.fetch_single_file(slug, &file.path).await? else {
                 // This can only happen if we have some kind of TOCTOU
                 // discrepancy with the listing call above, e.g. a file
@@ -859,7 +865,7 @@ impl Client {
             };
 
             let key = InputKey::remote(slug, file.path);
-            group.register(InputKind::Workflow, contents, key, options.strict)?;
+            group.register(kind, contents, key, options.strict)?;
         }
 
         Ok(())
@@ -930,44 +936,16 @@ impl Client {
                     .map_err(|e| CollectionError::InvalidPath(e, entry_path.clone().into_owned()))?
             };
 
-            if options.mode_set.workflows()
-                && matches!(file_path.extension(), Some("yaml" | "yml"))
-                && file_path.parent() == Some(Utf8Path::new(".github/workflows"))
-            {
-                let key = InputKey::remote(slug, file_path.to_string());
-                let mut contents = String::with_capacity(entry.size() as usize);
-                entry.read_to_string(&mut contents)?;
-                group.register(InputKind::Workflow, contents, key, options.strict)?;
-            } else if options.mode_set.actions()
-                && matches!(file_path.file_name(), Some("action.yml" | "action.yaml"))
-            {
-                let key = InputKey::remote(slug, file_path.to_string());
-                let mut contents = String::with_capacity(entry.size() as usize);
-                entry.read_to_string(&mut contents)?;
-                group.register(InputKind::Action, contents, key, options.strict)?;
-            } else if options.mode_set.dependabot()
-                && matches!(
-                    file_path.as_str(),
-                    ".github/dependabot.yml" | ".github/dependabot.yaml"
-                )
-            {
-                let key = InputKey::remote(slug, file_path.to_string());
-                let mut contents = String::with_capacity(entry.size() as usize);
-                entry.read_to_string(&mut contents)?;
-                group.register(InputKind::Dependabot, contents, key, options.strict)?;
-            } else if options.mode_set.pre_commit() {
-                if file_path == ".pre-commit-config.yaml" {
-                    let key = InputKey::remote(slug, file_path.to_string());
-                    let mut contents = String::with_capacity(entry.size() as usize);
-                    entry.read_to_string(&mut contents)?;
-                    group.register(InputKind::PreCommitConfig, contents, key, options.strict)?;
-                } else if file_path == ".pre-commit-hooks.yaml" {
-                    let key = InputKey::remote(slug, file_path.to_string());
-                    let mut contents = String::with_capacity(entry.size() as usize);
-                    entry.read_to_string(&mut contents)?;
-                    group.register(InputKind::PreCommitHooks, contents, key, options.strict)?;
-                }
-            }
+            let Some(kind) = InputKind::from_path(CollectionContext::repository_root(file_path))
+                .filter(|kind| options.mode_set.collects(*kind))
+            else {
+                continue;
+            };
+
+            let key = InputKey::remote(slug, file_path.to_string());
+            let mut contents = String::with_capacity(entry.size() as usize);
+            entry.read_to_string(&mut contents)?;
+            group.register(kind, contents, key, options.strict)?;
         }
 
         Ok(())
@@ -1114,7 +1092,6 @@ pub(crate) struct VulnerablePackage {
 /// Represents a file listing from GitHub's contents API.
 #[derive(Deserialize)]
 pub(crate) struct File {
-    name: String,
     path: String,
 }
 
