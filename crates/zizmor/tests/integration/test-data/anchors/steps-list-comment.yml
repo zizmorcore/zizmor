@@ -1,0 +1,12 @@
+name: steps-list-comment
+on: push
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    steps: &steps
+      # A comment before the anchored list's first item.
+      - name: Checkout
+        uses: actions/checkout@v4
+  b:
+    runs-on: ubuntu-latest
+    steps: *steps

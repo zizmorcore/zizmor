@@ -1177,7 +1177,7 @@ impl Document {
                 let mut cursor = focus_node.walk();
                 focus_node
                     .named_children(&mut cursor)
-                    .find(|n| !n.is_anchor())
+                    .find(|n| !n.is_anchor() && !n.is_comment())
                     .unwrap_or(focus_node)
             }
             _ => focus_node,
@@ -1288,7 +1288,7 @@ impl Document {
         // type we're descending through.
         //
         // To get to that child, we might have to skip over any
-        // anchor nodes that we're not actually aliasing through
+        // anchor and comment nodes that we're not actually aliasing through
         // in this descent step.
         //
         // For example, for a YAML snippet like:
@@ -1308,10 +1308,10 @@ impl Document {
         let mut child = {
             let mut cursor = node.walk();
             node.named_children(&mut cursor)
-                .find(|n| !n.is_anchor())
+                .find(|n| !n.is_anchor() && !n.is_comment())
                 .ok_or_else(|| {
                     QueryError::Other(format!(
-                        "node of kind {} has no non-anchor child",
+                        "node of kind {} has no non-anchor, non-comment child",
                         node.kind()
                     ))
                 })?
@@ -1840,6 +1840,38 @@ foo: &foo-anchor
             anchor_map["bar-anchor"].values().next().unwrap().kind(),
             "block_mapping"
         );
+    }
+
+    #[test]
+    fn test_commented_anchored_steps() {
+        let doc = Document::new(
+            r#"jobs:
+  a:
+    steps: &steps
+      # Comment before the first step.
+      - name: Checkout
+        uses: actions/checkout@v4
+  b:
+    steps: *steps
+"#,
+        )
+        .unwrap();
+
+        // Both the anchor definition and its alias must work as terminal
+        // values and as containers for deeper routes.
+        for job in ["a", "b"] {
+            let steps = doc
+                .query_exact(&route!("jobs", job, "steps"))
+                .unwrap()
+                .unwrap();
+            assert_eq!(steps.kind(), FeatureKind::BlockSequence);
+
+            let step = doc
+                .query_exact(&route!("jobs", job, "steps", 0, "name"))
+                .unwrap()
+                .unwrap();
+            assert_eq!(doc.extract(&step), "Checkout");
+        }
     }
 
     #[test]

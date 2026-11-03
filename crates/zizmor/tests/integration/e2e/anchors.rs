@@ -211,6 +211,19 @@ fn test_steps_list_alias() -> Result<()> {
     Ok(())
 }
 
+/// Regression for #2517: comments before an anchored steps list must not
+/// prevent audits from resolving either the list or its alias.
+#[test]
+fn test_steps_list_comment() -> Result<()> {
+    let output = Zizmor::cargo_bin()
+        .input(input_under_test("anchors/steps-list-comment.yml"))
+        .args(["--no-exit-codes", "--collect=workflows,actions"])
+        .run()?;
+
+    assert!(output.contains("warning[artipacked]"), "{output}");
+    Ok(())
+}
+
 #[test]
 fn test_cross_key_scalar() -> Result<()> {
     insta::assert_snapshot!(
