@@ -37,6 +37,9 @@ trait NodeExt {
     /// Returns true if this node is a comment node.
     fn is_comment(&self) -> bool;
 
+    /// Returns true if this node is anchor metadata or a comment.
+    fn is_anchor_or_comment(&self) -> bool;
+
     /// Returns true if this node is a block_node.
     fn is_block_node(&self) -> bool;
 
@@ -109,6 +112,10 @@ impl NodeExt for Node<'_> {
 
     fn is_comment(&self) -> bool {
         self.kind() == "comment"
+    }
+
+    fn is_anchor_or_comment(&self) -> bool {
+        self.is_anchor() || self.is_comment()
     }
 
     fn is_block_node(&self) -> bool {
@@ -519,7 +526,7 @@ impl Tree {
                 let mut cursor = parent.walk();
                 let sibling = parent
                     .named_children(&mut cursor)
-                    .find(|child| !child.is_anchor() && !child.is_comment())
+                    .find(|child| !child.is_anchor_or_comment())
                     .ok_or_else(|| {
                         QueryError::UnexpectedNode("anchor has no non-comment sibling".into())
                     })?;
@@ -1177,7 +1184,7 @@ impl Document {
                 let mut cursor = focus_node.walk();
                 focus_node
                     .named_children(&mut cursor)
-                    .find(|n| !n.is_anchor() && !n.is_comment())
+                    .find(|n| !n.is_anchor_or_comment())
                     .unwrap_or(focus_node)
             }
             _ => focus_node,
@@ -1308,7 +1315,7 @@ impl Document {
         let mut child = {
             let mut cursor = node.walk();
             node.named_children(&mut cursor)
-                .find(|n| !n.is_anchor() && !n.is_comment())
+                .find(|n| !n.is_anchor_or_comment())
                 .ok_or_else(|| {
                     QueryError::Other(format!(
                         "node of kind {} has no non-anchor, non-comment child",
@@ -1371,10 +1378,12 @@ impl Document {
             //
             // NOTE: text unwraps are infallible, since our document is UTF-8.
             // NOTE: The key might have an anchor prefix (e.g. `{ &v foo: bar }`),
-            // so we need to skip any anchor nodes to find the actual scalar.
+            // so we need to skip anchors and comments to find the actual scalar.
             let key_value = {
                 let mut cursor = key.walk();
-                let scalar = key.named_children(&mut cursor).find(|n| !n.is_anchor());
+                let scalar = key
+                    .named_children(&mut cursor)
+                    .find(|n| !n.is_anchor_or_comment());
 
                 match scalar {
                     Some(scalar) => {
@@ -1871,6 +1880,119 @@ foo: &foo-anchor
                 .unwrap()
                 .unwrap();
             assert_eq!(doc.extract(&step), "Checkout");
+        }
+    }
+
+    #[test]
+    fn test_terminal_values_after_comments() {
+        let doc = Document::new(
+            r#"sequence:
+  # Before the first item.
+  - one
+mapping:
+  # Before the first pair.
+  key: value
+"#,
+        )
+        .unwrap();
+
+        for (key, kind) in [
+            ("sequence", FeatureKind::BlockSequence),
+            ("mapping", FeatureKind::BlockMapping),
+        ] {
+            let feature = doc.query_exact(&route!(key)).unwrap().unwrap();
+            assert_eq!(feature.kind(), kind);
+        }
+    }
+
+    #[test]
+    fn test_terminal_alias_after_comment() {
+        let doc = Document::new(
+            r#"source: &source
+  key: value
+alias:
+  # Before the alias.
+  *source
+"#,
+        )
+        .unwrap();
+
+        let feature = doc.query_exact(&route!("alias")).unwrap().unwrap();
+        assert_eq!(feature.kind(), FeatureKind::BlockMapping);
+        assert_eq!(doc.extract(&feature), "key: value");
+        assert_eq!(
+            doc.extract(&doc.query_exact(&route!("alias", "key")).unwrap().unwrap()),
+            "value"
+        );
+    }
+
+    #[test]
+    fn test_terminal_sequence_item_after_comments() {
+        let doc = Document::new(
+            r#"items:
+  - # First comment.
+    # Second comment.
+    key: value
+"#,
+        )
+        .unwrap();
+
+        let item = doc.query_exact(&route!("items", 0)).unwrap().unwrap();
+        assert_eq!(item.kind(), FeatureKind::BlockMapping);
+        assert_eq!(
+            doc.extract(
+                &doc.query_exact(&route!("items", 0, "key"))
+                    .unwrap()
+                    .unwrap()
+            ),
+            "value"
+        );
+    }
+
+    #[test]
+    fn test_commented_anchored_explicit_key() {
+        for yaml in [
+            "? &key\n  # Comment before the key.\n  foo\n: bar\n",
+            "? &key # Comment after the anchor.\n  foo\n: bar\n",
+        ] {
+            let doc = Document::new(yaml).unwrap();
+            let feature = doc.query_exact(&route!("foo")).unwrap().unwrap();
+            assert_eq!(doc.extract(&feature), "bar", "YAML: {yaml}");
+        }
+    }
+
+    #[test]
+    fn test_comments_in_flow_collections() {
+        let doc = Document::new(
+            r#"items: [
+  # Before the anchored item.
+  &value {key: one},
+  # Before the alias.
+  *value
+]
+mapping: {
+  # Before the first pair.
+  foo: bar,
+  # Before the second pair.
+  baz: qux
+}
+"#,
+        )
+        .unwrap();
+
+        for index in [0, 1] {
+            let item = doc.query_exact(&route!("items", index)).unwrap().unwrap();
+            assert_eq!(item.kind(), FeatureKind::FlowMapping);
+            let value = doc
+                .query_exact(&route!("items", index, "key"))
+                .unwrap()
+                .unwrap();
+            assert_eq!(doc.extract(&value), "one");
+        }
+
+        for (key, expected) in [("foo", "bar"), ("baz", "qux")] {
+            let value = doc.query_exact(&route!("mapping", key)).unwrap().unwrap();
+            assert_eq!(doc.extract(&value), expected);
         }
     }
 
