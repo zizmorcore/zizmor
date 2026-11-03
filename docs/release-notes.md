@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+* LSP: Fixed a bug where findings that should have been suppressed
+  when a workflow lockfile is present were still presented (#2520)
+
 ## 1.32.0
 
 ### New Features 🌈
