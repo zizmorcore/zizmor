@@ -29,7 +29,7 @@ jobs:
       - name: Format
         run: cargo fmt --check
 
-      - uses: Swatinem/rust-cache@v2.9.2
+      - uses: Swatinem/rust-cache@v2.9.3
 
       - name: Lint
         run: cargo clippy -- --deny warnings
@@ -46,9 +46,9 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: Swatinem/rust-cache@v2.9.2
+      - uses: Swatinem/rust-cache@v2.9.3
 
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.2
 
       - name: Test dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -95,7 +95,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.2
 
       - name: Test site
         run: make site
@@ -120,7 +120,7 @@ jobs:
           fi
           echo "Schema covers all $REGISTRY_COUNT audits"
 
-      - uses: Swatinem/rust-cache@v2.9.2
+      - uses: Swatinem/rust-cache@v2.9.3
 
       - name: Verify committed schema is up-to-date
         run: |

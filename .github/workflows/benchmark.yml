@@ -37,17 +37,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: Swatinem/rust-cache@v2.9.2
+      - uses: Swatinem/rust-cache@v2.9.3
         with:
           cache-all-crates: true
 
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.2
 
       - name: Build zizmor (release)
         run: cargo build --release
 
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@v5.5.0
+        uses: CodSpeedHQ/action@v5.6.0
         with:
           mode: walltime
           run: make bench
