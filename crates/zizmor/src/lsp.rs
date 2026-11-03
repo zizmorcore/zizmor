@@ -292,8 +292,6 @@ impl Backend {
         )) else {
             anyhow::bail!("asked to audit unexpected file: {path}");
         };
-        let input = kind.parse(params.text, InputKey::local("lsp".into(), path, None, None))?;
-
         // Try to find the repo root for the "most correct" workspace
         // directory corresponding to the audit input.
         // LSP allows workspace directories to overlap, so we approximate
@@ -308,6 +306,11 @@ impl Backend {
                 .max_by_key(|dir| dir.as_str().len())
                 .and_then(|dir| Root::discover(dir))
         };
+
+        let input = kind.parse(
+            params.text,
+            InputKey::local("lsp".into(), path, None, root.clone()),
+        )?;
 
         let config = {
             match Config::discover_local(path, root.as_ref()).await {
