@@ -85,9 +85,7 @@ impl Lock {
 
     /// Test whether the given input is locked, i.e. is present
     /// in the lockfile.
-    pub(crate) fn is_locked(&self, input: &impl AsRef<InputKey>) -> bool {
-        let input = input.as_ref();
-
+    pub(crate) fn is_locked(&self, input: &InputKey) -> bool {
         match input {
             InputKey::Local(key) => {
                 if let Some(path) = key.root_relative_path() {

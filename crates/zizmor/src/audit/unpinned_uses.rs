@@ -241,7 +241,7 @@ impl Audit for UnpinnedUses {
         // If we have a lockfile and this step's workflow is present in it,
         // then all steps are pinned regardless of their `uses:` form.
         if let Some(lock) = group.lock()
-            && lock.is_locked(step)
+            && lock.is_locked(step.as_ref())
         {
             return Ok(vec![]);
         }

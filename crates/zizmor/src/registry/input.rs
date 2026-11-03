@@ -943,7 +943,9 @@ impl InputGroup {
             group.lock = None;
         }
 
-        if group.lock().is_some() {
+        if let Some(lock) = group.lock()
+            && group.inputs.keys().any(|input| lock.is_locked(input))
+        {
             warn_once!(
                 "one or more inputs uses a GitHub Actions workflow lockfile; see https://docs.zizmor.sh/usage/#workflow-lockfiles for details"
             );
