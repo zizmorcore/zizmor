@@ -215,12 +215,36 @@ fn test_steps_list_alias() -> Result<()> {
 /// prevent audits from resolving either the list or its alias.
 #[test]
 fn test_steps_list_comment() -> Result<()> {
-    let output = Zizmor::cargo_bin()
-        .input(input_under_test("anchors/steps-list-comment.yml"))
-        .args(["--no-exit-codes", "--collect=workflows,actions"])
-        .run()?;
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("anchors/steps-list-comment.yml"))
+            .run()?,
+        @"
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+      --> @@INPUT@@:9:9
+       |
+     9 |         - name: Checkout
+       |  _________^
+    10 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+       | |________________________________________________________________________________^ does not set persist-credentials: false
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
 
-    assert!(output.contains("warning[artipacked]"), "{output}");
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+      --> @@INPUT@@:9:9
+       |
+     9 |         - name: Checkout
+       |  _________^
+    10 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+       | |________________________________________________________________________________^ does not set persist-credentials: false
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    5 findings (3 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
+    "
+    );
     Ok(())
 }
 
