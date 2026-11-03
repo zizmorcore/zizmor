@@ -270,7 +270,7 @@ impl Audit for RefVersionMismatch {
         // If we have a lockfile and this step's workflow is present in it,
         // then there are no possible mismatches.
         if let Some(lock) = group.lock()
-            && lock.is_locked(step)
+            && lock.is_locked(step.as_ref())
         {
             return Ok(vec![]);
         }
