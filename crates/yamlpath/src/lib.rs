@@ -37,6 +37,9 @@ trait NodeExt {
     /// Returns true if this node is a comment node.
     fn is_comment(&self) -> bool;
 
+    /// Returns true if this node is anchor metadata or a comment.
+    fn is_anchor_or_comment(&self) -> bool;
+
     /// Returns true if this node is a block_node.
     fn is_block_node(&self) -> bool;
 
@@ -109,6 +112,10 @@ impl NodeExt for Node<'_> {
 
     fn is_comment(&self) -> bool {
         self.kind() == "comment"
+    }
+
+    fn is_anchor_or_comment(&self) -> bool {
+        self.is_anchor() || self.is_comment()
     }
 
     fn is_block_node(&self) -> bool {
@@ -519,7 +526,7 @@ impl Tree {
                 let mut cursor = parent.walk();
                 let sibling = parent
                     .named_children(&mut cursor)
-                    .find(|child| !child.is_anchor() && !child.is_comment())
+                    .find(|child| !child.is_anchor_or_comment())
                     .ok_or_else(|| {
                         QueryError::UnexpectedNode("anchor has no non-comment sibling".into())
                     })?;
@@ -1177,7 +1184,7 @@ impl Document {
                 let mut cursor = focus_node.walk();
                 focus_node
                     .named_children(&mut cursor)
-                    .find(|n| !n.is_anchor())
+                    .find(|n| !n.is_anchor_or_comment())
                     .unwrap_or(focus_node)
             }
             _ => focus_node,
@@ -1288,7 +1295,7 @@ impl Document {
         // type we're descending through.
         //
         // To get to that child, we might have to skip over any
-        // anchor nodes that we're not actually aliasing through
+        // anchor and comment nodes that we're not actually aliasing through
         // in this descent step.
         //
         // For example, for a YAML snippet like:
@@ -1308,10 +1315,10 @@ impl Document {
         let mut child = {
             let mut cursor = node.walk();
             node.named_children(&mut cursor)
-                .find(|n| !n.is_anchor())
+                .find(|n| !n.is_anchor_or_comment())
                 .ok_or_else(|| {
                     QueryError::Other(format!(
-                        "node of kind {} has no non-anchor child",
+                        "node of kind {} has no non-anchor, non-comment child",
                         node.kind()
                     ))
                 })?
@@ -1371,10 +1378,12 @@ impl Document {
             //
             // NOTE: text unwraps are infallible, since our document is UTF-8.
             // NOTE: The key might have an anchor prefix (e.g. `{ &v foo: bar }`),
-            // so we need to skip any anchor nodes to find the actual scalar.
+            // so we need to skip anchors and comments to find the actual scalar.
             let key_value = {
                 let mut cursor = key.walk();
-                let scalar = key.named_children(&mut cursor).find(|n| !n.is_anchor());
+                let scalar = key
+                    .named_children(&mut cursor)
+                    .find(|n| !n.is_anchor_or_comment());
 
                 match scalar {
                     Some(scalar) => {
