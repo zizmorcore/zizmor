@@ -1180,7 +1180,7 @@ step _should_ also be flagged if nested inside a `#!yaml parallel:` block.
 As of October 2026, GitHub Actions [supports lockfiles for workflows].
 
 zizmor makes a best-effort attempt to remain compatible with whatever the current
-state of the public preview is, but will not retain backwards compatibility
+state is, but will not retain backwards compatibility
 beyond what GitHub decides to support.
 
 If you decide to experiment with workflow lockfiles (and `zizmor`'s support
@@ -1217,7 +1217,7 @@ documentation and be aware of some current limitations:
 
         See github/gh-actions-lock#128 for more information.
 
-[supports lockfiles for workflows]: https://github.blog/changelog/2026-10-14-github-actions-workflow-lockfiles-in-public-preview/
+[supports lockfiles for workflows]: https://github.blog/changelog/2026-10-28-github-actions-workflow-lockfiles-are-generally-available/
 
 [workflow dependency lockfiles]: https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles
 
