@@ -17,6 +17,11 @@ of `zizmor`.
 * Fixed a bug where `zizmor` would fail to audit workflow inputs
   containing a bare i.e. null `#!yaml inputs:` (#2527)
 
+* Fixed a bug where `zizmor` would crash on some YAML inputs containing
+  anchors mixed with comments (#2522)
+
+    Many thanks to @DarkaMaul for implementing this fix!
+
 ## 1.32.0
 
 ### New Features 🌈
