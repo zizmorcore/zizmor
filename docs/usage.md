@@ -1179,8 +1179,6 @@ step _should_ also be flagged if nested inside a `#!yaml parallel:` block.
 
 As of October 2026, GitHub Actions [supports lockfiles for workflows].
 
-Workflow lockfiles are currently a "public preview" feature on GitHub itself,
-meaning that they're subject to change before GitHub decides to stabilize them.
 zizmor makes a best-effort attempt to remain compatible with whatever the current
 state of the public preview is, but will not retain backwards compatibility
 beyond what GitHub decides to support.
