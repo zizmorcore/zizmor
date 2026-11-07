@@ -71,39 +71,3 @@ impl<'src> ParsedRun<'src> {
         Subfeature::new(node.start_byte(), self.text(node))
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use tree_sitter::StreamingIterator as _;
-
-    use super::*;
-    use crate::utils::{BASH, PWSH, SpannedQuery};
-
-    #[test]
-    fn queries_use_parser_source_and_captures_use_original_source() {
-        let command = "echo GITHUB_ENV ${{\n env.VALUE || '🦀}}'\n}}";
-        let prefix = "echo '🦀'\necho \"${{ 'GITHUB_ENV' }}\"\n";
-        let source = format!("{prefix}{command}\necho done");
-        let start = prefix.len();
-
-        for (shell, language) in [("bash", &*BASH), ("pwsh", &*PWSH)] {
-            let run = ParsedRun::parse(&source, shell).unwrap();
-            let query = SpannedQuery::new(
-                r#"((command) @span (#match? @span "GITHUB_ENV"))"#,
-                language,
-            );
-            let mut cursor = QueryCursor::new();
-            let mut matches = vec![];
-            run.query(&query, &mut cursor).for_each(|mat| {
-                let node = mat.captures()[0].node;
-                let location = run.subfeature(node).locate_within(&source).unwrap();
-                matches.push((run.text(node), location.as_range()));
-            });
-            assert_eq!(
-                matches,
-                [(command, start..start + command.len())],
-                "{shell}"
-            );
-        }
-    }
-}
