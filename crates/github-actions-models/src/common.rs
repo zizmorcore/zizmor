@@ -262,7 +262,7 @@ where
     BoS::deserialize(de).map(Into::into)
 }
 
-fn null_to_default<'de, D, T>(de: D) -> Result<T, D::Error>
+pub(crate) fn null_to_default<'de, D, T>(de: D) -> Result<T, D::Error>
 where
     D: Deserializer<'de>,
     T: Default + Deserialize<'de>,

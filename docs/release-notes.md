@@ -14,6 +14,9 @@ of `zizmor`.
 * LSP: Fixed a bug where findings that should have been suppressed
   when a workflow lockfile is present were still presented (#2520)
 
+* Fixed a bug where `zizmor` would fail to audit workflow inputs
+  containing a bare i.e. null `#!yaml inputs:` (#2527)
+
 ## 1.32.0
 
 ### New Features 🌈
