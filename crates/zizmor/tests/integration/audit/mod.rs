@@ -15,6 +15,7 @@ mod forbidden_uses;
 mod github_app;
 mod github_env;
 // mod hardcoded_container_credentials; // TODO
+mod dangerous_checkout;
 mod impostor_commit;
 mod insecure_commands;
 mod insecure_url_scheme;
