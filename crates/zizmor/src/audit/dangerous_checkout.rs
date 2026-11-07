@@ -21,11 +21,11 @@ static UNSAFE_ACTIONS_CHECKOUT: LazyLock<ActionCoordinate> =
         ),
     });
 
-pub(crate) struct UnsafeCheckout;
+pub(crate) struct DangerousCheckout;
 
-audit_meta!(UnsafeCheckout, "unsafe-checkout", "unsafe Git checkout");
+audit_meta!(DangerousCheckout, "unsafe-checkout", "unsafe Git checkout");
 
-impl UnsafeCheckout {
+impl DangerousCheckout {
     async fn process_step<'doc>(
         &self,
         step: &impl crate::models::StepCommon<'doc>,
@@ -74,7 +74,7 @@ impl UnsafeCheckout {
 }
 
 #[async_trait::async_trait]
-impl Audit for UnsafeCheckout {
+impl Audit for DangerousCheckout {
     fn new(_state: &crate::state::AuditState) -> Result<Self, super::AuditLoadError>
     where
         Self: Sized,

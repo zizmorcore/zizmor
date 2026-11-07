@@ -151,7 +151,7 @@ define_audit_rules! {
     adhoc_packages,
     insecure_url_scheme,
     self_repository,
-    unsafe_checkout;
+    dangerous_checkout;
 
     [DependabotCooldownRuleConfig] dependabot_cooldown,
     [ForbiddenUsesRuleConfig] forbidden_uses,

@@ -15,6 +15,7 @@ mod forbidden_uses;
 mod github_app;
 mod github_env;
 // mod hardcoded_container_credentials; // TODO
+mod dangerous_checkout;
 mod impostor_commit;
 mod insecure_commands;
 mod insecure_url_scheme;
@@ -37,7 +38,6 @@ mod unpinned_images;
 mod unpinned_tools;
 mod unpinned_uses;
 mod unredacted_secrets;
-mod unsafe_checkout;
 mod unsound_condition;
 mod unsound_contains;
 mod unsound_ternary;
