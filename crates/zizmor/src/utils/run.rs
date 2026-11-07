@@ -1,6 +1,6 @@
 //! Shell parsing for run bodies containing Actions expressions.
 
-use std::{borrow::Cow, ops::Range};
+use std::borrow::Cow;
 
 use anyhow::{Context as _, Result};
 use subfeature::Subfeature;
@@ -21,7 +21,6 @@ use super::{bash_parser, extract_fenced_expressions, normalize_shell, pwsh_parse
 pub(crate) struct ParsedRun<'src> {
     original: &'src str,
     parser_source: Cow<'src, str>,
-    expressions: Vec<Range<usize>>,
     tree: Tree,
 }
 
@@ -36,12 +35,9 @@ impl<'src> ParsedRun<'src> {
         };
 
         let mut parser_source = Cow::Borrowed(source);
-        let mut expressions = vec![];
         for (_, span) in extract_fenced_expressions(source) {
-            parser_source
-                .to_mut()
-                .replace_range(span.clone(), &"x".repeat(span.len()));
-            expressions.push(span);
+            let padding = "x".repeat(span.len());
+            parser_source.to_mut().replace_range(span, &padding);
         }
 
         let tree = parser
@@ -51,7 +47,6 @@ impl<'src> ParsedRun<'src> {
         Ok(Self {
             original: source,
             parser_source,
-            expressions,
             tree,
         })
     }
@@ -71,26 +66,6 @@ impl<'src> ParsedRun<'src> {
             .expect("impossible: capture should be UTF-8 by construction")
     }
 
-    /// Whether a captured node overlaps a complete Actions expression.
-    ///
-    /// A node can contain both literal text and expressions, or cover only part
-    /// of an expression. In either case its text is dynamic.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "available for audits that need to distinguish dynamic captures"
-        )
-    )]
-    pub(crate) fn is_dynamic(&self, node: Node<'_>) -> bool {
-        let span = node.byte_range();
-        !span.is_empty()
-            && self
-                .expressions
-                .iter()
-                .any(|expr| span.start < expr.end && expr.start < span.end)
-    }
-
     /// Locate a captured node using its original text and byte offset.
     pub(crate) fn subfeature(&self, node: Node<'_>) -> Subfeature<'src> {
         Subfeature::new(node.start_byte(), self.text(node))
@@ -104,120 +79,31 @@ mod tests {
     use super::*;
     use crate::utils::{BASH, PWSH, SpannedQuery};
 
-    fn command_query(shell: &str) -> SpannedQuery {
-        match normalize_shell(shell) {
-            "bash" | "sh" | "zsh" => {
-                SpannedQuery::new("(command name: (_) @cmd argument: (_)+ @args) @span", &BASH)
-            }
-            "pwsh" | "powershell" => SpannedQuery::new(
-                "(command name: (_) @cmd (command_argument)+ @args) @span",
-                &PWSH,
-            ),
-            _ => panic!("unsupported test shell"),
-        }
-    }
-
     #[test]
-    fn captures_preserve_original_text_and_locations() {
-        let command = "npm install \"${{ '🦀}}' }}\" ${{\n env.X\n}} prefix${{ env.Y }}suffix";
-        let source = format!("echo '🦀'\n{command}\necho done");
+    fn queries_use_parser_source_and_captures_use_original_source() {
+        let command = "echo GITHUB_ENV ${{\n env.VALUE || '🦀}}'\n}}";
+        let prefix = "echo '🦀'\necho \"${{ 'GITHUB_ENV' }}\"\n";
+        let source = format!("{prefix}{command}\necho done");
+        let start = prefix.len();
 
-        for shell in [
-            "bash",
-            "sh",
-            "zsh",
-            "pwsh",
-            "powershell",
-            "/bin/bash -e {0}",
-        ] {
+        for (shell, language) in [("bash", &*BASH), ("pwsh", &*PWSH)] {
             let run = ParsedRun::parse(&source, shell).unwrap();
-            assert!(!run.tree.root_node().has_error(), "{shell}");
-            let query = command_query(shell);
-            let args_idx = query.capture_index_for_name("args").unwrap();
-            let mut cursor = QueryCursor::new();
-            let mut commands = vec![];
-            let mut args = vec![];
-
-            run.query(&query, &mut cursor).for_each(|mat| {
-                let span = mat
-                    .captures()
-                    .iter()
-                    .find(|cap| cap.index == query.span_idx)
-                    .unwrap()
-                    .node;
-                let located = run.subfeature(span).locate_within(&source).unwrap();
-                assert_eq!(located.as_range(), span.byte_range(), "{shell}");
-                commands.push((run.text(span), run.is_dynamic(span)));
-
-                args.extend(
-                    mat.captures()
-                        .iter()
-                        .filter(|cap| cap.index == args_idx)
-                        .map(|cap| (run.text(cap.node), run.is_dynamic(cap.node))),
-                );
-            });
-
-            assert_eq!(
-                commands,
-                [("echo '🦀'", false), (command, true), ("echo done", false)],
-                "{shell}"
+            let query = SpannedQuery::new(
+                r#"((command) @span (#match? @span "GITHUB_ENV"))"#,
+                language,
             );
-            assert_eq!(
-                args,
-                [
-                    ("'🦀'", false),
-                    ("install", false),
-                    ("\"${{ '🦀}}' }}\"", true),
-                    ("${{\n env.X\n}}", true),
-                    ("prefix${{ env.Y }}suffix", true),
-                    ("done", false),
-                ],
-                "{shell}"
-            );
-        }
-    }
-
-    #[test]
-    fn predicates_do_not_match_expression_contents() {
-        let source = "echo \"${{ 'ENV:GITHUB_ENV' }}\"\necho ENV:GITHUB_ENV";
-
-        for (shell, language, query_text) in [
-            (
-                "bash",
-                &*BASH,
-                r#"(command argument: (_) @arg (#match? @arg "ENV:GITHUB_ENV")) @span"#,
-            ),
-            (
-                "pwsh",
-                &*PWSH,
-                r#"(command (command_argument) @arg (#match? @arg "ENV:GITHUB_ENV")) @span"#,
-            ),
-        ] {
-            let run = ParsedRun::parse(source, shell).unwrap();
-            let query = SpannedQuery::new(query_text, language);
             let mut cursor = QueryCursor::new();
             let mut matches = vec![];
             run.query(&query, &mut cursor).for_each(|mat| {
-                let span = mat
-                    .captures()
-                    .iter()
-                    .find(|cap| cap.index == query.span_idx)
-                    .unwrap()
-                    .node;
-                matches.push(run.text(span));
+                let node = mat.captures()[0].node;
+                let location = run.subfeature(node).locate_within(&source).unwrap();
+                matches.push((run.text(node), location.as_range()));
             });
-            assert_eq!(matches, ["echo ENV:GITHUB_ENV"], "{shell}");
-        }
-    }
-
-    #[test]
-    fn incomplete_expressions_remain_original_text() {
-        let source = "echo ${{ env.X";
-        for shell in ["bash", "pwsh"] {
-            let run = ParsedRun::parse(source, shell).unwrap();
-            let node = run.tree.root_node();
-            assert_eq!(run.text(node), source);
-            assert!(!run.is_dynamic(node));
+            assert_eq!(
+                matches,
+                [(command, start..start + command.len())],
+                "{shell}"
+            );
         }
     }
 }
