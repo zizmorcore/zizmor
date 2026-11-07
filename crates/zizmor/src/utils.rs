@@ -9,6 +9,8 @@ use std::sync::LazyLock;
 use crate::finding::location::Routable;
 use crate::models::AsDocument;
 
+pub(crate) mod run;
+
 pub(crate) static ZIZMOR_AGENT: &str = concat!("zizmor/", env!("CARGO_PKG_VERSION"));
 
 pub(crate) static BASH: LazyLock<tree_sitter::Language> =
