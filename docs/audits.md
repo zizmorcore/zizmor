@@ -563,6 +563,32 @@ Some general pointers:
 
 [reusable workflow]: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
 
+## `dangerous-checkout`
+
+| Type     | Examples                  | Introduced in | Works offline  | Auto-fixes available | Configurable |
+|----------|---------------------------|---------------|----------------|--------------------|--------------|
+| Workflow, Action  | [dangerous-checkout.yml] | v1.33.0        | ✅             | ❌                 | ❌         |
+
+[dangerous-checkout.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/dangerous-checkout.yml
+
+Detects dangerous Git checkout patterns.
+
+By default, versions `v7` and newer of @actions/checkout prevent checkouts
+of fork-originated code on certain dangerous triggers (namely `pull_request_target`
+and `workflow_run`).
+
+However, users can explicitly disable this protection by setting
+`#!yaml allow-unsafe-pr-checkout: true`. This audit flags checkout steps
+that do this.
+
+Other resources:
+
+- [GitHub blog: Safer pull_request_target defaults](Safer pull_request_target defaults for GitHub Actions checkout)
+
+### Remediation
+
+Do not use `allow-unsafe-pr-checkout: true` with @actions/checkout.
+
 ## `dependabot-cooldown`
 
 | Type     | Examples                | Introduced in | Works offline  | Auto-fixes available | Configurable |

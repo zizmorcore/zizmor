@@ -1,3 +1,9 @@
+// TODOs:
+// - Support auto-fixes here.
+// - Detect manual dangerous checkout patterns.
+//   The most general version of this requires some additional dataflow work,
+//   e.g. checking whether `env: FOO` flows into `git checkout ... $FOO`.
+
 use std::sync::LazyLock;
 
 use github_actions_models::common::Uses;
