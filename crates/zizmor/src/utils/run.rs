@@ -8,16 +8,7 @@ use tree_sitter::{Node, Query, QueryCursor, QueryMatches, Tree};
 
 use super::{bash_parser, extract_fenced_expressions, normalize_shell, pwsh_parser};
 
-/// A run body parsed with Actions expressions treated as opaque text.
-///
-/// Parsing and query predicates use a private source in which each complete
-/// expression is replaced with ASCII padding of the same byte length. Newlines
-/// inside expressions are also replaced so they cannot split shell statements.
-/// This is an approximation of the script, not an evaluation of its expressions.
-///
-/// Node byte ranges refer to the original source. Row/column positions may
-/// differ; use [`Self::text`] and [`Self::subfeature`] to read captures and locate
-/// diagnostics in the original source.
+/// A run body with Actions expressions masked for shell parsing and queries.
 pub(crate) struct ParsedRun<'src> {
     original: &'src str,
     parser_source: Cow<'src, str>,
@@ -25,7 +16,7 @@ pub(crate) struct ParsedRun<'src> {
 }
 
 impl<'src> ParsedRun<'src> {
-    /// Parse a run body using a supported shell, including shell paths and flags.
+    /// Parse a run body using the given shell.
     pub(crate) fn parse(source: &'src str, shell: &str) -> Result<Self> {
         let shell = normalize_shell(shell);
         let mut parser = match shell {
@@ -51,7 +42,7 @@ impl<'src> ParsedRun<'src> {
         })
     }
 
-    /// Run a query with predicates evaluated against the parser's source.
+    /// Query the masked source.
     pub(crate) fn query<'a>(
         &'a self,
         query: &'a Query,
@@ -60,13 +51,13 @@ impl<'src> ParsedRun<'src> {
         cursor.matches(query, self.tree.root_node(), self.parser_source.as_bytes())
     }
 
-    /// Return the original text of a node captured by [`Self::query`].
+    /// Return a node's original source text.
     pub(crate) fn text(&self, node: Node<'_>) -> &'src str {
         node.utf8_text(self.original.as_bytes())
             .expect("impossible: capture should be UTF-8 by construction")
     }
 
-    /// Locate a captured node using its original text and byte offset.
+    /// Locate a node in the original source.
     pub(crate) fn subfeature(&self, node: Node<'_>) -> Subfeature<'src> {
         Subfeature::new(node.start_byte(), self.text(node))
     }
