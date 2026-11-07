@@ -25,11 +25,21 @@ fn test_normal_persona() -> anyhow::Result<()> {
        |               --------------------------------------------------------- this checkout
     ...
     26 |           allow-unsafe-pr-checkout: ${{ github.event_name == 'push' }}
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ conditionally enables unsafe checkouts here
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may enable unsafe checkouts here
        |
        = note: audit confidence → Low
 
-    2 findings: 0 informational, 0 low, 0 medium, 2 high
+    error[unsafe-checkout]: unsafe Git checkout
+      --> @@INPUT@@:30:9
+       |
+    29 |         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+       |               --------------------------------------------------------- this checkout
+    30 |         with: ${{ fromJSON('{}') }} # zizmor: ignore[obfuscation]
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ may enable unsafe checkouts here
+       |
+       = note: audit confidence → Low
+
+    4 findings (1 ignored): 0 informational, 0 low, 0 medium, 3 high
     "
     );
 

@@ -24,3 +24,7 @@ jobs:
         with:
           persist-credentials: false
           allow-unsafe-pr-checkout: ${{ github.event_name == 'push' }}
+
+      - name: obfuscated
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: ${{ fromJSON('{}') }} # zizmor: ignore[obfuscation]

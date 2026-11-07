@@ -1,6 +1,7 @@
 use std::sync::LazyLock;
 
 use github_actions_models::common::Uses;
+use itertools::Itertools;
 use subfeature::Subfeature;
 
 use crate::{
@@ -38,14 +39,35 @@ impl DangerousCheckout {
             return Ok(vec![]);
         };
 
-        let (confidence, annotation) = match usage {
-            crate::models::coordinate::Usage::Enabled(_) => {
-                (Confidence::High, "enables unsafe checkouts here")
-            }
-            crate::models::coordinate::Usage::Conditional(_) => (
-                Confidence::Low,
-                "conditionally enables unsafe checkouts here",
+        let (confidence, location) = match usage {
+            crate::models::coordinate::Usage::Enabled(_) => (
+                Confidence::High,
+                step.location()
+                    .primary()
+                    .with_keys(["with".into(), "allow-unsafe-pr-checkout".into()])
+                    .annotated("enables unsafe checkouts here"),
             ),
+            crate::models::coordinate::Usage::Conditional(origin) => {
+                let Some(origin) = origin.iter().exactly_one().ok() else {
+                    return Ok(vec![]);
+                };
+
+                let location = match origin {
+                    crate::models::coordinate::ControlOrigin::Input { .. } => step
+                        .location()
+                        .primary()
+                        .with_keys(["with".into(), "allow-unsafe-pr-checkout".into()])
+                        .annotated("may enable unsafe checkouts here"),
+                    crate::models::coordinate::ControlOrigin::WithExpression => step
+                        .location()
+                        .primary()
+                        .with_keys(["with".into()])
+                        .annotated("may enable unsafe checkouts here"),
+                    _ => unreachable!(),
+                };
+
+                (Confidence::Low, location)
+            }
             // Our coordinate is not trivial, so this never occurs.
             crate::models::coordinate::Usage::Always => unreachable!(),
         };
@@ -62,12 +84,7 @@ impl DangerousCheckout {
                         .subfeature(Subfeature::new(0, uses.raw()))
                         .annotated("this checkout"),
                 )
-                .add_location(
-                    step.location()
-                        .primary()
-                        .with_keys(["with".into(), "allow-unsafe-pr-checkout".into()])
-                        .annotated(annotation),
-                )
+                .add_location(location)
                 .build(step)?,
         ])
     }
