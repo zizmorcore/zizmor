@@ -22,6 +22,10 @@ of `zizmor`.
 
     Many thanks to @DarkaMaul for implementing this fix!
 
+* Fixed a bug where the [undocumented-permissions] audit would
+  incorrectly flag a `none` permission as requiring an explanatory
+  comment (#2530)
+
 ## 1.32.0
 
 ### New Features 🌈
