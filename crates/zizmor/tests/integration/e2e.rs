@@ -283,9 +283,9 @@ fn invalid_config_file() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check your configuration file for syntax errors
-      = help: see: https://docs.zizmor.sh/configuration/
+     |
+     = help: check your configuration file for syntax errors
+     = help: see: https://docs.zizmor.sh/configuration/
 
     Caused by:
         0: configuration error in @@CONFIG@@
@@ -330,9 +330,9 @@ fn invalid_inputs() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: no inputs collected
-      |
-      = help: collection yielded no auditable inputs
-      = help: at least one valid, auditable input must be given
+     |
+     = help: collection yielded no auditable inputs
+     = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
@@ -380,9 +380,9 @@ fn test_issue_1394() -> Result<()> {
      WARN collect_inputs: zizmor::registry::input: failed to parse input: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
     fatal: no audit was performed
     error: no inputs collected
-      |
-      = help: collection yielded no auditable inputs
-      = help: at least one valid, auditable input must be given
+     |
+     = help: collection yielded no auditable inputs
+     = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
@@ -631,9 +631,9 @@ fn issue_1300() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: input @@INPUT@@ doesn't contain any workflows
-      |
-      = help: ensure that @@INPUT@@ contains one or more workflows under `.github/workflows/`
-      = help: ensure that @@INPUT@@ exists and you have access to it
+     |
+     = help: ensure that @@INPUT@@ contains one or more workflows under `.github/workflows/`
+     = help: ensure that @@INPUT@@ exists and you have access to it
 
     Caused by:
         0: input @@INPUT@@ doesn't contain any workflows
@@ -753,8 +753,8 @@ fn test_cant_retrieve_offline() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: can't fetch remote repository: pypa/sampleproject
-      |
-      = help: remove --offline to audit remote repositories
+     |
+     = help: remove --offline to audit remote repositories
 
     Caused by:
         can't fetch remote repository: pypa/sampleproject
@@ -779,8 +779,8 @@ fn test_cant_retrieve_no_gh_token() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: can't fetch remote repository: pypa/sampleproject
-      |
-      = help: set a GitHub token with --gh-token or GH_TOKEN
+     |
+     = help: set a GitHub token with --gh-token or GH_TOKEN
 
     Caused by:
         can't fetch remote repository: pypa/sampleproject
@@ -924,10 +924,10 @@ fn issue_2202() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: remote input has an ambiguous Git reference ("v1" is both a tag and a branch)
-      |
-      = help: disambiguate the Git ref by putting it in the right namespace
-      = help: example: woodruffw-experiments/zizmor-issue-2202@refs/heads/v1
-      = help: example: woodruffw-experiments/zizmor-issue-2202@refs/tags/v1
+     |
+     = help: disambiguate the Git ref by putting it in the right namespace
+     = help: example: woodruffw-experiments/zizmor-issue-2202@refs/heads/v1
+     = help: example: woodruffw-experiments/zizmor-issue-2202@refs/tags/v1
 
     Caused by:
         remote input has an ambiguous Git reference ("v1" is both a tag and a branch)

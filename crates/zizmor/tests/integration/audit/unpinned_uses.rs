@@ -407,9 +407,9 @@ fn test_invalid_wrong_policy_object() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check the configuration for the 'unpinned-uses' rule
-      = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
+     |
+     = help: check the configuration for the 'unpinned-uses' rule
+     = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
 
     Caused by:
         0: configuration error in @@CONFIG@@
@@ -435,9 +435,9 @@ fn test_invalid_policy_syntax_1() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check the configuration for the 'unpinned-uses' rule
-      = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
+     |
+     = help: check the configuration for the 'unpinned-uses' rule
+     = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
 
     Caused by:
         0: configuration error in @@CONFIG@@
@@ -463,9 +463,9 @@ fn test_invalid_policy_syntax_2() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check the configuration for the 'unpinned-uses' rule
-      = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
+     |
+     = help: check the configuration for the 'unpinned-uses' rule
+     = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
 
     Caused by:
         0: configuration error in @@CONFIG@@
@@ -491,9 +491,9 @@ fn test_invalid_policy_syntax_3() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check the configuration for the 'unpinned-uses' rule
-      = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
+     |
+     = help: check the configuration for the 'unpinned-uses' rule
+     = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
 
     Caused by:
         0: configuration error in @@CONFIG@@
@@ -519,9 +519,9 @@ fn test_invalid_policy_syntax_4() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check the configuration for the 'unpinned-uses' rule
-      = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
+     |
+     = help: check the configuration for the 'unpinned-uses' rule
+     = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
 
     Caused by:
         0: configuration error in @@CONFIG@@
@@ -547,9 +547,9 @@ fn test_invalid_policy_syntax_5() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check the configuration for the 'unpinned-uses' rule
-      = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
+     |
+     = help: check the configuration for the 'unpinned-uses' rule
+     = help: see: https://docs.zizmor.sh/audits/#unpinned-uses-configuration
 
     Caused by:
         0: configuration error in @@CONFIG@@

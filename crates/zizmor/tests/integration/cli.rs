@@ -236,9 +236,9 @@ fn test_stdin_empty() -> anyhow::Result<()> {
      WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected
-      |
-      = help: collection yielded no auditable inputs
-      = help: at least one valid, auditable input must be given
+     |
+     = help: collection yielded no auditable inputs
+     = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
@@ -794,9 +794,9 @@ fn test_stdin_valid_yaml_unknown_schema() -> anyhow::Result<()> {
      WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected
-      |
-      = help: collection yielded no auditable inputs
-      = help: at least one valid, auditable input must be given
+     |
+     = help: collection yielded no auditable inputs
+     = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
@@ -822,9 +822,9 @@ fn test_stdin_valid_yaml_unknown_schema_strict() -> anyhow::Result<()> {
      WARN collect_inputs: zizmor::registry::input: stdin: could not parse as any known input type
     fatal: no audit was performed
     error: no inputs collected
-      |
-      = help: collection yielded no auditable inputs
-      = help: at least one valid, auditable input must be given
+     |
+     = help: collection yielded no auditable inputs
+     = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
