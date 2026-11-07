@@ -307,7 +307,7 @@ info[use-trusted-publishing]: prefer trusted publishing for authentication
   --> .github/workflows/cache-poisoning.yml:58:14
    |
 58 |         run: cargo publish --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }}
-   |         ---  ^^^^^^^^^^^^^^^^^^^^^ this command
+   |         ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this command
    |         |
    |         this step
    |
