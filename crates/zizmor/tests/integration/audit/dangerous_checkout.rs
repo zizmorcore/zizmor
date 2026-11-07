@@ -4,7 +4,7 @@ use zizmor_dev::{Zizmor, input_under_test};
 fn test_normal_persona() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         Zizmor::cargo_bin()
-            .input(input_under_test("unsafe-checkout.yml"))
+            .input(input_under_test("dangerous-checkout.yml"))
             .run()?,
         @"
     error[unsafe-checkout]: unsafe Git checkout
