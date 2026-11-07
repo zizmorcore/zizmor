@@ -86,6 +86,11 @@ impl UndocumentedPermissions {
         let mut has_undocumented = false;
 
         for (perm_name, perm) in perms {
+            if matches!(perm, Permission::None) {
+                // There's no meaningful comment to put on a `none` permission.
+                continue;
+            }
+
             if perm_name == "contents" && *perm == Permission::Read {
                 // Skip "contents: read" as it's common and self-explanatory
                 continue;
