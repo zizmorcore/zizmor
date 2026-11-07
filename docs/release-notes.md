@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### New Features 🌈
+
+* **New audit**: [dangerous-checkout] detects dangerous Git checkout
+  patterns. The initial version of this audit is limited to
+  @actions/checkout (#2532)
+
 ### Bug Fixes 🐛
 
 * LSP: Fixed a bug where findings that should have been suppressed
