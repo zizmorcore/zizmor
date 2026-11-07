@@ -1,14 +1,14 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
-expression: "zizmor().expects_failure(3).input(input_under_test(&format!(\"invalid/{tc}.yml\"))).run()?"
+expression: "Zizmor::cargo_bin().expects_failure(3).input(input_under_test(&format!(\"invalid/{tc}.yml\"))).run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
  WARN collect_inputs: zizmor::registry::input: failed to validate file://@@INPUT@@ as action: input does not match expected validation schema
 fatal: no audit was performed
 error: no inputs collected
-  |
-  = help: collection yielded no auditable inputs
-  = help: at least one valid, auditable input must be given
+ |
+ = help: collection yielded no auditable inputs
+ = help: at least one valid, auditable input must be given
 
 Caused by:
     no inputs collected

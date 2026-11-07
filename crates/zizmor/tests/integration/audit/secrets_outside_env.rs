@@ -41,9 +41,9 @@ fn test_config_invalid_variant() -> Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check the configuration for the 'secrets-outside-env' rule
-      = help: see: https://docs.zizmor.sh/audits/#secrets-outside-env-configuration
+     |
+     = help: check the configuration for the 'secrets-outside-env' rule
+     = help: see: https://docs.zizmor.sh/audits/#secrets-outside-env-configuration
 
     Caused by:
         0: configuration error in @@CONFIG@@

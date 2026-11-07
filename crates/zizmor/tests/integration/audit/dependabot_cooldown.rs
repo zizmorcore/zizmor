@@ -89,9 +89,9 @@ fn test_config_not_number() -> anyhow::Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check the configuration for the 'dependabot-cooldown' rule
-      = help: see: https://docs.zizmor.sh/audits/#dependabot-cooldown-configuration
+     |
+     = help: check the configuration for the 'dependabot-cooldown' rule
+     = help: see: https://docs.zizmor.sh/audits/#dependabot-cooldown-configuration
 
     Caused by:
         0: configuration error in @@CONFIG@@
@@ -116,9 +116,9 @@ fn test_invalid_config_zero_days() -> anyhow::Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check the configuration for the 'dependabot-cooldown' rule
-      = help: see: https://docs.zizmor.sh/audits/#dependabot-cooldown-configuration
+     |
+     = help: check the configuration for the 'dependabot-cooldown' rule
+     = help: see: https://docs.zizmor.sh/audits/#dependabot-cooldown-configuration
 
     Caused by:
         0: configuration error in @@CONFIG@@
@@ -143,9 +143,9 @@ fn test_invalid_config_negative_days() -> anyhow::Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check the configuration for the 'dependabot-cooldown' rule
-      = help: see: https://docs.zizmor.sh/audits/#dependabot-cooldown-configuration
+     |
+     = help: check the configuration for the 'dependabot-cooldown' rule
+     = help: see: https://docs.zizmor.sh/audits/#dependabot-cooldown-configuration
 
     Caused by:
         0: configuration error in @@CONFIG@@
