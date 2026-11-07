@@ -1,7 +1,7 @@
 use std::sync::LazyLock;
 
 use github_actions_models::common::Uses;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use subfeature::Subfeature;
 
 use crate::{
@@ -63,13 +63,19 @@ impl DangerousCheckout {
                         .primary()
                         .with_keys(["with".into()])
                         .annotated("may enable unsafe checkouts here"),
-                    _ => unreachable!(),
+                    _ => {
+                        // Our coordinate can only be satisified through *some* `with:` state
+                        // matched above.
+                        unreachable!("impossible: unexpected control origin for actions/checkout")
+                    }
                 };
 
                 (Confidence::Low, location)
             }
             // Our coordinate is not trivial, so this never occurs.
-            crate::models::coordinate::Usage::Always => unreachable!(),
+            crate::models::coordinate::Usage::Always => {
+                unreachable!("impossible: actions/checkout coordinate is non-trivial")
+            }
         };
 
         Ok(vec![
