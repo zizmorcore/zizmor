@@ -37,6 +37,7 @@ mod unpinned_images;
 mod unpinned_tools;
 mod unpinned_uses;
 mod unredacted_secrets;
+mod unsafe_checkout;
 mod unsound_condition;
 mod unsound_contains;
 mod unsound_ternary;
