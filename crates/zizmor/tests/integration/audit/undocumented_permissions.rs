@@ -263,3 +263,32 @@ fn test_partially_documented_pedantic() -> Result<()> {
 
     Ok(())
 }
+
+/// Bug #2523: undocumented-permissions should not flag a `none` permission as needing
+/// an explanatory comment, since there's no actual permission.
+///
+/// See: <https://github.com/zizmorcore/zizmor/issues/2523>
+#[test]
+fn test_issue_2523() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test(
+                "undocumented-permissions/issue-2523-repro.yml"
+            ))
+            .args(["--persona=pedantic"])
+            .run()?,
+        @"
+    help[undocumented-permissions]: permissions without explanatory comments
+      --> @@INPUT@@:20:7
+       |
+    20 |       contents: none
+       |       ^^^^^^^^^^^^^^ needs an explanatory comment
+       |
+       = note: audit confidence → High
+
+    1 finding: 0 informational, 1 low, 0 medium, 0 high
+    "
+    );
+
+    Ok(())
+}
