@@ -264,6 +264,9 @@
         "concurrency-limits": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
+        "dangerous-checkout": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "dangerous-triggers": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
@@ -352,9 +355,6 @@
           "$ref": "#/definitions/UnpinnedUsesRuleConfig"
         },
         "unredacted-secrets": {
-          "$ref": "#/definitions/BaseRuleConfig"
-        },
-        "unsafe-checkout": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
         "unsound-condition": {
