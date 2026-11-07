@@ -11,7 +11,7 @@ use anyhow::anyhow;
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 
-use super::{Audit, AuditLoadError, Job, audit_meta};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{Confidence, Finding, Severity, location::Locatable as _},
@@ -20,7 +20,7 @@ use crate::{
         StepCommon as _,
         pre_commit::PreCommitConfig,
         repo_ref::{RepoRef, Slug},
-        workflow::Workflow,
+        workflow::{ReusableWorkflowCallJob, Step},
     },
     state::AuditState,
 };
@@ -282,63 +282,61 @@ impl Audit for ImpostorCommit {
             .map(|client| Self { client })
     }
 
-    async fn audit_workflow<'doc>(
+    async fn audit_step<'doc>(
         &self,
-        workflow: &'doc Workflow,
+        step: &Step<'doc>,
         _group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(vec![]);
+        };
+
         let mut findings = vec![];
+        if self.impostor(uses).await? {
+            let finding_builder = Self::finding()
+                .severity(Severity::High)
+                .confidence(Confidence::High)
+                .add_location(step.location_with_grip())
+                .add_location(
+                    step.location()
+                        .with_keys(["uses".into()])
+                        .subfeature(Subfeature::new(0, uses.raw()))
+                        .primary()
+                        .annotated(IMPOSTOR_ANNOTATION),
+                );
 
-        for job in workflow.jobs() {
-            match job {
-                Job::NormalJob(normal) => {
-                    for step in normal.steps() {
-                        let Some(Uses::Repository(uses)) = step.uses() else {
-                            continue;
-                        };
+            findings.push(finding_builder.build(step)?);
+        }
 
-                        if self.impostor(uses).await? {
-                            let finding_builder = Self::finding()
-                                .severity(Severity::High)
-                                .confidence(Confidence::High)
-                                .add_location(step.location_with_grip())
-                                .add_location(
-                                    step.location()
-                                        .with_keys(["uses".into()])
-                                        .subfeature(Subfeature::new(0, uses.raw()))
-                                        .primary()
-                                        .annotated(IMPOSTOR_ANNOTATION),
-                                );
+        Ok(findings)
+    }
 
-                            findings.push(finding_builder.build(workflow).map_err(Self::err)?);
-                        }
-                    }
-                }
-                Job::ReusableWorkflowCallJob(reusable) => {
-                    // Reusable workflows can also be commit pinned, meaning
-                    // they can also be impersonated.
-                    let Uses::Repository(uses) = &reusable.uses else {
-                        continue;
-                    };
+    async fn audit_reusable_job<'doc>(
+        &self,
+        job: &ReusableWorkflowCallJob<'doc>,
+        _group: &crate::registry::input::InputGroup,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        // Reusable workflows can also be commit pinned, meaning
+        // they can also be impersonated.
+        let Uses::Repository(uses) = &job.uses else {
+            return Ok(vec![]);
+        };
 
-                    if self.impostor(uses).await? {
-                        let finding_builder = Self::finding()
-                            .severity(Severity::High)
-                            .confidence(Confidence::High)
-                            .add_location(reusable.location_with_grip())
-                            .add_location(
-                                reusable
-                                    .location()
-                                    .with_keys(["uses".into()])
-                                    .subfeature(Subfeature::new(0, uses.raw()))
-                                    .primary()
-                                    .annotated(IMPOSTOR_ANNOTATION),
-                            );
+        let mut findings = vec![];
+        if self.impostor(uses).await? {
+            let finding_builder = Self::finding()
+                .severity(Severity::High)
+                .confidence(Confidence::High)
+                .add_location(job.location_with_grip())
+                .add_location(
+                    job.location()
+                        .with_keys(["uses".into()])
+                        .subfeature(Subfeature::new(0, uses.raw()))
+                        .primary()
+                        .annotated(IMPOSTOR_ANNOTATION),
+                );
 
-                        findings.push(finding_builder.build(workflow).map_err(Self::err)?);
-                    }
-                }
-            }
+            findings.push(finding_builder.build(job)?);
         }
 
         Ok(findings)
