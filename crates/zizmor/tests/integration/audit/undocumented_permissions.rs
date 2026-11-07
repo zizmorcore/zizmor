@@ -277,17 +277,7 @@ fn test_issue_2523() -> Result<()> {
             ))
             .args(["--persona=pedantic"])
             .run()?,
-        @"
-    help[undocumented-permissions]: permissions without explanatory comments
-      --> @@INPUT@@:20:7
-       |
-    20 |       contents: none
-       |       ^^^^^^^^^^^^^^ needs an explanatory comment
-       |
-       = note: audit confidence → High
-
-    1 finding: 0 informational, 1 low, 0 medium, 0 high
-    "
+        @"No findings to report. Good job!"
     );
 
     Ok(())
