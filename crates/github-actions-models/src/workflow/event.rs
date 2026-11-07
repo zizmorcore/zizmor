@@ -261,7 +261,7 @@ pub struct WorkflowCallSecret {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct WorkflowDispatch {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::common::null_to_default")]
     pub inputs: IndexMap<String, WorkflowDispatchInput>,
 }
 
