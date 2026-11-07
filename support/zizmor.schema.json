@@ -354,6 +354,9 @@
         "unredacted-secrets": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
+        "unsafe-checkout": {
+          "$ref": "#/definitions/BaseRuleConfig"
+        },
         "unsound-condition": {
           "$ref": "#/definitions/BaseRuleConfig"
         },
