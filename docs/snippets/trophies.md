@@ -412,6 +412,14 @@
         - bitcoindevkit/bdk#1813
 
 
+-   ![](https://github.com/bitwalker.png?size=40){ width="40" loading=lazy align=left } bitwalker
+
+    ---
+
+    ??? example "Examples"
+        - bitwalker/timex@24db855df9f6927ab350b60f357f1926c6d40bf9
+
+
 -   ![](https://github.com/bitwarden.png?size=40){ width="40" loading=lazy align=left } bitwarden
 
     ---
@@ -682,6 +690,7 @@
     ??? example "Examples"
         - containers/conmon#687
         - containers/crun#2313
+        - containers/kubernetes-mcp-server#1644
         - containers/podman#27642
 
 
@@ -1208,6 +1217,14 @@
         - Flexget/Flexget#4299
 
 
+-   ![](https://github.com/FormidableLabs.png?size=40){ width="40" loading=lazy align=left } FormidableLabs
+
+    ---
+
+    ??? example "Examples"
+        - FormidableLabs/victory#3130
+
+
 -   ![](https://github.com/foyer-rs.png?size=40){ width="40" loading=lazy align=left } foyer-rs
 
     ---
@@ -1419,6 +1436,7 @@
         - google/grinder.dart#432
         - google/osv-scanner#2591
         - google/osv.dev#4969
+        - google/postcss-rename#95
         - google/zerocop#2810
         - google/zx#1067
         - google/zx#1126
@@ -1711,6 +1729,14 @@
 
     ??? example "Examples"
         - iorate/ublacklist#828
+
+
+-   ![](https://github.com/ipython.png?size=40){ width="40" loading=lazy align=left } ipython
+
+    ---
+
+    ??? example "Examples"
+        - ipython/xkcd-font#108
 
 
 -   ![](https://github.com/irbis-sh.png?size=40){ width="40" loading=lazy align=left } irbis-sh
@@ -2112,6 +2138,14 @@
 
     ??? example "Examples"
         - maypok86/otter#250
+
+
+-   ![](https://github.com/mbraak.png?size=40){ width="40" loading=lazy align=left } mbraak
+
+    ---
+
+    ??? example "Examples"
+        - mbraak/jqTree#1037
 
 
 -   ![](https://github.com/mbta.png?size=40){ width="40" loading=lazy align=left } mbta
@@ -2653,6 +2687,14 @@
         - Ouranosinc/xclim#2023
 
 
+-   ![](https://github.com/OutlineFoundation.png?size=40){ width="40" loading=lazy align=left } OutlineFoundation
+
+    ---
+
+    ??? example "Examples"
+        - OutlineFoundation/tunnel-server#297
+
+
 -   ![](https://github.com/owid.png?size=40){ width="40" loading=lazy align=left } owid
 
     ---
@@ -2714,6 +2756,14 @@
         - paperless-ngx/paperless-ngx#12466
 
 
+-   ![](https://github.com/payloadcms.png?size=40){ width="40" loading=lazy align=left } payloadcms
+
+    ---
+
+    ??? example "Examples"
+        - payloadcms/payload#19310
+
+
 -   ![](https://github.com/pendulum-project.png?size=40){ width="40" loading=lazy align=left } pendulum-project
 
     ---
@@ -2752,6 +2802,14 @@
 
     ??? example "Examples"
         - php/pie#634
+
+
+-   ![](https://github.com/planetscale.png?size=40){ width="40" loading=lazy align=left } planetscale
+
+    ---
+
+    ??? example "Examples"
+        - planetscale/cli#1496
 
 
 -   ![](https://github.com/PlasmaPy.png?size=40){ width="40" loading=lazy align=left } PlasmaPy
@@ -2824,6 +2882,7 @@
     ---
 
     ??? example "Examples"
+        - prometheus/alertmanager#5689
         - prometheus/prometheus#16530
 
 
@@ -3357,12 +3416,21 @@
         - SAP/cloud-sdk-js#6564
 
 
+-   ![](https://github.com/sarugaku.png?size=40){ width="40" loading=lazy align=left } sarugaku
+
+    ---
+
+    ??? example "Examples"
+        - sarugaku/resolvelib#211
+
+
 -   ![](https://github.com/sass.png?size=40){ width="40" loading=lazy align=left } sass
 
     ---
 
     ??? example "Examples"
         - sass/dart-sass#2792
+        - sass/sass#4265
 
 
 -   ![](https://github.com/savonrb.png?size=40){ width="40" loading=lazy align=left } savonrb
@@ -3540,6 +3608,14 @@
         - stanfordnlp/dspy#9743
 
 
+-   ![](https://github.com/starship.png?size=40){ width="40" loading=lazy align=left } starship
+
+    ---
+
+    ??? example "Examples"
+        - starship/starship#7849
+
+
 -   ![](https://github.com/statamic.png?size=40){ width="40" loading=lazy align=left } statamic
 
     ---
@@ -3673,6 +3749,14 @@
         - TecharoHQ/anubis#188
 
 
+-   ![](https://github.com/tediousjs.png?size=40){ width="40" loading=lazy align=left } tediousjs
+
+    ---
+
+    ??? example "Examples"
+        - tediousjs/tedious#1829
+
+
 -   ![](https://github.com/tektoncd.png?size=40){ width="40" loading=lazy align=left } tektoncd
 
     ---
@@ -3796,6 +3880,14 @@
     ??? example "Examples"
         - trailofbits/fickling#144
         - trailofbits/fickling#177
+
+
+-   ![](https://github.com/trezor.png?size=40){ width="40" loading=lazy align=left } trezor
+
+    ---
+
+    ??? example "Examples"
+        - trezor/trezor-suite#34485
 
 
 -   ![](https://github.com/trifectatechfoundation.png?size=40){ width="40" loading=lazy align=left } trifectatechfoundation

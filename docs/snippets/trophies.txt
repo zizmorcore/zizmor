@@ -109,6 +109,7 @@ biomejs/biome-vscode#1101
 biomejs/biome-zed#207
 bitcoindevkit/bdk#1778
 bitcoindevkit/bdk#1813
+bitwalker/timex@24db855df9f6927ab350b60f357f1926c6d40bf9
 bitwarden/ios#2124
 bitwarden/passkeys-index#128
 bitwarden/sdk-sm#1378
@@ -157,6 +158,7 @@ conda/conda-lock#814
 containerd/nerdctl#4909
 containers/conmon#687
 containers/crun#2313
+containers/kubernetes-mcp-server#1644
 containers/podman#27642
 CopilotKit/CopilotKit#4820
 cordx56/rustowl#675
@@ -247,6 +249,7 @@ fatiando/harmonica#550
 flatironinstitute/nemos#520
 flet-dev/flet#6602
 Flexget/Flexget#4299
+FormidableLabs/victory#3130
 foyer-rs/foyer#859
 fpgmaas/deptry#1161
 fpgmaas/deptry#972
@@ -278,6 +281,7 @@ golangci/golangci-lint#6500
 google/grinder.dart#432
 google/osv-scanner#2591
 google/osv.dev#4969
+google/postcss-rename#95
 google/zerocop#2810
 google/zx#1067
 google/zx#1126
@@ -360,6 +364,7 @@ Instagram/LibCST#1262
 intel/llvm#20437
 intlify/vue-i18n#2489
 iorate/ublacklist#828
+ipython/xkcd-font#108
 irbis-sh/zen-desktop#684
 ispc/ispc#3589
 j178/prek#947
@@ -432,6 +437,7 @@ maxmind/MaxMind-DB-Reader-python#178
 maxmind/mmdbinspect#82
 maxmind/mmdbwriter#104
 maypok86/otter#250
+mbraak/jqTree#1037
 mbta/api#1048
 mccutchen/go-httpbin#252
 medic/cht-core#10559
@@ -530,6 +536,7 @@ ossf/allstar#818
 ossf/scorecard-action#1716
 otter-sec/anchor#4594
 Ouranosinc/xclim#2023
+OutlineFoundation/tunnel-server#297
 owid/owid-grapher#6615
 oxc-project/oxc#7844
 oxc-project/oxc-resolver#370
@@ -542,11 +549,13 @@ pallets/markupsafe#535
 pallets/werkzeug#3150
 pantsbuild/pants#23249
 paperless-ngx/paperless-ngx#12466
+payloadcms/payload#19310
 pendulum-project/ntpd-rs#2139
 pentacent/keila@7eb6aeb61d0b191bc8fca13f4deef0bd422ac8d3
 pgautoupgrade/docker-pgautoupgrade#221
 philips-software/amp-devcontainer#830
 php/pie#634
+planetscale/cli#1496
 PlasmaPy/PlasmaPy#2975
 pnpm/pnpm#11608
 podman-container-tools/buildah#7052
@@ -556,6 +565,7 @@ powersync-ja/powersync.dart#416
 praetorian-inc/noseyparker#228
 prettytable/prettytable#339
 privacyidea/privacyidea#4854
+prometheus/alertmanager#5689
 prometheus/prometheus#16530
 prosekit/prosekit#1609
 prowler-cloud/prowler#10200
@@ -667,7 +677,9 @@ Saghen/blink.cmp#991
 sanity-io/sanity#12830
 SAP/ai-sdk-js#1822
 SAP/cloud-sdk-js#6564
+sarugaku/resolvelib#211
 sass/dart-sass#2792
+sass/sass#4265
 savonrb/savon@1cb9ad4311e7ed1f59dbdb0b48ad677016a0a875
 SBoudrias/Inquirer.js#2232
 scientific-python/repo-review#257
@@ -703,6 +715,7 @@ sonos/tract#2262
 sparklemotion/nokogiri#3654
 sqlite/sqlite-wasm#166
 stanfordnlp/dspy#9743
+starship/starship#7849
 statamic/cms#14687
 Stebalien/tempfile#402
 stravalib/stravalib#645
@@ -738,6 +751,7 @@ TanStack/table#6251
 TanStack/tanstack.com#919
 target/data-validator#223
 TecharoHQ/anubis#188
+tediousjs/tedious#1829
 tektoncd/operator#3300
 tektoncd/operator#3324
 tektoncd/pipeline#9667
@@ -758,6 +772,7 @@ toy/image_optim@9ccbbd0bc8e6a2d3258988e34de5dbe86408da80
 tradingview/lightweight-charts#2085
 trailofbits/fickling#144
 trailofbits/fickling#177
+trezor/trezor-suite#34485
 trifectatechfoundation/sudo-rs#1488
 trifectatechfoundation/sudo-rs#1490
 trifectatechfoundation/teach-rs#162
