@@ -19,6 +19,8 @@ of `zizmor`.
 
 * The [impostor-commit] audit is now aware of workflow lockfiles (#2534)
 
+* The [ref-confusion] audit is now aware of workflow lockfiles (#2536)
+
 ### Bug Fixes 🐛
 
 * LSP: Fixed a bug where findings that should have been suppressed
