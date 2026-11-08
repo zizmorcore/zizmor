@@ -23,6 +23,7 @@ use crate::{
         workflow::{ReusableWorkflowCallJob, Step},
     },
     state::AuditState,
+    utils::once::debug_once,
 };
 
 const IMPOSTOR_ANNOTATION: &str = "uses a commit that doesn't belong to the specified org/repo";
@@ -292,6 +293,10 @@ impl Audit for ImpostorCommit {
         if let Some(lock) = group.lock()
             && lock.is_locked(step.as_ref())
         {
+            debug_once!(
+                "{input} is covered by a lockfile, no impostor commit checks needed",
+                input = step.as_ref()
+            );
             return Ok(vec![]);
         }
 

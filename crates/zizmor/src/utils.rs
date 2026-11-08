@@ -572,6 +572,12 @@ pub(crate) mod once {
         }};
     }
 
+    macro_rules! debug_once {
+        ($($arg:tt)+) => ({
+            crate::utils::once::once!(tracing::debug!($($arg)+))
+        });
+    }
+
     macro_rules! warn_once {
         ($($arg:tt)+) => ({
             crate::utils::once::once!(tracing::warn!($($arg)+))
@@ -589,6 +595,7 @@ pub(crate) mod once {
         };
     }
 
+    pub(crate) use debug_once;
     pub(crate) use once;
     pub(crate) use static_regex;
     pub(crate) use warn_once;
