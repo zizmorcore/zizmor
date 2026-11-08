@@ -17,6 +17,7 @@ use crate::finding::location::Locatable as _;
 use crate::models::pre_commit::PreCommitConfig;
 use crate::models::repo_ref::RepoRef;
 use crate::models::{StepCommon as _, action::CompositeStep};
+use crate::utils::once::debug_once;
 use crate::{
     finding::{Confidence, Severity},
     github,
@@ -88,8 +89,20 @@ impl Audit for RefConfusion {
     async fn audit_step<'doc>(
         &self,
         step: &crate::models::workflow::Step<'doc>,
-        _group: &crate::registry::input::InputGroup,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        // If we have a lockfile and this step's workflow is present in it,
+        // then we assume that the lockfile is protecting against impostor commits.
+        if let Some(lock) = group.lock()
+            && lock.is_locked(step.as_ref())
+        {
+            debug_once!(
+                "{input} is covered by a lockfile, no ref confusion checks needed",
+                input = step.as_ref()
+            );
+            return Ok(vec![]);
+        }
+
         let Some(Uses::Repository(uses)) = step.uses() else {
             return Ok(vec![]);
         };
