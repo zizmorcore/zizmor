@@ -212,6 +212,8 @@ pub struct Cron {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct WorkflowCall {
+    // NOTE(ww): Unlike `workflow_dispatch`, GitHub Actions doesn't allow `workflow_call.inputs`
+    // or any of the other mappings to be nulled.
     #[serde(default)]
     pub inputs: IndexMap<String, WorkflowCallInput>,
     #[serde(default)]
@@ -261,7 +263,7 @@ pub struct WorkflowCallSecret {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct WorkflowDispatch {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::common::null_to_default")]
     pub inputs: IndexMap<String, WorkflowDispatchInput>,
 }
 

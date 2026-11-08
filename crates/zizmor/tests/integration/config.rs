@@ -252,9 +252,9 @@ fn test_discovers_config_when_repo_is_named_workflows() -> anyhow::Result<()> {
     DEBUG discover_in_dir{path="@@INPUT@@" root=Some(Root { request_is_root: true, path: "@@INPUT@@" })}:happy path: zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
     fatal: no audit was performed
     error: no inputs collected
-      |
-      = help: collection yielded no auditable inputs
-      = help: at least one valid, auditable input must be given
+     |
+     = help: collection yielded no auditable inputs
+     = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
@@ -286,9 +286,9 @@ fn test_discovers_config_when_repo_is_named_workflows() -> anyhow::Result<()> {
     DEBUG discover_in_dir{path="@@INPUT@@" root=None}:sad path: zizmor::config: found config candidate at `@@INPUT@@/zizmor.yml`
     fatal: no audit was performed
     error: no inputs collected
-      |
-      = help: collection yielded no auditable inputs
-      = help: at least one valid, auditable input must be given
+     |
+     = help: collection yielded no auditable inputs
+     = help: at least one valid, auditable input must be given
 
     Caused by:
         no inputs collected
@@ -372,9 +372,9 @@ fn test_invalid_configs() -> anyhow::Result<()> {
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
-      |
-      = help: check your configuration file for syntax errors
-      = help: see: https://docs.zizmor.sh/configuration/
+     |
+     = help: check your configuration file for syntax errors
+     = help: see: https://docs.zizmor.sh/configuration/
 
     Caused by:
         0: configuration error in @@CONFIG@@

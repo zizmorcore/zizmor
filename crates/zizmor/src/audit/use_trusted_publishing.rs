@@ -1,6 +1,5 @@
 use std::{sync::LazyLock, vec};
 
-use anyhow::Context as _;
 use subfeature::Subfeature;
 use tree_sitter::StreamingIterator as _;
 
@@ -170,16 +169,6 @@ audit_meta!(
 );
 
 impl UseTrustedPublishing {
-    fn query<'a>(
-        &self,
-        query: &'a utils::SpannedQuery,
-        cursor: &'a mut tree_sitter::QueryCursor,
-        tree: &'a tree_sitter::Tree,
-        source: &'a str,
-    ) -> tree_sitter::QueryMatches<'a, 'a, 'static, &'a [u8], &'a [u8]> {
-        cursor.matches(query, tree.root_node(), source.as_bytes())
-    }
-
     /// Determine whether the given command and arguments correspond to a publishing
     /// command, e.g., `cargo publish`, `twine upload`, etc.
     fn is_publish_command<'a>(cmd: &'a str, args: impl Iterator<Item = &'a str>) -> bool {
@@ -355,34 +344,18 @@ impl UseTrustedPublishing {
         shell: &str,
     ) -> Result<Vec<Subfeature<'doc>>, AuditError> {
         let normalized = utils::normalize_shell(shell);
-
-        let mut cursor = tree_sitter::QueryCursor::new();
-        let (query, tree) = match normalized {
-            "bash" | "sh" | "zsh" => {
-                let mut parser = utils::bash_parser();
-                let tree = parser
-                    .parse(run, None)
-                    .context("failed to parse `run:` body as bash")
-                    .map_err(Self::err)?;
-
-                (&self.bash_command_query, tree)
-            }
-            "pwsh" | "powershell" => {
-                let mut parser = utils::pwsh_parser();
-                let tree = parser
-                    .parse(run, None)
-                    .context("failed to parse `run:` body as pwsh")
-                    .map_err(Self::err)?;
-
-                (&self.pwsh_command_query, tree)
-            }
+        let query = match normalized {
+            "bash" | "sh" | "zsh" => &self.bash_command_query,
+            "pwsh" | "powershell" => &self.pwsh_command_query,
             _ => {
                 tracing::debug!("unable to analyze 'run:' block: unknown shell '{normalized}'");
                 return Ok(vec![]);
             }
         };
 
-        let matches = self.query(query, &mut cursor, &tree, run);
+        let run = utils::run::ParsedRun::parse(run, shell).map_err(Self::err)?;
+        let mut cursor = tree_sitter::QueryCursor::new();
+        let matches = run.query(query, &mut cursor);
         let cmd = query
             .capture_index_for_name("cmd")
             .expect("internal error: missing capture index for 'cmd'");
@@ -398,20 +371,14 @@ impl UseTrustedPublishing {
                     .iter()
                     .find(|cap| cap.index == cmd)
                     .expect("internal error: expected capture for cmd");
-                cap.node
-                    .utf8_text(run.as_bytes())
-                    .expect("impossible: capture should be UTF-8 by construction")
+                run.text(cap.node)
             };
 
             let args = mat
                 .captures()
                 .iter()
                 .filter(|cap| cap.index == args)
-                .map(|cap| {
-                    cap.node
-                        .utf8_text(run.as_bytes())
-                        .expect("impossible: capture should be UTF-8 by construction")
-                });
+                .map(|cap| run.text(cap.node));
 
             if Self::is_publish_command(cmd, args) {
                 let span = mat
@@ -420,12 +387,7 @@ impl UseTrustedPublishing {
                     .find(|cap| cap.index == query.span_idx)
                     .expect("internal error: expected capture for span");
 
-                let span_contents = span
-                    .node
-                    .utf8_text(run.as_bytes())
-                    .expect("impossible: capture should be UTF-8 by construction");
-
-                subfeatures.push(Subfeature::new(span.node.start_byte(), span_contents));
+                subfeatures.push(run.subfeature(span.node));
             }
         });
 
@@ -526,6 +488,10 @@ mod tests {
             ("cargo publish `\n  --dry-run", false),
             ("cargo publish <# comment #> --dry-run", false),
             ("cargo publish > publish.log --dry-run", false),
+            (
+                r#"cargo publish --token "${{ secrets.TOKEN }}" --dry-run"#,
+                false,
+            ),
             // Only real arguments can select a publishing subcommand.
             ("cargo build > publish", false),
             ("cargo build --% \"| cargo publish\"", false),

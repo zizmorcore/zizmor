@@ -9,6 +9,8 @@ use std::sync::LazyLock;
 use crate::finding::location::Routable;
 use crate::models::AsDocument;
 
+pub(crate) mod run;
+
 pub(crate) static ZIZMOR_AGENT: &str = concat!("zizmor/", env!("CARGO_PKG_VERSION"));
 
 pub(crate) static BASH: LazyLock<tree_sitter::Language> =
@@ -570,6 +572,12 @@ pub(crate) mod once {
         }};
     }
 
+    macro_rules! debug_once {
+        ($($arg:tt)+) => ({
+            crate::utils::once::once!(tracing::debug!($($arg)+))
+        });
+    }
+
     macro_rules! warn_once {
         ($($arg:tt)+) => ({
             crate::utils::once::once!(tracing::warn!($($arg)+))
@@ -587,6 +595,7 @@ pub(crate) mod once {
         };
     }
 
+    pub(crate) use debug_once;
     pub(crate) use once;
     pub(crate) use static_regex;
     pub(crate) use warn_once;

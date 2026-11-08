@@ -1,0 +1,55 @@
+testcase:
+  jobs:
+    first:
+      steps: &steps
+        # Before the anchored list's first item.
+        - name: Checkout
+          uses: actions/checkout@v4
+    second:
+      steps: *steps
+
+  source: &source
+    key: value
+  alias:
+    # Before the alias.
+    *source
+
+  flow-items: [
+    # Before the anchored item.
+    &flow {key: one},
+    # Before the alias.
+    *flow
+  ]
+
+queries:
+  - query: [jobs, first, steps]
+    mode: exact
+    expected: "        - name: Checkout\n          uses: actions/checkout@v4"
+
+  - query: [jobs, second, steps]
+    mode: exact
+    expected: "        - name: Checkout\n          uses: actions/checkout@v4"
+
+  - query: [jobs, first, steps, 0, name]
+    mode: exact
+    expected: Checkout
+
+  - query: [jobs, second, steps, 0, name]
+    mode: exact
+    expected: Checkout
+
+  - query: [alias]
+    mode: exact
+    expected: "    key: value"
+
+  - query: [alias, key]
+    mode: exact
+    expected: value
+
+  - query: [flow-items, 0, key]
+    mode: exact
+    expected: one
+
+  - query: [flow-items, 1, key]
+    mode: exact
+    expected: one

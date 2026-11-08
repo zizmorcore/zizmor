@@ -10,13 +10,14 @@ use anyhow::anyhow;
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 
-use super::{Audit, AuditLoadError, Job, audit_meta};
+use super::{Audit, AuditLoadError, audit_meta};
 use crate::audit::AuditError;
 use crate::finding::Finding;
 use crate::finding::location::Locatable as _;
 use crate::models::pre_commit::PreCommitConfig;
 use crate::models::repo_ref::RepoRef;
 use crate::models::{StepCommon as _, action::CompositeStep};
+use crate::utils::once::debug_once;
 use crate::{
     finding::{Confidence, Severity},
     github,
@@ -85,63 +86,65 @@ impl Audit for RefConfusion {
             .map(|client| Self { client })
     }
 
-    async fn audit_workflow<'doc>(
+    async fn audit_step<'doc>(
         &self,
-        workflow: &'doc crate::models::workflow::Workflow,
-        _group: &crate::registry::input::InputGroup,
-    ) -> Result<Vec<crate::finding::Finding<'doc>>, AuditError> {
-        let mut findings = vec![];
-
-        for job in workflow.jobs() {
-            match job {
-                Job::NormalJob(normal) => {
-                    for step in normal.steps() {
-                        let Some(Uses::Repository(uses)) = step.uses() else {
-                            continue;
-                        };
-
-                        if self.confusable(uses).await? {
-                            findings.push(
-                                Self::finding()
-                                    .severity(Severity::Medium)
-                                    .confidence(Confidence::High)
-                                    .add_location(
-                                        step.location()
-                                            .primary()
-                                            .with_keys(["uses".into()])
-                                            .annotated(REF_CONFUSION_ANNOTATION),
-                                    )
-                                    .build(workflow)
-                                    .map_err(Self::err)?,
-                            );
-                        }
-                    }
-                }
-                Job::ReusableWorkflowCallJob(reusable) => {
-                    let Uses::Repository(uses) = &reusable.uses else {
-                        continue;
-                    };
-
-                    if self.confusable(uses).await? {
-                        findings.push(
-                            Self::finding()
-                                .severity(Severity::Medium)
-                                .confidence(Confidence::High)
-                                .add_location(
-                                    reusable
-                                        .location()
-                                        .primary()
-                                        .annotated(REF_CONFUSION_ANNOTATION),
-                                )
-                                .build(workflow)
-                                .map_err(Self::err)?,
-                        )
-                    }
-                }
-            }
+        step: &crate::models::workflow::Step<'doc>,
+        group: &crate::registry::input::InputGroup,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        // If we have a lockfile and this step's workflow is present in it,
+        // then we assume that the lockfile is protecting against impostor commits.
+        if let Some(lock) = group.lock()
+            && lock.is_locked(step.as_ref())
+        {
+            debug_once!(
+                "{input} is covered by a lockfile, no ref confusion checks needed",
+                input = step.as_ref()
+            );
+            return Ok(vec![]);
         }
 
-        Ok(findings)
+        let Some(Uses::Repository(uses)) = step.uses() else {
+            return Ok(vec![]);
+        };
+
+        if !self.confusable(uses).await? {
+            return Ok(vec![]);
+        }
+
+        Ok(vec![
+            Self::finding()
+                .severity(Severity::Medium)
+                .confidence(Confidence::High)
+                .add_location(
+                    step.location()
+                        .primary()
+                        .with_keys(["uses".into()])
+                        .annotated(REF_CONFUSION_ANNOTATION),
+                )
+                .build(step)?,
+        ])
+    }
+
+    async fn audit_reusable_job<'doc>(
+        &self,
+        job: &crate::models::workflow::ReusableWorkflowCallJob<'doc>,
+        _group: &crate::registry::input::InputGroup,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let Uses::Repository(uses) = &job.uses else {
+            return Ok(vec![]);
+        };
+
+        if !self.confusable(uses).await? {
+            return Ok(vec![]);
+        }
+
+        Ok(vec![
+            Self::finding()
+                .severity(Severity::Medium)
+                .confidence(Confidence::High)
+                .add_location(job.location().primary().annotated(REF_CONFUSION_ANNOTATION))
+                .build(job)?,
+        ])
     }
 
     async fn audit_composite_step<'a>(

@@ -24,7 +24,6 @@ static_regex!(
 
 pub(crate) struct GitHubEnv {
     bash: Language,
-    pwsh: Language,
 
     // cached queries
     bash_redirect_query: utils::SpannedQuery,
@@ -284,16 +283,7 @@ impl GitHubEnv {
         &self,
         script_body: &'hay str,
     ) -> Result<Vec<(&'hay str, Range<usize>)>, AuditError> {
-        let mut parser = Parser::new();
-        parser
-            .set_language(&self.pwsh)
-            .context("failed to set pwsh language for parser")
-            .map_err(Self::err)?;
-
-        let tree = parser
-            .parse(script_body, None)
-            .context("failed to parse `run:` body as pwsh")
-            .map_err(Self::err)?;
+        let run = utils::run::ParsedRun::parse(script_body, "pwsh").map_err(Self::err)?;
 
         let mut cursor = QueryCursor::new();
         let queries = [&self.pwsh_redirect_query, &self.pwsh_pipeline_query];
@@ -303,7 +293,7 @@ impl GitHubEnv {
             let destination = query
                 .capture_index_for_name("destination")
                 .expect("internal error: missing capture index for 'destination' in pwsh query");
-            let matches = self.query(query, &mut cursor, &tree, script_body);
+            let matches = run.query(query, &mut cursor);
             matches.for_each(|mat| {
                 let span = mat
                     .captures()
@@ -317,9 +307,7 @@ impl GitHubEnv {
                         .iter()
                         .find(|cap| cap.index == destination)
                         .expect("internal error: no matching capture");
-                    cap.node
-                        .utf8_text(script_body.as_bytes())
-                        .expect("impossible: capture should be UTF-8 by construction")
+                    run.text(cap.node)
                 };
 
                 matching_spans.push((destination, span.node.byte_range()));
@@ -381,7 +369,6 @@ impl Audit for GitHubEnv {
             pwsh_redirect_query: utils::SpannedQuery::new(PWSH_REDIRECT_QUERY, &pwsh),
             pwsh_pipeline_query: utils::SpannedQuery::new(PWSH_PIPELINE_QUERY, &pwsh),
             bash,
-            pwsh,
         })
     }
 
@@ -648,6 +635,9 @@ mod tests {
             // Both queries must also match GITHUB_PATH.
             ("foo >> $env:GITHUB_PATH", true),
             ("foo | Tee-Object -FilePath \"$env:GITHUB_PATH\"", true),
+            // Expressions must not hide redirections or supply shell syntax.
+            (r#"echo "${{ env.VALUE }}" >> $env:GITHUB_ENV"#, true),
+            (r#"Out-File "${{ '$env:GITHUB_ENV' }}""#, false),
             // Extras must not interrupt destination matching.
             ("foo >> <# destination #> $env:GITHUB_ENV", true),
             ("foo | Out-File `\n  -FilePath $env:GITHUB_ENV", true),

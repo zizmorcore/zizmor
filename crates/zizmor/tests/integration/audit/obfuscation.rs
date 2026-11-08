@@ -254,7 +254,17 @@ fn test_issue_1769() -> Result<()> {
        |
        = note: audit confidence → High
 
-    1 finding: 1 informational, 0 low, 0 medium, 0 high
+    error[unsafe-checkout]: unsafe Git checkout
+      --> @@INPUT@@:19:9
+       |
+    18 |       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+       |               --------------------------------------------------------- this checkout
+    19 |         with: ${{ fromJson(steps.setup.outputs.options) }}
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may enable unsafe checkouts here
+       |
+       = note: audit confidence → Low
+
+    2 findings: 1 informational, 0 low, 0 medium, 1 high
     "
     );
 

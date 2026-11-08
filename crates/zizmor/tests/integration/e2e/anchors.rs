@@ -211,6 +211,43 @@ fn test_steps_list_alias() -> Result<()> {
     Ok(())
 }
 
+/// Regression for #2517: comments before an anchored steps list must not
+/// prevent audits from resolving either the list or its alias.
+#[test]
+fn test_steps_list_comment() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("anchors/steps-list-comment.yml"))
+            .run()?,
+        @"
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+      --> @@INPUT@@:9:9
+       |
+     9 |         - name: Checkout
+       |  _________^
+    10 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+       | |________________________________________________________________________________^ does not set persist-credentials: false
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    warning[artipacked]: credential persistence through GitHub Actions artifacts
+      --> @@INPUT@@:9:9
+       |
+     9 |         - name: Checkout
+       |  _________^
+    10 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+       | |________________________________________________________________________________^ does not set persist-credentials: false
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    5 findings (3 suppressed, 2 unsafe fixes): 0 informational, 0 low, 2 medium, 0 high
+    "
+    );
+    Ok(())
+}
+
 #[test]
 fn test_cross_key_scalar() -> Result<()> {
     insta::assert_snapshot!(

@@ -11,14 +11,36 @@ of `zizmor`.
 
 ### New Features 🌈
 
+* **New audit**: [dangerous-checkout] detects dangerous Git checkout
+  patterns. The initial version of this audit is limited to
+  @actions/checkout (#2532)
+  
 * zizmor now has a `--summary` flag, which shows the number of findings
   for each file in the plain output format. See the [per-file summary]
   documentation for more information (#2503)
+
+### Enhancements 🌱
+
+* The [impostor-commit] audit is now aware of workflow lockfiles (#2534)
+
+* The [ref-confusion] audit is now aware of workflow lockfiles (#2536)
 
 ### Bug Fixes 🐛
 
 * LSP: Fixed a bug where findings that should have been suppressed
   when a workflow lockfile is present were still presented (#2520)
+
+* Fixed a bug where `zizmor` would fail to audit workflow inputs
+  containing a bare i.e. null `#!yaml inputs:` (#2527)
+
+* Fixed a bug where `zizmor` would crash on some YAML inputs containing
+  anchors mixed with comments (#2522)
+
+    Many thanks to @DarkaMaul for implementing this fix!
+
+* Fixed a bug where the [undocumented-permissions] audit would
+  incorrectly flag a `none` permission as requiring an explanatory
+  comment (#2530)
 
 ## 1.32.0
 

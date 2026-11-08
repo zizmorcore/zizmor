@@ -1,0 +1,20 @@
+testcase:
+  key-with-leading-comment:
+    ? &key
+      # Between the anchor and the key.
+      foo
+    : bar
+
+  key-with-inline-comment:
+    ? &key-inline # After the anchor.
+      foo
+    : bar
+
+queries:
+  - query: [key-with-leading-comment, foo]
+    mode: exact
+    expected: bar
+
+  - query: [key-with-inline-comment, foo]
+    mode: exact
+    expected: bar
