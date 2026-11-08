@@ -16,6 +16,7 @@ use crate::models::workflow::ReusableWorkflowCallJob;
 use crate::models::{
     AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step,
 };
+use crate::utils::once::debug_once;
 
 pub(crate) struct UnpinnedUses {
     client: Option<github::Client>,
@@ -243,6 +244,11 @@ impl Audit for UnpinnedUses {
         if let Some(lock) = group.lock()
             && lock.is_locked(step.as_ref())
         {
+            debug_once!(
+                "{input} is covered by a lockfile, no unpinned uses checks needed",
+                input = step.as_ref()
+            );
+
             return Ok(vec![]);
         }
 

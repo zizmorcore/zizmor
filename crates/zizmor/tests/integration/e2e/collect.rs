@@ -264,9 +264,11 @@ fn remote_collection_includes_lockfile() -> anyhow::Result<()> {
             .offline(zizmor_dev::NetworkMode::AssertOnline)
             .input("github/actions-lockfile@ac15883476")
             .output(OutputMode::Stderr)
-            .setenv("RUST_LOG", "zizmor::registry::input=debug")
+            // Include per-audit debug lines as a backstop for our lockfile-aware
+            // audits exiting early when a lockfile is present.
+            .setenv("RUST_LOG", "zizmor::registry::input=debug,zizmor::audit=debug")
             .run()?,
-        @"
+        @r#"
     DEBUG zizmor::registry::input: collecting all eligible inputs from remote '@@INPUT@@'
     DEBUG zizmor::registry::input: registering dependabot config input with key https://github.com/github/actions-lockfile/blob/ac15883476/.github/dependabot.yml
     DEBUG zizmor::registry::input: registering workflow input with key https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/ci.yml
@@ -275,7 +277,10 @@ fn remote_collection_includes_lockfile() -> anyhow::Result<()> {
      INFO zizmor::registry::input: collected 4 inputs from @@INPUT@@
     DEBUG zizmor::registry::input: collected a group with 4 inputs (actions lockfile=true)
      WARN zizmor::registry::input: one or more inputs uses a GitHub Actions workflow lockfile; see https://docs.zizmor.sh/usage/#workflow-lockfiles for details
-    "
+    DEBUG audit{ident="impostor-commit" input=Workflow(https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/ci.yml)}: zizmor::audit::impostor_commit: https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/ci.yml is covered by a lockfile, no impostor commit checks needed
+    DEBUG audit{ident="unpinned-uses" input=Workflow(https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/ci.yml)}: zizmor::audit::unpinned_uses: https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/ci.yml is covered by a lockfile, no unpinned uses checks needed
+    DEBUG audit{ident="ref-version-mismatch" input=Workflow(https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/ci.yml)}: zizmor::audit::ref_version_mismatch: https://github.com/github/actions-lockfile/blob/ac15883476/.github/workflows/ci.yml is covered by a lockfile, no ref-version-mismatch checks needed
+    "#
     );
 
     Ok(())
