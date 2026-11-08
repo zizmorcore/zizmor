@@ -15,6 +15,10 @@ of `zizmor`.
   patterns. The initial version of this audit is limited to
   @actions/checkout (#2532)
 
+### Enhancements 🌱
+
+* The [impostor-commit] audit is now aware of workflow lockfiles (#2534)
+
 ### Bug Fixes 🐛
 
 * LSP: Fixed a bug where findings that should have been suppressed
