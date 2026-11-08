@@ -285,8 +285,16 @@ impl Audit for ImpostorCommit {
     async fn audit_step<'doc>(
         &self,
         step: &Step<'doc>,
-        _group: &crate::registry::input::InputGroup,
+        group: &crate::registry::input::InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        // If we have a lockfile and this step's workflow is present in it,
+        // then we assume that the lockfile is protecting against impostor commits.
+        if let Some(lock) = group.lock()
+            && lock.is_locked(step.as_ref())
+        {
+            return Ok(vec![]);
+        }
+
         let Some(Uses::Repository(uses)) = step.uses() else {
             return Ok(vec![]);
         };
