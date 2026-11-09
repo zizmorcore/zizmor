@@ -48,7 +48,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2.9.3
 
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
 
       - name: Test dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -95,7 +95,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
 
       - name: Test site
         run: make site
