@@ -1,0 +1,46 @@
+name: issue-2475-repro
+
+on: push
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Flag when `container` is an unpinned image
+  unpinned:
+    name: string-container (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            container: rockylinux:9
+          - arch: arm64
+            container: rockylinux/rockylinux:10
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - name: test
+        run: cat /etc/os-release
+
+  # Flag when `container.image` expands into an unpinned image
+  unpinned-through-path:
+    name: mapping-container (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            container:
+              image: rockylinux:9
+          - arch: arm64
+            container:
+              image: rockylinux/rockylinux:10
+              env:
+                PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - name: test
+        run: cat /etc/os-release

@@ -350,6 +350,79 @@ fn test_issue_1942_repro() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Reproduction case for #2475:
+/// Flags unpinned images expanding matrices through the `container.image` path
+#[test]
+fn test_issue_2475_repro() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("unpinned-images/issue-2475-repro.yml"))
+            .args(["--pedantic"])
+            .run()?,
+        @"
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:23:5
+       |
+    16 |       matrix:
+       |       ------ this matrix
+    ...
+    19 |             container: rockylinux:9
+       |             ----------------------- this expansion of matrix.container
+    ...
+    23 |     container: ${{ matrix.container }}
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:23:5
+       |
+    16 |       matrix:
+       |       ------ this matrix
+    ...
+    21 |             container: rockylinux/rockylinux:10
+       |             ----------------------------------- this expansion of matrix.container
+    22 |     runs-on: ubuntu-latest
+    23 |     container: ${{ matrix.container }}
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:43:5
+       |
+    32 |       matrix:
+       |       ------ this matrix
+    ...
+    36 |               image: rockylinux:9
+       |               ------------------- this expansion of matrix.container.image
+    ...
+    43 |     container: ${{ matrix.container }}
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    error[unpinned-images]: unpinned image references
+      --> @@INPUT@@:43:5
+       |
+    32 |       matrix:
+       |       ------ this matrix
+    ...
+    39 |               image: rockylinux/rockylinux:10
+       |               ------------------------------- this expansion of matrix.container.image
+    ...
+    43 |     container: ${{ matrix.container }}
+       |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+       |
+       = note: audit confidence → High
+
+    4 findings: 0 informational, 0 low, 0 medium, 4 high
+    "
+    );
+
+    Ok(())
+}
+
 /// Tests that `unpinned-images` handles Docker-style action definitions, not just images
 /// in jobs/steps within workflows.
 #[test]
