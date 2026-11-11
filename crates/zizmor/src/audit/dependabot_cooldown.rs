@@ -1,7 +1,10 @@
 use crate::{
     audit::{Audit, AuditError, audit_meta},
-    finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
-    models::dependabot,
+    finding::{
+        Confidence, Finding, Fix, FixDisposition, Severity,
+        location::{Locatable as _, SymbolicLocation},
+    },
+    models::dependabot::{self, Dependabot},
 };
 use github_actions_models::dependabot::v2::PackageEcosystem;
 use yamlpatch::{Op, Patch};
@@ -15,11 +18,24 @@ audit_meta!(
 pub(crate) struct DependabotCooldown;
 
 impl DependabotCooldown {
+    fn finding<'doc>(
+        dependabot: &'doc Dependabot,
+        location: SymbolicLocation<'doc>,
+        fix: Fix<'doc>,
+    ) -> Result<Finding<'doc>, AuditError> {
+        <Self as AuditCore>::finding()
+            .add_location(location)
+            .confidence(Confidence::High)
+            .severity(Severity::Medium)
+            .fix(fix)
+            .build(dependabot)
+    }
+
     /// Returns whether this `update` directive supports semver-style cooldowns.
     ///
     /// Matches the table here:
     /// <https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#configuration-of-cooldown>
-    fn supports_semver_cooldowns(update: dependabot::Update<'_>) -> bool {
+    fn supports_semver_cooldowns(update: &dependabot::Update<'_>) -> bool {
         match update.package_ecosystem {
             PackageEcosystem::Apm
             | PackageEcosystem::Bun
@@ -142,64 +158,81 @@ impl Audit for DependabotCooldown {
         let minimum_days = group.config().dependabot_cooldown_config.days.get() as u64;
 
         for update in dependabot.updates() {
+            let Some(cooldown) = &update.cooldown else {
+                // No `cooldown` block.
+                // As of 07-14-2026 the blanket cooldown in Dependabot is 3 days,
+                // so we flag a missing block if zizmor's configured cooldown
+                // is greater.
+                // See: <https://github.blog/changelog/2026-07-14-dependabot-version-updates-introduce-default-package-cooldown/>
+                if minimum_days > 3 {
+                    findings.push(Self::finding(
+                        dependabot,
+                        update.location_with_grip().primary().annotated(format!(
+                            "insufficient implicit default-days (less than {minimum_days})"
+                        )),
+                        Self::create_add_cooldown_fix(update, minimum_days),
+                    )?);
+                }
+
+                continue;
+            };
+
+            // TODO: Check for `cooldown.exclude: "*"` here, since
+            // it effectively disables the cooldown entirely.
+
             // If not set, `cooldown.default-days` is 3.
             // TODO: Should we have opinions about the other cooldown settings?
-            let default_days = update
-                .cooldown
-                .as_ref()
-                .map_or(3, |cooldown| cooldown.default_days.unwrap_or(3));
+            let default_days = cooldown.default_days.unwrap_or(3);
+
+            let all_semver_cooldowns_present = false;
+            if Self::supports_semver_cooldowns(&update) {
+                // If this update group is for an ecosystem that supports
+                // semver updates, then there are additional `cooldown.semver-*-days`
+                // fields we need to check. These take precedence over `default-days`.
+                // todo!()
+            }
+
+            // Nothing to do if we checked semver-specific cooldown settings above,
+            // and all were present (since no fallback to `default-days` happens
+            // in that case).
+            if all_semver_cooldowns_present {
+                continue;
+            }
 
             // Nothing to do if the configured cooldown is at least our minimum.
             if default_days >= minimum_days {
-                return Ok(findings);
+                continue;
             }
 
             // Otherwise, we need to build the right location and fix.
-            let (location, fix) = match update.cooldown.as_ref() {
-                Some(cooldown) => match cooldown.default_days {
-                    // `cooldown.default-days` is present.
-                    // Our fix needs to rewrite just the `default-days` value.
-                    Some(_) => (
-                        update
-                            .location()
-                            .with_keys(["cooldown".into(), "default-days".into()])
-                            .primary()
-                            .annotated(format!(
-                                "insufficient default-days configured (less than {minimum_days})",
-                            )),
-                        Self::create_increase_default_days_fix(update, minimum_days),
-                    ),
-                    // `cooldown` is present, but `default-days` is not.
-                    // Our fix needs to insert just `default-days` into the existing object.
-                    None => (
-                        update
-                            .location()
-                            .with_keys(["cooldown".into()])
-                            .primary()
-                            .annotated(format!(
-                                "insufficient implicit default-days (less than {minimum_days})"
-                            )),
-                        Self::create_add_default_days_fix(update, minimum_days),
-                    ),
-                },
-                // `cooldown` is not present.
-                // Our fix needs to insert the entire `cooldown` object, not just `default-days`.
+            let (location, fix) = match cooldown.default_days {
+                // `cooldown.default-days` is present.
+                // Our fix needs to rewrite just the `default-days` value.
+                Some(_) => (
+                    update
+                        .location()
+                        .with_keys(["cooldown".into(), "default-days".into()])
+                        .primary()
+                        .annotated(format!(
+                            "insufficient default-days configured (less than {minimum_days})",
+                        )),
+                    Self::create_increase_default_days_fix(update, minimum_days),
+                ),
+                // `cooldown` is present, but `default-days` is not.
+                // Our fix needs to insert just `default-days` into the existing object.
                 None => (
-                    update.location_with_grip().primary().annotated(format!(
-                        "insufficient implicit default-days (less than {minimum_days})"
-                    )),
-                    Self::create_add_cooldown_fix(update, minimum_days),
+                    update
+                        .location()
+                        .with_keys(["cooldown".into()])
+                        .primary()
+                        .annotated(format!(
+                            "insufficient implicit default-days (less than {minimum_days})"
+                        )),
+                    Self::create_add_default_days_fix(update, minimum_days),
                 ),
             };
 
-            findings.push(
-                Self::finding()
-                    .add_location(location)
-                    .confidence(Confidence::High)
-                    .severity(Severity::Medium)
-                    .fix(fix)
-                    .build(dependabot)?,
-            );
+            findings.push(Self::finding(dependabot, location, fix)?);
         }
 
         Ok(findings)

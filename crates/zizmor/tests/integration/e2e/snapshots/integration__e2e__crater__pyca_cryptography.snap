@@ -83,6 +83,24 @@ error[template-injection]: code injection via template expansion
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
+warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+  --> .github/dependabot.yml:17:5
+   |
+17 |   - package-ecosystem: cargo
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^ insufficient implicit default-days (less than 7)
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+  --> .github/dependabot.yml:28:5
+   |
+28 |   - package-ecosystem: uv
+   |     ^^^^^^^^^^^^^^^^^^^^^ insufficient implicit default-days (less than 7)
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
 warning[excessive-permissions]: overly broad permissions
   --> .github/workflows/auto-close-stale.yml:1:1
    |
@@ -1010,4 +1028,4 @@ info[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → Low
 
-100 findings (9 suppressed): 19 informational, 56 low, 5 medium, 11 high
+102 findings (9 suppressed): 19 informational, 56 low, 7 medium, 11 high
