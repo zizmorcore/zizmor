@@ -38,6 +38,9 @@ of `zizmor`.
   incorrectly flag a `none` permission as requiring an explanatory
   comment (#2530)
 
+* Fixed a bug where `zizmor` would crash on workflow lockfiles that
+  lack a `dependencies` key (#2543)
+
 ## 1.32.0
 
 ### New Features 🌈

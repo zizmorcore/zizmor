@@ -19,6 +19,7 @@ pub struct Lock {
     pub workflows: IndexMap<String, Vec<PinKey>>,
 
     /// Each pin key's lock state.
+    #[serde(default)]
     pub dependencies: IndexMap<PinKey, Pin>,
 }
 
