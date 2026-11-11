@@ -41,13 +41,13 @@ jobs:
         with:
           cache-all-crates: true
 
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
 
       - name: Build zizmor (release)
         run: cargo build --release
 
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@v5.6.0
+        uses: CodSpeedHQ/action@v5.6.1
         with:
           mode: walltime
           run: make bench
