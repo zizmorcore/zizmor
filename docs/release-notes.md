@@ -21,7 +21,7 @@ of `zizmor`.
 
 * The [ref-confusion] audit is now aware of workflow lockfiles (#2536)
 
-* The [self-hosted-runner] audit is now aware `xcode-27` Github runners (#2546)
+* The [self-hosted-runner] audit is now aware of `xcode-27` Github runners (#2546)
 
 ### Bug Fixes 🐛
 
