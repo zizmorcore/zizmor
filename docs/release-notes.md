@@ -26,6 +26,8 @@ of `zizmor`.
 
 * The [self-hosted-runner] audit is now aware of `xcode-27` Github runners (#2546)
 
+* `apm` is now recognized as a `package-ecosystem` in `dependabot.yml` (#2544)
+
 ### Bug Fixes 🐛
 
 * LSP: Fixed a bug where findings that should have been suppressed
@@ -45,6 +47,9 @@ of `zizmor`.
 
 * Fixed a bug where `zizmor` would crash on workflow lockfiles that
   lack a `dependencies` key (#2543)
+
+* Fixed a bug where the [dependabot-cooldown] audit would fail
+  to audit some update stanzas (#2544)
 
 ## 1.32.0
 
