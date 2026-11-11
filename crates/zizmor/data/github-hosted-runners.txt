@@ -23,6 +23,8 @@ ubuntu-26.04
 ubuntu-26.04-arm
 ubuntu-latest
 ubuntu-slim
+xcode-27
+xcode-27-xlarge
 windows-11
 windows-11-arm
 windows-11-vs2026-arm
