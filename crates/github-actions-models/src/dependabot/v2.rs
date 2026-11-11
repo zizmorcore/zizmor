@@ -359,6 +359,8 @@ pub enum AllowDeny {
 #[derive(Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum PackageEcosystem {
+    /// `apm`
+    Apm,
     /// `bazel`
     Bazel,
     /// `bun`

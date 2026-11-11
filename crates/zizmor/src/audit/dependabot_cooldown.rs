@@ -3,6 +3,7 @@ use crate::{
     finding::{Confidence, Fix, FixDisposition, Severity, location::Locatable as _},
     models::dependabot,
 };
+use github_actions_models::dependabot::v2::PackageEcosystem;
 use yamlpatch::{Op, Patch};
 
 audit_meta!(
@@ -14,6 +15,49 @@ audit_meta!(
 pub(crate) struct DependabotCooldown;
 
 impl DependabotCooldown {
+    /// Returns whether this `update` directive supports semver-style cooldowns.
+    ///
+    /// Matches the table here:
+    /// <https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#configuration-of-cooldown>
+    fn supports_semver_cooldowns(update: dependabot::Update<'_>) -> bool {
+        match update.package_ecosystem {
+            PackageEcosystem::Apm
+            | PackageEcosystem::Bun
+            | PackageEcosystem::Bundler
+            | PackageEcosystem::Cargo
+            | PackageEcosystem::Composer
+            | PackageEcosystem::Conda
+            | PackageEcosystem::Deno
+            | PackageEcosystem::DotnetSdk
+            | PackageEcosystem::Elm
+            | PackageEcosystem::Gomod
+            | PackageEcosystem::Gradle
+            | PackageEcosystem::Julia
+            | PackageEcosystem::Maven
+            | PackageEcosystem::Mix
+            | PackageEcosystem::Npm
+            | PackageEcosystem::Nuget
+            | PackageEcosystem::Pip
+            | PackageEcosystem::Pub
+            | PackageEcosystem::RustToolchain
+            | PackageEcosystem::Sbt
+            | PackageEcosystem::Swift
+            | PackageEcosystem::Uv => true,
+            PackageEcosystem::Bazel
+            | PackageEcosystem::Devcontainers
+            | PackageEcosystem::Docker
+            | PackageEcosystem::DockerCompose
+            | PackageEcosystem::Gitsubmodule
+            | PackageEcosystem::GithubActions
+            | PackageEcosystem::Helm
+            | PackageEcosystem::Nix
+            | PackageEcosystem::Opentofu
+            | PackageEcosystem::PreCommit
+            | PackageEcosystem::Terraform
+            | PackageEcosystem::Vcpkg => false,
+        }
+    }
+
     /// Creates a fix that adds default-days to an existing cooldown block
     fn create_add_default_days_fix<'doc>(
         update: dependabot::Update<'doc>,
