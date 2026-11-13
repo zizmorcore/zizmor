@@ -11,6 +11,15 @@ expression: "Zizmor::cargo_bin().offline(NetworkMode::AssertOnline).output(Outpu
  INFO audit: zizmor: 🌈 completed .github/workflows/cifuzz.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/codeql.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/openssh_server.yml
+warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+  --> .github/dependabot.yml:30:7
+   |
+30 |       semver-patch-days: 3
+   |       ^^^^^^^^^^^^^^^^^^^^ this update rule
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
 warning[ref-version-mismatch]: action's hash pin has mismatched or missing version comment
    --> .github/workflows/ci.yml:658:87
     |
@@ -22,4 +31,4 @@ warning[ref-version-mismatch]: action's hash pin has mismatched or missing versi
     = note: audit confidence → High
     = note: this finding has an auto-fix
 
-13 findings (2 ignored, 10 suppressed): 0 informational, 0 low, 1 medium, 0 high
+14 findings (2 ignored, 10 suppressed): 0 informational, 0 low, 2 medium, 0 high

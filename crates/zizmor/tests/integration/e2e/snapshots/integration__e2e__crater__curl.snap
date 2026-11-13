@@ -21,6 +21,15 @@ expression: "Zizmor::cargo_bin().offline(NetworkMode::AssertOnline).output(Outpu
  INFO audit: zizmor: 🌈 completed .github/workflows/macos.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/non-native.yml
  INFO audit: zizmor: 🌈 completed .github/workflows/windows.yml
+warning[dependabot-cooldown]: insufficient cooldown in Dependabot updates
+  --> .github/dependabot.yml:32:7
+   |
+32 |       semver-patch-days: 3
+   |       ^^^^^^^^^^^^^^^^^^^^ this update rule
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
 error[unpinned-images]: unpinned image references
   --> .github/workflows/linux-old.yml:58:5
    |
@@ -82,4 +91,4 @@ warning[ref-version-mismatch]: action's hash pin has mismatched or missing versi
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
-50 findings (1 ignored, 44 suppressed): 0 informational, 0 low, 1 medium, 4 high
+51 findings (1 ignored, 44 suppressed): 0 informational, 0 low, 2 medium, 4 high
