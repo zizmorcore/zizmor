@@ -14,6 +14,10 @@ of `zizmor`.
 * **New audit**: [dangerous-checkout] detects dangerous Git checkout
   patterns. The initial version of this audit is limited to
   @actions/checkout (#2532)
+  
+* zizmor now has a `--summary` flag, which shows the number of findings
+  for each file in the plain output format. See the [per-file summary]
+  documentation for more information (#2503)
 
 ### Enhancements 🌱
 
@@ -2264,3 +2268,4 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 <!-- useful doc links -->
 
 [input collection]: ./usage.md#input-collection
+[per-file summary]: ./usage.md#per-file-summary
