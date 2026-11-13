@@ -31,3 +31,5 @@ windows-2022
 windows-2025
 windows-2025-vs2026
 windows-latest
+xcode-27
+xcode-27-xlarge
