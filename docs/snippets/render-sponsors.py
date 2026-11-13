@@ -3,11 +3,11 @@
 # requires-python = ">=3.13"
 # ///
 
-# render-sponsors: take sponsors.json and produce pretty tables
+# render-sponsors: take sponsors.toml and produce pretty tables
 # in the README and website index for each of our wonderful sponsors
 
-import json
 import re
+import tomllib
 from itertools import batched
 from pathlib import Path
 
@@ -51,7 +51,7 @@ _SPONSOR_LOGO_HTML = """
 
 _HERE = Path(__file__).parent
 
-_SPONSORS = json.loads((_HERE / "sponsors.json").read_bytes())
+_SPONSORS = tomllib.loads((_HERE / "sponsors.toml").read_text())["sponsors"]
 _README = _HERE.parent.parent / "README.md"
 
 assert _README.is_file()

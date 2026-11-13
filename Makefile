@@ -23,7 +23,7 @@ docs/snippets/trophies.md: docs/snippets/trophies.txt docs/snippets/render-troph
 .PHONY: sponsors
 sponsors: docs/snippets/sponsors.html
 
-docs/snippets/sponsors.html: docs/snippets/sponsors.json docs/snippets/render-sponsors.py
+docs/snippets/sponsors.html: docs/snippets/sponsors.toml docs/snippets/render-sponsors.py
 	docs/snippets/render-sponsors.py > $@
 
 .PHONY: refresh-schemas
