@@ -208,6 +208,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
     // having `GH_TOKEN` present in the environment.
     if app.network.offline {
         app.network.gh_token = None;
+        app.network.github_com_token = None;
     }
 
     let indicatif_layer = IndicatifLayer::new();
@@ -297,11 +298,24 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     let global_config = Config::global(app)?;
 
+    if app.network.gh_token.is_none() && app.network.github_com_token.is_some() {
+        tracing::warn!(
+            "GITHUB_COM_TOKEN is set without a primary GitHub token; it will be ignored"
+        );
+    }
+
     let gh_client = app
         .network
         .gh_token
         .as_ref()
-        .map(|token| Client::new(&app.network.gh_hostname, token, &app.network.cache_dir))
+        .map(|token| {
+            let client = Client::new(&app.network.gh_hostname, token, &app.network.cache_dir)?;
+
+            match app.network.github_com_token.as_ref() {
+                Some(token) => client.with_github_com_token(token, &app.network.cache_dir),
+                None => Ok(client),
+            }
+        })
         .transpose()?;
 
     let collection_options = CollectionOptions {
