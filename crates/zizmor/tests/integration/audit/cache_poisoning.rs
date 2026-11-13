@@ -693,6 +693,19 @@ fn test_issue_2320() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Bug #2496: tag heuristics must refine fields inside compound cache controls.
+#[test]
+fn test_issue_2496() -> anyhow::Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("cache-poisoning/issue-2496-repro.yml"))
+            .run()?,
+        @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
+
 #[test]
 fn test_trigger_heuristics_tag_only() -> anyhow::Result<()> {
     insta::assert_snapshot!(
@@ -755,7 +768,30 @@ fn test_trigger_heuristics_tag_and_release() -> anyhow::Result<()> {
                 "cache-poisoning/trigger-heuristics/tag-and-release.yml"
             ))
             .run()?,
-        @"No findings to report. Good job!"
+        @r#"
+    error[cache-poisoning]: runtime artifacts potentially vulnerable to a cache poisoning attack
+      --> @@INPUT@@:26:9
+       |
+     3 | / on:
+     4 | |   push:
+     5 | |     branches:
+     6 | |       - master
+     7 | |     tags:
+     8 | |       - "*"
+     9 | |   release:
+       | |__________- generally used when publishing artifacts generated at runtime
+    ...
+    26 |         - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this step
+    ...
+    29 |             sccache: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}
+       |             -------------------------------------------------------------------------- may enable caching here
+       |
+       = note: audit confidence → Low
+       = note: this finding has an auto-fix
+
+    1 findings (1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    "#
     );
 
     Ok(())
