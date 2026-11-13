@@ -75,9 +75,10 @@ impl DependabotCooldown {
     }
 
     /// Creates a fix that adds default-days to an existing cooldown block
-    fn create_add_default_days_fix<'doc>(
+    fn create_add_days_fix<'doc>(
         update: dependabot::Update<'doc>,
         minimum_days: u64,
+        days_key: &'static str,
     ) -> Fix<'doc> {
         Fix {
             title: "add default-days to cooldown".to_string(),
@@ -86,17 +87,18 @@ impl DependabotCooldown {
             patches: vec![Patch {
                 route: update.location().route.with_keys(["cooldown".into()]),
                 operation: Op::Add {
-                    key: "default-days".to_string(),
+                    key: days_key.to_string(),
                     value: yaml_serde::Value::Number(minimum_days.into()),
                 },
             }],
         }
     }
 
-    /// Creates a fix that increases an insufficient default-days value
-    fn create_increase_default_days_fix<'doc>(
+    /// Creates a fix that increases an insufficient days value.
+    fn create_increase_days_fix<'doc>(
         update: dependabot::Update<'doc>,
         minimum_days: u64,
+        days_key: &'static str,
     ) -> Fix<'doc> {
         Fix {
             title: format!("increase default-days to {minimum_days}"),
@@ -106,7 +108,7 @@ impl DependabotCooldown {
                 route: update
                     .location()
                     .route
-                    .with_keys(["cooldown".into(), "default-days".into()]),
+                    .with_keys(["cooldown".into(), days_key.into()]),
                 operation: Op::Replace(yaml_serde::Value::Number(minimum_days.into())),
             }],
         }
@@ -184,18 +186,36 @@ impl Audit for DependabotCooldown {
             // TODO: Should we have opinions about the other cooldown settings?
             let default_days = cooldown.default_days.unwrap_or(3);
 
-            let all_semver_cooldowns_present = false;
+            let mut all_semver_cooldowns_present = false;
             if Self::supports_semver_cooldowns(&update) {
                 // If this update group is for an ecosystem that supports
                 // semver updates, then there are additional `cooldown.semver-*-days`
                 // fields we need to check. These take precedence over `default-days`.
-                // todo!()
+                all_semver_cooldowns_present = cooldown.semver_major_days.is_some()
+                    && cooldown.semver_minor_days.is_some()
+                    && cooldown.semver_patch_days.is_some();
+
+                if let Some(major_days) = cooldown.semver_major_days
+                    && major_days < minimum_days
+                {}
+
+                if let Some(minor_days) = cooldown.semver_minor_days
+                    && minor_days < minimum_days
+                {}
+
+                if let Some(patch_days) = cooldown.semver_patch_days
+                    && patch_days < minimum_days
+                {}
             }
 
             // Nothing to do if we checked semver-specific cooldown settings above,
             // and all were present (since no fallback to `default-days` happens
             // in that case).
             if all_semver_cooldowns_present {
+                tracing::debug!(
+                    "update group for {ecosystem:?} uses uniform semver cooldowns",
+                    ecosystem = update.package_ecosystem
+                );
                 continue;
             }
 
@@ -216,7 +236,7 @@ impl Audit for DependabotCooldown {
                         .annotated(format!(
                             "insufficient default-days configured (less than {minimum_days})",
                         )),
-                    Self::create_increase_default_days_fix(update, minimum_days),
+                    Self::create_increase_days_fix(update, minimum_days, "default-days"),
                 ),
                 // `cooldown` is present, but `default-days` is not.
                 // Our fix needs to insert just `default-days` into the existing object.
@@ -228,7 +248,7 @@ impl Audit for DependabotCooldown {
                         .annotated(format!(
                             "insufficient implicit default-days (less than {minimum_days})"
                         )),
-                    Self::create_add_default_days_fix(update, minimum_days),
+                    Self::create_add_days_fix(update, minimum_days, "default-days"),
                 ),
             };
 
