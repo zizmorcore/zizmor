@@ -21,6 +21,9 @@ of `zizmor`.
 
 * The [ref-confusion] audit is now aware of workflow lockfiles (#2536)
 
+* Recommend `gh release download` as a replacement for @robinraju/release-downloader
+  in [superfluous-actions] (#2552)
+
 ### Bug Fixes 🐛
 
 * LSP: Fixed a bug where findings that should have been suppressed
