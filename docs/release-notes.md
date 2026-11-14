@@ -24,6 +24,8 @@ of `zizmor`.
 * Recommend `gh release download` as a replacement for @robinraju/release-downloader
   in [superfluous-actions] (#2552)
 
+* The [self-hosted-runner] audit is now aware of `xcode-27` Github runners (#2546)
+
 ### Bug Fixes 🐛
 
 * LSP: Fixed a bug where findings that should have been suppressed
