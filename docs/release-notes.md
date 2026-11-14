@@ -28,6 +28,9 @@ of `zizmor`.
 
 * `apm` is now recognized as a `package-ecosystem` in `dependabot.yml` (#2544)
 
+* The [dependabot-cooldown] audit now supports the `semver-{major,minor,patch}-days`
+  cooldown settings (#2544)
+
 ### Bug Fixes 🐛
 
 * LSP: Fixed a bug where findings that should have been suppressed
