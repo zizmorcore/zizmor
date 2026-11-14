@@ -1,5 +1,6 @@
 use std::{collections::HashSet, sync::LazyLock};
 
+use pre_commit_models::config::{RemoteRepo, RemoteRepoTarget};
 use subfeature::Subfeature;
 
 use crate::{
@@ -46,11 +47,17 @@ impl Audit for InsecureURLScheme {
         let mut findings = vec![];
 
         // `meta` and `local` "repos" don't have a useful `repo:` URL field.
-        let Some(remote) = repo.repo() else {
+        // Similarly, SCP targets don't have a useful URL field since they're
+        // implicitly SSH.
+        let Some(RemoteRepo {
+            repo: RemoteRepoTarget::Url(url),
+            ..
+        }) = repo.repo()
+        else {
             return Ok(findings);
         };
 
-        if !INSECURE_SCHEMES.contains(&remote.repo.scheme()) {
+        if !INSECURE_SCHEMES.contains(url.scheme()) {
             return Ok(findings);
         }
 
@@ -68,9 +75,9 @@ impl Audit for InsecureURLScheme {
                         .with_keys(["repo".into()])
                         .annotated(format!(
                             "repository URL uses an insecure scheme: {scheme:?}",
-                            scheme = remote.repo.scheme()
+                            scheme = url.scheme()
                         ))
-                        .subfeature(Subfeature::new(0, remote.repo.as_str())),
+                        .subfeature(Subfeature::new(0, url.as_str())),
                 )
                 .build(repo)?,
         );

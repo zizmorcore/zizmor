@@ -13,6 +13,7 @@ categories = ["api-bindings"]
 
 [dependencies]
 indexmap.workspace = true
+self_cell.workspace = true
 serde.workspace = true
 url.workspace = true
 

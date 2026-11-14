@@ -2059,6 +2059,7 @@ name = "pre-commit-models"
 version = "1.32.0"
 dependencies = [
  "indexmap",
+ "self_cell",
  "serde",
  "url",
  "yaml_serde",
