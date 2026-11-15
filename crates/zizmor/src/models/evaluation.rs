@@ -1,7 +1,12 @@
 //! Resolve workflow expressions and record where their inputs were defined.
 
+mod matrix;
+
 use github_actions_expressions::evaluation::*;
-use std::{collections::BTreeSet, sync::Arc};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
 
 use crate::{finding::location::SymbolicLocation, utils::extract_fenced_expressions};
 use github_actions_expressions::{
@@ -70,6 +75,7 @@ impl<'doc> Context<'doc> {
 pub(crate) struct Analysis<'doc> {
     state: State,
     evidence: Vec<SymbolicLocation<'doc>>,
+    matrices: BTreeMap<String, (DecisionId, Outcomes)>,
 }
 
 impl<'doc> Analysis<'doc> {
@@ -206,8 +212,9 @@ impl<'doc> Resolver for Analysis<'doc> {
 
     fn resolve(&mut self, path: &[Access], context: &Context<'doc>) -> Outcomes {
         match path[0].text().to_ascii_lowercase().as_str() {
+            "matrix" if context.phase != Phase::Matrix => self.matrix(path, context),
             "env" if context.phase == Phase::Step => self.environment(path, context),
-            "env" | "steps" | "runner" | "job" if context.phase != Phase::Step => {
+            "env" | "matrix" | "steps" | "runner" | "job" if context.phase != Phase::Step => {
                 vec![Outcome::new(TrackedValue::incomplete())]
             }
             _ => self.runtime(path, context),

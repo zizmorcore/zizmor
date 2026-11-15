@@ -143,6 +143,16 @@ impl Workflow {
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
         let inner = Self::validate(&contents)?;
 
+        for (id, job) in &inner.jobs {
+            if let workflow::Job::NormalJob(job) = job
+                && let Some(matrix) = job.strategy.as_ref().and_then(|s| s.matrix.as_ref())
+            {
+                serde_json::to_value(matrix).map_err(|error| {
+                    CollectionError::InvalidInput(format!("invalid matrix in job {id}: {error}"))
+                })?;
+            }
+        }
+
         let document = yamlpath::Document::new(&contents)?;
 
         let link = match key {
