@@ -135,11 +135,19 @@ impl<'a> ScpInner<'a> {
             None => (None, raw),
         };
 
+        if user.is_some_and(|user| user.is_empty()) {
+            return Err("invalid SCP Git target: empty user");
+        }
+
         // Note: not an rsplit because hosts should not contain colons
         // but paths can.
         let (host, path) = rest
             .split_once(":")
             .ok_or_else(|| "invalid SCP Git target: missing path")?;
+
+        if host.is_empty() || path.is_empty() {
+            return Err("invalid SCP Git target: empty host or path");
+        }
 
         Ok(Self { user, host, path })
     }
@@ -262,4 +270,77 @@ pub struct Hook {
     /// If present, additionally append the hook's log output to this file.
     #[serde(default)]
     pub log_file: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::config::Scp;
+
+    #[test]
+    fn test_scp_parses() {
+        // Ok: explicit git suffix.
+        insta::assert_debug_snapshot!(
+            &Scp::parse("git@github.com:org/repo.git"),
+            @r#"
+        Ok(
+            Scp {
+                owner: "git@github.com:org/repo.git",
+                dependent: ScpInner {
+                    user: Some(
+                        "git",
+                    ),
+                    host: "github.com",
+                    path: "org/repo.git",
+                },
+            },
+        )
+        "#
+        );
+
+        // Ok: no git suffix.
+        insta::assert_debug_snapshot!(
+            &Scp::parse("git@github.com:org/repo"),
+            @r#"
+        Ok(
+            Scp {
+                owner: "git@github.com:org/repo",
+                dependent: ScpInner {
+                    user: Some(
+                        "git",
+                    ),
+                    host: "github.com",
+                    path: "org/repo",
+                },
+            },
+        )
+        "#
+        );
+
+        // Ok: no user.
+        insta::assert_debug_snapshot!(
+            &Scp::parse("github.com:org/repo.git"),
+            @r#"
+        Ok(
+            Scp {
+                owner: "github.com:org/repo.git",
+                dependent: ScpInner {
+                    user: None,
+                    host: "github.com",
+                    path: "org/repo.git",
+                },
+            },
+        )
+        "#
+        );
+
+        // Not ok.
+        for bad in [
+            "@github.com:org/repo", // Empty user.
+            "git@:org/repo",        // Empty host.
+            "git@github.com",       // Missing path.
+            "git@github.com:",      // Empty path.
+        ] {
+            assert!(Scp::parse(bad).is_err(), "expected {bad} to be invalid");
+        }
+    }
 }

@@ -18,6 +18,7 @@ serde.workspace = true
 url.workspace = true
 
 [dev-dependencies]
+insta.workspace = true
 yaml_serde.workspace = true
 
 [lints]
