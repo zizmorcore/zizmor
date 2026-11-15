@@ -42,6 +42,8 @@ pub(crate) fn if_is_statically_false(cond: &common::If) -> bool {
 pub(crate) mod action;
 pub(crate) mod coordinate;
 pub(crate) mod dependabot;
+#[allow(dead_code)] // Consumers are added in subsequent stack layers.
+pub(crate) mod evaluation;
 pub(crate) mod inputs;
 pub(crate) mod lock;
 pub(crate) mod pre_commit;
