@@ -54,6 +54,10 @@ of `zizmor`.
 * Fixed a bug where the [dependabot-cooldown] audit would fail
   to audit some update stanzas (#2544)
 
+* Fixed a bug where `zizmor` would crash on pre-commit inputs containing
+  valid SCP-style Git repository references (e.g. `git@github.com:org/repo`)
+  (#2553)
+
 ## 1.32.0
 
 ### New Features 🌈

@@ -79,17 +79,142 @@ pub enum Repo {
     Remote(RemoteRepo),
 }
 
-/// A remote repository reference, i.e. the home of one or more pre-commit hooks.
+/// A remote repository, i.e. the home of one or more pre-commit hooks.
 ///
-/// This reference is only "remote" in the sense that it's sourced via a URL.
-/// However, that URL could be `file://` or anything else.
+/// This is only "remote" in the sense that it's sourced via a "target".
+/// See [`RemoteRepoTarget`] for more information.
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct RemoteRepo {
-    pub repo: url::Url,
+    pub repo: RemoteRepoTarget,
     pub rev: String,
     #[serde(deserialize_with = "common::non_empty_vec")]
     pub hooks: Vec<Hook>,
+}
+
+/// A repository target in a "remote" pre-commit repository.
+/// A target be a local URL (like a `file://`), or an HTTP(S) URL,
+/// or anything else that Git accepts (like an SCP-style target).
+#[derive(Debug, serde::Deserialize)]
+#[serde(untagged)]
+pub enum RemoteRepoTarget {
+    /// Covers all normal `scheme://` URLs.
+    Url(url::Url),
+
+    /// Covers SCP-style Git targets.
+    Scp(Scp),
+}
+
+impl RemoteRepoTarget {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Url(url) => url.as_str(),
+            Self::Scp(scp) => scp.raw(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct ScpInner<'a> {
+    /// The SSH user, if present.
+    user: Option<&'a str>,
+
+    /// The remote hostname.
+    host: &'a str,
+
+    /// The remote path.
+    path: &'a str,
+}
+
+impl<'a> ScpInner<'a> {
+    fn from_str(raw: &'a str) -> Result<Self, &'static str> {
+        // SCP targets aren't really standardized, but they look like this:
+        // `[user@]host[:path]`. Git further strengthens this by requiring a path.
+        let (user, rest) = match raw.split_once("@") {
+            Some((user, rest)) => (Some(user), rest),
+            None => (None, raw),
+        };
+
+        if user.is_some_and(|user| user.is_empty()) {
+            return Err("invalid SCP Git target: empty user");
+        }
+
+        // Note: not an rsplit because hosts should not contain colons
+        // but paths can.
+        let (host, path) = rest
+            .split_once(":")
+            .ok_or("invalid SCP Git target: missing path")?;
+
+        if host.is_empty() || path.is_empty() {
+            return Err("invalid SCP Git target: empty host or path");
+        }
+
+        Ok(Self { user, host, path })
+    }
+}
+
+self_cell::self_cell!(
+    /// A SCP-style target, e.g. `[user@]host[:path]`.
+    pub struct Scp {
+        owner: String,
+
+        #[covariant]
+        dependent: ScpInner,
+    }
+
+    impl {Debug, PartialEq}
+);
+
+impl std::fmt::Display for Scp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.raw())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Scp {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let uses = <std::borrow::Cow<'de, str>>::deserialize(deserializer)?;
+        Self::parse(uses).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Scp {
+    /// Parse an SCP-style Git target.
+    pub fn parse(uses: impl Into<String>) -> Result<Self, &'static str> {
+        Self::try_new(uses.into(), |s| {
+            let inner = ScpInner::from_str(s)?;
+            Ok(inner)
+        })
+    }
+
+    /// Get the raw SCP-style target.
+    pub fn raw(&self) -> &str {
+        self.borrow_owner()
+    }
+
+    /// Get the username in the SCP-style target, if present.
+    ///
+    /// For example, this will be `foo` in `foo@host:/abcd`.
+    pub fn user(&self) -> Option<&str> {
+        self.borrow_dependent().user
+    }
+
+    /// Get the hostname in the SCP-style target.
+    ///
+    /// For example, this will be `example.com` in `foo@example.com:/abcd`.
+    pub fn host(&self) -> &str {
+        self.borrow_dependent().host
+    }
+
+    /// Get the path component in the SCP-style target.
+    ///
+    /// For example, this will be `/abcd` in `foo@example.com/abcd`.
+    pub fn path(&self) -> &str {
+        self.borrow_dependent().path
+    }
 }
 
 /// A single hook.
@@ -145,4 +270,77 @@ pub struct Hook {
     /// If present, additionally append the hook's log output to this file.
     #[serde(default)]
     pub log_file: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::config::Scp;
+
+    #[test]
+    fn test_scp_parses() {
+        // Ok: explicit git suffix.
+        insta::assert_debug_snapshot!(
+            &Scp::parse("git@github.com:org/repo.git"),
+            @r#"
+        Ok(
+            Scp {
+                owner: "git@github.com:org/repo.git",
+                dependent: ScpInner {
+                    user: Some(
+                        "git",
+                    ),
+                    host: "github.com",
+                    path: "org/repo.git",
+                },
+            },
+        )
+        "#
+        );
+
+        // Ok: no git suffix.
+        insta::assert_debug_snapshot!(
+            &Scp::parse("git@github.com:org/repo"),
+            @r#"
+        Ok(
+            Scp {
+                owner: "git@github.com:org/repo",
+                dependent: ScpInner {
+                    user: Some(
+                        "git",
+                    ),
+                    host: "github.com",
+                    path: "org/repo",
+                },
+            },
+        )
+        "#
+        );
+
+        // Ok: no user.
+        insta::assert_debug_snapshot!(
+            &Scp::parse("github.com:org/repo.git"),
+            @r#"
+        Ok(
+            Scp {
+                owner: "github.com:org/repo.git",
+                dependent: ScpInner {
+                    user: None,
+                    host: "github.com",
+                    path: "org/repo.git",
+                },
+            },
+        )
+        "#
+        );
+
+        // Not ok.
+        for bad in [
+            "@github.com:org/repo", // Empty user.
+            "git@:org/repo",        // Empty host.
+            "git@github.com",       // Missing path.
+            "git@github.com:",      // Empty path.
+        ] {
+            assert!(Scp::parse(bad).is_err(), "expected {bad} to be invalid");
+        }
+    }
 }

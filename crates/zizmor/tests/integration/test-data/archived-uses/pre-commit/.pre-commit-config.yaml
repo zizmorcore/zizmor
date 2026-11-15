@@ -3,3 +3,8 @@ repos:
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
+
+  - repo: git@github.com:pre-commit/mirrors-prettier.git
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier

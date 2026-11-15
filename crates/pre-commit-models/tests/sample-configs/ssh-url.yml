@@ -1,0 +1,6 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: git@github.com:example/private-hooks.git
+    rev: v1.0.0
+    hooks:
+      - id: example

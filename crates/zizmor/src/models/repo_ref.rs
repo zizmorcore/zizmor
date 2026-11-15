@@ -2,7 +2,7 @@
 //! repository, potentially qualified in various ways.
 
 use github_actions_models::common::RepositoryUses;
-use pre_commit_models::config::RemoteRepo;
+use pre_commit_models::config::{RemoteRepo, Scp};
 use url::Url;
 
 use crate::{models::uses::RepositoryUsesPattern, utils::once::warn_once};
@@ -75,7 +75,17 @@ pub(crate) enum RepoRef<'doc> {
         /// The GitHub `owner/repo` within the URL, if present.
         slug: Option<Slug<'doc>>,
 
-        /// A Git tag or other reference for the repository, if present.
+        /// A Git tag or other reference for the repository.
+        git_ref: &'doc str,
+    },
+    /// A repository reference from a Git-style SCP target.
+    Scp {
+        _scp: &'doc Scp,
+
+        /// The GitHub `owner/repo` within the SCP target, if present.
+        slug: Option<Slug<'doc>>,
+
+        /// A Git tag or other reference for the repository.
         git_ref: &'doc str,
     },
 }
@@ -122,11 +132,45 @@ impl<'doc> RepoRef<'doc> {
         }
     }
 
+    /// Turn an SCP-style target into a [`RepoRef`].
+    pub(crate) fn from_scp(scp: &'doc Scp, git_ref: &'doc str) -> Self {
+        // Like with URLs, we can opportunistically pull out a slug
+        // if we know the target's shape.
+        let slug = if scp.host() == "github.com" {
+            // GitHub expects SCP targets as `git@github.com:owner/repo[.git]`.
+            let path = scp.path().strip_suffix(".git").unwrap_or(scp.path());
+            let mut parts = path.split('/');
+
+            // Note: unlike URLs, we don't expect a leading `/`.
+            if let Some(owner) = parts.next()
+                && !owner.is_empty()
+                && let Some(repo) = parts.next()
+                && !repo.is_empty()
+                && let None = parts.next()
+            {
+                Some(Slug::new(owner, repo, path))
+            } else {
+                // Either too many or too few components.
+                warn_once!("invalid looking GitHub SCP target: {scp}");
+                None
+            }
+        } else {
+            None
+        };
+
+        Self::Scp {
+            _scp: scp,
+            slug,
+            git_ref,
+        }
+    }
+
     /// Returns the [`Slug`] for this [`RepoRef`], if it has one.
     pub(crate) fn slug(&self) -> Option<Slug<'doc>> {
         match self {
             RepoRef::Uses(uses) => Some(Slug::from(*uses)),
             RepoRef::Url { slug, .. } => slug.as_ref().copied(),
+            RepoRef::Scp { slug, .. } => slug.as_ref().copied(),
         }
     }
 
@@ -138,7 +182,7 @@ impl<'doc> RepoRef<'doc> {
     pub(crate) fn subpath(&self) -> Option<&'doc str> {
         match self {
             RepoRef::Uses(uses) => uses.subpath(),
-            RepoRef::Url { .. } => None,
+            RepoRef::Url { .. } | RepoRef::Scp { .. } => None,
         }
     }
 
@@ -147,6 +191,7 @@ impl<'doc> RepoRef<'doc> {
         match self {
             RepoRef::Uses(uses) => uses.git_ref(),
             RepoRef::Url { git_ref, .. } => git_ref,
+            RepoRef::Scp { git_ref, .. } => git_ref,
         }
     }
 
@@ -194,12 +239,16 @@ impl<'doc> From<&'doc RepositoryUses> for RepoRef<'doc> {
 
 impl<'doc> From<&'doc RemoteRepo> for RepoRef<'doc> {
     fn from(repo: &'doc RemoteRepo) -> Self {
-        Self::from_url(&repo.repo, &repo.rev)
+        match &repo.repo {
+            pre_commit_models::config::RemoteRepoTarget::Url(url) => Self::from_url(url, &repo.rev),
+            pre_commit_models::config::RemoteRepoTarget::Scp(scp) => Self::from_scp(scp, &repo.rev),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use pre_commit_models::config::Scp;
     use url::Url;
 
     use crate::models::repo_ref::{RepoRef, Slug};
@@ -316,6 +365,33 @@ mod tests {
                 fragment: None,
             },
             slug: None,
+            git_ref: "v1",
+        }
+        "#);
+    }
+
+    #[test]
+    fn test_reporef_from_scp() {
+        let scp = Scp::parse("git@github.com:pre-commit/mirrors-prettier.git").unwrap();
+        insta::assert_debug_snapshot!(&RepoRef::from_scp(&scp, "v1"), @r#"
+        Scp {
+            _scp: Scp {
+                owner: "git@github.com:pre-commit/mirrors-prettier.git",
+                dependent: ScpInner {
+                    user: Some(
+                        "git",
+                    ),
+                    host: "github.com",
+                    path: "pre-commit/mirrors-prettier.git",
+                },
+            },
+            slug: Some(
+                Slug {
+                    owner: "pre-commit",
+                    repo: "mirrors-prettier",
+                    slug: "pre-commit/mirrors-prettier",
+                },
+            ),
             git_ref: "v1",
         }
         "#);
