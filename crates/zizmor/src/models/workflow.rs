@@ -12,7 +12,7 @@ use github_actions_models::{
         job,
     },
 };
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::LazyLock;
 use terminal_link::Link;
 
@@ -143,14 +143,41 @@ impl Workflow {
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
         let inner = Self::validate(&contents)?;
 
+        let mut pending = BTreeMap::new();
         for (id, job) in &inner.jobs {
-            if let workflow::Job::NormalJob(job) = job
-                && let Some(matrix) = job.strategy.as_ref().and_then(|s| s.matrix.as_ref())
-            {
-                serde_json::to_value(matrix).map_err(|error| {
-                    CollectionError::InvalidInput(format!("invalid matrix in job {id}: {error}"))
-                })?;
-            }
+            let needs = match job {
+                workflow::Job::NormalJob(job) => {
+                    if let Some(matrix) = job.strategy.as_ref().and_then(|s| s.matrix.as_ref()) {
+                        serde_json::to_value(matrix).map_err(|error| {
+                            CollectionError::InvalidInput(format!(
+                                "invalid matrix in job {id}: {error}"
+                            ))
+                        })?;
+                    }
+                    &job.needs
+                }
+                workflow::Job::ReusableWorkflowCallJob(job) => &job.needs,
+            };
+            pending.insert(id.to_ascii_lowercase(), needs);
+        }
+
+        // Reject cycles before following output references between jobs.
+        while let Some(id) = pending
+            .iter()
+            .find(|(_, needs)| {
+                needs
+                    .iter()
+                    .all(|id| !pending.contains_key(&id.to_ascii_lowercase()))
+            })
+            .map(|(id, _)| id.clone())
+        {
+            pending.remove(&id);
+        }
+
+        if !pending.is_empty() {
+            return Err(CollectionError::InvalidInput(
+                "cyclic job dependencies".into(),
+            ));
         }
 
         let document = yamlpath::Document::new(&contents)?;

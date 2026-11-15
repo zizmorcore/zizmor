@@ -76,6 +76,7 @@ pub(crate) struct Analysis<'doc> {
     state: State,
     evidence: Vec<SymbolicLocation<'doc>>,
     matrices: BTreeMap<String, (DecisionId, Outcomes)>,
+    job_states: BTreeMap<String, DecisionId>,
 }
 
 impl<'doc> Analysis<'doc> {
@@ -127,6 +128,60 @@ impl<'doc> Analysis<'doc> {
             return self.explain(values, location);
         }
         self.runtime(path, context)
+    }
+
+    fn output(&mut self, path: &[Access], context: &Context<'doc>) -> Option<Outcomes> {
+        let [_, Access::Key(id), Access::Key(field), Access::Key(name)] = path else {
+            return Some(self.runtime(path, context));
+        };
+        if !field.eq_ignore_ascii_case("outputs") {
+            return Some(self.runtime(path, context));
+        }
+        let consumer = context.job.as_ref()?;
+        if !consumer
+            .needs
+            .iter()
+            .any(|need| need.eq_ignore_ascii_case(id))
+        {
+            return None;
+        }
+        let workflow = consumer.parent();
+        let (job_id, producer) = workflow
+            .jobs
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(id))?;
+        let github_actions_models::workflow::Job::NormalJob(inner) = producer else {
+            return Some(self.runtime(path, context));
+        };
+        let producer = NormalJob::new(job_id, inner, workflow);
+        let Some((name, value)) = inner
+            .outputs
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+        else {
+            return Some(vec![Outcome::known(Evaluation::String(String::new()))]);
+        };
+        let location = producer
+            .location()
+            .with_keys(["outputs".into(), name.as_str().into()])
+            .annotated(format!("this job declares output {name}"));
+
+        let child = Context::job(producer);
+        let mut values = self.template(&value.to_string(), &child);
+
+        // A skipped job has empty outputs. Keep repeated reads consistent.
+        let status = *self
+            .job_states
+            .entry(job_id.clone())
+            .or_insert_with(|| self.state.decision());
+        for value in &mut values {
+            value.choices.insert(status, AlternativeId::new(1));
+        }
+        let mut skipped = Outcome::known(Evaluation::String(String::new()));
+        skipped.choices.insert(status, AlternativeId::new(0));
+        values.push(skipped);
+        let values = self.state.bound(values);
+        Some(self.explain(values, location))
     }
 
     fn template(&mut self, text: &str, context: &Context<'doc>) -> Outcomes {
@@ -212,6 +267,9 @@ impl<'doc> Resolver for Analysis<'doc> {
 
     fn resolve(&mut self, path: &[Access], context: &Context<'doc>) -> Outcomes {
         match path[0].text().to_ascii_lowercase().as_str() {
+            "needs" => self
+                .output(path, context)
+                .unwrap_or_else(|| vec![Outcome::new(TrackedValue::incomplete())]),
             "matrix" if context.phase != Phase::Matrix => self.matrix(path, context),
             "env" if context.phase == Phase::Step => self.environment(path, context),
             "env" | "matrix" | "steps" | "runner" | "job" if context.phase != Phase::Step => {
