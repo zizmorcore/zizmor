@@ -81,7 +81,18 @@ fn test_pre_commit_config() -> anyhow::Result<()> {
       |
       = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    warning[archived-uses]: action or reusable workflow from archived repository
+     --> @@INPUT@@:7:11
+      |
+    7 |   - repo: git@github.com:pre-commit/mirrors-prettier.git
+      |     ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      |     |     |
+      |     |     repository is archived
+      |     this repo
+      |
+      = note: audit confidence → High
+
+    2 findings: 0 informational, 0 low, 2 medium, 0 high
     "
     );
 

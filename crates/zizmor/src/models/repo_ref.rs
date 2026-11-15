@@ -138,7 +138,7 @@ impl<'doc> RepoRef<'doc> {
         // if we know the target's shape.
         let slug = if scp.host() == "github.com" {
             // GitHub expects SCP targets as `git@github.com:owner/repo[.git]`.
-            let path = scp.path().strip_prefix(".git").unwrap_or(scp.path());
+            let path = scp.path().strip_suffix(".git").unwrap_or(scp.path());
             let mut parts = path.split('/');
 
             // Note: unlike URLs, we don't expect a leading `/`.
@@ -248,6 +248,7 @@ impl<'doc> From<&'doc RemoteRepo> for RepoRef<'doc> {
 
 #[cfg(test)]
 mod tests {
+    use pre_commit_models::config::Scp;
     use url::Url;
 
     use crate::models::repo_ref::{RepoRef, Slug};
@@ -364,6 +365,33 @@ mod tests {
                 fragment: None,
             },
             slug: None,
+            git_ref: "v1",
+        }
+        "#);
+    }
+
+    #[test]
+    fn test_reporef_from_scp() {
+        let scp = Scp::parse("git@github.com:pre-commit/mirrors-prettier.git").unwrap();
+        insta::assert_debug_snapshot!(&RepoRef::from_scp(&scp, "v1"), @r#"
+        Scp {
+            _scp: Scp {
+                owner: "git@github.com:pre-commit/mirrors-prettier.git",
+                dependent: ScpInner {
+                    user: Some(
+                        "git",
+                    ),
+                    host: "github.com",
+                    path: "pre-commit/mirrors-prettier.git",
+                },
+            },
+            slug: Some(
+                Slug {
+                    owner: "pre-commit",
+                    repo: "mirrors-prettier",
+                    slug: "pre-commit/mirrors-prettier",
+                },
+            ),
             git_ref: "v1",
         }
         "#);
