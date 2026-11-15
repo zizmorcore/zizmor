@@ -14,6 +14,7 @@ use crate::{
 
 pub mod call;
 pub mod context;
+pub mod evaluation;
 pub mod identifier;
 mod lexer;
 pub mod literal;
@@ -719,34 +720,20 @@ impl<'src> Expr<'src> {
     /// assert_eq!(result, Evaluation::Boolean(false));
     /// ```
     pub fn consteval(&self) -> Option<Evaluation> {
-        match self {
-            Expr::Literal(literal) => Some(literal.consteval()),
+        let values = self.evaluate(&mut evaluation::State::default(), &None);
+        let [value] = &values[..] else {
+            return None;
+        };
+        value.value.concrete()
+    }
 
-            Expr::BinExpr(BinExpr { lhs, op, rhs }) => {
-                let lhs_val = lhs.consteval()?;
-
-                // Short circuit before evaluating a potentially invalid right operand.
-                match op {
-                    BinOp::And if !lhs_val.as_boolean() => return Some(lhs_val),
-                    BinOp::Or if lhs_val.as_boolean() => return Some(lhs_val),
-                    _ => (),
-                }
-
-                Some(op.evaluate(lhs_val, rhs.consteval()?))
-            }
-
-            Expr::UnExpr { op, expr } => {
-                let val = expr.consteval()?;
-                match op {
-                    UnOp::Not => Some(Evaluation::Boolean(!val.as_boolean())),
-                }
-            }
-
-            Expr::Call(call) => call.consteval(),
-
-            // Non-constant expressions
-            _ => None,
-        }
+    /// Evaluate under bindings, preserving possible values, assumptions, and provenance.
+    pub fn evaluate<R: evaluation::Resolver>(
+        &self,
+        resolver: &mut R,
+        scope: &R::Scope,
+    ) -> evaluation::Outcomes {
+        evaluation::Run { resolver, scope }.evaluate(self)
     }
 }
 

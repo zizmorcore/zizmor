@@ -114,18 +114,6 @@ impl<'src> Call<'src> {
         Ok(Self { func, args })
     }
 
-    /// Performs constant evaluation of a GitHub Actions expression
-    /// function call.
-    pub(crate) fn consteval(&self) -> Option<Evaluation> {
-        let args = self
-            .args
-            .iter()
-            .map(|arg| arg.consteval())
-            .collect::<Option<Vec<Evaluation>>>()?;
-
-        Self::evaluate(self.func, &args)
-    }
-
     /// Applies a function to already evaluated arguments.
     ///
     /// Returns `None` for invalid arguments or functions requiring runtime state.
@@ -1112,6 +1100,14 @@ mod tests {
             ),
             // Invalid: `case` with non-boolean predicate
             ("case(1, 'yes', 0, 'no', 'maybe')", None),
+            ("case('yes', 'a', 'b')", None),
+            ("case(null, 'a', 'b')", None),
+            ("case(fromJSON('[]'), 'a', 'b')", None),
+            ("case(hashFiles('*.txt'), 'a', 'b')", None),
+            (
+                "case(false, fromJSON('invalid'), 'b')",
+                Some(Evaluation::String("b".into())),
+            ),
         ];
 
         for (expr_str, expected) in test_cases {
