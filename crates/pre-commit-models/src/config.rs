@@ -108,8 +108,8 @@ pub enum RemoteRepoTarget {
 impl RemoteRepoTarget {
     pub fn as_str(&self) -> &str {
         match self {
-            RemoteRepoTarget::Url(url) => url.as_str(),
-            RemoteRepoTarget::Scp(scp) => scp.raw(),
+            Self::Url(url) => url.as_str(),
+            Self::Scp(scp) => scp.raw(),
         }
     }
 }
@@ -143,7 +143,7 @@ impl<'a> ScpInner<'a> {
         // but paths can.
         let (host, path) = rest
             .split_once(":")
-            .ok_or_else(|| "invalid SCP Git target: missing path")?;
+            .ok_or("invalid SCP Git target: missing path")?;
 
         if host.is_empty() || path.is_empty() {
             return Err("invalid SCP Git target: empty host or path");
@@ -177,7 +177,7 @@ impl<'de> serde::Deserialize<'de> for Scp {
         D: serde::Deserializer<'de>,
     {
         let uses = <std::borrow::Cow<'de, str>>::deserialize(deserializer)?;
-        Ok(Self::parse(uses).map_err(serde::de::Error::custom)?)
+        Self::parse(uses).map_err(serde::de::Error::custom)
     }
 }
 
