@@ -9,11 +9,60 @@ use github_actions_expressions::{
     call::{Call, Function},
 };
 
-use super::workflow::NormalJob;
+use super::{
+    StepCommon as _,
+    action::CompositeStep,
+    workflow::{JobCommon as _, NormalJob, Step},
+};
+use crate::finding::location::Locatable as _;
+use github_actions_models::common::{Env, expr::LoE};
+
+#[derive(Clone, Copy, Default, PartialEq)]
+enum Phase {
+    #[default]
+    Step,
+    Env,
+    Matrix,
+}
+
+type EnvScope<'doc> = (&'doc LoE<Env>, SymbolicLocation<'doc>, bool);
 
 #[derive(Clone, Default)]
 pub(crate) struct Context<'doc> {
+    envs: Vec<EnvScope<'doc>>,
+    prior_steps: bool,
+    phase: Phase,
     job: Option<NormalJob<'doc>>,
+}
+
+impl<'doc> Context<'doc> {
+    pub(crate) fn job(job: NormalJob<'doc>) -> Self {
+        let workflow = job.parent();
+        Self {
+            envs: vec![
+                (&workflow.env, workflow.location(), false),
+                (&job.env, job.location(), false),
+            ],
+            prior_steps: true,
+            job: Some(job),
+            ..Self::default()
+        }
+    }
+
+    pub(crate) fn workflow_step(step: &Step<'doc>) -> Self {
+        let mut context = Context::job(step.job().clone());
+        context.envs.push((step.env(), step.location(), true));
+        context.prior_steps = step.job().steps().any(|prior| prior.ord() < step.ord());
+        context
+    }
+
+    pub(crate) fn composite_step(step: &CompositeStep<'doc>) -> Self {
+        Self {
+            envs: vec![(&step.inner.env, step.location(), true)],
+            prior_steps: step.index > 0,
+            ..Self::default()
+        }
+    }
 }
 
 /// Workflow bindings and source locations for one evaluation.
@@ -35,6 +84,43 @@ impl<'doc> Analysis<'doc> {
         ids.into_iter()
             .map(|id| self.evidence[id].clone())
             .collect()
+    }
+
+    fn environment(&mut self, path: &[Access], context: &Context<'doc>) -> Outcomes {
+        let [_, Access::Key(name)] = path else {
+            return self.runtime(path, context);
+        };
+        for index in (0..context.envs.len()).rev() {
+            let (values, location, step) = context.envs[index].clone();
+            let LoE::Literal(env) = values else {
+                return self.runtime(path, context);
+            };
+            let Some((key, value)) = env.iter().find(|(key, _)| key.eq_ignore_ascii_case(name))
+            else {
+                continue;
+            };
+            let location = location
+                .with_keys(["env".into(), key.as_str().into()])
+                .annotated(format!("{name} is defined here"));
+
+            // Step env values see outer scopes; other env definitions cannot reference env.
+            let outer_scopes = if step { index } else { 0 };
+            let child = Context {
+                envs: context.envs[..outer_scopes].to_vec(),
+                phase: if step { Phase::Step } else { Phase::Env },
+                ..context.clone()
+            };
+            let mut values = self.template(&value.to_string(), &child);
+            if context.prior_steps && !step {
+                let runtime = self.runtime(path, context);
+                let overwrite = location
+                    .clone()
+                    .annotated(format!("an earlier step may overwrite {name}"));
+                values.extend(self.explain(runtime, overwrite));
+            }
+            return self.explain(values, location);
+        }
+        self.runtime(path, context)
     }
 
     fn template(&mut self, text: &str, context: &Context<'doc>) -> Outcomes {
@@ -89,7 +175,7 @@ impl<'doc> Analysis<'doc> {
         })
     }
 
-    fn runtime(&self, path: &[Access], _context: &Context<'doc>) -> Outcomes {
+    fn runtime(&self, path: &[Access], context: &Context<'doc>) -> Outcomes {
         let root = path[0].text();
         if root.eq_ignore_ascii_case("github") {
             return vec![Outcome::new(TrackedValue::new(AbstractValue::Reference(
@@ -99,6 +185,13 @@ impl<'doc> Analysis<'doc> {
 
         let mut value = TrackedValue::unknown();
         let identity = path.iter().map(Access::text).collect::<Vec<_>>().join(".");
+        let identity = if let Some(job) = &context.job
+            && !root.eq_ignore_ascii_case("inputs")
+        {
+            format!("job:{}:{identity}", job.id())
+        } else {
+            identity
+        };
         value.provenance.sources.insert(identity);
         vec![Outcome::new(value)]
     }
@@ -112,7 +205,13 @@ impl<'doc> Resolver for Analysis<'doc> {
     }
 
     fn resolve(&mut self, path: &[Access], context: &Context<'doc>) -> Outcomes {
-        self.runtime(path, context)
+        match path[0].text().to_ascii_lowercase().as_str() {
+            "env" if context.phase == Phase::Step => self.environment(path, context),
+            "env" | "steps" | "runner" | "job" if context.phase != Phase::Step => {
+                vec![Outcome::new(TrackedValue::incomplete())]
+            }
+            _ => self.runtime(path, context),
+        }
     }
 }
 
