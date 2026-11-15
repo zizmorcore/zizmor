@@ -123,15 +123,23 @@ impl<'src> Call<'src> {
             .map(|arg| arg.consteval())
             .collect::<Option<Vec<Evaluation>>>()?;
 
-        match &self.func {
-            Function::Format => Self::consteval_format(&args),
-            Function::Contains => Self::consteval_contains(&args),
-            Function::StartsWith => Self::consteval_startswith(&args),
-            Function::EndsWith => Self::consteval_endswith(&args),
-            Function::ToJSON => Self::consteval_tojson(&args),
-            Function::FromJSON => Self::consteval_fromjson(&args),
-            Function::Join => Self::consteval_join(&args),
-            Function::Case => Self::consteval_case(&args),
+        Self::evaluate(self.func, &args)
+    }
+
+    /// Applies a function to already evaluated arguments.
+    ///
+    /// Returns `None` for invalid arguments or functions requiring runtime state.
+    /// Argument counts must satisfy the same constraints as a parsed call.
+    pub fn evaluate(func: Function, args: &[Evaluation]) -> Option<Evaluation> {
+        match func {
+            Function::Format => Self::consteval_format(args),
+            Function::Contains => Self::consteval_contains(args),
+            Function::StartsWith => Self::consteval_startswith(args),
+            Function::EndsWith => Self::consteval_endswith(args),
+            Function::ToJSON => Self::consteval_tojson(args),
+            Function::FromJSON => Self::consteval_fromjson(args),
+            Function::Join => Self::consteval_join(args),
+            Function::Case => Self::consteval_case(args),
             _ => None,
         }
     }

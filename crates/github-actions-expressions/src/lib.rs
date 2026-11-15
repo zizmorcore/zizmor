@@ -724,32 +724,15 @@ impl<'src> Expr<'src> {
 
             Expr::BinExpr(BinExpr { lhs, op, rhs }) => {
                 let lhs_val = lhs.consteval()?;
-                let rhs_val = rhs.consteval()?;
 
+                // Short circuit before evaluating a potentially invalid right operand.
                 match op {
-                    BinOp::And => {
-                        // GitHub Actions && semantics: if LHS is falsy, return LHS, else return RHS
-                        if lhs_val.as_boolean() {
-                            Some(rhs_val)
-                        } else {
-                            Some(lhs_val)
-                        }
-                    }
-                    BinOp::Or => {
-                        // GitHub Actions || semantics: if LHS is truthy, return LHS, else return RHS
-                        if lhs_val.as_boolean() {
-                            Some(lhs_val)
-                        } else {
-                            Some(rhs_val)
-                        }
-                    }
-                    BinOp::Eq => Some(Evaluation::Boolean(lhs_val.sema() == rhs_val.sema())),
-                    BinOp::Neq => Some(Evaluation::Boolean(lhs_val.sema() != rhs_val.sema())),
-                    BinOp::Lt => Some(Evaluation::Boolean(lhs_val.sema() < rhs_val.sema())),
-                    BinOp::Le => Some(Evaluation::Boolean(lhs_val.sema() <= rhs_val.sema())),
-                    BinOp::Gt => Some(Evaluation::Boolean(lhs_val.sema() > rhs_val.sema())),
-                    BinOp::Ge => Some(Evaluation::Boolean(lhs_val.sema() >= rhs_val.sema())),
+                    BinOp::And if !lhs_val.as_boolean() => return Some(lhs_val),
+                    BinOp::Or if lhs_val.as_boolean() => return Some(lhs_val),
+                    _ => (),
                 }
+
+                Some(op.evaluate(lhs_val, rhs.consteval()?))
             }
 
             Expr::UnExpr { op, expr } => {
