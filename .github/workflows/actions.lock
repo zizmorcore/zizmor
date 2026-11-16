@@ -6,7 +6,7 @@ workflows:
     '.github/workflows/benchmark.yml':
         - 'actions/checkout@v7.0.1'
         - 'astral-sh/setup-uv@v10.3.3'
-        - 'codspeedhq/action@v5.6.1'
+        - 'codspeedhq/action@v5.6.3'
         - 'swatinem/rust-cache@v2.9.3'
     '.github/workflows/ci.yml':
         - 'actions/checkout@v7.0.1'
@@ -16,7 +16,7 @@ workflows:
     '.github/workflows/codegen.yml':
         - 'actions/checkout@v7.0.1'
         - 'astral-sh/setup-uv@v10.3.3'
-        - 'peter-evans/create-pull-request@v8.1.1'
+        - 'peter-evans/create-pull-request@v8.1.2'
     '.github/workflows/release-binaries.yml':
         - 'actions/attest@v4.2.2'
         - 'actions/checkout@v7.0.1'
@@ -41,7 +41,7 @@ workflows:
         - 'astral-sh/setup-uv@v10.3.3'
     '.github/workflows/test-output.yml':
         - 'actions/checkout@v7.0.1'
-        - 'github/codeql-action@v4.39.1'
+        - 'github/codeql-action@v4.39.3'
         - 'swatinem/rust-cache@v2.9.3'
     '.github/workflows/zizmor.yml':
         - 'actions/checkout@v7.0.1'
@@ -104,9 +104,9 @@ dependencies:
         commit: 'sha1-68559e99cc807c1eb7e9238fd43a15bba460eec2'
         owner_id: 115962839
         repo_id: 846733598
-    'codspeedhq/action@v5.6.1':
-        ref: 'v5.6.1'
-        commit: 'sha1-61efe07e57e55bedeab750c434504de272a56e8c'
+    'codspeedhq/action@v5.6.3':
+        ref: 'v5.6.3'
+        commit: 'sha1-af75f77f17a054769abefaa42fe8dc2975469b5f'
         owner_id: 116658140
         repo_id: 561699778
         uses:
@@ -117,14 +117,14 @@ dependencies:
         commit: 'sha1-9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
         owner_id: 9919
         repo_id: 259445878
-    'github/codeql-action@v4.39.1':
-        ref: 'v4.39.1'
-        commit: 'sha1-9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
+    'github/codeql-action@v4.39.3':
+        ref: 'v4.39.3'
+        commit: 'sha1-33d7b85da1a04171e211befe2c739303b9a4c066'
         owner_id: 9919
         repo_id: 259445878
-    'peter-evans/create-pull-request@v8.1.1':
-        ref: 'v8.1.1'
-        commit: 'sha1-5f6978faf089d4d20b00c7766989d076bb2fc7f1'
+    'peter-evans/create-pull-request@v8.1.2':
+        ref: 'v8.1.2'
+        commit: 'sha1-15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8'
         owner_id: 18365890
         repo_id: 197176365
     'pyo3/maturin-action@v1.51.0':
