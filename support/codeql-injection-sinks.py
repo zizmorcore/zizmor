@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#     "pyyaml",
+#     "json5",
 # ]
 # ///
 
@@ -20,7 +20,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Set
 
-import yaml
+import json5
 
 _MODELS_SUBDIR = "actions/ql/lib/ext/"
 
@@ -81,14 +81,15 @@ def _clone_actions_codeql(temp_dir: Path) -> Path:
     return repo_path
 
 
-def _process_yaml_file(
+def _process_json_file(
     file_path: Path,
     relevant_kinds: Set[str],
     only_manual_models: bool,
     code_injection_sinks: Dict[str, List[str]],
 ) -> None:
     with file_path.open() as f:
-        content = yaml.safe_load(f)
+        # CodeQL's JSON models allow comments.
+        content = json5.load(f)
 
     extensions = content.get("extensions")
     if extensions is None:
@@ -167,20 +168,22 @@ def _process_models(codeql_dir: Path) -> None:
 
     processed_count = 0
 
-    for file in models_dir.glob("**/*.yml"):
-        if file.suffix in [".yml", ".yaml"]:
-            processed_count += 1
-            try:
-                _process_yaml_file(
-                    file,
-                    relevant_kinds,
-                    only_manual_models,
-                    code_injection_sinks,
-                )
-            except Exception as e:
-                raise RuntimeError(f"Failed processing file: {file}") from e
+    for file in models_dir.glob("**/*.json"):
+        processed_count += 1
+        try:
+            _process_json_file(
+                file,
+                relevant_kinds,
+                only_manual_models,
+                code_injection_sinks,
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed processing file: {file}") from e
 
     _debug(f"Processed {processed_count} files")
+
+    if not code_injection_sinks:
+        raise ValueError("No code injection sinks found")
 
     print(json.dumps(list(sorted(code_injection_sinks.items())), indent=2))
 
