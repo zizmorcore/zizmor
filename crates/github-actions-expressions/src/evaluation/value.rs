@@ -1,4 +1,34 @@
-//! Values, their sources, and the assumptions selecting an alternative.
+//! Abstract interpretation values, their sources, and assumptions when selecting an alternative.
+//!
+//! Our abstract interpretation has "decisions" and "alternatives," each of which has an
+//! identifier. A [`DecisionId`] identifies a shared choice during an evaluation, while
+//! an [`AlternativeId`] identifies which alternative an outcome assumes.
+//!
+//! For example, consider the following expression:
+//!
+//! ```text
+//! case(inputs.enabled, 'a', 'b')
+//! ```
+//!
+//! In this case, `inputs.enabled` drives a decision (D0), and has two alternatives:
+//!
+//! - inputs.enabled == true --> 'a' (A1)
+//! - inputs.enabled == false --> 'b' (A0)
+//!
+//! Note that `inputs.enabled` can be an unknown boolean, in which case both alternatives
+//! are possible.
+//!
+//! One or more decisions can lead into an [`Outcome`] which tracks (by default)
+//! a [`Value`]. Each [`Value`] in turn has a [`Kind`] and [`Provenance`],
+//! where [`Kind`] conveys the actual value (which may be abstract or concrete)
+//! and [`Provenance`] records the inputs that contribute to the value.
+//!
+//! Expressing the case above, the outcomes would be:
+//!
+//! ```text
+//! Outcome { value: 'a', choices: {D0: A1} }
+//! Outcome { value: 'b', choices: {D0: A0} }
+//! ```
 
 use crate::Evaluation;
 use std::{
@@ -6,38 +36,40 @@ use std::{
     sync::Arc,
 };
 
-/// Identifies a choice whose alternatives must stay consistent across reads.
+/// Identifies a decision.
 ///
-/// A decision might be "is this predicate true?" or "which matrix row is being
-/// evaluated?". Each entry in [`Outcome::choices`] associates a decision with the
-/// [`AlternativeId`] assumed by that outcome.
+/// Decisions can be things like predicates, or the selection of a row from a matrix.
+/// Decisions appear as the keys in [`Outcome::choices`], where each decision
+/// is associated with the alternative (as [`AlternativeId`]) that's assumed
+/// by the overall outcome.
 ///
-/// For example, if `D` identifies a predicate, `D -> 0` means false and `D -> 1`
-/// means true. Outcomes carrying different alternatives for `D` describe mutually
-/// exclusive cases, so [`State::product`](super::State::product) rejects that pair.
-///
-/// IDs are allocated by [`State::decision`](super::State::decision) and are local
-/// to that state. Repeated reads of the same choice must reuse its ID; independent
-/// choices must use different IDs.
+/// In plain English, if [`Outcome::choices`] has `{D0: A1}`, then
+/// the outcome assumes that decision D0 selects alternative A1.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DecisionId(pub(super) usize);
 
-/// Identifies one alternative of a [`DecisionId`].
+/// Identifies one alternative (of potentially many) from a decision.
 ///
-/// The producer of the outcomes assigns the meaning of each index. The evaluator
-/// uses `0` for a false predicate and `1` for a true predicate; a resolver might
-/// use row indices for a matrix decision. Indices are compared within a decision.
+/// [`AlternativeId`]s are unique per-[`DecisionId`], not globally unique.
+///
+/// Different kinds of decisions may use different conventions for the meanings
+/// of their alternative IDs. For example, for predicate decisions, our convention
+/// is to use `0` for a false alternative and `1` for a true alternative.
+///
+/// Alternatives are computed during evaluation and can be derived either from
+/// expression semantics (e.g. predicate semantics) or resolver states (e.g.
+/// matrix row alternatives or skipped/executed job alternatives).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AlternativeId(usize);
 
 impl AlternativeId {
-    /// Identify an alternative by its index within the decision.
+    /// Identify a new alternative (relative to some [`DecisionId`]).
     pub const fn new(index: usize) -> Self {
         Self(index)
     }
 }
 
-/// Known restrictions on an unknown value.
+/// Partial restrictions on an otherwise unknown value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Shape {
     /// Any runtime value.
@@ -47,17 +79,28 @@ pub enum Shape {
     /// Null, false, zero, or the empty string.
     Falsy,
     /// An empty string or hexadecimal file hash.
+    ///
+    /// Note that this can be an empty string because it models the result of the `hashFiles` function,
+    /// which can return an empty string when no files match the given pattern(s).
     Hash,
 }
 
-/// A property access. Unknown indices are not wildcard projections.
+/// A property access within an Actions expression context.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Access {
-    /// A named property or numeric index.
+    /// A named property or numeric index, e.g. `inputs.key`.
     Key(String),
-    /// An explicit `*` projection.
+    /// An explicit `*`, e.g. `inputs.*`.
+    ///
+    /// Note that this produces an array (which is truthy)
+    /// when "projecting" an object or array, e.g. when
+    /// `inputs` of `inputs.*` is an array or object.
+    /// However, if `inputs` is a known scalar, then this
+    /// produces an empty string.
     Wildcard,
-    /// A computed index whose value is unknown.
+    /// A computed index or access whose value is unknown.
+    /// For example, `github.event[inputs.field]` if `inputs.field`
+    /// could not be resolved during analysis.
     Unknown,
 }
 
@@ -72,21 +115,36 @@ impl Access {
     }
 }
 
-/// The inputs and definitions used to obtain a value.
+/// Provenance for the inputs and source locations that contribute to a value.
+///
+/// Provenance includes both "source" and "control" provenance, tracking dataflow
+/// and control-flow (and dependencies) respectively. The two are not mutually exclusive
+/// either, e.g. `case(inputs.name != '', inputs.name, 'anonymous')` would track the
+/// provenance of `inputs.name` as both for the outcome that actually produces
+/// `inputs.name`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Provenance {
-    /// Context paths supplying the value's contents.
+    /// Context paths whose contents may flow into the result.
+    ///
+    /// For example, `format('{0}', inputs.name)` would have `inputs.name` as a source,
+    /// since the contents of that context flow into the result.
     pub sources: BTreeSet<String>,
-    /// Context paths affecting selection.
+    /// Context paths used to select or index a value, or compute a boolean or hash.
+    ///
+    /// For example, `case(inputs.enabled, 'a', 'b')` would have `inputs.enabled` in controls,
+    /// as it selects a literal.
     pub controls: BTreeSet<String>,
-    /// Indices into the caller's source locations.
+    /// Indices into source locations stored by the caller, used for breadcrumbs.
     pub evidence: BTreeSet<usize>,
-    /// Some contributing data could not be evaluated.
+    /// A definition could not be resolved, or we couldn't fully explore all
+    /// possibilities given our evaluation limits.
+    ///
+    /// Unknown inputs do not themselves necessarily make a value's provenance incomplete.
     pub incomplete: bool,
 }
 
 impl Provenance {
-    /// Add sources and locations without changing values or assumptions.
+    /// Merge `other`'s provenance into this provenance.
     pub fn extend(&mut self, other: &Self) {
         self.sources.extend(other.sources.iter().cloned());
         self.controls.extend(other.controls.iter().cloned());
@@ -94,7 +152,19 @@ impl Provenance {
         self.incomplete |= other.incomplete;
     }
 
-    /// Record these inputs as controlling selection, not contents.
+    /// Re-assign this provenance's source contexts as control contexts.
+    ///
+    /// For example, for `case(inputs.enabled, 'a', 'b')`, this would transform:
+    ///
+    /// ```text
+    /// sources = {"inputs.enabled"}, controls = {}
+    /// ```
+    ///
+    /// into:
+    ///
+    /// ```text
+    /// sources = {}, controls = {"inputs.enabled"}
+    /// ```
     pub fn controlled(mut self) -> Self {
         self.controls.extend(std::mem::take(&mut self.sources));
         self.incomplete = false;
