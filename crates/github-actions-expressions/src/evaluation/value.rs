@@ -19,8 +19,8 @@
 //! are possible.
 //!
 //! One or more decisions can lead into an [`Outcome`] which tracks (by default)
-//! a [`Value`]. Each [`Value`] in turn has a [`Kind`] and [`Provenance`],
-//! where [`Kind`] conveys the actual value (which may be abstract or concrete)
+//! a [`TrackedValue`]. Each [`TrackedValue`] in turn has an [`AbstractValue`] and [`Provenance`],
+//! where [`AbstractValue`] conveys the actual value (which may be abstract or concrete)
 //! and [`Provenance`] records the inputs that contribute to the value.
 //!
 //! Expressing the case above, the outcomes would be:
@@ -178,7 +178,7 @@ impl Provenance {
 /// arrays and objects by identity, and our evaluator matches this by comparing them with
 /// [`Arc::ptr_eq`].
 #[derive(Clone, Debug, PartialEq)]
-pub enum Kind {
+pub enum AbstractValue {
     /// A known scalar.
     ///
     /// For example, we might know that a given expression evaluates to a literal string `'foo'`.
@@ -203,28 +203,28 @@ pub enum Kind {
     /// contain both a scalar literal `'foo'` and a reference `inputs.foo`.
     ///
     /// This represents a single array value, not multiple possible outcomes.
-    Array(Arc<Vec<Value>>),
+    Array(Arc<Vec<TrackedValue>>),
 
     /// An evaluation of object fields, each with their individual provenance.
     ///
     /// Like [`Self::Array`] each element may not be fully concrete or known.
-    Object(Arc<BTreeMap<String, Value>>),
+    Object(Arc<BTreeMap<String, TrackedValue>>),
 }
 
 /// A value with its provenance; branch assumptions belong to `Outcome`.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Value {
+pub struct TrackedValue {
     /// The value or its known properties.
-    pub kind: Kind,
+    pub inner: AbstractValue,
     /// Sources and definitions contributing to this value.
     pub provenance: Provenance,
 }
 
-impl Value {
+impl TrackedValue {
     /// Construct a value without provenance.
-    pub fn new(kind: Kind) -> Self {
+    pub fn new(inner: AbstractValue) -> Self {
         Self {
-            kind,
+            inner,
             provenance: Provenance::default(),
         }
     }
@@ -233,21 +233,21 @@ impl Value {
     pub fn known(value: Evaluation) -> Self {
         Self::new(match value {
             Evaluation::Array(values) => {
-                Kind::Array(Arc::new(values.into_iter().map(Self::known).collect()))
+                AbstractValue::Array(Arc::new(values.into_iter().map(Self::known).collect()))
             }
-            Evaluation::Object(fields) => Kind::Object(Arc::new(
+            Evaluation::Object(fields) => AbstractValue::Object(Arc::new(
                 fields
                     .into_iter()
                     .map(|(k, v)| (k, Self::known(v)))
                     .collect(),
             )),
-            value => Kind::Known(value),
+            value => AbstractValue::Known(value),
         })
     }
 
     /// An unconstrained runtime value.
     pub fn unknown() -> Self {
-        Self::new(Kind::Unknown(Shape::Any))
+        Self::new(AbstractValue::Unknown(Shape::Any))
     }
 
     /// Mark an unresolved definition or an omitted evaluation.
@@ -271,18 +271,18 @@ impl Value {
     /// Collect inputs and locations, including those inside containers.
     pub fn dependencies(&self) -> Provenance {
         let mut provenance = self.provenance.clone();
-        match &self.kind {
-            Kind::Reference(path) => {
+        match &self.inner {
+            AbstractValue::Reference(path) => {
                 provenance
                     .sources
                     .insert(path.iter().map(Access::text).collect::<Vec<_>>().join("."));
             }
-            Kind::Array(values) => {
+            AbstractValue::Array(values) => {
                 for value in values.iter() {
                     provenance.extend(&value.dependencies());
                 }
             }
-            Kind::Object(fields) => {
+            AbstractValue::Object(fields) => {
                 for value in fields.values() {
                     provenance.extend(&value.dependencies());
                 }
@@ -294,17 +294,17 @@ impl Value {
 
     /// Return truthiness when the value constrains it.
     pub fn truth(&self) -> Option<bool> {
-        match &self.kind {
-            Kind::Known(value) => Some(value.as_boolean()),
-            Kind::Array(_) | Kind::Object(_) => Some(true),
-            Kind::Unknown(Shape::Falsy) => Some(false),
+        match &self.inner {
+            AbstractValue::Known(value) => Some(value.as_boolean()),
+            AbstractValue::Array(_) | AbstractValue::Object(_) => Some(true),
+            AbstractValue::Unknown(Shape::Falsy) => Some(false),
             _ => None,
         }
     }
 
     /// Return array elements with the array's provenance attached.
     pub fn elements(&self) -> Option<Vec<Self>> {
-        let Kind::Array(values) = &self.kind else {
+        let AbstractValue::Array(values) = &self.inner else {
             return None;
         };
         Some(
@@ -318,12 +318,12 @@ impl Value {
 
     /// Convert a fully known value into a concrete Actions value.
     pub fn concrete(&self) -> Option<Evaluation> {
-        match &self.kind {
-            Kind::Known(value) => Some(value.clone()),
-            Kind::Array(values) => Some(Evaluation::Array(
+        match &self.inner {
+            AbstractValue::Known(value) => Some(value.clone()),
+            AbstractValue::Array(values) => Some(Evaluation::Array(
                 values.iter().map(Self::concrete).collect::<Option<_>>()?,
             )),
-            Kind::Object(fields) => Some(Evaluation::Object(
+            AbstractValue::Object(fields) => Some(Evaluation::Object(
                 fields
                     .iter()
                     .map(|(key, value)| Some((key.clone(), value.concrete()?)))
@@ -336,33 +336,35 @@ impl Value {
     /// Look up a property without changing branch assumptions.
     pub fn project(&self, access: &Access) -> Self {
         let empty = || Self::known(Evaluation::String(String::new()));
-        let value = match (&self.kind, access) {
-            (Kind::Reference(path), _) => {
+        let value = match (&self.inner, access) {
+            (AbstractValue::Reference(path), _) => {
                 let mut path = path.clone();
                 path.push(access.clone());
-                Self::new(Kind::Reference(path))
+                Self::new(AbstractValue::Reference(path))
             }
-            (Kind::Known(_) | Kind::Unknown(Shape::Boolean | Shape::Falsy | Shape::Hash), _) => {
-                empty()
-            }
+            (
+                AbstractValue::Known(_)
+                | AbstractValue::Unknown(Shape::Boolean | Shape::Falsy | Shape::Hash),
+                _,
+            ) => empty(),
             (_, Access::Unknown) => Self::unknown().with_provenance(&self.dependencies()),
-            (Kind::Object(fields), Access::Key(key)) => fields
+            (AbstractValue::Object(fields), Access::Key(key)) => fields
                 .iter()
                 .find(|(k, _)| k.eq_ignore_ascii_case(key))
                 .map_or_else(empty, |(_, value)| value.clone()),
-            (Kind::Object(fields), Access::Wildcard) => {
-                Self::new(Kind::Array(Arc::new(fields.values().cloned().collect())))
-            }
-            (Kind::Array(values), Access::Key(key)) => match key.parse::<usize>() {
+            (AbstractValue::Object(fields), Access::Wildcard) => Self::new(AbstractValue::Array(
+                Arc::new(fields.values().cloned().collect()),
+            )),
+            (AbstractValue::Array(values), Access::Key(key)) => match key.parse::<usize>() {
                 Ok(index) => values.get(index).cloned().unwrap_or_else(empty),
-                Err(_) => Self::new(Kind::Array(Arc::new(
+                Err(_) => Self::new(AbstractValue::Array(Arc::new(
                     values.iter().map(|v| v.project(access)).collect(),
                 ))),
             },
-            (Kind::Array(values), Access::Wildcard) => {
-                Self::new(Kind::Array(Arc::new(values.as_ref().clone())))
+            (AbstractValue::Array(values), Access::Wildcard) => {
+                Self::new(AbstractValue::Array(Arc::new(values.as_ref().clone())))
             }
-            (Kind::Unknown(_), _) => Self::unknown(),
+            (AbstractValue::Unknown(_), _) => Self::unknown(),
         };
         value.with_provenance(&self.provenance)
     }
@@ -370,7 +372,7 @@ impl Value {
 
 /// One possible evaluation and the choices that must hold for it.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Outcome<T = Value> {
+pub struct Outcome<T = TrackedValue> {
     /// The value selected by these assumptions.
     pub value: T,
     /// Assumptions required for this outcome, keyed by the shared choice.
@@ -383,7 +385,7 @@ pub struct Outcome<T = Value> {
 }
 
 /// Alternatives, distinct from the elements of a single array.
-pub type Outcomes<T = Value> = Vec<Outcome<T>>;
+pub type Outcomes<T = TrackedValue> = Vec<Outcome<T>>;
 
 /// Payload operations on collections of outcomes.
 pub trait OutcomesExt<T> {
@@ -433,6 +435,6 @@ impl<T> Outcome<T> {
 impl Outcome {
     /// Construct a concrete alternative.
     pub fn known(value: Evaluation) -> Self {
-        Self::new(Value::known(value))
+        Self::new(TrackedValue::known(value))
     }
 }

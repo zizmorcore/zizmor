@@ -70,7 +70,7 @@ pub struct State {
 }
 
 impl Resolver for State {
-    type Scope = Option<Value>;
+    type Scope = Option<TrackedValue>;
 
     fn state(&mut self) -> &mut State {
         self
@@ -123,7 +123,7 @@ impl State {
         id
     }
 
-    fn predicate(&mut self, expression: &str, value: &Value) -> Option<DecisionId> {
+    fn predicate(&mut self, expression: &str, value: &TrackedValue) -> Option<DecisionId> {
         let mut provenance = value.dependencies();
         provenance.sources.extend(provenance.controls);
         if provenance.sources.is_empty() {
@@ -145,7 +145,7 @@ impl State {
     pub fn finish(&self, mut values: Outcomes) -> Outcomes {
         if self.depth == 0 && self.incomplete {
             values.truncate(MAX_ALTERNATIVES - 1);
-            values.push(Outcome::new(Value::incomplete()));
+            values.push(Outcome::new(TrackedValue::incomplete()));
         }
         values
     }
@@ -271,11 +271,12 @@ impl<R: Resolver> Run<'_, R> {
         for value in self.evaluate(predicate) {
             if boolean_only
                 && matches!(
-                    &value.value.kind,
-                    Kind::Known(Evaluation::String(_) | Evaluation::Number(_) | Evaluation::Null)
-                        | Kind::Array(_)
-                        | Kind::Object(_)
-                        | Kind::Unknown(Shape::Hash)
+                    &value.value.inner,
+                    AbstractValue::Known(
+                        Evaluation::String(_) | Evaluation::Number(_) | Evaluation::Null
+                    ) | AbstractValue::Array(_)
+                        | AbstractValue::Object(_)
+                        | AbstractValue::Unknown(Shape::Hash)
                 )
             {
                 continue;
@@ -339,12 +340,12 @@ impl<R: Resolver> Run<'_, R> {
         match expr {
             Expr::Literal(literal) => vec![Outcome::known(literal.consteval())],
             Expr::UnExpr { expr, .. } => self.evaluate(expr).map(|value| {
-                let kind = value
+                let inner = value
                     .truth()
-                    .map_or(Kind::Unknown(Shape::Boolean), |truth| {
-                        Kind::Known(Evaluation::Boolean(!truth))
+                    .map_or(AbstractValue::Unknown(Shape::Boolean), |truth| {
+                        AbstractValue::Known(Evaluation::Boolean(!truth))
                     });
-                Value::new(kind).with_provenance(&value.dependencies().controlled())
+                TrackedValue::new(inner).with_provenance(&value.dependencies().controlled())
             }),
             Expr::BinExpr(bin) if matches!(bin.op, BinOp::And | BinOp::Or) => {
                 let mut results = vec![];
@@ -352,7 +353,8 @@ impl<R: Resolver> Run<'_, R> {
                     if truth == matches!(bin.op, BinOp::Or) {
                         results.push(condition.map(|value| {
                             if !truth && value.truth().is_none() {
-                                Value::new(Kind::Unknown(Shape::Falsy)).conditioned(&value)
+                                TrackedValue::new(AbstractValue::Unknown(Shape::Falsy))
+                                    .conditioned(&value)
                             } else {
                                 value
                             }
@@ -372,21 +374,27 @@ impl<R: Resolver> Run<'_, R> {
                 let lhs = self.evaluate(&bin.lhs);
                 let rhs = self.evaluate(&bin.rhs);
                 self.state().product(lhs, rhs, |lhs, rhs| {
-                    let identity = match (&lhs.kind, &rhs.kind) {
-                        (Kind::Array(a), Kind::Array(b)) => Some(Arc::ptr_eq(a, b)),
-                        (Kind::Object(a), Kind::Object(b)) => Some(Arc::ptr_eq(a, b)),
+                    let identity = match (&lhs.inner, &rhs.inner) {
+                        (AbstractValue::Array(a), AbstractValue::Array(b)) => {
+                            Some(Arc::ptr_eq(a, b))
+                        }
+                        (AbstractValue::Object(a), AbstractValue::Object(b)) => {
+                            Some(Arc::ptr_eq(a, b))
+                        }
                         _ => None,
                     };
-                    let kind = match (identity, lhs.concrete(), rhs.concrete()) {
-                        (Some(equal), _, _) => Kind::Known(Evaluation::Boolean(match bin.op {
-                            BinOp::Eq => equal,
-                            BinOp::Neq => !equal,
-                            _ => false,
-                        })),
-                        (_, Some(a), Some(b)) => Kind::Known(bin.op.evaluate(a, b)),
-                        _ => Kind::Unknown(Shape::Boolean),
+                    let inner = match (identity, lhs.concrete(), rhs.concrete()) {
+                        (Some(equal), _, _) => {
+                            AbstractValue::Known(Evaluation::Boolean(match bin.op {
+                                BinOp::Eq => equal,
+                                BinOp::Neq => !equal,
+                                _ => false,
+                            }))
+                        }
+                        (_, Some(a), Some(b)) => AbstractValue::Known(bin.op.evaluate(a, b)),
+                        _ => AbstractValue::Unknown(Shape::Boolean),
                     };
-                    Value::new(kind).conditioned(&lhs).conditioned(&rhs)
+                    TrackedValue::new(inner).conditioned(&lhs).conditioned(&rhs)
                 })
             }
             Expr::Context(reference) => {
@@ -452,7 +460,7 @@ impl<R: Resolver> Run<'_, R> {
     }
 }
 
-impl Outcome<Vec<Value>> {
+impl Outcome<Vec<TrackedValue>> {
     fn evaluate_call(self, function: Function) -> Option<Outcome> {
         let mut provenance = Provenance::default();
         for value in &self.value {
@@ -465,23 +473,23 @@ impl Outcome<Vec<Value>> {
             HashFiles => Shape::Hash,
             _ => Shape::Any,
         };
-        let kind = match function {
-            Always => Kind::Known(Evaluation::Boolean(true)),
-            Success | Failure | Cancelled | HashFiles => Kind::Unknown(shape),
+        let inner = match function {
+            Always => AbstractValue::Known(Evaluation::Boolean(true)),
+            Success | Failure | Cancelled | HashFiles => AbstractValue::Unknown(shape),
             _ => match self
                 .value
                 .iter()
-                .map(Value::concrete)
+                .map(TrackedValue::concrete)
                 .collect::<Option<Vec<_>>>()
             {
-                Some(args) => Value::known(Call::evaluate(function, &args)?).kind,
-                None => Kind::Unknown(shape),
+                Some(args) => TrackedValue::known(Call::evaluate(function, &args)?).inner,
+                None => AbstractValue::Unknown(shape),
             },
         };
         if matches!(shape, Shape::Boolean | Shape::Hash) {
             provenance = provenance.controlled();
         }
-        Some(self.map(|_| Value::new(kind).with_provenance(&provenance)))
+        Some(self.map(|_| TrackedValue::new(inner).with_provenance(&provenance)))
     }
 }
 
@@ -509,7 +517,7 @@ mod tests {
 
     #[test]
     fn incomplete_control_dependencies_remain_incomplete() {
-        let mut root = Value::new(Kind::Reference(vec![]));
+        let mut root = TrackedValue::new(AbstractValue::Reference(vec![]));
         root.provenance.incomplete = true;
         let scope = Some(root);
 
@@ -535,7 +543,7 @@ mod tests {
 
     #[test]
     fn independent_choices_preserve_the_last_alternative() {
-        let context = Some(Value::new(Kind::Reference(vec![])));
+        let context = Some(TrackedValue::new(AbstractValue::Reference(vec![])));
         for branch in [
             "case(flags.b{index}, '1', '0')",
             "(flags.b{index} && '1' || '0')",
@@ -568,7 +576,7 @@ mod tests {
 
     #[test]
     fn bindings_preserve_typed_values_and_provenance() {
-        let mut root = Value::new(Kind::Reference(vec![]));
+        let mut root = TrackedValue::new(AbstractValue::Reference(vec![]));
         root.provenance.evidence.insert(7);
         let scope = Some(root);
         let parsed =
@@ -587,7 +595,7 @@ mod tests {
         }
 
         let data = serde_json::json!({"config": {"n": 20}, "list": []});
-        let scope = Some(Value::known(data.try_into().unwrap()));
+        let scope = Some(TrackedValue::known(data.try_into().unwrap()));
         for source in [
             "config == config",
             "list == list",
@@ -605,15 +613,15 @@ mod tests {
         let mut state = State::default();
         let external = state.decision();
         let parsed = Expr::parse("case(config.enabled, 1, 2)").unwrap();
-        let scope = Some(Value::new(Kind::Reference(vec![])));
+        let scope = Some(TrackedValue::new(AbstractValue::Reference(vec![])));
         let first = parsed.evaluate(&mut state, &scope);
         let repeated = parsed.evaluate(&mut state, &scope);
         assert!(!first[0].choices.contains_key(&external));
         assert_eq!(state.product(first.clone(), repeated, |a, _| a).len(), 2);
 
-        let scope = Some(Value::new(Kind::Reference(vec![Access::Key(
-            "other".into(),
-        )])));
+        let scope = Some(TrackedValue::new(AbstractValue::Reference(vec![
+            Access::Key("other".into()),
+        ])));
         let other = parsed.evaluate(&mut state, &scope);
         assert_eq!(state.product(first, other, |a, _| a).len(), 4);
     }
