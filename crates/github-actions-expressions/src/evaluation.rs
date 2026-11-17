@@ -508,6 +508,32 @@ mod tests {
     }
 
     #[test]
+    fn incomplete_control_dependencies_remain_incomplete() {
+        let mut root = Value::new(Kind::Reference(vec![]));
+        root.provenance.incomplete = true;
+        let scope = Some(root);
+
+        for source in [
+            "case(inputs.value, 'a', 'b')",
+            "!inputs.value",
+            "inputs.value == 'expected'",
+            "contains(inputs.value, 'expected')",
+            "hashFiles(inputs.value)",
+            r#"fromJSON('{"key":"fixed"}')[inputs.value]"#,
+        ] {
+            let parsed = Expr::parse(source).expect("valid expression");
+            let values = parsed.evaluate(&mut State::default(), &scope);
+            assert!(!values.is_empty(), "{source}");
+            assert!(
+                values
+                    .iter()
+                    .all(|outcome| outcome.value.dependencies().incomplete),
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
     fn independent_choices_preserve_the_last_alternative() {
         let context = Some(Value::new(Kind::Reference(vec![])));
         for branch in [

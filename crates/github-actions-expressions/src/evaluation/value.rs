@@ -167,7 +167,6 @@ impl Provenance {
     /// ```
     pub fn controlled(mut self) -> Self {
         self.controls.extend(std::mem::take(&mut self.sources));
-        self.incomplete = false;
         self
     }
 }
