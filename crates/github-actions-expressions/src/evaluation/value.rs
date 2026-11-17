@@ -171,18 +171,43 @@ impl Provenance {
     }
 }
 
-/// An Actions value. Array elements are values, not alternative evaluations.
+/// An Actions value.
+///
+/// Note: the [`Self::Array`] and [`Self::Object`] variants are wrapped in an [`Arc`] to preserve
+/// container identity, matching GitHub's own comparison semantics. More precisely, GitHub compares
+/// arrays and objects by identity, and our evaluator matches this by comparing them with
+/// [`Arc::ptr_eq`].
 #[derive(Clone, Debug, PartialEq)]
 pub enum Kind {
     /// A known scalar.
+    ///
+    /// For example, we might know that a given expression evaluates to a literal string `'foo'`.
     Known(Evaluation),
-    /// A runtime value with a known restriction.
+
+    /// An unknown evaluation, but with a possible shape restriction.
+    ///
+    /// For example, we might not know an expression's ultimate evaluation, but we might
+    /// know that it produces a boolean.
     Unknown(Shape),
-    /// An opaque runtime context path supporting further property access.
+
+    /// A runtime value represented by its context path.
+    ///
+    /// Subsequent property access extends this path while
+    /// its evaluation remains unknown.
     Reference(Vec<Access>),
-    /// Array elements with their individual provenance.
+
+    /// An evaluation of array elements, each with their individual provenance.
+    ///
+    /// This is distinct from [`Evaluation::Array`] because each element here
+    /// may not be fully concrete or known. For example, an array might
+    /// contain both a scalar literal `'foo'` and a reference `inputs.foo`.
+    ///
+    /// This represents a single array value, not multiple possible outcomes.
     Array(Arc<Vec<Value>>),
-    /// Object fields with their individual provenance.
+
+    /// An evaluation of object fields, each with their individual provenance.
+    ///
+    /// Like [`Self::Array`] each element may not be fully concrete or known.
     Object(Arc<BTreeMap<String, Value>>),
 }
 
