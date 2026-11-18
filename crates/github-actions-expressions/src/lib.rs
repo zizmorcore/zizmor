@@ -14,6 +14,7 @@ use crate::{
 
 pub mod call;
 pub mod context;
+pub mod evaluation;
 pub mod identifier;
 mod lexer;
 pub mod literal;
@@ -719,51 +720,23 @@ impl<'src> Expr<'src> {
     /// assert_eq!(result, Evaluation::Boolean(false));
     /// ```
     pub fn consteval(&self) -> Option<Evaluation> {
-        match self {
-            Expr::Literal(literal) => Some(literal.consteval()),
+        let values = self.evaluate(&mut evaluation::State::default(), |_, _| vec![]);
+        let [value] = &values[..] else {
+            return None;
+        };
+        value.value.concrete()
+    }
 
-            Expr::BinExpr(BinExpr { lhs, op, rhs }) => {
-                let lhs_val = lhs.consteval()?;
-                let rhs_val = rhs.consteval()?;
-
-                match op {
-                    BinOp::And => {
-                        // GitHub Actions && semantics: if LHS is falsy, return LHS, else return RHS
-                        if lhs_val.as_boolean() {
-                            Some(rhs_val)
-                        } else {
-                            Some(lhs_val)
-                        }
-                    }
-                    BinOp::Or => {
-                        // GitHub Actions || semantics: if LHS is truthy, return LHS, else return RHS
-                        if lhs_val.as_boolean() {
-                            Some(lhs_val)
-                        } else {
-                            Some(rhs_val)
-                        }
-                    }
-                    BinOp::Eq => Some(Evaluation::Boolean(lhs_val.sema() == rhs_val.sema())),
-                    BinOp::Neq => Some(Evaluation::Boolean(lhs_val.sema() != rhs_val.sema())),
-                    BinOp::Lt => Some(Evaluation::Boolean(lhs_val.sema() < rhs_val.sema())),
-                    BinOp::Le => Some(Evaluation::Boolean(lhs_val.sema() <= rhs_val.sema())),
-                    BinOp::Gt => Some(Evaluation::Boolean(lhs_val.sema() > rhs_val.sema())),
-                    BinOp::Ge => Some(Evaluation::Boolean(lhs_val.sema() >= rhs_val.sema())),
-                }
-            }
-
-            Expr::UnExpr { op, expr } => {
-                let val = expr.consteval()?;
-                match op {
-                    UnOp::Not => Some(Evaluation::Boolean(!val.as_boolean())),
-                }
-            }
-
-            Expr::Call(call) => call.consteval(),
-
-            // Non-constant expressions
-            _ => None,
-        }
+    /// Evaluate the expression, looking up each context path in the caller's bindings.
+    ///
+    /// If a binding contains another expression, evaluate it with the state passed
+    /// to the lookup so both expressions share decisions and work limits.
+    pub fn evaluate(
+        &self,
+        state: &mut evaluation::State,
+        mut lookup: impl FnMut(&mut evaluation::State, &[evaluation::Access]) -> evaluation::Outcomes,
+    ) -> evaluation::Outcomes {
+        state.evaluate(self, &mut lookup)
     }
 }
 

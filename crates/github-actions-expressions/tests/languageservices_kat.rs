@@ -93,14 +93,6 @@ const SKIPPED_CASES: LazyLock<HashSet<(&str, &str, usize)>> = LazyLock::new(|| {
         ("basic.json", "unknown context", 0),
         // We don't parse '' (an empty expression) as valid.
         ("basic.json", "empty_expression", 0),
-        // We don't currently support context evaluation on `fromJSON` in consteval.
-        // TODO: We should support this.
-        ("op_dot.json", "property-basics", 7),
-        ("op_dot.json", "property-basics", 8),
-        // We don't currently support index evaluation on `fromJSON` in consteval.
-        // TODO: We should support this.
-        ("op_idx.json", "index-following-group", 0),
-        ("op_idx.json", "index-following-function", 0),
     ])
 });
 
@@ -124,8 +116,6 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
             let label = format!("{suite_name}::{group}[{i}] `{}`", case.expr);
 
             // Skip cases that require context variables.
-            // TODO: We should probably test these too, and broaden
-            // `consteval` to include support for known contexts.
             if case.contexts.is_some() {
                 continue;
             }

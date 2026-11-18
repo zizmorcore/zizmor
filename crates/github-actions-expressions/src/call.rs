@@ -114,24 +114,20 @@ impl<'src> Call<'src> {
         Ok(Self { func, args })
     }
 
-    /// Performs constant evaluation of a GitHub Actions expression
-    /// function call.
-    pub(crate) fn consteval(&self) -> Option<Evaluation> {
-        let args = self
-            .args
-            .iter()
-            .map(|arg| arg.consteval())
-            .collect::<Option<Vec<Evaluation>>>()?;
-
-        match &self.func {
-            Function::Format => Self::consteval_format(&args),
-            Function::Contains => Self::consteval_contains(&args),
-            Function::StartsWith => Self::consteval_startswith(&args),
-            Function::EndsWith => Self::consteval_endswith(&args),
-            Function::ToJSON => Self::consteval_tojson(&args),
-            Function::FromJSON => Self::consteval_fromjson(&args),
-            Function::Join => Self::consteval_join(&args),
-            Function::Case => Self::consteval_case(&args),
+    /// Applies a function to already evaluated arguments.
+    ///
+    /// Returns `None` for invalid arguments or functions requiring runtime state.
+    /// Argument counts must satisfy the same constraints as a parsed call.
+    pub fn evaluate(func: Function, args: &[Evaluation]) -> Option<Evaluation> {
+        match func {
+            Function::Format => Self::consteval_format(args),
+            Function::Contains => Self::consteval_contains(args),
+            Function::StartsWith => Self::consteval_startswith(args),
+            Function::EndsWith => Self::consteval_endswith(args),
+            Function::ToJSON => Self::consteval_tojson(args),
+            Function::FromJSON => Self::consteval_fromjson(args),
+            Function::Join => Self::consteval_join(args),
+            Function::Case => Self::consteval_case(args),
             _ => None,
         }
     }
@@ -1104,6 +1100,14 @@ mod tests {
             ),
             // Invalid: `case` with non-boolean predicate
             ("case(1, 'yes', 0, 'no', 'maybe')", None),
+            ("case('yes', 'a', 'b')", None),
+            ("case(null, 'a', 'b')", None),
+            ("case(fromJSON('[]'), 'a', 'b')", None),
+            ("case(hashFiles('*.txt'), 'a', 'b')", None),
+            (
+                "case(false, fromJSON('invalid'), 'b')",
+                Some(Evaluation::String("b".into())),
+            ),
         ];
 
         for (expr_str, expected) in test_cases {
