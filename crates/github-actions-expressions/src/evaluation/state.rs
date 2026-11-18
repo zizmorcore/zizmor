@@ -10,7 +10,9 @@ use super::{DecisionId, Outcome, Outcomes, TrackedValue};
 /// Both expressions can then refer to the same decisions and draw on the same
 /// work budget.
 #[derive(Default)]
-pub struct State {
+pub(super) struct State {
+    pub(super) definitions: BTreeMap<usize, DecisionId>,
+    pub(super) matrices: BTreeMap<DecisionId, Outcomes>,
     depth: usize,
     work: usize,
     incomplete: bool,
@@ -36,7 +38,7 @@ impl State {
     /// Keep the ID if later lookups depend on the same choice. For example,
     /// all reads of a job's matrix fields depend on which row that job uses.
     /// They share a decision ID, with a different alternative for each row.
-    pub fn decision(&mut self) -> DecisionId {
+    pub(super) fn decision(&mut self) -> DecisionId {
         let id = DecisionId(self.next_decision);
         self.next_decision += 1;
         id
@@ -69,7 +71,7 @@ impl State {
     /// If a limit cut evaluation short, add one unknown outcome for the
     /// unexplored alternatives when the outermost evaluation finishes. This
     /// outcome is marked incomplete and counts toward the result limit.
-    pub fn finish(&self, mut values: Outcomes) -> Outcomes {
+    pub(super) fn finish(&self, mut values: Outcomes) -> Outcomes {
         if self.depth == 0 && self.incomplete {
             values.truncate(MAX_ALTERNATIVES - 1);
             values.push(Outcome::new(TrackedValue::incomplete()));
@@ -79,7 +81,7 @@ impl State {
 
     /// Collect alternatives up to the result and work limits. If either limit
     /// cuts the collection short, mark this evaluation incomplete.
-    pub fn bound<T>(&mut self, values: impl IntoIterator<Item = T>) -> Vec<T> {
+    pub(super) fn bound<T>(&mut self, values: impl IntoIterator<Item = T>) -> Vec<T> {
         let mut results = Vec::new();
         for value in values {
             if !self.checkpoint() {
@@ -96,7 +98,7 @@ impl State {
 
     /// Charge one unit of work. A `false` result means this unit exceeds the
     /// budget and the caller should stop exploring.
-    pub fn checkpoint(&mut self) -> bool {
+    pub(super) fn checkpoint(&mut self) -> bool {
         self.work += 1;
         let available = self.work <= MAX_WORK;
         self.incomplete |= !available;
@@ -131,7 +133,7 @@ impl State {
     /// Evaluate each part and collect one value per part, in input order, for
     /// each compatible combination. For example, a function call uses this to
     /// build its possible argument lists. Empty input yields one empty list.
-    pub fn sequence<T, U: Clone>(
+    pub(super) fn sequence<T, U: Clone>(
         &mut self,
         parts: impl IntoIterator<Item = T>,
         mut evaluate: impl FnMut(&mut Self, T) -> Outcomes<U>,
@@ -155,30 +157,7 @@ impl State {
     /// Two outcomes are compatible if they agree on every decision present in
     /// both. Each result carries the union of their assumptions and the value
     /// returned by `value`. All decision IDs must belong to this state.
-    ///
-    /// In this example, both operands depend on the same decision.
-    ///
-    /// ```
-    /// use github_actions_expressions::evaluation::{AlternativeId, Outcome, State};
-    ///
-    /// let mut state = State::default();
-    /// let decision = state.decision();
-    /// let enabled = Outcome::new("enabled")
-    ///     .assume(decision, AlternativeId::new(1))
-    ///     .unwrap();
-    /// let disabled = Outcome::new("disabled")
-    ///     .assume(decision, AlternativeId::new(0))
-    ///     .unwrap();
-    ///
-    /// let pairs = state.product(
-    ///     vec![enabled.clone(), disabled.clone()],
-    ///     vec![enabled, disabled],
-    ///     |left, right| (left, right),
-    /// );
-    /// let values: Vec<_> = pairs.into_iter().map(|outcome| outcome.value).collect();
-    /// assert_eq!(values, [("enabled", "enabled"), ("disabled", "disabled")]);
-    /// ```
-    pub fn product<T: Clone, U: Clone, V>(
+    pub(super) fn product<T: Clone, U: Clone, V>(
         &mut self,
         left: Outcomes<T>,
         right: Outcomes<U>,
@@ -215,7 +194,7 @@ mod tests {
             ..State::default()
         };
         let parsed = Expr::parse("config.x").unwrap();
-        let values = parsed.evaluate(&mut analysis, |_, _| vec![]);
+        let values = analysis.evaluate(&parsed, &super::super::Scope::default());
         assert_eq!(values.len(), 1);
         assert!(values[0].value.provenance.incomplete);
 

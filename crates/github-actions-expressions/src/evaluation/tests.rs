@@ -1,13 +1,8 @@
 use super::*;
 use crate::Evaluation;
 
-fn bindings(root: &TrackedValue) -> impl FnMut(&mut State, &[Access]) -> Outcomes {
-    |_, path| {
-        let value = path
-            .iter()
-            .fold(root.clone(), |value, key| value.apply_access(key));
-        vec![Outcome::new(value)]
-    }
+fn bindings(root: &TrackedValue) -> Scope {
+    Scope::new(Definition::value(root.clone()))
 }
 
 #[test]
@@ -24,7 +19,7 @@ fn incomplete_control_dependencies_remain_incomplete() {
         r#"fromJSON('{"key":"fixed"}')[inputs.value]"#,
     ] {
         let parsed = Expr::parse(source).expect("valid expression");
-        let values = parsed.evaluate(&mut State::default(), bindings(&root));
+        let values = bindings(&root).evaluate(&parsed);
         assert!(!values.is_empty(), "{source}");
         assert!(
             values
@@ -51,7 +46,7 @@ fn independent_choices_preserve_the_last_alternative() {
         );
         let parsed = Expr::parse(&source).expect("valid expression");
         let mut analysis = State::default();
-        let values = parsed.evaluate(&mut analysis, bindings(&context));
+        let values = analysis.evaluate(&parsed, &bindings(&context));
         assert_eq!(values.len(), 1 << 8);
         assert!(
             values
@@ -72,7 +67,7 @@ fn bindings_preserve_typed_values_and_provenance() {
     root.provenance.evidence.insert(7);
     let parsed =
         Expr::parse(r#"case(flags.enabled, fromJSON('{"n":20}'), fromJSON('{"n":1}')).n"#).unwrap();
-    let values = parsed.evaluate(&mut State::default(), bindings(&root));
+    let values = bindings(&root).evaluate(&parsed);
     assert_eq!(values.len(), 2);
     assert_eq!(values[0].value.concrete(), Some(Evaluation::Number(1.0)));
     assert_eq!(values[1].value.concrete(), Some(Evaluation::Number(20.0)));
@@ -93,7 +88,7 @@ fn bindings_preserve_typed_values_and_provenance() {
         "list != fromJSON('[]')",
     ] {
         let parsed = Expr::parse(source).unwrap();
-        let values = parsed.evaluate(&mut State::default(), bindings(&root));
+        let values = bindings(&root).evaluate(&parsed);
         assert_eq!(values[0].value.concrete(), Some(Evaluation::Boolean(true)));
     }
 }
@@ -104,12 +99,33 @@ fn decisions_are_stable_across_reads_and_distinct_across_scopes() {
     let external = state.decision();
     let parsed = Expr::parse("case(config.enabled, 1, 2)").unwrap();
     let scope = TrackedValue::new(AbstractValue::Reference(vec![]));
-    let first = parsed.evaluate(&mut state, bindings(&scope));
-    let repeated = parsed.evaluate(&mut state, bindings(&scope));
+    let first = state.evaluate(&parsed, &bindings(&scope));
+    let repeated = state.evaluate(&parsed, &bindings(&scope));
     assert!(!first[0].choices.contains_key(&external));
     assert_eq!(state.product(first.clone(), repeated, |a, _| a).len(), 2);
 
     let scope = TrackedValue::new(AbstractValue::Reference(vec![Access::Key("other".into())]));
-    let other = parsed.evaluate(&mut state, bindings(&scope));
+    let other = state.evaluate(&parsed, &bindings(&scope));
     assert_eq!(state.product(first, other, |a, _| a).len(), 4);
+}
+
+#[test]
+fn nested_definition_preserves_shared_choices_and_short_circuits() {
+    let known = |value| Definition::known(Evaluation::Boolean(value));
+    let mut producer = Scope::default();
+    producer.bind("flag", Definition::choice(vec![known(false), known(true)]));
+    let output = Definition::template(
+        "${{ flag || (false && fromJSON('invalid')) }}".into(),
+        producer,
+    );
+    let mut consumer = Scope::default();
+    consumer.bind("first", output.clone());
+    consumer.bind("second", output);
+    let values = consumer.evaluate(&Expr::parse("first == second").unwrap());
+    assert_eq!(values.len(), 2);
+    assert!(
+        values
+            .iter()
+            .all(|o| o.value.concrete() == Some(Evaluation::Boolean(true)))
+    );
 }

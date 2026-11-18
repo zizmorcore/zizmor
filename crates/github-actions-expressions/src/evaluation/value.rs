@@ -40,11 +40,11 @@ use std::{
 /// Identifies a decision.
 ///
 /// Decisions can be things like predicates, or the selection of a row from a matrix.
-/// Decisions appear as the keys in [`Outcome::choices`], where each decision
+/// Decisions appear as the keys in an outcome's choice map, where each decision
 /// is associated with the alternative (as [`AlternativeId`]) that's assumed
 /// by the overall outcome.
 ///
-/// In plain English, if [`Outcome::choices`] has `{D0: A1}`, then
+/// In plain English, if an outcome's choice map has `{D0: A1}`, then
 /// the outcome assumes that decision D0 selects alternative A1.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DecisionId(pub(super) usize);
@@ -58,7 +58,7 @@ pub struct DecisionId(pub(super) usize);
 /// is to use `0` for a false alternative and `1` for a true alternative.
 ///
 /// Alternatives are computed during evaluation and can be derived either from
-/// expression semantics (e.g. predicate semantics) or resolver states (e.g.
+/// expression semantics (e.g. predicate semantics) or workflow definitions (e.g.
 /// matrix row alternatives or skipped/executed job alternatives).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AlternativeId(usize);
@@ -485,8 +485,8 @@ pub struct Outcome<T = TrackedValue> {
     /// An entry `{D0: A1}` means that this outcome assumes that decision D0
     /// selects alternative A1. A missing entry means an unconstrained decision.
     ///
-    /// See [`super::State::product`] for how outcomes can be combined.
-    pub choices: BTreeMap<DecisionId, AlternativeId>,
+    /// Only outcomes that agree on their shared decisions can be combined.
+    pub(super) choices: BTreeMap<DecisionId, AlternativeId>,
 }
 
 /// Zero or more possible outcomes.
@@ -555,7 +555,11 @@ impl<T> Outcome<T> {
     ///
     /// Return `None` if this outcome already assumes a different alternative for
     /// the same decision.
-    pub fn assume(mut self, decision: DecisionId, alternative: AlternativeId) -> Option<Self> {
+    pub(super) fn assume(
+        mut self,
+        decision: DecisionId,
+        alternative: AlternativeId,
+    ) -> Option<Self> {
         if self
             .choices
             .get(&decision)

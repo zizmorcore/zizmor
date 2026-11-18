@@ -20,7 +20,7 @@
 //! result in imprecisions, since it would admit combinations like `a/b` when only `a/a`
 //! and `b/b` are actually possible.
 //!
-//! An evaluation's decisions are managed through its [`State`]. The [`State`]
+//! An evaluation's decisions are managed internally. The evaluator
 //! allocates new decisions and can also merge outcomes together when their
 //! assumptions agree.
 //!
@@ -28,12 +28,17 @@
 //! records the inputs and source locations used to obtain a value.
 //! Callers can use this to explain the result in a human-friendly manner.
 
+mod definitions;
+mod matrix;
 mod state;
+mod template;
 #[cfg(test)]
 mod tests;
 mod value;
 
-pub use state::State;
+pub use definitions::{Definition, Scope};
+use state::State;
+pub use template::fenced_span;
 pub use value::*;
 
 use crate::{
@@ -42,41 +47,23 @@ use crate::{
     op::{BinExpr, BinOp},
 };
 
-/// Looks up an evaluated context path in the caller's bindings. A binding may
-/// itself contain an expression, so the callback receives the current state.
-type Lookup<'a> = dyn FnMut(&mut State, &[Access]) -> Outcomes + 'a;
-
-impl Expr<'_> {
-    /// Evaluate the expression, looking up each context path in the caller's bindings.
-    ///
-    /// If a binding contains another expression, evaluate it with the state passed
-    /// to the lookup so both expressions share decisions and work limits.
-    pub fn evaluate(
-        &self,
-        state: &mut State,
-        mut lookup: impl FnMut(&mut State, &[Access]) -> Outcomes,
-    ) -> Outcomes {
-        state.evaluate(self, &mut lookup)
-    }
-}
-
 impl State {
-    fn evaluate(&mut self, expr: &Expr<'_>, lookup: &mut Lookup<'_>) -> Outcomes {
+    fn evaluate(&mut self, expr: &Expr<'_>, scope: &Scope) -> Outcomes {
         self.within_limits(|state| match expr {
             Expr::Literal(literal) => vec![Outcome::known(literal.consteval())],
-            Expr::UnExpr { expr, .. } => state.evaluate(expr, lookup).map(TrackedValue::negate),
+            Expr::UnExpr { expr, .. } => state.evaluate(expr, scope).map(TrackedValue::negate),
             Expr::BinExpr(bin) if matches!(bin.op, BinOp::And | BinOp::Or) => {
-                state.short_circuit(bin, lookup)
+                state.short_circuit(bin, scope)
             }
             Expr::BinExpr(bin) => {
-                let lhs = state.evaluate(&bin.lhs, lookup);
-                let rhs = state.evaluate(&bin.rhs, lookup);
+                let lhs = state.evaluate(&bin.lhs, scope);
+                let rhs = state.evaluate(&bin.rhs, scope);
                 state.product(lhs, rhs, |lhs, rhs| lhs.compare(&bin.op, &rhs))
             }
-            Expr::Context(reference) => state.context(&reference.parts, lookup),
-            Expr::Call(call) if call.func == Case => state.case(&call.args, lookup),
+            Expr::Context(reference) => state.context(&reference.parts, scope),
+            Expr::Call(call) if call.func == Case => state.case(&call.args, scope),
             Expr::Call(call) => {
-                let args = state.sequence(&call.args, |state, arg| state.evaluate(arg, lookup));
+                let args = state.sequence(&call.args, |state, arg| state.evaluate(arg, scope));
                 args.into_iter()
                     .filter_map(|args| args.evaluate_call(call.func))
                     .collect()
@@ -88,8 +75,8 @@ impl State {
     /// For each possible truth value of the left operand, return the operand
     /// selected by `&&` or `||`. Evaluate the right operand only on branches
     /// that reach it.
-    fn short_circuit(&mut self, bin: &BinExpr<'_>, lookup: &mut Lookup<'_>) -> Outcomes {
-        let left = self.evaluate(&bin.lhs, lookup);
+    fn short_circuit(&mut self, bin: &BinExpr<'_>, scope: &Scope) -> Outcomes {
+        let left = self.evaluate(&bin.lhs, scope);
         let mut results = vec![];
         for (truth, condition) in self.conditions(bin.lhs.origin.raw, left) {
             match (&bin.op, truth) {
@@ -103,7 +90,7 @@ impl State {
                     }
                 })),
                 _ => {
-                    let right = self.evaluate(&bin.rhs, lookup);
+                    let right = self.evaluate(&bin.rhs, scope);
                     results.extend(self.product(vec![condition], right, |predicate, value| {
                         value.conditioned(&predicate)
                     }));
@@ -115,25 +102,25 @@ impl State {
 
     /// Evaluate predicate/value pairs in order. A true branch selects its
     /// paired value. A false branch continues to the next pair or the fallback.
-    fn case(&mut self, args: &[SpannedExpr<'_>], lookup: &mut Lookup<'_>) -> Outcomes {
+    fn case(&mut self, args: &[SpannedExpr<'_>], scope: &Scope) -> Outcomes {
         if self.exhausted() {
             return Outcomes::default();
         }
         let (predicate, selected, remaining) = match args {
-            [fallback] => return self.evaluate(fallback, lookup),
+            [fallback] => return self.evaluate(fallback, scope),
             [predicate, selected, remaining @ ..] => (predicate, selected, remaining),
             [] => unreachable!("a parsed case expression has a fallback"),
         };
 
-        let predicates = self.evaluate(predicate, lookup);
+        let predicates = self.evaluate(predicate, scope);
         let booleans = predicates.into_iter().filter(|p| p.value.can_be_boolean());
         let mut results = vec![];
         for (truth, condition) in self.conditions(predicate.origin.raw, booleans) {
             let values = self.nested(|state| {
                 if truth {
-                    state.evaluate(selected, lookup)
+                    state.evaluate(selected, scope)
                 } else {
-                    state.case(remaining, lookup)
+                    state.case(remaining, scope)
                 }
             });
             results.extend(self.product(vec![condition], values, |condition, value| {
@@ -175,12 +162,12 @@ impl State {
     /// Look up a named context such as `env.NAME` using its full path. For
     /// `fromJSON(inputs.data).name`, evaluate the call first, then apply
     /// the field access to each value it returns.
-    fn context(&mut self, parts: &[SpannedExpr<'_>], lookup: &mut Lookup<'_>) -> Outcomes {
+    fn context(&mut self, parts: &[SpannedExpr<'_>], scope: &Scope) -> Outcomes {
         let (first, rest) = parts.split_first().expect("parsed context has a head");
         if matches!(first.inner, Expr::Identifier(_)) {
             let mut results = vec![];
-            for path in self.paths(parts, lookup) {
-                let values = lookup(self, &path.value.parts);
+            for path in self.paths(parts, scope) {
+                let values = scope.read(self, &path.value.parts, &path.value.parts);
                 results.extend(self.product(vec![path], values, |path, value| {
                     value.with_provenance(&path.provenance)
                 }));
@@ -188,9 +175,9 @@ impl State {
             return self.bound(results);
         }
 
-        let mut values = self.evaluate(first, lookup);
+        let mut values = self.evaluate(first, scope);
         for part in rest {
-            let keys = self.keys(part, lookup);
+            let keys = self.keys(part, scope);
             values = self.product(values, keys, |value, (key, provenance)| {
                 value.apply_access(&key).with_provenance(&provenance)
             });
@@ -198,10 +185,10 @@ impl State {
         values
     }
 
-    fn paths(&mut self, parts: &[SpannedExpr<'_>], lookup: &mut Lookup<'_>) -> Outcomes<Path> {
+    fn paths(&mut self, parts: &[SpannedExpr<'_>], scope: &Scope) -> Outcomes<Path> {
         let mut paths = vec![Outcome::new(Path::default())];
         for part in parts {
-            let keys = self.keys(part, lookup);
+            let keys = self.keys(part, scope);
             paths = self.product(paths, keys, |mut path, (key, provenance)| {
                 path.parts.push(key);
                 path.provenance.extend(&provenance);
@@ -213,17 +200,13 @@ impl State {
 
     /// Evaluate one path component. A computed index can produce several keys
     /// or an unknown key. Each carries the dependencies used to compute it.
-    fn keys(
-        &mut self,
-        part: &SpannedExpr<'_>,
-        lookup: &mut Lookup<'_>,
-    ) -> Outcomes<(Access, Provenance)> {
+    fn keys(&mut self, part: &SpannedExpr<'_>, scope: &Scope) -> Outcomes<(Access, Provenance)> {
         let access = match &part.inner {
             Expr::Identifier(key) => Access::Key(key.as_str().into()),
             Expr::Star => Access::Wildcard,
-            Expr::Index(index) => return self.keys(index, lookup),
+            Expr::Index(index) => return self.keys(index, scope),
             _ => {
-                return self.evaluate(part, lookup).map(|value| {
+                return self.evaluate(part, scope).map(|value| {
                     let key = value.concrete().map_or(Access::Unknown, |value| {
                         Access::Key(value.sema().to_string())
                     });
