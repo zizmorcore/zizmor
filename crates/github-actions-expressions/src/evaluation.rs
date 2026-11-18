@@ -42,7 +42,11 @@ use crate::{
     op::{BinExpr, BinOp},
 };
 
-/// Decisions and work limits shared by an evaluation and its resolved definitions.
+/// Tracks decisions and work limits for one evaluation.
+///
+/// When a context lookup evaluates another expression, pass it the same state.
+/// Both expressions can then refer to the same decisions and draw on the same
+/// work budget.
 #[derive(Default)]
 pub struct State {
     depth: usize,
@@ -52,16 +56,18 @@ pub struct State {
     predicates: BTreeMap<Predicate, DecisionId>,
 }
 
+/// One possible context path, together with the provenance of its computed indices.
+///
+/// For `env[inputs.field]`, the index determines which field is read. Its
+/// dependencies become control provenance on the value returned by the lookup.
 #[derive(Clone, Default)]
 struct Path {
     parts: Vec<Access>,
     provenance: Provenance,
 }
 
-/// Cache key for recognizing a repeated predicate.
-///
-/// Expression text is compared verbatim. Input identities distinguish the same
-/// expression evaluated against different bindings.
+/// Identifies a repeated predicate by its verbatim expression text and the
+/// union of its source and control paths.
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Predicate {
     expression: String,
@@ -72,24 +78,24 @@ const MAX_ALTERNATIVES: usize = 256;
 const MAX_DEPTH: usize = 64;
 const MAX_WORK: usize = 16_384;
 
+/// Looks up an evaluated context path in the caller's bindings. A binding may
+/// itself contain an expression, so the callback receives the current state.
 type Lookup<'a> = dyn FnMut(&mut State, &[Access]) -> Outcomes + 'a;
 
 impl State {
-    /// Allocate a fresh ID for a choice with mutually exclusive alternatives.
+    /// Allocate a new decision ID in this state.
     ///
-    /// Call this once per independent choice and retain the ID for subsequent
-    /// reads. Every call allocates a different decision, even if the underlying
-    /// expressions or values happen to be equal.
-    ///
-    /// The evaluator reuses predicate IDs by matching expression text and input
-    /// identities. Callers must retain their own IDs for choices such as a
-    /// matrix's row or a job's execution status.
+    /// Keep the ID if later lookups depend on the same choice. For example,
+    /// all reads of a job's matrix fields depend on which row that job uses.
+    /// They share a decision ID, with a different alternative for each row.
     pub fn decision(&mut self) -> DecisionId {
         let id = DecisionId(self.next_decision);
         self.next_decision += 1;
         id
     }
 
+    /// Find or allocate the decision for this predicate. Without a source or
+    /// control path, we have no binding identity to associate with another read.
     fn predicate(&mut self, expression: &str, value: &TrackedValue) -> Option<DecisionId> {
         let mut provenance = value.dependencies();
         provenance.sources.extend(provenance.controls);
@@ -108,7 +114,9 @@ impl State {
         Some(id)
     }
 
-    /// Retain an unknown remainder when the outermost evaluation hits a limit.
+    /// If a limit cut evaluation short, add one unknown outcome for the
+    /// unexplored alternatives when the outermost evaluation finishes. This
+    /// outcome is marked incomplete and counts toward the result limit.
     pub fn finish(&self, mut values: Outcomes) -> Outcomes {
         if self.depth == 0 && self.incomplete {
             values.truncate(MAX_ALTERNATIVES - 1);
@@ -117,7 +125,8 @@ impl State {
         values
     }
 
-    /// Limit alternatives and charge their evaluation work.
+    /// Collect alternatives up to the result and work limits. If either limit
+    /// cuts the collection short, mark this evaluation incomplete.
     pub fn bound<T>(&mut self, values: impl IntoIterator<Item = T>) -> Vec<T> {
         let mut values: Vec<_> = values
             .into_iter()
@@ -129,7 +138,8 @@ impl State {
         values
     }
 
-    /// Charge one unit of work, returning false when the budget is exhausted.
+    /// Charge one unit of work. A `false` result means this unit exceeds the
+    /// budget and the caller should stop exploring.
     pub fn checkpoint(&mut self) -> bool {
         self.work += 1;
         let available = self.work <= MAX_WORK;
@@ -143,7 +153,9 @@ impl State {
         exhausted
     }
 
-    /// Evaluate parts and assemble compatible combinations in order.
+    /// Evaluate each part and collect one value per part, in input order, for
+    /// each compatible combination. For example, a function call uses this to
+    /// build its possible argument lists. Empty input yields one empty list.
     pub fn sequence<T, U: Clone>(
         &mut self,
         parts: impl IntoIterator<Item = T>,
@@ -163,13 +175,13 @@ impl State {
         combinations
     }
 
-    /// Form pairs of outcomes whose assumptions can hold together.
+    /// Combine each left outcome with each compatible right outcome.
     ///
-    /// Outcomes with no shared decisions can be paired freely. For a shared
-    /// decision, both outcomes must name the same alternative. The result combines
-    /// their choice maps and uses `value` to combine their payloads.
+    /// Two outcomes are compatible if they agree on every decision present in
+    /// both. Each result carries the union of their assumptions and the value
+    /// returned by `value`. All decision IDs must belong to this state.
     ///
-    /// Two reads of the same choice produce pairs with matching alternatives:
+    /// In this example, both operands depend on the same decision.
     ///
     /// ```
     /// use github_actions_expressions::evaluation::{AlternativeId, Outcome, State};
@@ -191,8 +203,6 @@ impl State {
     /// let values: Vec<_> = pairs.into_iter().map(|outcome| outcome.value).collect();
     /// assert_eq!(values, [("enabled", "enabled"), ("disabled", "disabled")]);
     /// ```
-    ///
-    /// All decision IDs must have been allocated by this state.
     pub fn product<T: Clone, U: Clone, V>(
         &mut self,
         left: Outcomes<T>,
@@ -238,6 +248,9 @@ impl State {
         self.finish(values)
     }
 
+    /// Pair each possible truth value with the outcome that permits it. An
+    /// unknown truth value can yield both branches. `case` requires a boolean
+    /// predicate, while `&&` and `||` use Actions truthiness.
     fn conditions(
         &mut self,
         predicate: &SpannedExpr<'_>,
@@ -278,6 +291,8 @@ impl State {
         self.bound(conditions)
     }
 
+    /// Evaluate one path component. A computed index can produce several keys
+    /// or an unknown key. Each carries the dependencies used to compute it.
     fn keys(
         &mut self,
         part: &SpannedExpr<'_>,
@@ -343,6 +358,9 @@ impl State {
         }
     }
 
+    /// For each possible truth value of the left operand, return the operand
+    /// selected by `&&` or `||`. Evaluate the right operand only on branches
+    /// that reach it.
     fn short_circuit(&mut self, bin: &BinExpr<'_>, lookup: &mut Lookup<'_>) -> Outcomes {
         let mut results = vec![];
         for (truth, condition) in self.conditions(&bin.lhs, false, lookup) {
@@ -350,6 +368,8 @@ impl State {
             if use_left {
                 results.push(condition.map(|value| {
                     if !truth && value.truth().is_none() {
+                        // This branch returns the left operand of `&&`. Its
+                        // exact value is unknown, but it must be falsy here.
                         TrackedValue::new(AbstractValue::Unknown(Shape::Falsy)).conditioned(&value)
                     } else {
                         value
@@ -365,6 +385,9 @@ impl State {
         self.bound(results)
     }
 
+    /// Look up a named context such as `env.NAME` using its full path. For
+    /// `fromJSON(inputs.data).name`, evaluate the call first, then apply
+    /// the field access to each value it returns.
     fn context(&mut self, parts: &[SpannedExpr<'_>], lookup: &mut Lookup<'_>) -> Outcomes {
         let (first, rest) = parts.split_first().expect("parsed context has a head");
         if matches!(first.inner, Expr::Identifier(_)) {
@@ -387,6 +410,8 @@ impl State {
         values
     }
 
+    /// Evaluate predicate/value pairs in order. A true branch selects its
+    /// paired value. A false branch continues to the next pair or the fallback.
     fn case(&mut self, args: &[SpannedExpr<'_>], lookup: &mut Lookup<'_>) -> Outcomes {
         if self.exhausted() {
             return Outcomes::default();
@@ -435,6 +460,9 @@ impl TrackedValue {
 }
 
 impl Outcome<Vec<TrackedValue>> {
+    /// Evaluate a function for one compatible argument list. For example,
+    /// `hashFiles` needs the runner's files even if its patterns are known,
+    /// so its result has shape [`Shape::Hash`].
     fn evaluate_call(self, function: Function) -> Option<Outcome> {
         let mut provenance = Provenance::default();
         for value in &self.value {
