@@ -823,6 +823,9 @@ error[excessive-permissions]: overly broad permissions
 error[template-injection]: code injection via template expansion
   --> .github/workflows/release.yml:83:102
    |
+44 |       tag:
+   |       --- input tag declared here
+...
 82 |         run: |
    |         --- this run block
 83 |           dist ${{ (inputs.tag && inputs.tag != 'dry-run' && format('host --steps=create --tag={0}', inputs.tag)) || 'plan' }} --out...
@@ -833,6 +836,9 @@ error[template-injection]: code injection via template expansion
 info[template-injection]: code injection via template expansion
    --> .github/workflows/release.yml:147:26
     |
+ 44 |       tag:
+    |       --- input tag declared here
+...
 146 |         run: |
     |         --- this run block
 147 |           dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json "--artifacts=global" > dist-manifest.json
@@ -844,6 +850,9 @@ info[template-injection]: code injection via template expansion
 info[template-injection]: code injection via template expansion
    --> .github/workflows/release.yml:199:25
     |
+ 44 |       tag:
+    |       --- input tag declared here
+...
 198 |         run: |
     |         --- this run block
 199 |           dist host ${{ needs.plan.outputs.tag-flag }} --steps=upload --steps=release --output-format=json > dist-manifest.json
@@ -855,6 +864,9 @@ info[template-injection]: code injection via template expansion
 info[template-injection]: code injection via template expansion
    --> .github/workflows/release.yml:291:34
     |
+ 44 |       tag:
+    |       --- input tag declared here
+...
 287 | ...   run: |
     |       --- this run block
 ...

@@ -3,9 +3,16 @@ on:
   workflow_call:
     inputs:
       test:
-        description: "Test"
-        required: true
         type: string
+      called:
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      test:
+        type: boolean
+      manual:
+        type: boolean
+  push:
 
 permissions: {}
 
@@ -14,5 +21,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - run: |
-          echo "doing a thing: ${{ inputs.test }}"
+      - name: Only workflow_call accepts the string 'true'
+        run: echo "${{ inputs.test == 'true' && github.ref_name || '' }}"
+
+      - name: Only push has neither boolean input
+        run: echo "${{ format('{0}{1}', inputs.called, inputs.manual) == '' && github.ref_name || '' }}"
+
+      - name: These inputs belong to different triggers
+        run: echo "${{ inputs.called && inputs.manual && github.ref_name || '' }}"
+
+      - name: Both reads see the same boolean
+        run: echo "${{ inputs.manual && !inputs['MANUAL'] && github.ref_name || '' }}"

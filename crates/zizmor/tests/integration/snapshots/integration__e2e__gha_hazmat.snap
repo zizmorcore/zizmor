@@ -891,6 +891,9 @@ error[template-injection]: code injection via template expansion
 error[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:55:36
    |
+25 |       hackme:
+   |       ------ input hackme declared here
+...
 54 |         run: |
    |         --- this run block
 55 |           echo "doing a thing: ${{ inputs.hackme }}"
@@ -902,6 +905,9 @@ error[template-injection]: code injection via template expansion
 error[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:65:36
    |
+29 |       hackme-call:
+   |       ----------- input hackme-call declared here
+...
 64 |         run: |
    |         --- this run block
 65 |           echo "doing a thing: ${{ inputs.hackme-call }}"

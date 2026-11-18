@@ -1,5 +1,6 @@
 //! Resolve workflow expressions and record where their inputs were defined.
 
+mod inputs;
 mod matrix;
 
 use github_actions_expressions::evaluation::*;
@@ -80,6 +81,8 @@ pub(crate) struct Analysis<'doc> {
 #[derive(Default)]
 struct Bindings<'doc> {
     evidence: Vec<SymbolicLocation<'doc>>,
+    input_trigger: Option<DecisionId>,
+    inputs: BTreeMap<String, Outcomes>,
     matrices: BTreeMap<String, (DecisionId, Outcomes)>,
     job_states: BTreeMap<String, DecisionId>,
 }
@@ -115,6 +118,15 @@ impl<'doc> Bindings<'doc> {
 
     fn resolve(&mut self, state: &mut State, path: &[Access], context: &Context<'doc>) -> Outcomes {
         match path[0].text().to_ascii_lowercase().as_str() {
+            "inputs" => match (&context.job, path) {
+                (Some(job), [_, Access::Key(name), rest @ ..]) => {
+                    self.input(state, job.parent(), name).map(|value| {
+                        rest.iter()
+                            .fold(value, |value, access| value.apply_access(access))
+                    })
+                }
+                _ => self.runtime(path, context),
+            },
             "needs" => self
                 .output(state, path, context)
                 .unwrap_or_else(|| vec![Outcome::new(TrackedValue::incomplete())]),

@@ -491,6 +491,9 @@ fn test_multiline_expression_pedantic() -> Result<()> {
     help[template-injection]: code injection via template expansion
       --> @@INPUT@@:32:15
        |
+     5 |         free-threading:
+       |         -------------- input free-threading declared here
+    ...
     30 |           run: |
        |           --- this run block
     31 |             echo "TSAN_OPTIONS=log_path=${GITHUB_WORKSPACE}/tsan_log suppressions=${GITHUB_WORKSPACE}/Tools/tsan/suppressions${{
@@ -1358,6 +1361,42 @@ jobs:
     "#
     );
 
+    Ok(())
+}
+
+#[test]
+fn test_workflow_input_types() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("template-injection/input-caps.yml"))
+            .run()?,
+        @r#"
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:25:24
+       |
+     5 |       test:
+       |       ---- input test declared here
+    ...
+    25 |         run: echo "${{ inputs.test == 'true' && github.ref_name || '' }}"
+       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         |
+       |         this run block
+       |
+       = note: audit confidence → High
+
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:28:24
+       |
+    28 |         run: echo "${{ format('{0}{1}', inputs.called, inputs.manual) == '' && github.ref_name || '' }}"
+       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         |
+       |         this run block
+       |
+       = note: audit confidence → High
+
+    6 findings (4 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    "#
+    );
     Ok(())
 }
 
