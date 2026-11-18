@@ -1,4 +1,4 @@
-//! Abstract interpretation values, their sources, and assumptions when selecting an alternative.
+//! Abstract interpretation values, their sources, and assumptions when selecting an outcome.
 //!
 //! Our abstract interpretation has "decisions" and "alternatives," each of which has an
 //! identifier. A [`DecisionId`] identifies a shared choice during an evaluation, while
@@ -10,12 +10,13 @@
 //! case(inputs.enabled, 'a', 'b')
 //! ```
 //!
-//! In this case, `inputs.enabled` drives a decision (D0), and has two alternatives:
+//! In this case, `inputs.enabled` drives a decision (D0). Its two alternatives
+//! lead to two possible outcomes:
 //!
 //! - inputs.enabled == true --> 'a' (A1)
 //! - inputs.enabled == false --> 'b' (A0)
 //!
-//! Note that `inputs.enabled` can be an unknown boolean, in which case both alternatives
+//! Note that `inputs.enabled` can be an unknown boolean, in which case both outcomes
 //! are possible.
 //!
 //! One or more decisions can lead into an [`Outcome`] which tracks (by default)
@@ -211,7 +212,7 @@ pub enum AbstractValue {
     Object(Arc<BTreeMap<String, TrackedValue>>),
 }
 
-/// A value with its provenance; branch assumptions belong to `Outcome`.
+/// A "tracked" value, i.e. an [`AbstractValue`] with its associated [`Provenance`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrackedValue {
     /// The value or its known properties.
@@ -221,7 +222,7 @@ pub struct TrackedValue {
 }
 
 impl TrackedValue {
-    /// Construct a value without provenance.
+    /// Construct a tracked value without provenance.
     pub fn new(inner: AbstractValue) -> Self {
         Self {
             inner,
@@ -229,7 +230,11 @@ impl TrackedValue {
         }
     }
 
-    /// Preserve concrete container structure for subsequent property access.
+    /// Convert a concrete [`Evaluation`] into a [`TrackedValue`], without provenance.
+    ///
+    /// This recursively turns concrete arrays and objects into [`AbstractValue::Array`]
+    /// and [`AbstractValue::Object`] respectively. All other concrete evaluations
+    /// become [`AbstractValue::Known`].
     pub fn known(value: Evaluation) -> Self {
         Self::new(match value {
             Evaluation::Array(values) => {
@@ -245,30 +250,33 @@ impl TrackedValue {
         })
     }
 
-    /// An unconstrained runtime value.
+    /// Creates an unknown abstract value.
     pub fn unknown() -> Self {
         Self::new(AbstractValue::Unknown(Shape::Any))
     }
 
-    /// Mark an unresolved definition or an omitted evaluation.
+    /// Creates a new unknown abstract value with incomplete provenance.
     pub fn incomplete() -> Self {
         let mut value = Self::unknown();
         value.provenance.incomplete = true;
         value
     }
 
-    /// Attach additional sources and definitions.
+    /// Attach the given provenance to this tracked value.
     pub fn with_provenance(mut self, provenance: &Provenance) -> Self {
         self.provenance.extend(provenance);
         self
     }
 
-    /// Record the predicate selecting this value.
+    /// Add the given predicate's dependencies to this tracked value,
+    /// as control provenance.
     pub fn conditioned(self, predicate: &Self) -> Self {
         self.with_provenance(&predicate.dependencies().controlled())
     }
 
-    /// Collect inputs and locations, including those inside containers.
+    /// Returns this tracked value's provenance, recursively merged with the provenance
+    /// of array elements and object fields. For tracked values that are references,
+    /// the context path is also included in the provenance.
     pub fn dependencies(&self) -> Provenance {
         let mut provenance = self.provenance.clone();
         match &self.inner {
@@ -292,7 +300,7 @@ impl TrackedValue {
         provenance
     }
 
-    /// Return truthiness when the value constrains it.
+    /// Return this tracked value's truthiness, if it can be determined.
     pub fn truth(&self) -> Option<bool> {
         match &self.inner {
             AbstractValue::Known(value) => Some(value.as_boolean()),
@@ -302,7 +310,8 @@ impl TrackedValue {
         }
     }
 
-    /// Return array elements with the array's provenance attached.
+    /// Return this tracked value's elements, with the value's
+    /// own provenance attached, if the tracked value is an array.
     pub fn elements(&self) -> Option<Vec<Self>> {
         let AbstractValue::Array(values) = &self.inner else {
             return None;
@@ -316,7 +325,8 @@ impl TrackedValue {
         )
     }
 
-    /// Convert a fully known value into a concrete Actions value.
+    /// Return a concrete Actions evaluation for this tracked value, if the underlying
+    /// value is fully concrete.
     pub fn concrete(&self) -> Option<Evaluation> {
         match &self.inner {
             AbstractValue::Known(value) => Some(value.clone()),
@@ -333,63 +343,118 @@ impl TrackedValue {
         }
     }
 
-    /// Look up a property without changing branch assumptions.
+    /// Applies a single access to this tracked value, returning
+    /// a new tracked value with updated provenance.
     pub fn apply_access(&self, access: &Access) -> Self {
+        // Some accesses are *not* unknown, but produce an empty string because
+        // Actions semantics say they do. For example, accessing a missing
+        // object field, out-of-range index, or access on a known scalar
+        // produces an empty string. See below for examples.
         let empty = || Self::known(Evaluation::String(String::new()));
+
         let value = match (&self.inner, access) {
+            // Our tracked value is a reference, e.g. `matrix`.
+            // The access is just appended to it, e.g. `Key("os")` becomes `matrix.os`.
             (AbstractValue::Reference(path), _) => {
                 let mut path = path.clone();
                 path.push(access.clone());
                 Self::new(AbstractValue::Reference(path))
             }
+
+            // Our tracked value is a scalar, or unknown but known to be of a scalar
+            // shape. Any key or index access on these evaluates to the empty string.
+            //
+            // Example: `fromJSON('"abc"').abc --> ''`
             (
                 AbstractValue::Known(_)
                 | AbstractValue::Unknown(Shape::Boolean | Shape::Falsy | Shape::Hash),
                 _,
             ) => empty(),
+
+            // Our access is fully unknown, which means our tracked value becomes
+            // unknown, but with provenance from all nested elements and fields,
+            // since any might be selected.
+            //
+            // Example: `fromJSON('{"foo": "bar"}')[inputs.foo] --> ?`, assuming
+            // `inputs.foo` is unresolved.
             (_, Access::Unknown) => Self::unknown().with_provenance(&self.dependencies()),
+
+            // Our tracked value is an object, and our access is a key.
+            // This ends up being a trivial (case insensitive) value lookup.
+            // A lookup failure yields the empty string.
+            //
+            // Example: `fromJSON('{"foo": "bar"}').foo --> 'bar'`
             (AbstractValue::Object(fields), Access::Key(key)) => fields
                 .iter()
                 .find(|(k, _)| k.eq_ignore_ascii_case(key))
                 .map_or_else(empty, |(_, value)| value.clone()),
+
+            // Our tracked value is an object and our access is a wildcard.
+            // This ends up being a new tracked array of the object's values.
+            //
+            // Example: `fromJSON('{"foo": "bar"}').* --> ['bar']`
             (AbstractValue::Object(fields), Access::Wildcard) => Self::new(AbstractValue::Array(
                 Arc::new(fields.values().cloned().collect()),
             )),
+
+            // Our tracked value is an array and our access is an index.
+            // This ends up being a trivial index lookup.
+            // Like with objects, a lookup failure yields a new empty string
+            // as a tracked value.
+            //
+            // If an access's index is not parseable, we return a new array as a tracked value
+            // where every element has the access applied to it.
+            //
+            // TODO: Model `Access::Index` instead here to avoid the fallible parse?
             (AbstractValue::Array(values), Access::Key(key)) => match key.parse::<usize>() {
                 Ok(index) => values.get(index).cloned().unwrap_or_else(empty),
                 Err(_) => Self::new(AbstractValue::Array(Arc::new(
                     values.iter().map(|v| v.apply_access(access)).collect(),
                 ))),
             },
+
+            // Our tracked value is an array and our access is a wildcard.
+            // This ends up being a new tracked value of the same array items,
+            // but with a new object identity.
+            //
+            // Example: `fromJSON('["foo", "bar"]').* --> ['foo', 'bar']`
             (AbstractValue::Array(values), Access::Wildcard) => {
                 Self::new(AbstractValue::Array(Arc::new(values.as_ref().clone())))
             }
+
+            // Any unconstrained unknown tracked value remains unknown.
+            // "Unconstrained" here means not boolean, falsey, or hash, since we handle those above.
             (AbstractValue::Unknown(_), _) => Self::unknown(),
         };
+
+        // Now that we have our new tracked value, apply the previous tracked
+        // value's provenance to it.
         value.with_provenance(&self.provenance)
     }
 }
 
-/// One possible evaluation and the choices that must hold for it.
+/// A single possible outcome from an evaluation, along with the choices
+/// that must hold for it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Outcome<T = TrackedValue> {
-    /// The value selected by these assumptions.
+    /// The value selected by the outcome's assumptions.
     pub value: T,
-    /// Assumptions required for this outcome, keyed by the shared choice.
+
+    /// Alternatives assumed by this outcome, keyed by their decisions.
     ///
-    /// A missing entry leaves that decision unconstrained. To combine two
-    /// outcomes, [`State::product`](super::State::product) requires the same
-    /// alternative for every decision present in both maps. Its result carries
-    /// the union of their assumptions.
+    /// An entry `{D0: A1}` means that this outcome assumes that decision D0
+    /// selects alternative A1. A missing entry means an unconstrained decision.
+    ///
+    /// See [`super::State::product`] for how outcomes can be combined.
     pub choices: BTreeMap<DecisionId, AlternativeId>,
 }
 
-/// Alternatives, distinct from the elements of a single array.
+/// Zero or more possible outcomes.
 pub type Outcomes<T = TrackedValue> = Vec<Outcome<T>>;
 
-/// Payload operations on collections of outcomes.
+/// Operations on collections of outcomes.
 pub trait OutcomesExt<T> {
-    /// Transform payloads while preserving branch assumptions.
+    /// Transform payloads while preserving choice constraints.
     fn map<U>(self, apply: impl FnMut(T) -> U) -> Outcomes<U>;
 }
 
@@ -402,7 +467,7 @@ impl<T> OutcomesExt<T> for Outcomes<T> {
 }
 
 impl<T> Outcome<T> {
-    /// Construct an alternative without branch assumptions.
+    /// Construct an outcome without any additional choice constraints.
     pub fn new(value: T) -> Self {
         Self {
             value,
@@ -410,7 +475,7 @@ impl<T> Outcome<T> {
         }
     }
 
-    /// Transform the payload while preserving branch assumptions.
+    /// Transform the payload while preserving choice constraints.
     pub fn map<U>(self, apply: impl FnOnce(T) -> U) -> Outcome<U> {
         Outcome {
             value: apply(self.value),
@@ -418,22 +483,28 @@ impl<T> Outcome<T> {
         }
     }
 
-    /// Select an alternative, rejecting a conflicting assumption about this decision.
+    /// Add a choice constraint to this outcome, returning the updated outcome.
+    ///
+    /// Return `None` if this outcome already assumes a different alternative for
+    /// the same decision.
     pub fn assume(mut self, decision: DecisionId, alternative: AlternativeId) -> Option<Self> {
         if self
             .choices
             .get(&decision)
             .is_some_and(|prior| *prior != alternative)
         {
+            // This outcome already assumes a different alternative for the given decision,
+            // meaning the assumptions contradict.
             return None;
         }
+
         self.choices.insert(decision, alternative);
         Some(self)
     }
 }
 
 impl Outcome {
-    /// Construct a concrete alternative.
+    /// Construct a concrete outcome.
     pub fn known(value: Evaluation) -> Self {
         Self::new(TrackedValue::known(value))
     }

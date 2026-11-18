@@ -1,14 +1,32 @@
-//! Evaluate expressions under caller-supplied bindings, retaining alternatives and provenance.
+//! Abstract interpretation and evaluation of Actions expressions.
 //!
-//! Each [`Outcome`] contains a value and the assumptions needed to obtain it.
-//! Assumptions associate a [`DecisionId`] (a shared choice) with an [`AlternativeId`]
-//! (the alternative selected for that choice). Reusing a decision across reads
-//! keeps their possible values correlated. [`State::product`] combines outcomes
-//! only when their assumptions agree.
+//! Expressions are evaluated into zero or more [`Outcome`]s, each of which contains
+//! a value and the assumptions that the interpreter made to obtain it. Assumptions
+//! are themselves a mapping of shared choices ([`DecisionId`]) to alternatives
+//! taken ([`AlternativeId`]).
 //!
-//! [`Provenance`] records the inputs and source locations used to obtain a value.
-//! Callers can use this to explain the result, while decisions determine which
-//! results can occur together.
+//! The evaluator is responsible for identifying decisions. This is not as trivial as
+//! assigning a fresh identifier for every predicate or similar. For example:
+//!
+//! ```text
+//! format('{0}/{1}',
+//!    case(inputs.enabled, 'a', 'b'),
+//!    case(inputs.enabled, 'a', 'b'))
+//! ```
+//!
+//! A naive decision allocation would assign a new decision identifier for each `inputs.enabled`
+//! in the expression. However, doing that would allow for inconsistent alternatives/outcomes,
+//! since each `inputs.enabled` would appear independent during analysis. This in turn would
+//! result in imprecisions, since it would admit combinations like `a/b` when only `a/a`
+//! and `b/b` are actually possible.
+//!
+//! An evaluation's decisions are managed through its [`State`]. The [`State`]
+//! allocates new decisions and can also merge outcomes together when their
+//! assumptions agree.
+//!
+//! Finally, each outcome of an evaluation comes with [`Provenance`], which
+//! records the inputs and source locations used to obtain a value.
+//! Callers can use this to explain the result in a human-friendly manner.
 
 mod value;
 pub use value::*;
