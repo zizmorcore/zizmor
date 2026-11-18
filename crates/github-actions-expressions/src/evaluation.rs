@@ -82,7 +82,7 @@ impl Resolver for State {
         };
         let value = path
             .iter()
-            .fold(root.clone(), |value, access| value.project(access));
+            .fold(root.clone(), |value, access| value.apply_access(access));
         vec![Outcome::new(value)]
     }
 }
@@ -414,7 +414,7 @@ impl<R: Resolver> Run<'_, R> {
                     let keys = self.keys(part);
                     values = self.state().product(values, keys, |value, key| {
                         value
-                            .project(&key.parts[0])
+                            .apply_access(&key.parts[0])
                             .with_provenance(&key.provenance)
                     });
                 }

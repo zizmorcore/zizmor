@@ -334,7 +334,7 @@ impl TrackedValue {
     }
 
     /// Look up a property without changing branch assumptions.
-    pub fn project(&self, access: &Access) -> Self {
+    pub fn apply_access(&self, access: &Access) -> Self {
         let empty = || Self::known(Evaluation::String(String::new()));
         let value = match (&self.inner, access) {
             (AbstractValue::Reference(path), _) => {
@@ -358,7 +358,7 @@ impl TrackedValue {
             (AbstractValue::Array(values), Access::Key(key)) => match key.parse::<usize>() {
                 Ok(index) => values.get(index).cloned().unwrap_or_else(empty),
                 Err(_) => Self::new(AbstractValue::Array(Arc::new(
-                    values.iter().map(|v| v.project(access)).collect(),
+                    values.iter().map(|v| v.apply_access(access)).collect(),
                 ))),
             },
             (AbstractValue::Array(values), Access::Wildcard) => {
