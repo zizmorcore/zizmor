@@ -12,34 +12,30 @@ impl State {
         inner: &Definition,
         path: &[Access],
     ) -> Outcomes {
-        if !self.matrices.contains_key(&decision) {
-            let mut rows = vec![];
-            for outcome in inner.read(self, path, &[]) {
-                let expanded = match &outcome.value.inner {
-                    AbstractValue::Object(fields) => self.expand_rows(fields.as_ref().clone()),
-                    AbstractValue::Unknown(_) | AbstractValue::Reference(_) => {
-                        vec![outcome.value.clone()]
-                    }
-                    _ => vec![],
-                };
-                for row in expanded {
-                    if !self.checkpoint() {
-                        break;
-                    }
-                    let index = rows.len();
-                    let row = outcome
-                        .clone()
-                        .map(|value| row.with_provenance(&value.provenance));
-                    rows.extend(row.assume(decision, AlternativeId::new(index)));
+        let mut rows = vec![];
+        for outcome in inner.read(self, path, &[]) {
+            let expanded = match &outcome.value.inner {
+                AbstractValue::Object(fields) => self.expand_rows(fields.as_ref().clone()),
+                AbstractValue::Unknown(_) | AbstractValue::Reference(_) => {
+                    vec![outcome.value.clone()]
                 }
+                _ => vec![],
+            };
+            for row in expanded {
+                if !self.checkpoint() {
+                    break;
+                }
+                let index = rows.len();
+                let row = outcome
+                    .clone()
+                    .map(|value| row.with_provenance(&value.provenance));
+                rows.extend(row.assume(decision, AlternativeId::new(index)));
             }
-            let rows = self.bound(rows);
-            self.matrices.insert(decision, rows);
         }
-        self.matrices[&decision].clone()
+        self.bound(rows)
     }
 
-    pub(super) fn expand_rows(&mut self, mut definition: Row) -> Vec<TrackedValue> {
+    fn expand_rows(&mut self, mut definition: Row) -> Vec<TrackedValue> {
         let matches_row = |row: &Row, condition: &Row, allow_new_keys: bool| {
             condition.iter().all(|(key, expected)| {
                 row.get(key).map_or(allow_new_keys, |value| {

@@ -12,7 +12,7 @@ use super::{DecisionId, Outcome, Outcomes, TrackedValue};
 #[derive(Default)]
 pub(super) struct State {
     pub(super) definitions: BTreeMap<usize, DecisionId>,
-    pub(super) matrices: BTreeMap<DecisionId, Outcomes>,
+    pub(super) materialized: BTreeMap<(usize, Vec<String>), Outcomes>,
     depth: usize,
     work: usize,
     incomplete: bool,

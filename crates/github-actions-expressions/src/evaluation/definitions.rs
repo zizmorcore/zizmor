@@ -19,7 +19,7 @@ impl Default for Scope {
 }
 
 impl Scope {
-    /// Use `fallback` for paths without an explicit binding.
+    /// Apply the unmatched path to `fallback`. This includes empty and wildcard paths.
     pub fn new(fallback: Definition) -> Self {
         Self {
             names: Default::default(),
@@ -28,7 +28,8 @@ impl Scope {
         }
     }
 
-    /// Bind a missing named field separately from a bare or computed access.
+    /// Use `missing` for an unbound key, consuming that key before reading further.
+    /// Bare and wildcard reads still use the original fallback.
     pub fn with_missing(mut self, missing: Definition) -> Self {
         self.missing = Some(missing);
         self
@@ -107,7 +108,11 @@ impl Definition {
 
     /// Capture the scope in which the template was written.
     pub fn template(text: String, scope: Scope) -> Self {
-        Self::new(Node::Template(text, scope))
+        if text.contains("${{") {
+            Self::new(Node::Template(text, scope))
+        } else {
+            Self::known(Evaluation::String(text))
+        }
     }
 
     /// Evaluate the elements to form an array.
@@ -143,52 +148,31 @@ impl Definition {
     }
 
     fn read_inner(&self, state: &mut State, path: &[Access], rest: &[Access]) -> Outcomes {
-        let values =
-            match self.0.as_ref() {
-                Node::Value(value) => vec![Outcome::new(value.clone())],
-                Node::Unavailable => return vec![],
-                Node::Runtime(prefix) => {
-                    let mut value = TrackedValue::unknown();
-                    let name = path.iter().map(Access::text).collect::<Vec<_>>().join(".");
-                    value.provenance.sources.insert(format!("{prefix}{name}"));
-                    return vec![Outcome::new(value)];
-                }
-                Node::Namespace(scope) => return scope.read(state, path, rest),
-                Node::Located(inner, evidence) => {
-                    return inner.read(state, path, rest).map(|mut value| {
-                        value.provenance.evidence.insert(*evidence);
-                        value
-                    });
-                }
-                Node::Choice(options) => {
-                    let decision = state.definition_decision(self);
-                    let mut results = vec![];
-                    for (index, option) in options.iter().enumerate() {
-                        if !state.checkpoint() {
-                            break;
-                        }
-                        results.extend(option.read(state, path, rest).into_iter().filter_map(
-                            |outcome| outcome.assume(decision, AlternativeId::new(index)),
-                        ));
-                    }
-                    return state.bound(results);
-                }
-                Node::Matrix(inner) => {
-                    let decision = state.definition_decision(self);
-                    state.matrix_rows(decision, inner, path)
-                }
-                Node::Template(text, scope) => state.template(text, scope),
-                Node::Array(items) => state
-                    .sequence(items, |state, item| item.read(state, path, &[]))
-                    .map(|items| TrackedValue::new(AbstractValue::Array(Arc::new(items)))),
-                Node::Object(fields) => state
-                    .sequence(fields.values(), |state, item| item.read(state, path, &[]))
-                    .map(|items| {
-                        TrackedValue::new(AbstractValue::Object(Arc::new(
-                            fields.keys().cloned().zip(items).collect(),
-                        )))
-                    }),
-            };
+        let values = match self.0.as_ref() {
+            Node::Value(value) => vec![Outcome::new(value.clone())],
+            Node::Unavailable => return vec![],
+            Node::Runtime(prefix) => {
+                let mut value = TrackedValue::unknown();
+                let name = path.iter().map(Access::text).collect::<Vec<_>>().join(".");
+                value.provenance.sources.insert(format!("{prefix}{name}"));
+                return vec![Outcome::new(value)];
+            }
+            Node::Namespace(scope) => return scope.read(state, path, rest),
+            Node::Located(inner, evidence) => {
+                return inner.read(state, path, rest).map(|mut value| {
+                    value.provenance.evidence.insert(*evidence);
+                    value
+                });
+            }
+            Node::Choice(options) => {
+                let decision = state.definition_decision(self);
+                return state.read_choice(decision, options, path, rest);
+            }
+            Node::Template(..) => state.materialize(self, &[]),
+            Node::Matrix(_) | Node::Array(_) | Node::Object(_) => {
+                state.materialize(self, &path[..path.len() - rest.len()])
+            }
+        };
         values.map(|value| {
             rest.iter()
                 .fold(value, |value, access| value.apply_access(access))
@@ -197,6 +181,70 @@ impl Definition {
 }
 
 impl State {
+    fn read_choice(
+        &mut self,
+        decision: DecisionId,
+        options: &[Definition],
+        path: &[Access],
+        rest: &[Access],
+    ) -> Outcomes {
+        let mut results = Vec::new();
+        for (index, option) in options.iter().enumerate() {
+            if !self.checkpoint() {
+                break;
+            }
+            for outcome in option.read(self, path, rest) {
+                results.extend(outcome.assume(decision, AlternativeId::new(index)));
+            }
+        }
+        self.bound(results)
+    }
+
+    /// Once a definition yields a value, all later accesses read that value.
+    /// This also preserves the identity of arrays and objects during comparisons.
+    fn materialize(&mut self, definition: &Definition, binding: &[Access]) -> Outcomes {
+        let key = (
+            Arc::as_ptr(&definition.0) as usize,
+            binding
+                .iter()
+                .map(|access| access.text().to_ascii_lowercase())
+                .collect(),
+        );
+        if let Some(values) = self.materialized.get(&key) {
+            return values.clone();
+        }
+
+        let field = |state: &mut Self, name: String, item: &Definition| {
+            let mut path = binding.to_vec();
+            path.push(Access::Key(name));
+            item.read(state, &path, &[])
+        };
+        let values = match definition.0.as_ref() {
+            Node::Array(items) => self
+                .sequence(items.iter().enumerate(), |state, (i, item)| {
+                    field(state, i.to_string(), item)
+                })
+                .map(|items| TrackedValue::new(AbstractValue::Array(Arc::new(items)))),
+            Node::Object(fields) => self
+                .sequence(fields, |state, (name, item)| {
+                    field(state, name.clone(), item)
+                })
+                .map(|items| {
+                    TrackedValue::new(AbstractValue::Object(Arc::new(
+                        fields.keys().cloned().zip(items).collect(),
+                    )))
+                }),
+            Node::Matrix(inner) => {
+                let decision = self.definition_decision(definition);
+                self.matrix_rows(decision, inner, binding)
+            }
+            Node::Template(text, scope) => self.template(text, scope),
+            _ => unreachable!("only computed definitions need materialization"),
+        };
+        self.materialized.insert(key, values.clone());
+        values
+    }
+
     fn definition_decision(&mut self, definition: &Definition) -> DecisionId {
         // All nodes belong to the scope borrowed for this evaluation.
         let key = Arc::as_ptr(&definition.0) as usize;

@@ -129,3 +129,24 @@ fn nested_definition_preserves_shared_choices_and_short_circuits() {
             .all(|o| o.value.concrete() == Some(Evaluation::Boolean(true)))
     );
 }
+
+#[test]
+fn bound_collections_preserve_identity_and_field_sources() {
+    let mut scope = Scope::default();
+    scope.bind(
+        "config",
+        Definition::object(std::collections::BTreeMap::from([(
+            "field".into(),
+            Definition::runtime(String::new()),
+        )])),
+    );
+    let values = scope.evaluate(&Expr::parse("config == CONFIG && config.field").unwrap());
+    assert_eq!(values.len(), 1);
+    assert!(
+        values[0]
+            .value
+            .dependencies()
+            .sources
+            .contains("config.field")
+    );
+}

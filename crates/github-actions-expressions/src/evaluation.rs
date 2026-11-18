@@ -1,5 +1,10 @@
 //! Abstract interpretation and evaluation of Actions expressions.
 //!
+//! A [`Scope`] binds context names to [`Definition`]s. A template captures the
+//! scope of its declaration, so reading it from a second scope still resolves
+//! its names in the first. Each call to [`Scope::evaluate`] starts a fresh
+//! evaluation and follows the definitions the expression reads.
+//!
 //! Expressions are evaluated into zero or more [`Outcome`]s, each of which contains
 //! a value and the assumptions that the interpreter made to obtain it. Assumptions
 //! are themselves a mapping of shared choices ([`DecisionId`]) to alternatives

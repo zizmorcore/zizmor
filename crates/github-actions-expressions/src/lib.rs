@@ -704,7 +704,7 @@ impl<'src> Expr<'src> {
     /// if successful.
     ///
     /// This implementation follows GitHub Actions' evaluation semantics as documented at:
-    /// https://docs.github.com/en/actions/reference/workflows-and-actions/expressions
+    /// <https://docs.github.com/en/actions/reference/workflows-and-actions/expressions>
     ///
     /// # Examples
     ///
