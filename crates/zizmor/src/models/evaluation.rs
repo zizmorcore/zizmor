@@ -98,6 +98,10 @@ impl<'a, 'doc> Site<'a, 'doc> {
         self.evaluate_with(|eval, env| eval.evaluate(expr, env))
     }
 
+    pub(crate) fn evaluate_template(&self, text: &str) -> Results<'doc> {
+        self.evaluate_with(|eval, env| eval.template(text, env))
+    }
+
     fn evaluate_with(
         self,
         run: impl Fn(&mut Evaluator, &mut Environment<'_, 'doc>) -> Outcomes,

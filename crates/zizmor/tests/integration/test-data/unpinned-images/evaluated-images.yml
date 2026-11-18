@@ -1,0 +1,40 @@
+name: Evaluated container images
+on: push
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  define:
+    name: Define the build container
+    runs-on: ubuntu-latest
+    outputs:
+      container: '{"image":"alpine:latest"}'
+    steps:
+      - run: echo ready
+
+  build:
+    name: Build
+    needs: define
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: redis
+            tag: '7'
+          - name: valkey
+            tag: latest
+          - name: valkey
+            tag: latest # zizmor: ignore[unpinned-images]
+            replica: true
+    container: ${{ fromJSON(needs.define.outputs.container) }}
+    services:
+      cache: registry.example/${{ matrix.name }}:${{ matrix.tag }}
+      mirror:
+        image: ${{ vars.MIRROR }}/redis@sha256:7df1eeff67eb0ba84f6b9d2940765a6bb1158081426745c185a03b1507de6a09
+      optional:
+        image: postgres:${{ matrix.name == 'postgres' && 'latest' || '' }}
+    steps:
+      - run: echo ready
