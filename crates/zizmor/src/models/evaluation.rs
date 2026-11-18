@@ -6,6 +6,7 @@
 //! evaluator follows those definitions and returns the locations it visited.
 
 mod inputs;
+mod matrix;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -266,18 +267,7 @@ impl<'doc> Builder<'doc> {
         for name in ["env", "steps", "runner", "job", "matrix"] {
             scope.bind(name, incomplete());
         }
-        let matrix = job
-            .strategy
-            .as_ref()
-            .and_then(|strategy| strategy.matrix.as_ref());
-        let matrix = matrix.map_or_else(empty, |matrix| {
-            let location = job
-                .location()
-                .with_keys(["strategy".into(), "matrix".into()])
-                .annotated("matrix value defined here");
-            let value = serde_json::to_value(matrix).expect("validated matrix");
-            Definition::matrix(self.decode(&value, location, &scope))
-        });
+        let matrix = self.matrix(job, &scope);
         scope.bind("matrix", matrix);
         JobScope { scope, runtime }
     }
@@ -306,37 +296,5 @@ impl<'doc> Builder<'doc> {
             Definition::namespace(ran),
             Definition::namespace(skipped),
         ])
-    }
-
-    fn decode(
-        &mut self,
-        value: &serde_json::Value,
-        location: SymbolicLocation<'doc>,
-        scope: &Scope,
-    ) -> Definition {
-        match value {
-            serde_json::Value::String(text) => {
-                Definition::template(text.clone(), scope.clone()).located(self.record(location))
-            }
-            serde_json::Value::Array(items) => Definition::array(
-                items
-                    .iter()
-                    .enumerate()
-                    .map(|(i, item)| self.decode(item, location.with_keys([i.into()]), scope))
-                    .collect(),
-            ),
-            serde_json::Value::Object(fields) => Definition::object(
-                fields
-                    .iter()
-                    .map(|(key, item)| {
-                        (
-                            key.clone(),
-                            self.decode(item, location.with_keys([key.clone().into()]), scope),
-                        )
-                    })
-                    .collect(),
-            ),
-            value => Definition::known(value.clone().try_into().expect("JSON scalar")),
-        }
     }
 }
