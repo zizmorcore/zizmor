@@ -8,15 +8,22 @@ name: issue-1802-repro
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  test-matrix:
+    name: Test matrix
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo testing
+
   repro: # zizmor: ignore[secrets-outside-env]
     name: Repro
+    needs: test-matrix
     runs-on: ubuntu-latest
     steps:
       - run: |
           test "${{ needs.test-matrix.result }}" = "success"
           test "${{ needs['test-matrix']['result'] }}" = "success"
-          test "${{ needs.TEST_MATRIX['result'] }}" = "success"
+          test "${{ needs.TEST-MATRIX['result'] }}" = "success"
