@@ -3,7 +3,6 @@
 //! These models enrich the models under [`github_actions_models::workflow`],
 //! providing higher-level APIs for zizmor to use.
 
-use github_actions_expressions::context::{self};
 use github_actions_models::{
     common::{self, CacheMode, expr::LoE},
     workflow::{
@@ -12,7 +11,7 @@ use github_actions_models::{
         job,
     },
 };
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::LazyLock;
 use terminal_link::Link;
 
@@ -30,7 +29,7 @@ use crate::{
         workflow::matrix::Matrix,
     },
     registry::input::CollectionError,
-    utils::{self, once::warn_once},
+    utils::once::warn_once,
 };
 
 static WORKFLOW_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
@@ -142,6 +141,43 @@ impl Workflow {
     /// Load a workflow from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
         let inner = Self::validate(&contents)?;
+
+        let mut pending = BTreeMap::new();
+        for (id, job) in &inner.jobs {
+            let needs = match job {
+                workflow::Job::NormalJob(job) => {
+                    if let Some(matrix) = job.strategy.as_ref().and_then(|s| s.matrix.as_ref()) {
+                        serde_json::to_value(matrix).map_err(|error| {
+                            CollectionError::InvalidInput(format!(
+                                "invalid matrix in job {id}: {error}"
+                            ))
+                        })?;
+                    }
+                    &job.needs
+                }
+                workflow::Job::ReusableWorkflowCallJob(job) => &job.needs,
+            };
+            pending.insert(id.to_ascii_lowercase(), needs);
+        }
+
+        // Reject cycles before following output references between jobs.
+        while let Some(id) = pending
+            .iter()
+            .find(|(_, needs)| {
+                needs
+                    .iter()
+                    .all(|id| !pending.contains_key(&id.to_ascii_lowercase()))
+            })
+            .map(|(id, _)| id.clone())
+        {
+            pending.remove(&id);
+        }
+
+        if !pending.is_empty() {
+            return Err(CollectionError::InvalidInput(
+                "cyclic job dependencies".into(),
+            ));
+        }
 
         let document = yamlpath::Document::new(&contents)?;
 
@@ -612,8 +648,8 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         (self.steps_index, self.parallel_index)
     }
 
-    fn env_is_static(&self, ctx: &context::Context) -> bool {
-        utils::env_is_static(ctx, &[self.env(), &self.job().env, &self.workflow().env])
+    fn expression_context(&self) -> super::evaluation::Context<'doc> {
+        super::evaluation::Context::workflow_step(self)
     }
 
     fn uses(&self) -> Option<&'doc common::Uses> {
@@ -622,10 +658,6 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         };
 
         Some(uses)
-    }
-
-    fn matrix(&self) -> Option<Matrix<'doc>> {
-        self.job().matrix()
     }
 
     fn body(&self) -> Option<StepBodyCommon<'doc>> {

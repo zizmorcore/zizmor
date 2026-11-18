@@ -93,7 +93,7 @@ expression: output
           },
           "feature_kind": {
             "Subfeature": {
-              "after": 24,
+              "after": 23,
               "fragment": {
                 "Raw": "github.event.issue.title"
               }

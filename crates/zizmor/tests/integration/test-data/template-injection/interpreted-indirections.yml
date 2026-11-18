@@ -1,0 +1,53 @@
+on: issues
+permissions: {}
+
+jobs:
+  consumer:
+    runs-on: ubuntu-latest
+    env:
+      TITLE: ${{ github.event.issue.title }}
+      CHOICE: ${{ case(github.event.action == 'opened', 'a', 'b') }}
+    strategy:
+      matrix:
+        command: [fixed, '${{ github.event.issue.title }}']
+        include:
+          - indirect: "literal '{' ${{ github.event.action == 'opened' && 'fixed' || github.event.issue.title }} '}'"
+            pieces: ["${{ case(github.event.action == 'opened', 'a', 'b') }}", c]
+    steps:
+      - run: |
+          echo "${{ env.TITLE }}"
+          echo "${{ format('{0}', matrix.command) }}"
+          echo "${{ matrix.indirect }}"
+          echo "${{ '${{ github.actor }}' }}"
+          echo "${{ format('{0}:{1}', runner.arch, fromJSON('invalid')) }}"
+          echo "${{ github.event.action == 'opened' && fromJSON('invalid') || github.event.issue.title }}"
+          echo "${{ env.CHOICE == 'a' && env.CHOICE == 'b' && github.event.issue.title || 'fixed' }}"
+          echo "${{ matrix[github.event.action] || github.event.issue.title }}"
+          echo "${{ matrix['*'] || github.event.issue.title }}"
+          echo "${{ join(matrix.pieces, ',') == 'a,c' && github.event.issue.title || 'fixed' }}"
+          echo "${{ join(matrix.pieces, ',') == 'a,b,c' && github.event.issue.title || 'fixed' }}"
+
+  correlated:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu, windows]
+        node: [18, 20]
+        exclude: [{os: ubuntu, node: 18}]
+        include:
+          - {os: windows, label: included}
+          - {os: extra, node: 99}
+    steps:
+      - run: |
+          echo "${{ matrix.os == 'ubuntu' && matrix.node == 18 && github.event.issue.title || 'fixed' }}"
+          echo "${{ matrix.label && github.event.issue.title || 'fixed' }}"
+          echo "${{ matrix.os == 'extra' && github.event.issue.title || 'fixed' }}"
+          echo "${{ matrix.os == 'ubuntu' && matrix.label && github.event.issue.title || 'fixed' }}"
+
+  failed-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        value: ["${{ fromJSON('invalid') }}", "${{ github.event.issue.title }}"]
+    steps:
+      - run: echo "${{ matrix.value }}"

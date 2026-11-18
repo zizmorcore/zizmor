@@ -18,7 +18,8 @@
 use std::{env, ops::Deref as _, sync::LazyLock, vec};
 
 use fst::Map;
-use github_actions_expressions::{Expr, context::Context, literal::Literal};
+use github_actions_expressions::evaluation::{Outcome, TrackedValue};
+use github_actions_expressions::{Error, Expr, context::Context, literal::Literal};
 use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
 use itertools::Itertools as _;
 
@@ -38,6 +39,8 @@ use crate::{
 };
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
+
+type Risk = Option<(Severity, Confidence)>;
 
 pub(crate) struct TemplateInjection;
 
@@ -361,215 +364,55 @@ impl TemplateInjection {
         })
     }
 
-    fn injectable_template_expressions<'doc>(
-        &self,
-        script: &'doc str,
-        step: &impl StepCommon<'doc>,
-    ) -> Vec<(
-        Subfeature<'doc>,
-        Option<Fix<'doc>>,
-        Severity,
-        Confidence,
-        Persona,
-    )> {
-        let mut all_bad_expressions = vec![];
-        for (expr, expr_span) in extract_fenced_expressions(script) {
-            let Ok(parsed) = Expr::parse(expr.as_bare()) else {
-                tracing::warn!("couldn't parse expression: {expr}", expr = expr.as_raw());
-                continue;
-            };
-            let mut bad_expressions = vec![];
-
-            for (context, origin) in parsed.dataflow_contexts() {
-                // Try and turn our context into a pattern for
-                // matching against the FST.
-                match context.as_pattern().as_deref() {
-                    Some(context_pattern) => {
-                        // Try and get the pattern's capability from our FST.
-                        match Capability::from_context(context_pattern) {
-                            // Fixed means no meaningful injectable structure.
-                            Some(Capability::Fixed) => continue,
-                            // Structured means some attacker-controllable
-                            // structure, but not fully arbitrary.
-                            Some(Capability::Structured) => {
-                                bad_expressions.push((
-                                    Subfeature::new(
-                                        expr_span.start + origin.span.start,
-                                        origin.raw,
-                                    ),
-                                    self.attempt_fix(&expr, &parsed, step),
-                                    Severity::Medium,
-                                    Confidence::High,
-                                    Persona::default(),
-                                ));
-                            }
-                            // Arbitrary means the context's expansion is
-                            // fully attacker-controllable.
-                            Some(Capability::Arbitrary) => {
-                                bad_expressions.push((
-                                    Subfeature::new(
-                                        expr_span.start + origin.span.start,
-                                        origin.raw,
-                                    ),
-                                    self.attempt_fix(&expr, &parsed, step),
-                                    Severity::High,
-                                    Confidence::High,
-                                    Persona::default(),
-                                ));
-                            }
-                            None => {
-                                // Without a FST match, we fall back on heuristics.
-                                if context.child_of("secrets") {
-                                    // While not ideal, secret expansion is typically not exploitable.
-                                    continue;
-                                } else if context.matches("needs.*.result")
-                                    || context.matches("steps.*.outcome")
-                                    || context.matches("steps.*.conclusion")
-                                {
-                                    // These are always one of `success`, `failure`, `cancelled`, or `skipped`.
-                                    continue;
-                                } else if context.child_of("inputs") {
-                                    let (severity, confidence, persona) = match context
-                                        .single_tail()
-                                        .and_then(|input_name| step.get_input(input_name))
-                                    {
-                                        Some(Capability::Fixed) => {
-                                            (Severity::Low, Confidence::High, Persona::Pedantic)
-                                        }
-                                        Some(Capability::Structured) => {
-                                            (Severity::Medium, Confidence::High, Persona::default())
-                                        }
-                                        Some(Capability::Arbitrary) => {
-                                            (Severity::High, Confidence::High, Persona::default())
-                                        }
-                                        None => {
-                                            (Severity::Low, Confidence::Low, Persona::default())
-                                        }
-                                    };
-
-                                    bad_expressions.push((
-                                        Subfeature::new(
-                                            expr_span.start + origin.span.start,
-                                            origin.raw,
-                                        ),
-                                        self.attempt_fix(&expr, &parsed, step),
-                                        severity,
-                                        confidence,
-                                        persona,
-                                    ));
-                                } else if context.child_of("env") {
-                                    let env_is_static = step.env_is_static(context);
-
-                                    if !env_is_static {
-                                        bad_expressions.push((
-                                            Subfeature::new(
-                                                expr_span.start + origin.span.start,
-                                                origin.raw,
-                                            ),
-                                            self.attempt_fix(&expr, &parsed, step),
-                                            Severity::Low,
-                                            Confidence::High,
-                                            Persona::default(),
-                                        ));
-                                    } else {
-                                        // Emit a pedantic finding even if we think the env context
-                                        // expansion is probably static.
-                                        bad_expressions.push((
-                                            Subfeature::new(
-                                                expr_span.start + origin.span.start,
-                                                origin.raw,
-                                            ),
-                                            self.attempt_fix(&expr, &parsed, step),
-                                            Severity::Low,
-                                            Confidence::High,
-                                            Persona::Pedantic,
-                                        ));
-                                    }
-                                } else if context.child_of("github") {
-                                    // TODO: Filter these more finely; not everything in the event
-                                    // context is actually attacker-controllable.
-                                    bad_expressions.push((
-                                        Subfeature::new(
-                                            expr_span.start + origin.span.start,
-                                            origin.raw,
-                                        ),
-                                        self.attempt_fix(&expr, &parsed, step),
-                                        Severity::High,
-                                        Confidence::High,
-                                        Persona::default(),
-                                    ));
-                                } else if context.child_of("matrix") {
-                                    let matrix_is_static = match step.matrix() {
-                                        Some(matrix) => matrix.expands_to_static_values(context),
-                                        // Context specifies a matrix, but there is no matrix defined.
-                                        // This is an invalid workflow so there's no point in flagging it.
-                                        None => continue,
-                                    };
-
-                                    if !matrix_is_static {
-                                        bad_expressions.push((
-                                            Subfeature::new(
-                                                expr_span.start + origin.span.start,
-                                                origin.raw,
-                                            ),
-                                            self.attempt_fix(&expr, &parsed, step),
-                                            Severity::Medium,
-                                            Confidence::Medium,
-                                            Persona::default(),
-                                        ));
-                                    }
-                                } else {
-                                    // All other contexts are typically not attacker controllable,
-                                    // but may be in obscure cases.
-                                    bad_expressions.push((
-                                        Subfeature::new(
-                                            expr_span.start + origin.span.start,
-                                            origin.raw,
-                                        ),
-                                        self.attempt_fix(&expr, &parsed, step),
-                                        Severity::Informational,
-                                        Confidence::Low,
-                                        Persona::default(),
-                                    ));
-                                }
-                            }
-                        }
-                    }
-                    None => {
-                        // If we couldn't turn the context into a pattern,
-                        // we almost certainly have something like
-                        // `call(...).foo.bar`.
-                        bad_expressions.push((
-                            Subfeature::new(expr_span.start + origin.span.start, origin.raw),
-                            self.attempt_fix(&expr, &parsed, step),
-                            Severity::Informational,
-                            Confidence::Low,
-                            Persona::default(),
-                        ));
-                    }
-                }
-            }
-
-            // If we didn't find anything noteworthy inside the extracted expression
-            // (i.e., no injectable contexts with relevant dataflows), then
-            // we emit a blanket pedantic finding for the extracted expression itself.
-            // We do this because any expression in a code context is a code smell,
-            // even if unexploitable.
-            if bad_expressions.is_empty() {
-                bad_expressions.push((
-                    Subfeature::new(expr_span.start, &parsed),
-                    // Intentionally not providing a fix here.
-                    None,
-                    Severity::Low,
-                    Confidence::High,
-                    Persona::Pedantic,
-                ));
-            }
-
-            all_bad_expressions.extend(bad_expressions);
+    /// Rate a runtime context using its known capabilities and input type.
+    fn source_risk(source: &str, input: &dyn Fn(&str) -> Option<Capability>) -> Risk {
+        let source = source
+            .strip_prefix("job:")
+            .and_then(|scoped| scoped.split_once(':'))
+            .map_or(source, |(_, path)| path);
+        let pattern = source.to_ascii_lowercase();
+        let capability = source
+            .split_once('.')
+            .filter(|(root, _)| root.eq_ignore_ascii_case("inputs"))
+            .and_then(|(_, name)| input(name));
+        match Capability::from_context(&pattern).or(capability) {
+            Some(Capability::Fixed) => return None,
+            Some(Capability::Structured) => return Some((Severity::Medium, Confidence::High)),
+            Some(Capability::Arbitrary) => return Some((Severity::High, Confidence::High)),
+            None => (),
         }
+        let root = pattern.split('.').next().unwrap_or_default();
 
-        all_bad_expressions
+        match root {
+            "secrets" => None,
+            "needs" if pattern.ends_with(".result") => None,
+            "steps" if pattern.ends_with(".outcome") || pattern.ends_with(".conclusion") => None,
+            "inputs" => Some((Severity::Low, Confidence::Low)),
+            "env" => {
+                if let Some(ctx) = Context::parse(&pattern)
+                    && DEFAULT_ENVIRONMENT_VARIABLES
+                        .iter()
+                        .any(|(_, pat, _, fixed)| *fixed && pat.matches(&ctx))
+                {
+                    return None;
+                }
+                Some((Severity::Low, Confidence::High))
+            }
+            "github" => Some((Severity::High, Confidence::High)),
+            "matrix" => Some((Severity::Medium, Confidence::Medium)),
+            _ => Some((Severity::Informational, Confidence::Low)),
+        }
+    }
+
+    fn outcome_risk(value: &Outcome, input: &dyn Fn(&str) -> Option<Capability>) -> Risk {
+        let provenance = value.value.dependencies();
+        let fallback = (Severity::Low, Confidence::Low);
+        provenance
+            .sources
+            .iter()
+            .filter_map(|id| Self::source_risk(id, input))
+            .chain(provenance.incomplete.then_some(fallback))
+            .max()
     }
 
     fn process_step<'doc>(
@@ -579,9 +422,43 @@ impl TemplateInjection {
         let mut findings = vec![];
 
         for (script, script_loc, related_locs) in Self::scripts_with_location(step) {
-            for (subfeature, fix, severity, confidence, persona) in
-                self.injectable_template_expressions(script, step)
-            {
+            for (expression, span) in extract_fenced_expressions(script) {
+                let parsed = Expr::parse(expression.as_bare());
+                let context = step.expression_context();
+                let mut analysis = models::evaluation::Analysis::default();
+                let outcomes = match &parsed {
+                    Ok(expr) => analysis.evaluate(expr, &context),
+                    Err(Error::Depth) => vec![Outcome::new(TrackedValue::incomplete())],
+                    Err(_) => continue,
+                };
+                if outcomes.is_empty() {
+                    continue;
+                }
+
+                let parsed = parsed.ok();
+                let risk = outcomes
+                    .iter()
+                    .filter_map(|value| Self::outcome_risk(value, &|name| step.get_input(name)))
+                    .max();
+                let (severity, confidence) = risk.unwrap_or((Severity::Low, Confidence::High));
+                let persona = if risk.is_some() {
+                    Persona::default()
+                } else {
+                    Persona::Pedantic
+                };
+
+                let fragment = parsed
+                    .as_ref()
+                    .map(subfeature::Fragment::from)
+                    .unwrap_or_else(|| subfeature::Fragment::new(expression.as_raw()));
+                let subfeature = Subfeature::new(span.start, fragment);
+                let fix = parsed
+                    .as_ref()
+                    .filter(|expr| {
+                        risk.is_some()
+                            || matches!(&expr.inner, Expr::Context(ctx) if ctx.child_of("env"))
+                    })
+                    .and_then(|parsed| self.attempt_fix(&expression, parsed, step));
                 let mut finding_builder = Self::finding()
                     .severity(severity)
                     .confidence(confidence)
@@ -595,8 +472,12 @@ impl TemplateInjection {
                             .annotated("may expand into attacker-controllable code".to_string()),
                     );
 
-                for related_loc in &related_locs {
-                    finding_builder = finding_builder.add_location(related_loc.clone());
+                let locations = analysis.locations(outcomes.iter().filter(|value| {
+                    risk.is_none()
+                        || Self::outcome_risk(value, &|name| step.get_input(name)).is_some()
+                }));
+                for location in locations.into_iter().chain(related_locs.iter().cloned()) {
+                    finding_builder = finding_builder.add_location(location);
                 }
 
                 if let Some(fix) = fix {

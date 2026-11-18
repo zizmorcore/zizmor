@@ -1,0 +1,26 @@
+on: issues
+permissions: {}
+
+jobs:
+  producer:
+    runs-on: ubuntu-latest
+    outputs:
+      title: ${{ github.event.issue.title }}
+    steps:
+      - run: echo producer
+
+  middle:
+    needs: producer
+    runs-on: ubuntu-latest
+    outputs:
+      title: ${{ needs.producer.outputs.title }}
+    steps:
+      - run: echo middle
+
+  consumer:
+    needs: middle
+    runs-on: ubuntu-latest
+    env:
+      TITLE: ${{ needs.middle.outputs.title }}
+    steps:
+      - run: echo "${{ env.TITLE }}"

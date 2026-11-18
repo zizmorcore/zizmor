@@ -1,14 +1,13 @@
 //! Enriching/context-bearing wrappers over GitHub Actions models
 //! from [`github_actions_models`].
 
-use github_actions_expressions::{Evaluation, Expr, context};
+use github_actions_expressions::{Evaluation, Expr};
 use github_actions_models::common;
 use github_actions_models::common::Env;
 use github_actions_models::common::expr::LoE;
 
 use crate::finding::location::{Locatable, SymbolicLocation};
 use crate::models::inputs::HasInputs;
-use crate::models::workflow::matrix::Matrix;
 use crate::registry::input::CollectionError;
 use crate::utils::ExtractedExpr;
 
@@ -42,6 +41,7 @@ pub(crate) fn if_is_statically_false(cond: &common::If) -> bool {
 pub(crate) mod action;
 pub(crate) mod coordinate;
 pub(crate) mod dependabot;
+pub(crate) mod evaluation;
 pub(crate) mod inputs;
 pub(crate) mod lock;
 pub(crate) mod pre_commit;
@@ -185,17 +185,11 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
     /// stack of traits implied by ordering (`PartialEq`, `PartialOrd`, etc).
     fn ord(&self) -> impl Ord;
 
-    /// Returns whether the given `env.name` environment access is "static,"
-    /// i.e. is not influenced by another expression.
-    fn env_is_static(&self, ctx: &context::Context) -> bool;
+    /// Creates a workflow-aware expression analysis at this step.
+    fn expression_context(&self) -> evaluation::Context<'doc>;
 
     /// Returns a [`common::Uses`] for this step, if it has one.
     fn uses(&self) -> Option<&'doc common::Uses>;
-
-    /// Returns this step's job's computed matrix, if present.
-    ///
-    /// Composite action steps have no matrix.
-    fn matrix(&self) -> Option<Matrix<'doc>>;
 
     /// Returns a [`StepBodyCommon`] for this step, if there is one.
     ///

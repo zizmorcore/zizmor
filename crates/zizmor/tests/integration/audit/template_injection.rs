@@ -14,6 +14,11 @@ fn test_template_injection_static_matrix() -> Result<()> {
     help[template-injection]: code injection via template expansion
       --> @@INPUT@@:25:36
        |
+    20 |         frob: ["nothing", "special"]
+       |                ---------  --------- matrix value defined here
+       |                |
+       |                matrix value defined here
+    ...
     24 |         run: |
        |         --- this run block
     25 |           echo "issue created: ${{ matrix.frob }}"
@@ -38,18 +43,21 @@ fn test_template_injection_dynamic_matrix() -> Result<()> {
             .args(["--persona=auditor"])
             .run()?,
         @r#"
-    warning[template-injection]: code injection via template expansion
+    error[template-injection]: code injection via template expansion
       --> @@INPUT@@:26:36
        |
+    21 |         dynamic: ${{ github.event.client_payload.mystery_meat }}
+       |         -------------------------------------------------------- matrix value defined here
+    ...
     25 |         run: |
        |         --- this run block
     26 |           echo "doing a thing: ${{ matrix.dynamic }}"
        |                                    ^^^^^^^^^^^^^^ may expand into attacker-controllable code
        |
-       = note: audit confidence → Medium
+       = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    1 findings (1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
+    1 findings (1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
@@ -74,20 +82,7 @@ fn test_pr_317_repro() -> Result<()> {
         Zizmor::cargo_bin()
             .input(input_under_test("template-injection/pr-317-repro.yml"))
             .run()?,
-        @"
-    warning[template-injection]: code injection via template expansion
-      --> @@INPUT@@:28:20
-       |
-    27 |       - run: |
-       |         --- this run block
-    28 |           echo ${{ matrix.bar }}
-       |                    ^^^^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → Medium
-       = note: this finding has an auto-fix
-
-    2 findings (1 suppressed, 1 unsafe fixes): 0 informational, 0 low, 1 medium, 0 high
-    "
+        @"No findings to report. Good job! (2 suppressed)"
     );
 
     Ok(())
@@ -98,42 +93,14 @@ fn test_static_env() -> Result<()> {
     insta::assert_snapshot!(
         Zizmor::cargo_bin()
             .input(input_under_test("template-injection/static-env.yml"))
+            .args(["--format=github"])
             .run()?,
         @"
-    help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:43:20
-       |
-    42 |         run: |
-       |         --- this run block
-    43 |           echo ${{ env.bar }}
-       |                    ^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → High
-       = note: this finding has an auto-fix
-
-    help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:50:20
-       |
-    49 |         run: |
-       |         --- this run block
-    50 |           echo ${{ env.foo }}
-       |                    ^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → High
-       = note: this finding has an auto-fix
-
-    help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:55:20
-       |
-    54 |         run: |
-       |         --- this run block
-    55 |           echo ${{ env.quux }}
-       |                    ^^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → High
-       = note: this finding has an auto-fix
-
-    7 findings (4 suppressed, 3 unsafe fixes): 0 informational, 3 low, 0 medium, 0 high
+    ::warning file=@@INPUT@@,line=33,title=template-injection::static-env.yml:33: code injection via template expansion: may expand into attacker-controllable code
+    ::warning file=@@INPUT@@,line=38,title=template-injection::static-env.yml:38: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=43,title=template-injection::static-env.yml:43: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=50,title=template-injection::static-env.yml:50: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=55,title=template-injection::static-env.yml:55: code injection via template expansion: may expand into attacker-controllable code
     "
     );
 
@@ -338,108 +305,17 @@ fn test_issue_883_repro_action() -> Result<()> {
             .input(input_under_test(
                 "template-injection/issue-883-repro/action.yml"
             ))
+            .args(["--format=github"])
             .run()?,
-        @r#"
-    help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:48:53
-       |
-    34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
-       |       -------------------------------------------------------------------------------- action accepts arbitrary code
-    ...
-    39 |         script: |
-       |         ------ via this input
-    ...
-    48 |           chango_instance = get_chango_instance(${{ inputs.pyproject-toml }})
-       |                                                     ^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → Low
-
-    help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:56:26
-       |
-    34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
-       |       -------------------------------------------------------------------------------- action accepts arbitrary code
-    ...
-    39 |         script: |
-       |         ------ via this input
-    ...
-    56 |               ${{ toJson(env.CUSTOM_OUTPUT) }}
-       |                          ^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → High
-
-    help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:57:29
-       |
-    34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
-       |       -------------------------------------------------------------------------------- action accepts arbitrary code
-    ...
-    39 |         script: |
-       |         ------ via this input
-    ...
-    57 |               or ${{ toJson(env.DEFAULT_OUTPUT) }}
-       |                             ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → High
-
-    help[template-injection]: code injection via template expansion
-      --> @@INPUT@@:60:19
-       |
-    34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
-       |       -------------------------------------------------------------------------------- action accepts arbitrary code
-    ...
-    39 |         script: |
-       |         ------ via this input
-    ...
-    60 |               ${{ inputs.data }}
-       |                   ^^^^^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → Low
-
-    error[template-injection]: code injection via template expansion
-      --> @@INPUT@@:65:32
-       |
-    34 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
-       |       -------------------------------------------------------------------------------- action accepts arbitrary code
-    ...
-    39 |         script: |
-       |         ------ via this input
-    ...
-    65 |               event=${{ toJson(github.event) }},
-       |                                ^^^^^^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → High
-
-    help[template-injection]: code injection via template expansion
-       --> @@INPUT@@:110:33
-        |
-    104 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
-        |       -------------------------------------------------------------------------------- action accepts arbitrary code
-    105 |       with:
-    106 |         script: |
-        |         ------ via this input
-    ...
-    110 |           file_path = Path("${{ env.CHANGE_NOTE_PATH }}")
-        |                                 ^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-        |
-        = note: audit confidence → High
-
-    help[template-injection]: code injection via template expansion
-       --> @@INPUT@@:111:34
-        |
-    104 |       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
-        |       -------------------------------------------------------------------------------- action accepts arbitrary code
-    105 |       with:
-    106 |         script: |
-        |         ------ via this input
-    ...
-    111 |           encoded_content = "${{ env.CHANGE_NOTE_CONTENT }}"
-        |                                  ^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-        |
-        = note: audit confidence → High
-
-    7 findings: 0 informational, 6 low, 0 medium, 1 high
-    "#
+        @"
+    ::warning file=@@INPUT@@,line=48,title=template-injection::action.yml:48: code injection via template expansion: may expand into attacker-controllable code
+    ::notice file=@@INPUT@@,line=56,title=template-injection::action.yml:56: code injection via template expansion: may expand into attacker-controllable code
+    ::notice file=@@INPUT@@,line=57,title=template-injection::action.yml:57: code injection via template expansion: may expand into attacker-controllable code
+    ::warning file=@@INPUT@@,line=60,title=template-injection::action.yml:60: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=65,title=template-injection::action.yml:65: code injection via template expansion: may expand into attacker-controllable code
+    ::notice file=@@INPUT@@,line=110,title=template-injection::action.yml:110: code injection via template expansion: may expand into attacker-controllable code
+    ::notice file=@@INPUT@@,line=111,title=template-injection::action.yml:111: code injection via template expansion: may expand into attacker-controllable code
+    "
     );
 
     Ok(())
@@ -456,24 +332,15 @@ fn test_multiline_expression_pedantic() -> Result<()> {
             .run()?,
         @r#"
     info[template-injection]: code injection via template expansion
-      --> @@INPUT@@:19:16
+      --> @@INPUT@@:18:13
        |
-    16 |       - run: |
-       |         --- this run block
-    ...
-    19 |             && foo.bar
-       |                ^^^^^^^ may expand into attacker-controllable code
-       |
-       = note: audit confidence → Low
-
-    info[template-injection]: code injection via template expansion
-      --> @@INPUT@@:20:16
-       |
-    16 |       - run: |
-       |         --- this run block
-    ...
-    20 |             || baz.qux
-       |                ^^^^^^^ may expand into attacker-controllable code
+    16 |         - run: |
+       |           --- this run block
+    17 |             echo ${{
+    18 | /             some.ctx
+    19 | |             && foo.bar
+    20 | |             || baz.qux
+       | |______________________^ may expand into attacker-controllable code
        |
        = note: audit confidence → Low
 
@@ -490,7 +357,7 @@ fn test_multiline_expression_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    3 findings: 2 informational, 1 low, 0 medium, 0 high
+    2 findings: 1 informational, 1 low, 0 medium, 0 high
     "#
     );
 
@@ -683,19 +550,7 @@ fn test_issue_1903() -> Result<()> {
         Zizmor::cargo_bin()
             .input(input_under_test("template-injection/issue-1903-repro.yml"))
             .run()?,
-        @r#"
-    info[template-injection]: code injection via template expansion
-      --> @@INPUT@@:21:24
-       |
-    21 |       - run: echo "${{ (github.event.pull_request || github.event.issue).number }}"
-       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
-       |         |
-       |         this run block
-       |
-       = note: audit confidence → Low
-
-    1 finding: 1 informational, 0 low, 0 medium, 0 high
-    "#
+        @"No findings to report. Good job! (1 suppressed)"
     );
 
     Ok(())
@@ -729,10 +584,12 @@ fn test_issue_2490() -> Result<()> {
             .run()?,
         @r#"
     error[template-injection]: code injection via template expansion
-      --> @@INPUT@@:19:40
+      --> @@INPUT@@:19:24
        |
     19 |       - run: echo "${{ fromJSON(toJSON(github.event.issue.title)) }}"
-       |         --- this run block             ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         |
+       |         this run block
        |
        = note: audit confidence → High
 
@@ -755,10 +612,12 @@ fn test_issue_2502() -> Result<()> {
             .run()?,
         @r#"
     error[template-injection]: code injection via template expansion
-      --> @@INPUT@@:19:62
+      --> @@INPUT@@:19:24
        |
     19 |       - run: echo "${{ case(github.event.action == 'opened', github.event.issue.title, 'x') }}"
-       |         --- this run block                                   ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         |
+       |         this run block
        |
        = note: audit confidence → High
 
@@ -1335,6 +1194,63 @@ jobs:
      ⏎
            - shell: bash
              run: echo ok
+    "#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_interpreted_indirections() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("template-injection/interpreted-indirections.yml"))
+            .args(["--format=github"])
+            .run()?,
+        @"
+    ::error file=@@INPUT@@,line=18,title=template-injection::interpreted-indirections.yml:18: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=19,title=template-injection::interpreted-indirections.yml:19: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=20,title=template-injection::interpreted-indirections.yml:20: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=23,title=template-injection::interpreted-indirections.yml:23: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=25,title=template-injection::interpreted-indirections.yml:25: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=26,title=template-injection::interpreted-indirections.yml:26: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=27,title=template-injection::interpreted-indirections.yml:27: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=43,title=template-injection::interpreted-indirections.yml:43: code injection via template expansion: may expand into attacker-controllable code
+    ::error file=@@INPUT@@,line=44,title=template-injection::interpreted-indirections.yml:44: code injection via template expansion: may expand into attacker-controllable code
+    "
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_output_aliases() -> Result<()> {
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .input(input_under_test("template-injection/output-aliases.yml"))
+            .run()?,
+        @r#"
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:26:24
+       |
+     8 |       title: ${{ github.event.issue.title }}
+       |       -------------------------------------- this job declares output title
+    ...
+    16 |       title: ${{ needs.producer.outputs.title }}
+       |       ------------------------------------------ this job declares output title
+    ...
+    24 |       TITLE: ${{ needs.middle.outputs.title }}
+       |       ---------------------------------------- TITLE is defined here
+    25 |     steps:
+    26 |       - run: echo "${{ env.TITLE }}"
+       |         ---            ^^^^^^^^^ may expand into attacker-controllable code
+       |         |
+       |         this run block
+       |
+       = note: audit confidence → High
+       = note: this finding has an auto-fix
+
+    6 findings (5 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
     "#
     );
 
