@@ -421,13 +421,12 @@ impl TemplateInjection {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
+        let context = std::cell::LazyCell::new(|| step.expression_context());
         for (script, script_loc, related_locs) in Self::scripts_with_location(step) {
             for (expression, span) in extract_fenced_expressions(script) {
                 let parsed = Expr::parse(expression.as_bare());
-                let context = step.expression_context();
-                let mut analysis = models::evaluation::Analysis::default();
                 let outcomes = match &parsed {
-                    Ok(expr) => analysis.evaluate(expr, &context),
+                    Ok(expr) => context.scope.evaluate(expr),
                     Err(Error::Depth) => vec![Outcome::new(TrackedValue::incomplete())],
                     Err(_) => continue,
                 };
@@ -472,7 +471,7 @@ impl TemplateInjection {
                             .annotated("may expand into attacker-controllable code".to_string()),
                     );
 
-                let locations = analysis.locations(outcomes.iter().filter(|value| {
+                let locations = context.locations(outcomes.iter().filter(|value| {
                     risk.is_none()
                         || Self::outcome_risk(value, &|name| step.get_input(name)).is_some()
                 }));

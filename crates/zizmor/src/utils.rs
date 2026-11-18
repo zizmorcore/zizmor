@@ -362,27 +362,8 @@ pub(crate) fn extract_fenced_expression(
     text: &str,
     offset: usize,
 ) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
-    let view = &text[offset..];
-    let start = view.find("${{")?;
-
-    let mut end = None;
-    let mut in_string = false;
-
-    for (idx, char) in view.bytes().enumerate().skip(start) {
-        if char == b'\'' {
-            in_string = !in_string;
-        } else if !in_string && view.as_bytes()[idx] == b'}' && view.as_bytes()[idx - 1] == b'}' {
-            end = Some(idx);
-            break;
-        }
-    }
-
-    end.map(|end| {
-        (
-            ExtractedExpr::from_fenced(&view[start..=end]).expect("impossible"),
-            start + offset..end + offset + 1,
-        )
-    })
+    let span = github_actions_expressions::evaluation::fenced_span(text, offset)?;
+    Some((ExtractedExpr::from_fenced(&text[span.clone()])?, span))
 }
 
 /// Extract zero or more fenced expressions from the given free-form text.
