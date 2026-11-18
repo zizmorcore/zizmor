@@ -31,7 +31,7 @@
 //! Outcome { value: 'b', choices: {D0: A0} }
 //! ```
 
-use crate::Evaluation;
+use crate::{Evaluation, op::BinOp};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
@@ -310,6 +310,46 @@ impl TrackedValue {
         }
     }
 
+    pub(super) fn negate(self) -> Self {
+        let inner = match self.truth() {
+            Some(truth) => AbstractValue::Known(Evaluation::Boolean(!truth)),
+            None => AbstractValue::Unknown(Shape::Boolean),
+        };
+        Self::new(inner).conditioned(&self)
+    }
+
+    /// Whether this value could be a boolean, as required by `case`.
+    /// A value of unknown type that is known to be falsy could be `false`.
+    pub(super) fn can_be_boolean(&self) -> bool {
+        matches!(
+            self.inner,
+            AbstractValue::Known(Evaluation::Boolean(_))
+                | AbstractValue::Unknown(Shape::Any | Shape::Boolean | Shape::Falsy)
+                | AbstractValue::Reference(_)
+        )
+    }
+
+    pub(super) fn compare(&self, op: &BinOp, rhs: &Self) -> Self {
+        // Actions compares arrays and objects by identity.
+        let same_instance = match (&self.inner, &rhs.inner) {
+            (AbstractValue::Array(a), AbstractValue::Array(b)) => Some(Arc::ptr_eq(a, b)),
+            (AbstractValue::Object(a), AbstractValue::Object(b)) => Some(Arc::ptr_eq(a, b)),
+            _ => None,
+        };
+        let inner = if let Some(same) = same_instance {
+            AbstractValue::Known(Evaluation::Boolean(match op {
+                BinOp::Eq => same,
+                BinOp::Neq => !same,
+                _ => false,
+            }))
+        } else if let (Some(a), Some(b)) = (self.concrete(), rhs.concrete()) {
+            AbstractValue::Known(op.evaluate(a, b))
+        } else {
+            AbstractValue::Unknown(Shape::Boolean)
+        };
+        Self::new(inner).conditioned(self).conditioned(rhs)
+    }
+
     /// Return this tracked value's elements, with the value's
     /// own provenance attached, if the tracked value is an array.
     pub fn elements(&self) -> Option<Vec<Self>> {
@@ -481,6 +521,34 @@ impl<T> Outcome<T> {
             value: apply(self.value),
             choices: self.choices,
         }
+    }
+
+    /// Combine two outcomes if their assumptions agree on every shared decision.
+    pub(super) fn combine<U, V>(
+        &self,
+        other: &Outcome<U>,
+        value: impl FnOnce(T, U) -> V,
+    ) -> Option<Outcome<V>>
+    where
+        T: Clone,
+        U: Clone,
+    {
+        for (decision, alternative) in &self.choices {
+            if other
+                .choices
+                .get(decision)
+                .is_some_and(|a| a != alternative)
+            {
+                return None;
+            }
+        }
+
+        let mut choices = self.choices.clone();
+        choices.extend(&other.choices);
+        Some(Outcome {
+            value: value(self.value.clone(), other.value.clone()),
+            choices,
+        })
     }
 
     /// Add a choice constraint to this outcome, returning the updated outcome.

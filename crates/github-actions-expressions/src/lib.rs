@@ -726,18 +726,6 @@ impl<'src> Expr<'src> {
         };
         value.value.concrete()
     }
-
-    /// Evaluate the expression, looking up each context path in the caller's bindings.
-    ///
-    /// If a binding contains another expression, evaluate it with the state passed
-    /// to the lookup so both expressions share decisions and work limits.
-    pub fn evaluate(
-        &self,
-        state: &mut evaluation::State,
-        mut lookup: impl FnMut(&mut evaluation::State, &[evaluation::Access]) -> evaluation::Outcomes,
-    ) -> evaluation::Outcomes {
-        state.evaluate(self, &mut lookup)
-    }
 }
 
 #[cfg(test)]
