@@ -14,8 +14,7 @@ pub(super) struct State {
     pub(super) definitions: BTreeMap<usize, DecisionId>,
     pub(super) materialized: BTreeMap<(usize, Vec<String>), Outcomes>,
     depth: usize,
-    work: usize,
-    incomplete: bool,
+    pub(super) budget: Budget,
     next_decision: usize,
     predicates: BTreeMap<Predicate, DecisionId>,
 }
@@ -31,6 +30,41 @@ struct Predicate {
 const MAX_ALTERNATIVES: usize = 256;
 const MAX_DEPTH: usize = 64;
 const MAX_WORK: usize = 16_384;
+
+/// The work and alternative limits shared by an expression and its bindings.
+#[derive(Default)]
+pub struct Budget {
+    work: usize,
+    incomplete: bool,
+}
+
+impl Budget {
+    /// Collect alternatives up to the result and work limits. If either limit
+    /// cuts the collection short, mark this evaluation incomplete.
+    pub fn bound<T>(&mut self, values: impl IntoIterator<Item = T>) -> Vec<T> {
+        let mut results = Vec::new();
+        for value in values {
+            if !self.checkpoint() {
+                break;
+            }
+            if results.len() == MAX_ALTERNATIVES {
+                self.incomplete = true;
+                break;
+            }
+            results.push(value);
+        }
+        results
+    }
+
+    /// Charge one unit of work. A `false` result means this unit exceeds the
+    /// budget and the caller should stop exploring.
+    pub fn checkpoint(&mut self) -> bool {
+        self.work += 1;
+        let available = self.work <= MAX_WORK;
+        self.incomplete |= !available;
+        available
+    }
+}
 
 impl State {
     /// Allocate a new decision ID in this state.
@@ -72,37 +106,11 @@ impl State {
     /// unexplored alternatives when the outermost evaluation finishes. This
     /// outcome is marked incomplete and counts toward the result limit.
     pub(super) fn finish(&self, mut values: Outcomes) -> Outcomes {
-        if self.depth == 0 && self.incomplete {
+        if self.depth == 0 && self.budget.incomplete {
             values.truncate(MAX_ALTERNATIVES - 1);
             values.push(Outcome::new(TrackedValue::incomplete()));
         }
         values
-    }
-
-    /// Collect alternatives up to the result and work limits. If either limit
-    /// cuts the collection short, mark this evaluation incomplete.
-    pub(super) fn bound<T>(&mut self, values: impl IntoIterator<Item = T>) -> Vec<T> {
-        let mut results = Vec::new();
-        for value in values {
-            if !self.checkpoint() {
-                break;
-            }
-            if results.len() == MAX_ALTERNATIVES {
-                self.incomplete = true;
-                break;
-            }
-            results.push(value);
-        }
-        results
-    }
-
-    /// Charge one unit of work. A `false` result means this unit exceeds the
-    /// budget and the caller should stop exploring.
-    pub(super) fn checkpoint(&mut self) -> bool {
-        self.work += 1;
-        let available = self.work <= MAX_WORK;
-        self.incomplete |= !available;
-        available
     }
 
     /// Charge for visiting an expression and bound its outcomes. Only the
@@ -113,7 +121,7 @@ impl State {
         }
 
         let values = self.nested(visit);
-        let values = self.bound(values);
+        let values = self.budget.bound(values);
         self.finish(values)
     }
 
@@ -125,8 +133,8 @@ impl State {
     }
 
     pub(super) fn exhausted(&mut self) -> bool {
-        let exhausted = self.depth >= MAX_DEPTH || !self.checkpoint();
-        self.incomplete |= exhausted;
+        let exhausted = self.depth >= MAX_DEPTH || !self.budget.checkpoint();
+        self.budget.incomplete |= exhausted;
         exhausted
     }
 
@@ -166,7 +174,7 @@ impl State {
         let mut results = vec![];
         for lhs in &left {
             for rhs in &right {
-                if !self.checkpoint() {
+                if !self.budget.checkpoint() {
                     return results;
                 }
                 let Some(pair) = lhs.combine(rhs, &mut value) else {
@@ -174,7 +182,7 @@ impl State {
                 };
                 results.push(pair);
                 if results.len() > MAX_ALTERNATIVES {
-                    return self.bound(results);
+                    return self.budget.bound(results);
                 }
             }
         }
@@ -190,7 +198,10 @@ mod tests {
     #[test]
     fn resource_limits_retain_an_unknown_remainder() {
         let mut analysis = State {
-            work: MAX_WORK,
+            budget: Budget {
+                work: MAX_WORK,
+                ..Budget::default()
+            },
             ..State::default()
         };
         let parsed = Expr::parse("config.x").unwrap();
@@ -199,7 +210,7 @@ mod tests {
         assert!(values[0].value.provenance.incomplete);
 
         let mut analysis = State::default();
-        analysis.bound(vec![(); MAX_ALTERNATIVES + 1]);
+        analysis.budget.bound(vec![(); MAX_ALTERNATIVES + 1]);
         let values = analysis.finish(Outcomes::default());
         assert_eq!(values.len(), 1);
         assert!(values[0].value.provenance.incomplete);

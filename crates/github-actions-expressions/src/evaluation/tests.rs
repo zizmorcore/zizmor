@@ -150,3 +150,24 @@ fn bound_collections_preserve_identity_and_field_sources() {
             .contains("config.field")
     );
 }
+
+#[test]
+fn expansion_charges_only_the_branch_that_reads_it() {
+    let value = Definition::known(Evaluation::Boolean(true)).expand(|value, budget| {
+        // Even discarded intermediate candidates count toward the evaluation limits.
+        budget.bound(std::iter::repeat(()));
+        vec![value.clone()]
+    });
+    let mut scope = Scope::default();
+    scope.bind("value", value);
+
+    let skipped = scope.evaluate(&Expr::parse("false && value").unwrap());
+    assert_eq!(skipped.len(), 1);
+    assert!(!skipped[0].value.provenance.incomplete);
+
+    let read = scope.evaluate(&Expr::parse("value").unwrap());
+    assert!(
+        read.iter()
+            .any(|outcome| outcome.value.provenance.incomplete)
+    );
+}

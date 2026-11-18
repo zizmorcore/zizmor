@@ -63,10 +63,12 @@ impl Scope {
     }
 }
 
-/// A value definition. Cloning a choice or matrix keeps its identity, so two
-/// reads in one evaluation select the same alternative or row.
+/// A value definition. Reads of the same choice or expansion select the same
+/// alternative throughout an evaluation.
 #[derive(Clone)]
 pub struct Definition(Arc<Node>);
+
+type Expansion = fn(&TrackedValue, &mut Budget) -> Vec<TrackedValue>;
 
 enum Node {
     Value(TrackedValue),
@@ -77,7 +79,7 @@ enum Node {
     Array(Vec<Definition>),
     Object(BTreeMap<String, Definition>),
     Choice(Vec<Definition>),
-    Matrix(Definition),
+    Expand(Definition, Expansion),
     Located(Definition, usize),
 }
 
@@ -130,9 +132,12 @@ impl Definition {
         Self::new(Node::Choice(values))
     }
 
-    /// Expand the definition into matrix rows when a consumer first reads it.
-    pub fn matrix(definition: Self) -> Self {
-        Self::new(Node::Matrix(definition))
+    /// Derive alternatives from each possible value on the first read.
+    /// Each alternative inherits the input outcome's assumptions and provenance.
+    /// The expansion shares the evaluation's budget, including any work it
+    /// spends on intermediate combinations.
+    pub fn expand(self, alternatives: fn(&TrackedValue, &mut Budget) -> Vec<TrackedValue>) -> Self {
+        Self::new(Node::Expand(self, alternatives))
     }
 
     /// Attach the caller’s source location to each result.
@@ -169,7 +174,7 @@ impl Definition {
                 return state.read_choice(decision, options, path, rest);
             }
             Node::Template(..) => state.materialize(self, &[]),
-            Node::Matrix(_) | Node::Array(_) | Node::Object(_) => {
+            Node::Expand(..) | Node::Array(_) | Node::Object(_) => {
                 state.materialize(self, &path[..path.len() - rest.len()])
             }
         };
@@ -190,14 +195,14 @@ impl State {
     ) -> Outcomes {
         let mut results = Vec::new();
         for (index, option) in options.iter().enumerate() {
-            if !self.checkpoint() {
+            if !self.budget.checkpoint() {
                 break;
             }
             for outcome in option.read(self, path, rest) {
                 results.extend(outcome.assume(decision, AlternativeId::new(index)));
             }
         }
-        self.bound(results)
+        self.budget.bound(results)
     }
 
     /// Once a definition yields a value, all later accesses read that value.
@@ -234,15 +239,39 @@ impl State {
                         fields.keys().cloned().zip(items).collect(),
                     )))
                 }),
-            Node::Matrix(inner) => {
+            Node::Expand(inner, alternatives) => {
                 let decision = self.definition_decision(definition);
-                self.matrix_rows(decision, inner, binding)
+                let inputs = inner.read(self, binding, &[]);
+                self.expand(decision, inputs, *alternatives)
             }
             Node::Template(text, scope) => self.template(text, scope),
             _ => unreachable!("only computed definitions need materialization"),
         };
         self.materialized.insert(key, values.clone());
         values
+    }
+
+    fn expand(
+        &mut self,
+        decision: DecisionId,
+        inputs: Outcomes,
+        alternatives: Expansion,
+    ) -> Outcomes {
+        let mut results = Vec::new();
+        'inputs: for input in inputs {
+            for value in alternatives(&input.value, &mut self.budget) {
+                if !self.budget.checkpoint() {
+                    break 'inputs;
+                }
+                let index = AlternativeId::new(results.len());
+                let outcome = Outcome {
+                    value: value.with_provenance(&input.value.provenance),
+                    choices: input.choices.clone(),
+                };
+                results.extend(outcome.assume(decision, index));
+            }
+        }
+        self.budget.bound(results)
     }
 
     fn definition_decision(&mut self, definition: &Definition) -> DecisionId {

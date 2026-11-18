@@ -34,7 +34,6 @@
 //! Callers can use this to explain the result in a human-friendly manner.
 
 mod definitions;
-mod matrix;
 mod state;
 mod template;
 #[cfg(test)]
@@ -42,6 +41,7 @@ mod tests;
 mod value;
 
 pub use definitions::{Definition, Scope};
+pub use state::Budget;
 use state::State;
 pub use template::fenced_span;
 pub use value::*;
@@ -102,7 +102,7 @@ impl State {
                 }
             }
         }
-        self.bound(results)
+        self.budget.bound(results)
     }
 
     /// Evaluate predicate/value pairs in order. A true branch selects its
@@ -132,7 +132,7 @@ impl State {
                 value.conditioned(&condition)
             }));
         }
-        self.bound(results)
+        self.budget.bound(results)
     }
 
     /// Pair each possible truth value with the outcome and assumptions that permit it.
@@ -161,7 +161,7 @@ impl State {
                 }
             }
         }
-        self.bound(conditions)
+        self.budget.bound(conditions)
     }
 
     /// Look up a named context such as `env.NAME` using its full path. For
@@ -177,7 +177,7 @@ impl State {
                     value.with_provenance(&path.provenance)
                 }));
             }
-            return self.bound(results);
+            return self.budget.bound(results);
         }
 
         let mut values = self.evaluate(first, scope);
