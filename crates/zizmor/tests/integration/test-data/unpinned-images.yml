@@ -105,7 +105,9 @@ jobs:
     runs-on: ubuntu-latest
     services:
       redis:
-        image: ${{ inputs.use-redis && 'redis:7' || '' }}
+        image: ${{ inputs.use-redis == true && 'redis:7' || '' }}
+      redis-string-comparison:
+        image: ${{ inputs.use-redis == 'true' && 'redis:7' || '' }}
     steps:
       - run: echo 'not vulnerable!'
 

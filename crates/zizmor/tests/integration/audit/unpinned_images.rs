@@ -59,44 +59,58 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
     error[unpinned-images]: unpinned image references
        --> @@INPUT@@:108:9
         |
-    108 |         image: ${{ inputs.use-redis && 'redis:7' || '' }}
-        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "redis:7" is not pinned to a SHA256 hash
+     10 |       use-redis:
+        |       --------- input use-redis declared here
+    ...
+    108 |         image: ${{ inputs.use-redis == true && 'redis:7' || '' }}
+        |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "redis:7" is not pinned to a SHA256 hash
         |
         = note: audit confidence → High
 
     error[unpinned-images]: unpinned image references
-       --> @@INPUT@@:125:7
+       --> @@INPUT@@:127:7
         |
-    125 |       image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
+     13 |       image:
+        |       ----- input image declared here
+    ...
+    127 |       image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
         |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
         |
         = note: audit confidence → Low
 
     error[unpinned-images]: unpinned image references
-       --> @@INPUT@@:133:24
+       --> @@INPUT@@:127:7
         |
-    133 |       - uses: docker://ubuntu
+    127 |       image: ${{ inputs.image || vars.DEFAULT_IMAGE }}
+        |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
+        |
+        = note: audit confidence → Low
+
+    error[unpinned-images]: unpinned image references
+       --> @@INPUT@@:135:24
+        |
+    135 |       - uses: docker://ubuntu
         |                        ^^^^^^ container image is unpinned
         |
         = note: audit confidence → High
 
     error[unpinned-images]: unpinned image references
-       --> @@INPUT@@:134:24
+       --> @@INPUT@@:136:24
         |
-    134 |       - uses: docker://ubuntu:latest
+    136 |       - uses: docker://ubuntu:latest
         |                        ^^^^^^^^^^^^^ container image uses the floating 'latest' tag
         |
         = note: audit confidence → High
 
     error[unpinned-images]: unpinned image references
-       --> @@INPUT@@:135:24
+       --> @@INPUT@@:137:24
         |
-    135 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
+    137 |       - uses: docker://ghcr.io/pypa/gh-action-pypi-publish
         |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
         |
         = note: audit confidence → High
 
-    11 findings: 0 informational, 0 low, 0 medium, 11 high
+    12 findings: 0 informational, 0 low, 0 medium, 12 high
     "#
     );
 
