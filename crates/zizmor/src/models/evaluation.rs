@@ -193,27 +193,19 @@ impl Bindings for Environment<'_, '_> {
                         .get(&name.to_ascii_lowercase())
                         .cloned()
                         .unwrap_or_else(|| vec![empty()]);
-                    values.map(|value| {
-                        rest.iter()
-                            .fold(value, |value, key| value.apply_access(key))
-                    })
+                    values.map(|value| value.apply_path(rest))
                 } else {
                     self.runtime(path)
                 }
             }
             "matrix" if context.phase != Phase::Matrix && context.job.is_some() => {
-                if let Some(needed) = self.needs_row {
-                    needed.set(true);
+                if self.defer_until_row() {
                     return vec![];
                 }
                 let Some((_, row)) = &context.row else {
                     return vec![empty()];
                 };
-                vec![Outcome::new(
-                    path[1..]
-                        .iter()
-                        .fold(row.clone(), |value, key| value.apply_access(key)),
-                )]
+                vec![Outcome::new(row.clone().apply_path(&path[1..]))]
             }
             "env" if context.phase == Phase::Step => self.environment(eval, path),
             "needs" => self
@@ -238,13 +230,20 @@ impl<'doc> Environment<'_, 'doc> {
         }
     }
 
+    fn defer_until_row(&self) -> bool {
+        if let Some(needed) = self.needs_row {
+            needed.set(true);
+            return true;
+        }
+        false
+    }
+
     fn runtime(&self, path: &[Access]) -> Outcomes {
         let mut value = TrackedValue::unknown();
         let name = path.iter().map(Access::text).collect::<Vec<_>>().join(".");
         let name = match &self.context.job {
             Some(job) if !path[0].text().eq_ignore_ascii_case("inputs") => {
-                if let Some(needed) = self.needs_row {
-                    needed.set(true);
+                if self.defer_until_row() {
                     return vec![];
                 }
                 match &self.context.row {
@@ -280,11 +279,9 @@ impl<'doc> Environment<'_, 'doc> {
                         .annotated(format!("an earlier step may overwrite {name}")),
                 )
             });
-            let id = self.results.record(
-                location
-                    .clone()
-                    .annotated(format!("{name} is defined here")),
-            );
+            let id = self
+                .results
+                .record(location.annotated(format!("{name} is defined here")));
             let key = (
                 id,
                 context.job.as_ref().map_or("", |j| j.id()).to_owned(),
@@ -320,10 +317,7 @@ impl<'doc> Environment<'_, 'doc> {
                 }
                 values
             };
-            return values.map(|value| {
-                rest.iter()
-                    .fold(value, |value, key| value.apply_access(key))
-            });
+            return values.map(|value| value.apply_path(rest));
         }
         self.runtime(path)
     }
@@ -403,7 +397,7 @@ impl<'doc> Environment<'_, 'doc> {
         Some(
             self.cache.outputs[&key]
                 .clone()
-                .map(|value| rest.iter().fold(value, |v, k| v.apply_access(k))),
+                .map(|value| value.apply_path(rest)),
         )
     }
 }
