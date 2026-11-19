@@ -121,6 +121,11 @@ Alexander Riccio
 Carol Willing
 </a>
 </td>
+<td align="center" valign="top">
+<a href="https://github.com/bevanjkay">
+Bevan Kay
+</a>
+</td>
 </tr>
 </tbody>
 </table>
