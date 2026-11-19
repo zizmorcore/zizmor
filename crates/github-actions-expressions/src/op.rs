@@ -23,6 +23,27 @@ pub enum BinOp {
     Le,
 }
 
+impl BinOp {
+    /// Applies this operator to already evaluated operands.
+    ///
+    /// Callers must implement short circuiting before evaluating the right operand.
+    pub fn evaluate(&self, lhs: crate::Evaluation, rhs: crate::Evaluation) -> crate::Evaluation {
+        use crate::Evaluation::Boolean;
+
+        match self {
+            Self::And if lhs.as_boolean() => rhs,
+            Self::Or if !lhs.as_boolean() => rhs,
+            Self::And | Self::Or => lhs,
+            Self::Eq => Boolean(lhs.sema() == rhs.sema()),
+            Self::Neq => Boolean(lhs.sema() != rhs.sema()),
+            Self::Lt => Boolean(lhs.sema() < rhs.sema()),
+            Self::Le => Boolean(lhs.sema() <= rhs.sema()),
+            Self::Gt => Boolean(lhs.sema() > rhs.sema()),
+            Self::Ge => Boolean(lhs.sema() >= rhs.sema()),
+        }
+    }
+}
+
 /// Represents a binary expression.
 ///
 /// Binary expressions can be either logical or arithmetic.
@@ -52,6 +73,12 @@ mod tests {
         use crate::Evaluation;
 
         let test_cases = &[
+            // Unreachable operands may be dynamic or invalid.
+            ("true || fromJSON('invalid')", Evaluation::Boolean(true)),
+            (
+                "'' && fromJSON('invalid')",
+                Evaluation::String(String::new()),
+            ),
             // Boolean operations
             ("true && true", Evaluation::Boolean(true)),
             ("true && false", Evaluation::Boolean(false)),

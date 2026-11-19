@@ -10,13 +10,14 @@ homepage.workspace = true
 license.workspace = true
 
 [dependencies]
+indexmap.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 subfeature.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
-serde.workspace = true
 
 [lints]
 workspace = true
