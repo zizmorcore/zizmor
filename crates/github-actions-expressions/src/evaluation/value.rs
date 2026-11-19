@@ -368,6 +368,16 @@ impl TrackedValue {
         Some(Self::new(inner).with_provenance(&self.dependencies()))
     }
 
+    /// `format` renders a collection's type name regardless of its members.
+    pub(super) fn formatted(self) -> Self {
+        let name = match self.inner {
+            AbstractValue::Array(_) | AbstractValue::FilteredArray(_) => "Array",
+            AbstractValue::Object(_) => "Object",
+            _ => return self.into_string().expect("scalar"),
+        };
+        Self::known(Evaluation::String(name.into())).with_provenance(&self.provenance.controlled())
+    }
+
     /// Return this tracked value's truthiness, if it can be determined.
     pub fn truth(&self) -> Option<bool> {
         match &self.inner {

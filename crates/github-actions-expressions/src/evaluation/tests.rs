@@ -60,6 +60,23 @@ fn independent_choices_preserve_the_last_alternative() {
 }
 
 #[test]
+fn repeated_format_placeholder_reuses_its_argument() {
+    let parsed = Expr::parse("format('{0}{0}', case(success(), 'a', 'b'))").unwrap();
+    let outcomes = Evaluator::default().evaluate(&parsed, &mut Constants);
+    let strings: Vec<_> = outcomes
+        .iter()
+        .map(|outcome| outcome.value.concrete())
+        .collect();
+    assert_eq!(
+        strings,
+        [
+            Some(Evaluation::String("bb".into())),
+            Some(Evaluation::String("aa".into()))
+        ]
+    );
+}
+
+#[test]
 fn bindings_preserve_typed_values_and_provenance() {
     let mut root = TrackedValue::new(AbstractValue::Reference(vec![]));
     root.provenance.evidence.insert(7);
@@ -77,9 +94,10 @@ fn bindings_preserve_typed_values_and_provenance() {
         assert!(provenance.evidence.contains(&7));
     }
 
-    let data = serde_json::json!({"config": {"n": 20}, "list": []});
+    let data = serde_json::json!({"config": {"n": 20}, "list": [], "items": [{}]});
     let root = TrackedValue::known(data.try_into().unwrap());
     for source in [
+        "contains(items, items[0])",
         "config == config",
         "config >= config",
         "list <= list",

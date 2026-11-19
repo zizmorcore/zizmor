@@ -1,6 +1,7 @@
 //! Fenced expressions in YAML string values.
 use super::*;
-use crate::Origin;
+use crate::call::FormatString;
+use indexmap::IndexSet;
 use std::ops::Range;
 
 /// Find the next expression, ignoring closing braces inside Actions strings.
@@ -18,6 +19,74 @@ pub fn fenced_span(text: &str, offset: usize) -> Option<Range<usize>> {
 }
 
 impl Evaluator {
+    /// A format argument is evaluated once, and only if a placeholder uses it.
+    pub(super) fn format(
+        &mut self,
+        args: &[SpannedExpr<'_>],
+        bindings: &mut dyn Bindings,
+    ) -> Outcomes {
+        let Some((template, args)) = args.split_first() else {
+            return vec![];
+        };
+        let templates = self
+            .evaluate(template, bindings)
+            .map(TrackedValue::formatted);
+        self.flat_map(templates, |state, template| {
+            state.interpolate(template, args, bindings)
+        })
+    }
+
+    fn interpolate(
+        &mut self,
+        template: &TrackedValue,
+        args: &[SpannedExpr<'_>],
+        bindings: &mut dyn Bindings,
+    ) -> Outcomes {
+        let AbstractValue::Known(Evaluation::String(text)) = &template.inner else {
+            // Any argument could be selected by a format string supplied at runtime.
+            let mut result = template.clone();
+            if matches!(result.inner, AbstractValue::Unknown(Shape::Hash)) {
+                return vec![Outcome::new(result)];
+            }
+            for arg in args {
+                for value in self.evaluate(arg, bindings).map(TrackedValue::formatted) {
+                    result.provenance.extend(&value.value.provenance);
+                }
+            }
+            return vec![Outcome::new(result)];
+        };
+        let Some(format) = FormatString::parse(text) else {
+            return vec![];
+        };
+        let indices: IndexSet<_> = format.arguments().collect();
+        if indices.iter().any(|&i| i >= args.len()) {
+            return vec![];
+        }
+        self.sequence(&indices, |state, &i| {
+            state
+                .evaluate(&args[i], bindings)
+                .map(TrackedValue::formatted)
+        })
+        .map(|values| {
+            let mut provenance = template.provenance.clone();
+            for value in &values {
+                provenance.extend(&value.provenance);
+            }
+            let text = format.render(|i| {
+                let value = &values[indices.get_index_of(&i)?];
+                match &value.inner {
+                    AbstractValue::Known(Evaluation::String(text)) => Some(text.as_str()),
+                    _ => None,
+                }
+            });
+            let inner = match text {
+                Some(text) => AbstractValue::Known(Evaluation::String(text)),
+                None => AbstractValue::Unknown(Shape::String),
+            };
+            TrackedValue { inner, provenance }
+        })
+    }
+
     /// Evaluate a YAML string. A single fenced expression retains its value type.
     pub fn template(&mut self, text: &str, bindings: &mut dyn Bindings) -> Outcomes {
         if !text.contains("${{") {
@@ -50,15 +119,7 @@ impl Evaluator {
 
         // Use format for interpolation so arguments retain their sources.
         format.push_str(&escape(&text[offset..]));
-        let synthetic = |inner| SpannedExpr {
-            inner,
-            origin: Origin::new(0..0, ""),
-        };
-        args.insert(0, synthetic(Expr::from(format)));
-        let expr = Expr::Call(Call {
-            func: Function::Format,
-            args,
-        });
-        self.evaluate(&expr, bindings)
+        let format = TrackedValue::known(Evaluation::String(format));
+        self.within_limits(|state| state.interpolate(&format, &args, bindings))
     }
 }

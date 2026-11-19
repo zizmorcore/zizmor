@@ -87,6 +87,7 @@ impl Evaluator {
                 state.product(lhs, rhs, |lhs, rhs| lhs.compare(&bin.op, &rhs))
             }
             Expr::Context(reference) => state.context(&reference.parts, bindings),
+            Expr::Call(call) if call.func == Format => state.format(&call.args, bindings),
             Expr::Call(call) if call.func == Case => state.case(&call.args, bindings),
             Expr::Call(call) => {
                 let args = state.sequence(&call.args, |state, arg| state.evaluate(arg, bindings));
@@ -276,6 +277,26 @@ impl Outcome<Vec<TrackedValue>> {
 
         let unknown = TrackedValue::new(AbstractValue::Unknown(shape));
         let value = match function {
+            Contains
+                if let [haystack, needle] = self.value.as_slice()
+                    && let Some(items) = haystack.elements() =>
+            {
+                // Compare tracked elements before converting to JSON loses object identity.
+                let mut found = Some(false);
+                for item in items {
+                    match item.compare(&BinOp::Eq, needle).truth() {
+                        Some(true) => {
+                            found = Some(true);
+                            break;
+                        }
+                        None => found = None,
+                        Some(false) => {}
+                    }
+                }
+                found.map_or(unknown, |value| {
+                    TrackedValue::known(Evaluation::Boolean(value))
+                })
+            }
             Always => TrackedValue::known(Evaluation::Boolean(true)),
             Success | Failure | Cancelled | HashFiles => unknown,
             _ => {
