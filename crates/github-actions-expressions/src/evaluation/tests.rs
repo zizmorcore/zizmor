@@ -49,11 +49,13 @@ fn independent_choices_preserve_the_last_alternative() {
                 .iter()
                 .all(|value| !value.value.provenance.incomplete)
         );
-        assert!(
-            values
-                .iter()
-                .any(|value| value.value.dependencies().sources.contains("payload.text"))
-        );
+        assert!(values.iter().any(|value| {
+            value
+                .value
+                .dependencies()
+                .sources
+                .contains(&Source::new("payload.text"))
+        }));
     }
 }
 
@@ -71,7 +73,7 @@ fn bindings_preserve_typed_values_and_provenance() {
     for value in values {
         let provenance = value.value.dependencies();
         assert!(provenance.sources.is_empty());
-        assert!(provenance.controls.contains("flags.enabled"));
+        assert!(provenance.controls.contains(&Source::new("flags.enabled")));
         assert!(provenance.evidence.contains(&7));
     }
 
@@ -92,7 +94,7 @@ fn bindings_preserve_typed_values_and_provenance() {
 #[test]
 fn partial_object_distinguishes_unknown_field_contents_from_a_missing_field() {
     let mut field = TrackedValue::unknown();
-    field.provenance.sources.insert("config.field".into());
+    field.provenance.sources.insert(Source::new("config.field"));
     let mut root = TrackedValue::new(AbstractValue::Object(std::sync::Arc::new(
         [("field".into(), field)].into_iter().collect(),
     )));
@@ -105,7 +107,7 @@ fn partial_object_distinguishes_unknown_field_contents_from_a_missing_field() {
             .value
             .dependencies()
             .sources
-            .contains("config.field")
+            .contains(&Source::new("config.field"))
     );
 }
 
@@ -114,14 +116,20 @@ fn decisions_are_stable_across_reads_and_distinct_across_scopes() {
     let mut state = Evaluator::default();
     let external = state.decision();
     let parsed = Expr::parse("case(config.enabled, 1, 2)").unwrap();
-    let scope = TrackedValue::new(AbstractValue::Reference(vec![]));
-    let first = state.evaluate(&parsed, &mut scope.clone());
-    let repeated = state.evaluate(&parsed, &mut scope.clone());
+    let scope = |name: &str| {
+        let mut root = TrackedValue::unknown();
+        root.provenance.sources.insert(Source {
+            path: "config.enabled".into(),
+            scope: Some(name.into()),
+        });
+        root
+    };
+    let first = state.evaluate(&parsed, &mut scope("first"));
+    let repeated = state.evaluate(&parsed, &mut scope("first"));
     assert!(!first[0].choices.contains_key(&external));
     assert_eq!(state.product(first.clone(), repeated, |a, _| a).len(), 2);
 
-    let scope = TrackedValue::new(AbstractValue::Reference(vec![Access::Key("other".into())]));
-    let other = state.evaluate(&parsed, &mut scope.clone());
+    let other = state.evaluate(&parsed, &mut scope("second"));
     assert_eq!(state.product(first, other, |a, _| a).len(), 4);
 }
 

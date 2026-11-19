@@ -116,6 +116,26 @@ impl Access {
     }
 }
 
+/// A runtime context path and the scope in which it was read.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Source {
+    /// The context path, for example `steps.build.outputs.image`.
+    pub path: String,
+    /// Supplied by the bindings when the same path names independent values
+    /// in different environments.
+    pub scope: Option<String>,
+}
+
+impl Source {
+    /// A path shared across the evaluation.
+    pub fn new(path: impl Into<String>) -> Self {
+        Self {
+            path: path.into(),
+            scope: None,
+        }
+    }
+}
+
 /// Provenance for the inputs and source locations that contribute to a value.
 ///
 /// Provenance includes both "source" and "control" provenance, tracking dataflow
@@ -129,12 +149,12 @@ pub struct Provenance {
     ///
     /// For example, `format('{0}', inputs.name)` would have `inputs.name` as a source,
     /// since the contents of that context flow into the result.
-    pub sources: BTreeSet<String>,
+    pub sources: BTreeSet<Source>,
     /// Context paths used to select or index a value, or compute a boolean or hash.
     ///
     /// For example, `case(inputs.enabled, 'a', 'b')` would have `inputs.enabled` in controls,
     /// as it selects a literal.
-    pub controls: BTreeSet<String>,
+    pub controls: BTreeSet<Source>,
     /// Indices into source locations stored by the caller, used for breadcrumbs.
     pub evidence: BTreeSet<usize>,
     /// A definition could not be resolved, or we couldn't fully explore all
@@ -281,9 +301,9 @@ impl TrackedValue {
         let mut provenance = self.provenance.clone();
         match &self.inner {
             AbstractValue::Reference(path) => {
-                provenance
-                    .sources
-                    .insert(path.iter().map(Access::text).collect::<Vec<_>>().join("."));
+                provenance.sources.insert(Source::new(
+                    path.iter().map(Access::text).collect::<Vec<_>>().join("."),
+                ));
             }
             AbstractValue::Array(values) => {
                 for value in values.iter() {

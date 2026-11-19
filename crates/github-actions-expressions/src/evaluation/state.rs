@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::{DecisionId, Outcome, Outcomes, TrackedValue};
+use super::{DecisionId, Outcome, Outcomes, Source, TrackedValue};
 
 /// Tracks decisions and work limits for one evaluation.
 ///
@@ -23,7 +23,7 @@ pub struct Evaluator {
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Predicate {
     expression: String,
-    inputs: BTreeSet<String>,
+    inputs: BTreeSet<Source>,
 }
 
 const MAX_ALTERNATIVES: usize = 256;
