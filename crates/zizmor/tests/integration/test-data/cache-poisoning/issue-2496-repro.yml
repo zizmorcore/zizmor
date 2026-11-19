@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    tags: ["**"]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node_tests:
+    name: "Node tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          package-manager-cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
