@@ -2,13 +2,13 @@
 # https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/template-injection.yml
 name: paw-me
 on:
-  issues:
+  repository_dispatch:
 
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.base_ref == main }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   not-ok:

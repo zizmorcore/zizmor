@@ -43,7 +43,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/ci.yml:101:18
     |
 101 |         run: ${{ matrix.command }}
-    |         ---      ^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         ---      ^^^^^^^^^^^^^^ prefer passing this value through the environment
     |         |
     |         this run block
     |
@@ -266,7 +266,7 @@ help[template-injection]: code injection via template expansion
   --> .github/workflows/node-ci.yml:40:18
    |
 40 |         run: ${{ matrix.command }}
-   |         ---      ^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |         ---      ^^^^^^^^^^^^^^ prefer passing this value through the environment
    |         |
    |         this run block
    |

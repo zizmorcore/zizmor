@@ -11,6 +11,8 @@ runs:
   steps:
     - name: case1
       run: |
+        # PR#402: github.action_path is available in composite actions.
+        cd "${{ github.action_path }}"
         hello ${{ inputs.expandme }}
       shell: bash
 

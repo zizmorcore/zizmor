@@ -323,7 +323,7 @@ expression: "zizmor().input(input_under_test(\"several-vulnerabilities.yml\")).a
                                 "annotation": "may expand into attacker-controllable code",
                                 "feature_kind": {
                                   "Subfeature": {
-                                    "after": 7,
+                                    "after": 6,
                                     "fragment": {
                                       "Raw": "github.event.pull_request.title"
                                     }
@@ -452,7 +452,7 @@ expression: "zizmor().input(input_under_test(\"several-vulnerabilities.yml\")).a
                       "annotation": "may expand into attacker-controllable code",
                       "feature_kind": {
                         "Subfeature": {
-                          "after": 7,
+                          "after": 6,
                           "fragment": {
                             "Raw": "github.event.pull_request.title"
                           }

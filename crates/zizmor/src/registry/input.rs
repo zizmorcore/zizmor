@@ -58,8 +58,7 @@ pub(crate) enum CollectionError {
     #[error(transparent)]
     Config(#[from] ConfigError),
 
-    /// The input couldn't be parsed as one of our known input sources
-    /// (file, directory, or GitHub repo).
+    /// The input or its source (file, directory, or GitHub repo) is invalid.
     #[error("invalid input: {0}")]
     InvalidInput(String),
 
@@ -611,7 +610,9 @@ impl InputGroup {
                 tracing::warn!("failed to parse input: {e}");
                 Ok(())
             }
-            Err(e @ CollectionError::Schema { .. }) if !strict => {
+            Err(e @ (CollectionError::Schema { .. } | CollectionError::InvalidInput(_)))
+                if !strict =>
+            {
                 tracing::warn!("failed to validate {key} as {kind}: {e}");
                 Ok(())
             }
@@ -851,6 +852,7 @@ impl InputGroup {
     }
 
     async fn collect_from_stdin() -> Result<Self, CollectionError> {
+        use CollectionError::{InvalidInput, Syntax};
         let mut contents = String::new();
         std::io::stdin()
             .read_to_string(&mut contents)
@@ -865,8 +867,8 @@ impl InputGroup {
         // Workflow is tried first since it's the most common stdin use case.
         match group.register(InputKind::Workflow, contents.clone(), key.clone(), true) {
             Ok(()) => return Ok(group),
-            // YAML itself is invalid; no point trying other types.
-            Err(e) if matches!(e.inner(), CollectionError::Syntax(_)) => return Err(e),
+            // Invalid YAML or a recognized workflow; no point trying other types.
+            Err(e) if matches!(e.inner(), Syntax(_) | InvalidInput(_)) => return Err(e),
             // Valid YAML but not a valid workflow; fall through to the next type.
             Err(_) => (),
         };

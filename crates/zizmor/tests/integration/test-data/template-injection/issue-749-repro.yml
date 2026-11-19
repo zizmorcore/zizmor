@@ -2,7 +2,7 @@
 
 name: issue-749-repro
 
-on: push
+on: issues
 
 permissions: {}
 
