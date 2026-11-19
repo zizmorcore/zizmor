@@ -104,32 +104,10 @@ impl<'a> SpannedExpr<'a> {
     /// For dataflow contexts, see [`SpannedExpr::dataflow_contexts`].
     pub fn contexts(&self) -> Vec<(&Context<'a>, &Origin<'a>)> {
         let mut contexts = vec![];
-
-        match self.deref() {
-            Expr::Index(expr) => contexts.extend(expr.contexts()),
-            Expr::Call(Call { func: _, args }) => {
-                for arg in args {
-                    contexts.extend(arg.contexts());
-                }
-            }
-            Expr::Context(ctx) => {
-                // Record the context itself.
-                contexts.push((ctx, &self.origin));
-
-                // The context's parts can also contain independent contexts,
-                // e.g. computed indices like `bar.baz` in `foo[bar.baz]`.
-                ctx.parts
-                    .iter()
-                    .for_each(|part| contexts.extend(part.contexts()));
-            }
-            Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {
-                contexts.extend(lhs.contexts());
-                contexts.extend(rhs.contexts());
-            }
-            Expr::UnExpr { op: _, expr } => contexts.extend(expr.contexts()),
-            _ => (),
+        if let Expr::Context(ctx) = &self.inner {
+            contexts.push((ctx, &self.origin));
         }
-
+        contexts.extend(self.children().flat_map(Self::contexts));
         contexts
     }
 
@@ -228,73 +206,26 @@ impl<'a> SpannedExpr<'a> {
     /// A computed index is any index operation with a non-literal
     /// evaluation, e.g. `foo[a.b.c]`.
     pub fn computed_indices(&self) -> Vec<&Self> {
-        let mut index_exprs = vec![];
-
-        match self.deref() {
-            Expr::Call(Call { func: _, args }) => {
-                for arg in args {
-                    index_exprs.extend(arg.computed_indices());
-                }
-            }
-            Expr::Index(spanned_expr)
-                // NOTE: We consider any non-literal, non-star index computed.
-                if !spanned_expr.is_literal() && !matches!(spanned_expr.inner, Expr::Star) => {
-                    index_exprs.push(self);
-                }
-            Expr::Context(context) => {
-                for part in &context.parts {
-                    index_exprs.extend(part.computed_indices());
-                }
-            }
-            Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {
-                index_exprs.extend(lhs.computed_indices());
-                index_exprs.extend(rhs.computed_indices());
-            }
-            Expr::UnExpr { op: _, expr } => {
-                index_exprs.extend(expr.computed_indices());
-            }
-            _ => {}
+        if let Expr::Index(index) = &self.inner
+            && !matches!(index.inner, Expr::Literal(_) | Expr::Star)
+        {
+            return vec![self];
         }
-
-        index_exprs
+        self.children().flat_map(Self::computed_indices).collect()
     }
 
     /// Returns all non-literal subexpressions within this expression
-    /// that can be constant-evaluated, along with their evaluations.
+    /// that can be replaced by their constant evaluations. See [`Expr::reducible_constant`].
     ///
     /// Literals are skipped because they are already simplified.
     pub fn consteval_subexprs(&self) -> Vec<(&Self, Evaluation)> {
         if !self.is_literal()
-            && let Some(evaluation) = self.consteval()
+            && let Some(evaluation) = self.reducible_constant()
         {
             return vec![(self, evaluation)];
         }
 
-        let mut subexprs = vec![];
-
-        match self.deref() {
-            Expr::Call(Call { func: _, args }) => {
-                for arg in args {
-                    subexprs.extend(arg.consteval_subexprs());
-                }
-            }
-            Expr::Context(ctx) => {
-                // Context indices may contain constant subexpressions.
-                for part in &ctx.parts {
-                    subexprs.extend(part.consteval_subexprs());
-                }
-            }
-            Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {
-                subexprs.extend(lhs.consteval_subexprs());
-                subexprs.extend(rhs.consteval_subexprs());
-            }
-            Expr::UnExpr { op: _, expr } => subexprs.extend(expr.consteval_subexprs()),
-
-            Expr::Index(expr) => subexprs.extend(expr.consteval_subexprs()),
-            _ => {}
-        }
-
-        subexprs
+        self.children().flat_map(Self::consteval_subexprs).collect()
     }
 }
 
@@ -345,6 +276,43 @@ pub enum Expr<'src> {
 }
 
 impl<'src> Expr<'src> {
+    /// Immediate operands in source order, including computed context indices.
+    fn children(&self) -> impl Iterator<Item = &SpannedExpr<'src>> {
+        use std::slice::from_ref;
+
+        let (operands, last): (&[_], _) = match self {
+            Self::Call(call) => (call.args.as_slice(), None),
+            Self::Context(context) => (context.parts.as_slice(), None),
+            Self::BinExpr(bin) => (from_ref(bin.lhs.as_ref()), Some(bin.rhs.as_ref())),
+            Self::Index(expr) | Self::UnExpr { expr, .. } => (from_ref(expr.as_ref()), None),
+            Self::Literal(_) | Self::Star | Self::Identifier(_) => (&[], None),
+        };
+        operands.iter().chain(last)
+    }
+
+    fn has_status_check(&self) -> bool {
+        matches!(
+            self,
+            Self::Call(Call {
+                func: Function::Always
+                    | Function::Success
+                    | Function::Failure
+                    | Function::Cancelled,
+                ..
+            })
+        ) || self.children().any(|child| child.has_status_check())
+    }
+
+    /// A constant that can replace this expression without removing an Actions
+    /// status check. In an `if`, the presence of even an unreachable status
+    /// check suppresses the runner's implicit `success()` condition.
+    pub fn reducible_constant(&self) -> Option<Evaluation> {
+        if self.has_status_check() {
+            return None;
+        }
+        self.consteval()
+    }
+
     /// Convenience API for making an [`Expr::Identifier`].
     fn ident(i: &'src str) -> Self {
         Self::Identifier(Identifier(i))
@@ -2280,6 +2248,11 @@ mod tests {
         for (source, expected) in [
             // Literals cannot be simplified further.
             ("'foo'", vec![]),
+            // Keep the status check and fold its independent sibling.
+            (
+                "always() && (1 == 1)",
+                vec![("(1 == 1)", Evaluation::Boolean(true))],
+            ),
             // Return only the outermost evaluable expression in each subtree.
             (
                 "format('{0}, {1}', github.event.number, format('{0}', fromJSON('\"abc\"')))",

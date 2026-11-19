@@ -78,6 +78,8 @@ pub enum Shape {
     Any,
     /// A string whose contents are unknown.
     String,
+    /// A number whose value is unknown.
+    Number,
     /// A boolean whose value is unknown.
     Boolean,
     /// Null, false, zero, or the empty string.
