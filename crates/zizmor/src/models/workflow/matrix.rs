@@ -61,21 +61,12 @@ impl<'doc> Expansion<'doc> {
     }
 }
 
-/// The container for a matrix expansions
-#[derive(Clone, Debug)]
+/// The values that can be expanded statically from a matrix.
+#[derive(Clone, Debug, Default)]
 pub(crate) struct Expansions<'doc> {
     /// Consolidated expansions of dimensions and explicit rows,
     /// evaluating inclusions and exclusions, if any
     all_expansions: Vec<Expansion<'doc>>,
-
-    /// Whether the matrix itself is fully indirect
-    indirectly_expanded: Option<SymbolicLocation<'doc>>,
-
-    /// Whether some inclusions are defined by non-static expressions
-    indirect_inclusions: Option<SymbolicLocation<'doc>>,
-
-    /// Whether some exclusions are defined by non-static expressions
-    indirect_exclusions: Option<SymbolicLocation<'doc>>,
 }
 
 impl<'doc> Expansions<'doc> {
@@ -92,105 +83,45 @@ impl<'doc> Expansions<'doc> {
         self.all_expansions.iter()
     }
 
-    /// Exposes the `SymbolicLocation` if `matrix` is fully indirectly expanded
-    pub(crate) fn indirectly_expanded(&self) -> &Option<SymbolicLocation<'doc>> {
-        &self.indirectly_expanded
-    }
-
-    /// Exposes the `SymbolicLocation` if `matrix.include` holds any indirect values
-    pub(crate) fn indirect_inclusions(&self) -> &Option<SymbolicLocation<'doc>> {
-        &self.indirect_inclusions
-    }
-
-    /// Exposes the `SymbolicLocation` if `matrix.exclude` holds any indirect values
-    #[allow(dead_code)]
-    pub(crate) fn indirect_exclusions(&self) -> &Option<SymbolicLocation<'doc>> {
-        &self.indirect_exclusions
-    }
-
-    /// Whether there are any indirections after expanding the matrix.
-    /// Note that exclusions can't add values, hence they are not considered
-    pub(crate) fn has_indirect_expansions(&self) -> bool {
-        self.indirectly_expanded.is_some() || self.indirect_inclusions.is_some()
-    }
-
-    /// Expands the current Matrix into all possible values
-    /// By default, the return is a pair (String, String), in which
-    /// the first component is the expanded path (e.g. 'matrix.os') and
-    /// the second component is the string representation for the expanded value
-    /// (e.g. ubuntu-latest)
-    ///
     fn expand_values(matrix: &LoE<job::Matrix>, location: SymbolicLocation<'doc>) -> Self {
-        match matrix {
-            LoE::Expr(_) => Self {
-                all_expansions: vec![],
-                // We consider this scenario as an indirect expansion
-                indirectly_expanded: Some(location.clone()),
-                indirect_inclusions: None,
-                indirect_exclusions: None,
-            },
-            LoE::Literal(inner) => {
-                let LoE::Literal(dimensions) = &inner.dimensions else {
-                    return Self {
-                        all_expansions: vec![],
-                        // We also consider this scenario as an indirect expansion
-                        indirectly_expanded: Some(location.clone()),
-                        indirect_inclusions: None,
-                        indirect_exclusions: None,
-                    };
-                };
+        let LoE::Literal(matrix) = matrix else {
+            return Self::default();
+        };
+        let LoE::Literal(dimensions) = &matrix.dimensions else {
+            return Self::default();
+        };
 
-                let mut expanded = Self::expand_dimensions(dimensions, location.clone());
+        let mut expanded = Self::expand_dimensions(dimensions, location.clone());
 
-                // Should be processed before includes, since that's what GitHub does.
-                if let LoE::Literal(excludes) = &inner.exclude {
-                    let to_exclude = excludes
-                        .iter()
-                        .flat_map(|exclude| {
-                            Self::expand_explicit_rows(
-                                exclude,
-                                location.with_keys(["exclude".into()]),
-                            )
-                        })
-                        .collect::<Vec<_>>();
+        // GitHub applies exclusions before inclusions.
+        if let LoE::Literal(excludes) = &matrix.exclude {
+            let to_exclude = excludes
+                .iter()
+                .flat_map(|exclude| {
+                    Self::expand_explicit_rows(exclude, location.with_keys(["exclude".into()]))
+                })
+                .collect::<Vec<_>>();
 
-                    expanded.retain(|expanded| !to_exclude.contains(expanded));
-                };
+            expanded.retain(|expanded| !to_exclude.contains(expanded));
+        }
 
-                if let LoE::Literal(includes) = &inner.include {
-                    let additional_expansions = includes
-                        .iter()
-                        .enumerate()
-                        .flat_map(|(idx, include)| {
-                            Self::expand_explicit_rows(
-                                include,
-                                location.clone().with_keys(["include".into(), idx.into()]),
-                            )
-                        })
-                        .collect::<Vec<_>>();
+        if let LoE::Literal(includes) = &matrix.include {
+            let additional_expansions = includes
+                .iter()
+                .enumerate()
+                .flat_map(|(idx, include)| {
+                    Self::expand_explicit_rows(
+                        include,
+                        location.with_keys(["include".into(), idx.into()]),
+                    )
+                })
+                .collect::<Vec<_>>();
 
-                    expanded.extend(additional_expansions);
-                };
+            expanded.extend(additional_expansions);
+        }
 
-                // Don't miss any indirections, handling inclusions and exclusions
-                // defined by expressions
-                let maybe_indirect_inclusions = match &inner.include {
-                    LoE::Expr(_) => Some(location.clone().with_keys(["include".into()])),
-                    _ => None,
-                };
-
-                let maybe_indirect_exclusions = match &inner.exclude {
-                    LoE::Expr(_) => Some(location.clone().with_keys(["exclude".into()])),
-                    _ => None,
-                };
-
-                Self {
-                    all_expansions: expanded,
-                    indirectly_expanded: None,
-                    indirect_inclusions: maybe_indirect_inclusions,
-                    indirect_exclusions: maybe_indirect_exclusions,
-                }
-            }
+        Self {
+            all_expansions: expanded,
         }
     }
 
@@ -1028,7 +959,7 @@ jobs:
     }
 
     #[test]
-    fn test_indirect_matrix_expands_to_static_values() -> anyhow::Result<()> {
+    fn test_dynamic_matrix_has_no_static_expansions() -> anyhow::Result<()> {
         let workflow_yaml = r#"
 name: test
 on: push
@@ -1036,7 +967,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ dynamic }}
+      matrix: ${{ fromJSON(vars.TARGETS) }}
     steps:
       - run: true
         "#;
@@ -1059,15 +990,12 @@ jobs:
         let matrix = Matrix::new(&job).unwrap();
         let expansions = matrix.expansions();
         assert!(expansions.all_expansions.is_empty());
-        assert!(expansions.indirectly_expanded.is_some());
-        assert!(expansions.indirect_exclusions.is_none());
-        assert!(expansions.indirect_inclusions.is_none());
 
         Ok(())
     }
 
     #[test]
-    fn test_matrix_expands_indirect_exclusions_inclusions() -> anyhow::Result<()> {
+    fn test_expands_dimensions_with_dynamic_include_and_exclude() -> anyhow::Result<()> {
         let workflow_yaml = r#"
 name: test
 on: push
@@ -1107,10 +1035,7 @@ jobs:
         let matrix = Matrix::new(&job).unwrap();
         let expansions = matrix.expansions();
 
-        assert_eq!(expansions.all_expansions.iter().count(), 3);
-        assert!(expansions.indirectly_expanded.is_none());
-        assert!(expansions.indirect_inclusions.is_some());
-        assert!(expansions.indirect_exclusions.is_some());
+        assert_eq!(expansions.iter().count(), 3);
 
         Ok(())
     }

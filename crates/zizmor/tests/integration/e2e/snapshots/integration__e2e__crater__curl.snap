@@ -42,13 +42,10 @@ error[unpinned-images]: unpinned image references
    --> .github/workflows/linux.yml:64:5
     |
  64 |     container: ${{ matrix.build.container }}
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
-...
- 73 |       matrix:
-    |       ------ this matrix
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "andy5995/slackware-build-essential:15.0" is not pinned to a SHA256 hash
 ...
 390 |             container: 'andy5995/slackware-build-essential:15.0'
-    |             ---------------------------------------------------- this expansion of matrix.build.container
+    |             ---------------------------------------------------- matrix value defined here
     |
     = note: audit confidence → High
 
@@ -56,13 +53,10 @@ error[unpinned-images]: unpinned image references
    --> .github/workflows/linux.yml:64:5
     |
  64 |     container: ${{ matrix.build.container }}
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
-...
- 73 |       matrix:
-    |       ------ this matrix
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "alpine:3.20" is not pinned to a SHA256 hash
 ...
 394 |             container: 'alpine:3.20'
-    |             ------------------------ this expansion of matrix.build.container
+    |             ------------------------ matrix value defined here
     |
     = note: audit confidence → High
 
@@ -70,13 +64,10 @@ error[unpinned-images]: unpinned image references
    --> .github/workflows/linux.yml:64:5
     |
  64 |     container: ${{ matrix.build.container }}
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
-...
- 73 |       matrix:
-    |       ------ this matrix
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "alpine:3.20" is not pinned to a SHA256 hash
 ...
 398 |             container: 'alpine:3.20'
-    |             ------------------------ this expansion of matrix.build.container
+    |             ------------------------ matrix value defined here
     |
     = note: audit confidence → High
 

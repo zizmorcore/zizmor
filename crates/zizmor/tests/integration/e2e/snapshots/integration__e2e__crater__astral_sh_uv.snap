@@ -1451,7 +1451,32 @@ error[unpinned-images]: unpinned image references
    --> .github/workflows/test-system.yml:138:5
     |
 138 |     container: rockylinux/rockylinux:${{ matrix.rocky-version }}
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "rockylinux/rockylinux:8" is not pinned to a SHA256 hash
+...
+142 |         rocky-version: ["8", "9", "10"]
+    |                         --- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/test-system.yml:138:5
+    |
+138 |     container: rockylinux/rockylinux:${{ matrix.rocky-version }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "rockylinux/rockylinux:9" is not pinned to a SHA256 hash
+...
+142 |         rocky-version: ["8", "9", "10"]
+    |                              --- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/test-system.yml:138:5
+    |
+138 |     container: rockylinux/rockylinux:${{ matrix.rocky-version }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "rockylinux/rockylinux:10" is not pinned to a SHA256 hash
+...
+142 |         rocky-version: ["8", "9", "10"]
+    |                                   ---- matrix value defined here
     |
     = note: audit confidence → High
 
@@ -1723,4 +1748,4 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-155 findings (2 suppressed): 21 informational, 105 low, 16 medium, 11 high
+157 findings (2 suppressed): 21 informational, 105 low, 16 medium, 13 high

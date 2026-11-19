@@ -2115,6 +2115,11 @@ Add inline comments explaining why each permission is needed:
 
 Checks for `container.image` values where the image is not pinned by either a tag (other than `latest`) or SHA256.
 
+When a workflow uses an expression for a job or service image, the audit checks
+each image name it can resolve. Findings point to the matrix entries or job
+outputs that supplied the value. An unresolved image produces a low-confidence
+finding unless the workflow specifies a literal SHA256 digest.
+
 When image references are unpinned or are pinned to a mutable tag, the
 workflow is at risk because the image used will be unpredictable over time.
 Changes made to the OCI registry used to source the image may result in untrusted
