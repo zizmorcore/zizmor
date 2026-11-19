@@ -51,7 +51,7 @@ use crate::{
 /// The context values visible at one evaluation site.
 pub trait Bindings {
     /// The first key names the context. Subsequent accesses have their
-    /// computed indices already evaluated. Return an unknown value for a runtime input, an empty string for a known missing
+    /// computed indices already evaluated. Return an unknown value for a runtime input, null for a known missing
     /// property, or no outcomes for an evaluation that cannot succeed.
     fn lookup(&mut self, path: &[Access], evaluator: &mut Evaluator) -> Outcomes;
 }
@@ -103,86 +103,85 @@ impl Evaluator {
     /// that reach it.
     fn short_circuit(&mut self, bin: &BinExpr<'_>, bindings: &mut dyn Bindings) -> Outcomes {
         let left = self.evaluate(&bin.lhs, bindings);
-        let mut results = vec![];
-        for (truth, condition) in self.conditions(bin.lhs.origin.raw, left) {
-            match (&bin.op, truth) {
-                (BinOp::Or, true) => results.push(condition),
-                (BinOp::And, false) => results.push(condition.map(|value| {
-                    // On this branch the left operand must be falsy.
+        let (falsy, truthy) = self.conditions(bin.lhs.origin.raw, left);
+        let (mut results, continued) = match bin.op {
+            BinOp::Or => (truthy, falsy),
+            BinOp::And => (
+                falsy.map(|value| {
                     if value.truth().is_some() {
                         value
                     } else {
                         TrackedValue::new(AbstractValue::Unknown(Shape::Falsy)).conditioned(&value)
                     }
-                })),
-                _ => {
-                    let right = self.evaluate(&bin.rhs, bindings);
-                    results.extend(self.product(vec![condition], right, |predicate, value| {
-                        value.conditioned(&predicate)
-                    }));
-                }
-            }
+                }),
+                truthy,
+            ),
+            _ => unreachable!("short-circuit operator"),
+        };
+        if !continued.is_empty() {
+            let right = self.evaluate(&bin.rhs, bindings);
+            results.extend(self.product(continued, right, |condition, value| {
+                value.conditioned(&condition)
+            }));
         }
-        self.budget.bound(results)
+        results
     }
 
-    /// Evaluate predicate/value pairs in order. A true branch selects its
-    /// paired value. A false branch continues to the next pair or the fallback.
+    /// Evaluate each reachable arm once, then attach the assumptions that reach it.
     fn case(&mut self, args: &[SpannedExpr<'_>], bindings: &mut dyn Bindings) -> Outcomes {
         if self.exhausted() {
-            return Outcomes::default();
+            return vec![];
         }
         let (predicate, selected, remaining) = match args {
             [fallback] => return self.evaluate(fallback, bindings),
             [predicate, selected, remaining @ ..] => (predicate, selected, remaining),
-            [] => unreachable!("a parsed case expression has a fallback"),
+            [] => return vec![],
         };
 
         let predicates = self.evaluate(predicate, bindings);
         let booleans = predicates.into_iter().filter(|p| p.value.can_be_boolean());
+        let (falsy, truthy) = self.conditions(predicate.origin.raw, booleans);
         let mut results = vec![];
-        for (truth, condition) in self.conditions(predicate.origin.raw, booleans) {
-            let values = self.nested(|state| {
-                if truth {
-                    state.evaluate(selected, bindings)
-                } else {
-                    state.case(remaining, bindings)
-                }
+        if !falsy.is_empty() {
+            let fallback = self.nested(|state| state.case(remaining, bindings));
+            results = self.product(falsy, fallback, |condition, value| {
+                value.conditioned(&condition)
             });
-            results.extend(self.product(vec![condition], values, |condition, value| {
+        }
+        if !truthy.is_empty() {
+            let selected = self.evaluate(selected, bindings);
+            results.extend(self.product(truthy, selected, |condition, value| {
                 value.conditioned(&condition)
             }));
         }
-        self.budget.bound(results)
+        self.budget.limit(results)
     }
 
-    /// Pair each possible truth value with the outcome and assumptions that permit it.
+    /// Separate false and true branches. A known truth value already carries
+    /// its binding's choices. Only an unresolved predicate needs a new assumption.
     fn conditions(
         &mut self,
         expression: &str,
         outcomes: impl IntoIterator<Item = Outcome>,
-    ) -> Vec<(bool, Outcome)> {
-        let mut conditions = vec![];
+    ) -> (Outcomes, Outcomes) {
+        let mut falsy = vec![];
+        let mut truthy = vec![];
         for outcome in outcomes {
-            let truths: &[bool] = match outcome.value.truth() {
-                Some(true) => &[true],
-                Some(false) => &[false],
-                None => &[false, true],
-            };
-            let decision = self.predicate(expression, &outcome.value);
-            for &truth in truths {
-                let branch = match decision {
-                    Some(id) => outcome
-                        .clone()
-                        .assume(id, AlternativeId::new(usize::from(truth))),
-                    None => Some(outcome.clone()),
-                };
-                if let Some(branch) = branch {
-                    conditions.push((truth, branch));
+            match outcome.value.truth() {
+                Some(false) => falsy.push(outcome),
+                Some(true) => truthy.push(outcome),
+                None => {
+                    if let Some(id) = self.predicate(expression, &outcome.value) {
+                        falsy.extend(outcome.clone().assume(id, AlternativeId::new(0)));
+                        truthy.extend(outcome.assume(id, AlternativeId::new(1)));
+                    } else {
+                        falsy.push(outcome.clone());
+                        truthy.push(outcome);
+                    }
                 }
             }
         }
-        self.budget.bound(conditions)
+        (falsy, truthy)
     }
 
     /// Look up a named context such as `env.NAME` using its full path. For
@@ -191,14 +190,12 @@ impl Evaluator {
     fn context(&mut self, parts: &[SpannedExpr<'_>], bindings: &mut dyn Bindings) -> Outcomes {
         let (first, rest) = parts.split_first().expect("parsed context has a head");
         if matches!(first.inner, Expr::Identifier(_)) {
-            let mut results = vec![];
-            for path in self.paths(parts, bindings) {
-                let values = bindings.lookup(&path.value.parts, self);
-                results.extend(self.product(vec![path], values, |path, value| {
-                    value.with_provenance(&path.provenance)
-                }));
-            }
-            return self.budget.bound(results);
+            let paths = self.paths(parts, bindings);
+            return self.flat_map(paths, |state, path| {
+                bindings
+                    .lookup(&path.parts, state)
+                    .map(|value| value.with_provenance(&path.provenance))
+            });
         }
 
         let mut values = self.evaluate(first, bindings);
@@ -232,14 +229,12 @@ impl Evaluator {
         bindings: &mut dyn Bindings,
     ) -> Outcomes<(Access, Provenance)> {
         let access = match &part.inner {
-            Expr::Identifier(key) => Access::Key(key.as_str().into()),
+            Expr::Identifier(key) => Access::from(key.as_str()),
             Expr::Star => Access::Wildcard,
             Expr::Index(index) => return self.keys(index, bindings),
             _ => {
                 return self.evaluate(part, bindings).map(|value| {
-                    let key = value.concrete().map_or(Access::Unknown, |value| {
-                        Access::Key(value.sema().to_string())
-                    });
+                    let key = value.concrete().map_or(Access::Unknown, Access::from_value);
                     (key, value.dependencies().controlled())
                 });
             }

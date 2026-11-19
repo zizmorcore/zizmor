@@ -8,7 +8,10 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::LazyLock;
 
-use github_actions_expressions::{Evaluation, Expr};
+use github_actions_expressions::{
+    Evaluation, Expr,
+    evaluation::{Evaluator, TrackedValue},
+};
 use serde::Deserialize;
 
 /// Top level: HashMap<GroupName, Vec<TestCase>>
@@ -115,10 +118,17 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
 
             let label = format!("{suite_name}::{group}[{i}] `{}`", case.expr);
 
-            // Skip cases that require context variables.
-            if case.contexts.is_some() {
-                continue;
-            }
+            let evaluate = |expr: &Expr<'_>| match &case.contexts {
+                None => expr.consteval(),
+                Some(contexts) => {
+                    let mut bindings = TrackedValue::known(contexts.clone().try_into().unwrap());
+                    let outcomes = Evaluator::default().evaluate(expr, &mut bindings);
+                    let [outcome] = outcomes.as_slice() else {
+                        return None;
+                    };
+                    outcome.value.concrete()
+                }
+            };
 
             if let Some(err) = &case.err {
                 match err.kind {
@@ -134,7 +144,7 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
                     // Evaluation errors
                     ErrorKind::Evaluation => {
                         if let Ok(parsed) = Expr::parse(&case.expr)
-                            && parsed.consteval().is_some()
+                            && evaluate(&parsed).is_some()
                         {
                             failures.push(format!(
                                 "{label}: expected eval error {:?} but got a result",
@@ -152,7 +162,7 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
                     }
                 };
                 match to_evaluation(expected) {
-                    Ok(expected_eval) => match parsed.consteval() {
+                    Ok(expected_eval) => match evaluate(&parsed) {
                         Some(actual) => {
                             if expected_eval != actual {
                                 failures.push(format!(
@@ -162,7 +172,7 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
                         }
                         None => {
                             failures.push(format!(
-                                "{label}: expected {expected_eval:?}, but consteval returned None"
+                                "{label}: expected {expected_eval:?}, but evaluation returned None"
                             ));
                         }
                     },

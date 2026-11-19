@@ -81,6 +81,8 @@ fn bindings_preserve_typed_values_and_provenance() {
     let root = TrackedValue::known(data.try_into().unwrap());
     for source in [
         "config == config",
+        "config >= config",
+        "list <= list",
         "list == list",
         "config.n == 20",
         "list != fromJSON('[]')",
@@ -158,7 +160,7 @@ fn bindings_share_the_budget_only_when_read() {
     struct Expensive;
     impl Bindings for Expensive {
         fn lookup(&mut self, _: &[Access], evaluator: &mut Evaluator) -> Outcomes {
-            evaluator.budget.bound(std::iter::repeat(()));
+            while evaluator.budget.checkpoint() {}
             vec![Outcome::known(Evaluation::Boolean(true))]
         }
     }
@@ -168,8 +170,9 @@ fn bindings_share_the_budget_only_when_read() {
     assert!(!skipped[0].value.provenance.incomplete);
 
     let read = Evaluator::default().evaluate(&Expr::parse("value").unwrap(), &mut Expensive);
-    assert!(
-        read.iter()
-            .any(|outcome| outcome.value.provenance.incomplete)
-    );
+    let [known, remainder] = read.as_slice() else {
+        panic!("expected a known result and an unexplored remainder")
+    };
+    assert_eq!(known.value.truth(), Some(true));
+    assert!(remainder.value.provenance.incomplete);
 }

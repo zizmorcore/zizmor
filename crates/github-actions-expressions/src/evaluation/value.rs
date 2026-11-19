@@ -32,6 +32,7 @@
 //! ```
 
 use crate::{Evaluation, op::BinOp};
+use indexmap::IndexMap;
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
@@ -75,6 +76,8 @@ impl AlternativeId {
 pub enum Shape {
     /// Any runtime value.
     Any,
+    /// A string whose contents are unknown.
+    String,
     /// A boolean whose value is unknown.
     Boolean,
     /// Null, false, zero, or the empty string.
@@ -89,15 +92,16 @@ pub enum Shape {
 /// A property access within an Actions expression context.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Access {
-    /// A named property or numeric index, e.g. `inputs.key`.
-    Key(String),
-    /// An explicit `*`, e.g. `inputs.*`.
-    ///
-    /// Note that this produces an array (which is truthy)
-    /// when "projecting" an object or array, e.g. when
-    /// `inputs` of `inputs.*` is an array or object.
-    /// However, if `inputs` is a known scalar, then this
-    /// produces an empty string.
+    /// A primitive key. Objects use its string form and arrays use its numeric form.
+    Key {
+        /// The property name when indexing an object.
+        name: String,
+        /// The nonnegative, floored index when indexing an array.
+        index: Option<usize>,
+    },
+    /// A collection used as an index. It cannot select a property or element.
+    Invalid,
+    /// An explicit `*`, e.g. `inputs.*`. Subsequent accesses apply to each match.
     Wildcard,
     /// A computed index or access whose value is unknown.
     /// For example, `github.event[inputs.field]` if `inputs.field`
@@ -105,11 +109,31 @@ pub enum Access {
     Unknown,
 }
 
+impl From<&str> for Access {
+    fn from(name: &str) -> Self {
+        Self::from_value(Evaluation::String(name.into()))
+    }
+}
+
 impl Access {
+    pub(super) fn from_value(value: Evaluation) -> Self {
+        if matches!(value, Evaluation::Array(_) | Evaluation::Object(_)) {
+            return Self::Invalid;
+        }
+        let index = value.as_number().floor();
+        Self::Key {
+            name: value.sema().to_string(),
+            index: (0.0..=f64::from(i32::MAX))
+                .contains(&index)
+                .then_some(index as usize),
+        }
+    }
+
     /// Render a path component for source identities.
     pub fn text(&self) -> &str {
         match self {
-            Self::Key(key) => key,
+            Self::Key { name, .. } => name,
+            Self::Invalid => "?",
             Self::Wildcard => "*",
             Self::Unknown => "?",
         }
@@ -226,10 +250,13 @@ pub enum AbstractValue {
     /// This represents a single array value, not multiple possible outcomes.
     Array(Arc<Vec<TrackedValue>>),
 
+    /// A wildcard result. Further accesses select from each member and skip misses.
+    FilteredArray(Arc<Vec<TrackedValue>>),
+
     /// An evaluation of object fields, each with their individual provenance.
     ///
     /// Like [`Self::Array`] each element may not be fully concrete or known.
-    Object(Arc<BTreeMap<String, TrackedValue>>),
+    Object(Arc<IndexMap<String, TrackedValue>>),
 }
 
 /// A "tracked" value, i.e. an [`AbstractValue`] with its associated [`Provenance`].
@@ -305,7 +332,7 @@ impl TrackedValue {
                     path.iter().map(Access::text).collect::<Vec<_>>().join("."),
                 ));
             }
-            AbstractValue::Array(values) => {
+            AbstractValue::Array(values) | AbstractValue::FilteredArray(values) => {
                 for value in values.iter() {
                     provenance.extend(&value.dependencies());
                 }
@@ -320,11 +347,32 @@ impl TrackedValue {
         provenance
     }
 
+    /// Coerce a scalar for a string-valued YAML field such as an environment
+    /// variable. Collections are invalid in those fields.
+    pub fn into_string(self) -> Option<Self> {
+        let inner = match &self.inner {
+            AbstractValue::Known(Evaluation::String(_))
+            | AbstractValue::Unknown(Shape::Hash | Shape::String) => return Some(self),
+            AbstractValue::Known(value) => {
+                AbstractValue::Known(Evaluation::String(value.sema().to_string()))
+            }
+            AbstractValue::Unknown(_) | AbstractValue::Reference(_) => {
+                AbstractValue::Unknown(Shape::String)
+            }
+            AbstractValue::Array(_)
+            | AbstractValue::FilteredArray(_)
+            | AbstractValue::Object(_) => return None,
+        };
+        Some(Self::new(inner).with_provenance(&self.dependencies()))
+    }
+
     /// Return this tracked value's truthiness, if it can be determined.
     pub fn truth(&self) -> Option<bool> {
         match &self.inner {
             AbstractValue::Known(value) => Some(value.as_boolean()),
-            AbstractValue::Array(_) | AbstractValue::Object(_) => Some(true),
+            AbstractValue::Array(_)
+            | AbstractValue::FilteredArray(_)
+            | AbstractValue::Object(_) => Some(true),
             AbstractValue::Unknown(Shape::Falsy) => Some(false),
             _ => None,
         }
@@ -352,13 +400,16 @@ impl TrackedValue {
     pub(super) fn compare(&self, op: &BinOp, rhs: &Self) -> Self {
         // Actions compares arrays and objects by identity.
         let same_instance = match (&self.inner, &rhs.inner) {
-            (AbstractValue::Array(a), AbstractValue::Array(b)) => Some(Arc::ptr_eq(a, b)),
+            (AbstractValue::Array(a), AbstractValue::Array(b))
+            | (AbstractValue::FilteredArray(a), AbstractValue::FilteredArray(b)) => {
+                Some(Arc::ptr_eq(a, b))
+            }
             (AbstractValue::Object(a), AbstractValue::Object(b)) => Some(Arc::ptr_eq(a, b)),
             _ => None,
         };
         let inner = if let Some(same) = same_instance {
             AbstractValue::Known(Evaluation::Boolean(match op {
-                BinOp::Eq => same,
+                BinOp::Eq | BinOp::Ge | BinOp::Le => same,
                 BinOp::Neq => !same,
                 _ => false,
             }))
@@ -373,7 +424,8 @@ impl TrackedValue {
     /// Return this tracked value's elements, with the value's
     /// own provenance attached, if the tracked value is an array.
     pub fn elements(&self) -> Option<Vec<Self>> {
-        let AbstractValue::Array(values) = &self.inner else {
+        let (AbstractValue::Array(values) | AbstractValue::FilteredArray(values)) = &self.inner
+        else {
             return None;
         };
         Some(
@@ -390,9 +442,9 @@ impl TrackedValue {
     pub fn concrete(&self) -> Option<Evaluation> {
         match &self.inner {
             AbstractValue::Known(value) => Some(value.clone()),
-            AbstractValue::Array(values) => Some(Evaluation::Array(
-                values.iter().map(Self::concrete).collect::<Option<_>>()?,
-            )),
+            AbstractValue::Array(values) | AbstractValue::FilteredArray(values) => Some(
+                Evaluation::Array(values.iter().map(Self::concrete).collect::<Option<_>>()?),
+            ),
             AbstractValue::Object(fields) => Some(Evaluation::Object(
                 fields
                     .iter()
@@ -411,90 +463,72 @@ impl TrackedValue {
     /// Applies a single access to this tracked value, returning
     /// a new tracked value with updated provenance.
     pub fn apply_access(&self, access: &Access) -> Self {
-        // Some accesses are *not* unknown, but produce an empty string because
-        // Actions semantics say they do. For example, accessing a missing
-        // object field, out-of-range index, or access on a known scalar
-        // produces an empty string. See below for examples.
-        let empty = || Self::known(Evaluation::String(String::new()));
+        let mut matches = Vec::new();
+        match (&self.inner, access) {
+            (AbstractValue::FilteredArray(items), _) => {
+                for item in items.iter() {
+                    item.collect_matches(access, &mut matches);
+                }
+            }
+            (_, Access::Wildcard)
+                if !matches!(
+                    self.inner,
+                    AbstractValue::Reference(_) | AbstractValue::Unknown(Shape::Any)
+                ) =>
+            {
+                self.collect_matches(access, &mut matches);
+            }
+            _ => {
+                return self
+                    .member(access)
+                    .unwrap_or_else(|| Self::known(Evaluation::Null))
+                    .with_provenance(&self.provenance);
+            }
+        }
+        Self::new(AbstractValue::FilteredArray(Arc::new(matches))).with_provenance(&self.provenance)
+    }
 
-        let value = match (&self.inner, access) {
-            // Our tracked value is a reference, e.g. `matrix`.
-            // The access is just appended to it, e.g. `Key("os")` becomes `matrix.os`.
+    /// A missing member is skipped by a filter, while a member containing null is retained.
+    fn collect_matches(&self, access: &Access, matches: &mut Vec<Self>) {
+        let push = |value: &Self| matches.push(value.clone().with_provenance(&self.provenance));
+        match (&self.inner, access) {
+            (
+                AbstractValue::Array(items) | AbstractValue::FilteredArray(items),
+                Access::Wildcard,
+            ) => items.iter().for_each(push),
+            (AbstractValue::Object(fields), Access::Wildcard) => fields.values().for_each(push),
+            _ => matches.extend(
+                self.member(access)
+                    .map(|value| value.with_provenance(&self.provenance)),
+            ),
+        }
+    }
+
+    fn member(&self, access: &Access) -> Option<Self> {
+        match (&self.inner, access) {
+            (_, Access::Invalid) => None,
+            (AbstractValue::Object(fields), Access::Key { name, .. }) => fields
+                .iter()
+                .find(|(k, _)| k.eq_ignore_ascii_case(name))
+                .map(|(_, value)| value.clone()),
+            (
+                AbstractValue::Array(items) | AbstractValue::FilteredArray(items),
+                Access::Key { index: Some(i), .. },
+            ) => items.get(*i).cloned(),
             (AbstractValue::Reference(path), _) => {
                 let mut path = path.clone();
                 path.push(access.clone());
-                Self::new(AbstractValue::Reference(path))
+                Some(Self::new(AbstractValue::Reference(path)))
             }
-
-            // Our tracked value is a scalar, or unknown but known to be of a scalar
-            // shape. Any key or index access on these evaluates to the empty string.
-            //
-            // Example: `fromJSON('"abc"').abc --> ''`
+            (AbstractValue::Unknown(Shape::Any), _) => Some(Self::unknown()),
             (
-                AbstractValue::Known(_)
-                | AbstractValue::Unknown(Shape::Boolean | Shape::Falsy | Shape::Hash),
-                _,
-            ) => empty(),
-
-            // Our access is fully unknown, which means our tracked value becomes
-            // unknown, but with provenance from all nested elements and fields,
-            // since any might be selected.
-            //
-            // Example: `fromJSON('{"foo": "bar"}')[inputs.foo] --> ?`, assuming
-            // `inputs.foo` is unresolved.
-            (_, Access::Unknown) => Self::unknown().with_provenance(&self.dependencies()),
-
-            // Our tracked value is an object, and our access is a key.
-            // This ends up being a trivial (case insensitive) value lookup.
-            // A lookup failure yields the empty string.
-            //
-            // Example: `fromJSON('{"foo": "bar"}').foo --> 'bar'`
-            (AbstractValue::Object(fields), Access::Key(key)) => fields
-                .iter()
-                .find(|(k, _)| k.eq_ignore_ascii_case(key))
-                .map_or_else(empty, |(_, value)| value.clone()),
-
-            // Our tracked value is an object and our access is a wildcard.
-            // This ends up being a new tracked array of the object's values.
-            //
-            // Example: `fromJSON('{"foo": "bar"}').* --> ['bar']`
-            (AbstractValue::Object(fields), Access::Wildcard) => Self::new(AbstractValue::Array(
-                Arc::new(fields.values().cloned().collect()),
-            )),
-
-            // Our tracked value is an array and our access is an index.
-            // This ends up being a trivial index lookup.
-            // Like with objects, a lookup failure yields a new empty string
-            // as a tracked value.
-            //
-            // If an access's index is not parseable, we return a new array as a tracked value
-            // where every element has the access applied to it.
-            //
-            // TODO: Model `Access::Index` instead here to avoid the fallible parse?
-            (AbstractValue::Array(values), Access::Key(key)) => match key.parse::<usize>() {
-                Ok(index) => values.get(index).cloned().unwrap_or_else(empty),
-                Err(_) => Self::new(AbstractValue::Array(Arc::new(
-                    values.iter().map(|v| v.apply_access(access)).collect(),
-                ))),
-            },
-
-            // Our tracked value is an array and our access is a wildcard.
-            // This ends up being a new tracked value of the same array items,
-            // but with a new object identity.
-            //
-            // Example: `fromJSON('["foo", "bar"]').* --> ['foo', 'bar']`
-            (AbstractValue::Array(values), Access::Wildcard) => {
-                Self::new(AbstractValue::Array(Arc::new(values.as_ref().clone())))
-            }
-
-            // Any unconstrained unknown tracked value remains unknown.
-            // "Unconstrained" here means not boolean, falsey, or hash, since we handle those above.
-            (AbstractValue::Unknown(_), _) => Self::unknown(),
-        };
-
-        // Now that we have our new tracked value, apply the previous tracked
-        // value's provenance to it.
-        value.with_provenance(&self.provenance)
+                AbstractValue::Array(_)
+                | AbstractValue::Object(_)
+                | AbstractValue::FilteredArray(_),
+                Access::Unknown,
+            ) => Some(Self::unknown().with_provenance(&self.dependencies())),
+            _ => None,
+        }
     }
 }
 

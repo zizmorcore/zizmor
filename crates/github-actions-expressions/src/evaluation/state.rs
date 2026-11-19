@@ -19,11 +19,12 @@ pub struct Evaluator {
 }
 
 /// Identifies a repeated predicate by its verbatim expression text and the
-/// union of its source and control paths.
+/// source paths and definitions that gave it its value.
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Predicate {
     expression: String,
     inputs: BTreeSet<Source>,
+    evidence: BTreeSet<usize>,
 }
 
 const MAX_ALTERNATIVES: usize = 256;
@@ -41,18 +42,21 @@ impl Budget {
     /// Collect alternatives up to the result and work limits. If either limit
     /// cuts the collection short, mark this evaluation incomplete.
     pub fn bound<T>(&mut self, values: impl IntoIterator<Item = T>) -> Vec<T> {
-        let mut results = Vec::new();
-        for value in values {
-            if !self.checkpoint() {
-                break;
-            }
-            if results.len() == MAX_ALTERNATIVES {
-                self.incomplete = true;
-                break;
-            }
-            results.push(value);
+        let values = values
+            .into_iter()
+            .take(MAX_ALTERNATIVES + 1)
+            .take_while(|_| self.checkpoint())
+            .collect();
+        self.limit(values)
+    }
+
+    /// Cap already computed alternatives without spending work to collect them again.
+    pub(super) fn limit<T>(&mut self, mut values: Vec<T>) -> Vec<T> {
+        if values.len() > MAX_ALTERNATIVES {
+            self.incomplete = true;
+            values.truncate(MAX_ALTERNATIVES);
         }
-        results
+        values
     }
 
     /// Charge one unit of work. A `false` result means this unit exceeds the
@@ -92,6 +96,7 @@ impl Evaluator {
         let predicate = Predicate {
             expression: expression.into(),
             inputs: provenance.sources,
+            evidence: provenance.evidence,
         };
         if let Some(id) = self.predicates.get(&predicate) {
             return Some(*id);
@@ -120,7 +125,7 @@ impl Evaluator {
         }
 
         let values = self.nested(visit);
-        let values = self.budget.bound(values);
+        let values = self.budget.limit(values);
         self.finish(values)
     }
 
@@ -160,7 +165,7 @@ impl Evaluator {
     }
 
     /// Evaluate once per input and retain results compatible with that input.
-    pub fn flat_map<T: Clone>(
+    pub fn flat_map<T>(
         &mut self,
         inputs: Outcomes<T>,
         mut evaluate: impl FnMut(&mut Self, &T) -> Outcomes,
@@ -171,12 +176,16 @@ impl Evaluator {
                 break;
             }
             let values = evaluate(self, &input.value);
-            results.extend(self.product(vec![input], values, |_, value| value));
+            if input.choices.is_empty() {
+                results.extend(values);
+            } else {
+                results.extend(self.product(vec![input.map(|_| ())], values, |(), value| value));
+            }
             if results.len() > MAX_ALTERNATIVES {
                 break;
             }
         }
-        self.budget.bound(results)
+        self.budget.limit(results)
     }
 
     /// Combine each left outcome with each compatible right outcome.
@@ -201,7 +210,7 @@ impl Evaluator {
                 };
                 results.push(pair);
                 if results.len() > MAX_ALTERNATIVES {
-                    return self.budget.bound(results);
+                    return self.budget.limit(results);
                 }
             }
         }

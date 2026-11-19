@@ -380,11 +380,9 @@ impl<'src> Call<'src> {
 
         let array_or_string = &args[0];
 
-        // Get separator (default is comma)
-        let separator = if args.len() > 1 {
-            args[1].sema().to_string()
-        } else {
-            ",".to_string()
+        let separator = match args.get(1) {
+            None | Some(Evaluation::Array(_) | Evaluation::Object(_)) => ",".to_owned(),
+            Some(separator) => separator.sema().to_string(),
         };
 
         match array_or_string {
@@ -490,12 +488,12 @@ mod tests {
             // Objects
             (
                 "fromJSON('{}')",
-                Evaluation::Object(std::collections::HashMap::new()),
+                Evaluation::Object(indexmap::IndexMap::new()),
             ),
             (
                 "fromJSON('{\"key\": \"value\"}')",
                 Evaluation::Object({
-                    let mut map = std::collections::HashMap::new();
+                    let mut map = indexmap::IndexMap::new();
                     map.insert("key".to_string(), Evaluation::String("value".to_string()));
                     map
                 }),
@@ -503,7 +501,7 @@ mod tests {
             (
                 "fromJSON('{\"num\": 42, \"bool\": true, \"null\": null}')",
                 Evaluation::Object({
-                    let mut map = std::collections::HashMap::new();
+                    let mut map = indexmap::IndexMap::new();
                     map.insert("num".to_string(), Evaluation::Number(42.0));
                     map.insert("bool".to_string(), Evaluation::Boolean(true));
                     map.insert("null".to_string(), Evaluation::Null);
@@ -514,12 +512,12 @@ mod tests {
             (
                 "fromJSON('{\"array\": [1, 2], \"object\": {\"nested\": true}}')",
                 Evaluation::Object({
-                    let mut map = std::collections::HashMap::new();
+                    let mut map = indexmap::IndexMap::new();
                     map.insert(
                         "array".to_string(),
                         Evaluation::Array(vec![Evaluation::Number(1.0), Evaluation::Number(2.0)]),
                     );
-                    let mut nested_map = std::collections::HashMap::new();
+                    let mut nested_map = indexmap::IndexMap::new();
                     nested_map.insert("nested".to_string(), Evaluation::Boolean(true));
                     map.insert("object".to_string(), Evaluation::Object(nested_map));
                     map
@@ -565,10 +563,7 @@ mod tests {
 
         let test_cases = &[
             (Evaluation::Array(vec![Evaluation::Number(1.0)]), "Array"),
-            (
-                Evaluation::Object(std::collections::HashMap::new()),
-                "Object",
-            ),
+            (Evaluation::Object(indexmap::IndexMap::new()), "Object"),
         ];
 
         for (result, expected) in test_cases {
@@ -1192,7 +1187,7 @@ mod tests {
             (
                 "fromJSON('{\"key\": \"value\"}')",
                 Evaluation::Object({
-                    let mut map = std::collections::HashMap::new();
+                    let mut map = indexmap::IndexMap::new();
                     map.insert("key".to_string(), Evaluation::String("value".to_string()));
                     map
                 }),

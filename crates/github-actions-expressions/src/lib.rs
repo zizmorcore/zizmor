@@ -439,7 +439,7 @@ pub enum Evaluation {
     /// An array value. Array evaluations can only be realized through `fromJSON`.
     Array(Vec<Self>),
     /// An object value. Object evaluations can only be realized through `fromJSON`.
-    Object(std::collections::HashMap<String, Self>),
+    Object(indexmap::IndexMap<String, Self>),
 }
 
 impl TryFrom<serde_json::Value> for Evaluation {
@@ -465,7 +465,7 @@ impl TryFrom<serde_json::Value> for Evaluation {
                 Ok(Self::Array(elements))
             }
             serde_json::Value::Object(obj) => {
-                let mut map = std::collections::HashMap::new();
+                let mut map = indexmap::IndexMap::new();
                 for (key, value) in obj {
                     map.insert(key, value.try_into()?);
                 }
@@ -2111,7 +2111,7 @@ mod tests {
             (Evaluation::String("".to_string()), false),
             (Evaluation::String("hello".to_string()), true),
             (Evaluation::Array(vec![]), true), // Arrays are always truthy
-            (Evaluation::Object(std::collections::HashMap::new()), true), // Dictionaries are always truthy
+            (Evaluation::Object(indexmap::IndexMap::new()), true), // Dictionaries are always truthy
         ];
 
         for (result, expected) in test_cases {
