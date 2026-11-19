@@ -5,11 +5,7 @@
 
 use github_actions_models::{
     common::{self, CacheMode, expr::LoE},
-    workflow::{
-        self, TriggerSyntax,
-        event::{BareEvent, OptionalBody},
-        job,
-    },
+    workflow::{self, TriggerSyntax, event::BareEvent, job},
 };
 use std::collections::{BTreeMap, HashSet};
 use std::sync::LazyLock;
@@ -80,60 +76,6 @@ impl std::ops::Deref for Workflow {
 
     fn deref(&self) -> &Self::Target {
         &self.inner
-    }
-}
-
-impl HasInputs for workflow::event::WorkflowCall {
-    fn get_input(&self, name: &str) -> Option<Capability> {
-        let input = self.inputs.get(name)?;
-
-        Some(match input.r#type {
-            workflow::event::WorkflowCallInputType::Boolean => Capability::Fixed,
-            workflow::event::WorkflowCallInputType::Number => Capability::Fixed,
-            workflow::event::WorkflowCallInputType::String => Capability::Arbitrary,
-        })
-    }
-}
-
-impl HasInputs for workflow::event::WorkflowDispatch {
-    fn get_input(&self, name: &str) -> Option<Capability> {
-        let input = self.inputs.get(name)?;
-
-        Some(match input.r#type {
-            workflow::event::WorkflowDispatchInputType::Boolean => Capability::Fixed,
-            workflow::event::WorkflowDispatchInputType::Choice => Capability::Fixed,
-            workflow::event::WorkflowDispatchInputType::Environment => Capability::Fixed,
-            workflow::event::WorkflowDispatchInputType::Number => Capability::Fixed,
-            workflow::event::WorkflowDispatchInputType::String => Capability::Arbitrary,
-        })
-    }
-}
-
-impl HasInputs for Workflow {
-    fn get_input(&self, name: &str) -> Option<Capability> {
-        let events = &self.on.events;
-
-        let wc_cap = {
-            if let OptionalBody::Body(wc) = &events.workflow_call {
-                wc.get_input(name)
-            } else {
-                None
-            }
-        };
-
-        let wd_cap = {
-            if let OptionalBody::Body(wd) = &events.workflow_dispatch {
-                wd.get_input(name)
-            } else {
-                None
-            }
-        };
-
-        match (wc_cap, wd_cap) {
-            (Some(cap1), Some(cap2)) => Some(cap1.unify(cap2)),
-            (Some(single), None) | (None, Some(single)) => Some(single),
-            (None, None) => None,
-        }
     }
 }
 
@@ -304,6 +246,23 @@ pub(crate) struct NormalJob<'doc> {
 impl<'doc> NormalJob<'doc> {
     pub(crate) fn new(id: &'doc str, inner: &'doc job::NormalJob, parent: &'doc Workflow) -> Self {
         Self { id, inner, parent }
+    }
+
+    /// The job named by a direct `needs` dependency.
+    pub(crate) fn dependency(&self, name: &str) -> Option<Job<'doc>> {
+        if !self
+            .needs
+            .iter()
+            .any(|need| need.eq_ignore_ascii_case(name))
+        {
+            return None;
+        }
+        let (id, model) = self
+            .parent
+            .jobs
+            .iter()
+            .find(|(id, _)| id.eq_ignore_ascii_case(name))?;
+        Some(Job::new(id, model, self.parent))
     }
 
     /// This job's matrix, if it has one.
@@ -648,8 +607,11 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         (self.steps_index, self.parallel_index)
     }
 
-    fn expression_context(&self) -> super::evaluation::Context<'doc> {
-        super::evaluation::Context::workflow_step(self)
+    fn evaluate(
+        &self,
+        expr: &github_actions_expressions::Expr<'_>,
+    ) -> super::evaluation::Evaluated<'doc> {
+        super::evaluation::Site::Step(self).evaluate(expr)
     }
 
     fn uses(&self) -> Option<&'doc common::Uses> {

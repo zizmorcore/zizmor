@@ -263,8 +263,11 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         self.index
     }
 
-    fn expression_context(&self) -> super::evaluation::Context<'doc> {
-        super::evaluation::Context::composite_step(self)
+    fn evaluate(
+        &self,
+        expr: &github_actions_expressions::Expr<'_>,
+    ) -> super::evaluation::Evaluated<'doc> {
+        super::evaluation::Site::CompositeStep(self).evaluate(expr)
     }
 
     fn uses(&self) -> Option<&'doc common::Uses> {

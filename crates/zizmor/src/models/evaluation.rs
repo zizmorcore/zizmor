@@ -3,7 +3,6 @@
 //! row run once per row. Reading a job output switches to the producer's bindings.
 
 mod inputs;
-mod matrix;
 
 use super::{
     StepCommon as _,
@@ -20,98 +19,102 @@ use std::{
     collections::{BTreeMap, BTreeSet},
 };
 
-#[derive(Clone, Copy, Default, PartialEq)]
-enum Phase {
-    #[default]
-    Step,
-    Job,
-    Matrix,
+/// The part of the document that supplies the bindings for a read.
+/// Aliases switch to their declaration site, keeping the current invocation.
+#[derive(Clone, Copy)]
+pub(super) enum Site<'a, 'doc> {
+    Step(&'a Step<'doc>),
+    StepEnv(&'a Step<'doc>),
+    CompositeStep(&'a CompositeStep<'doc>),
+    CompositeEnv,
+    Job(&'a NormalJob<'doc>),
+    Matrix(&'a NormalJob<'doc>),
+    JobOutput(&'a NormalJob<'doc>),
 }
 
-#[derive(Clone)]
-struct EnvScope<'doc> {
+struct EnvScope<'a, 'doc> {
     values: &'doc LoE<Env>,
     location: SymbolicLocation<'doc>,
-    phase: Phase,
+    declared_at: Site<'a, 'doc>,
+    may_be_overwritten: bool,
 }
 
-#[derive(Clone, Default)]
-pub(crate) struct Context<'doc> {
-    row: Option<(usize, TrackedValue)>,
-    envs: Vec<EnvScope<'doc>>,
-    prior_steps: bool,
-    phase: Phase,
-    job: Option<NormalJob<'doc>>,
-}
-
-impl<'doc> Context<'doc> {
-    pub(crate) fn job(job: NormalJob<'doc>) -> Self {
-        let workflow = job.parent();
-        Self {
-            envs: vec![
-                EnvScope {
-                    values: &workflow.env,
-                    location: workflow.location(),
-                    phase: Phase::Job,
-                },
-                EnvScope {
-                    values: &job.env,
-                    location: job.location(),
-                    phase: Phase::Job,
-                },
-            ],
-            phase: Phase::Job,
-            job: Some(job),
-            ..Self::default()
+impl<'a, 'doc> Site<'a, 'doc> {
+    fn job(self) -> Option<&'a NormalJob<'doc>> {
+        match self {
+            Self::Step(step) | Self::StepEnv(step) => Some(step.job()),
+            Self::Job(job) | Self::JobOutput(job) | Self::Matrix(job) => Some(job),
+            Self::CompositeStep(_) | Self::CompositeEnv => None,
         }
     }
 
-    pub(crate) fn workflow_step(step: &Step<'doc>) -> Self {
-        let mut context = Context::job(step.job().clone());
-        context.phase = Phase::Step;
-        context.envs.push(EnvScope {
-            values: step.env(),
-            location: step.location(),
-            phase: Phase::Step,
-        });
-        context.prior_steps = step.job().steps().any(|prior| prior.ord() < step.ord());
-        context
+    fn before_steps(self) -> bool {
+        matches!(self, Self::Job(_) | Self::Matrix(_))
     }
 
-    pub(crate) fn composite_step(step: &CompositeStep<'doc>) -> Self {
-        Self {
-            envs: vec![EnvScope {
+    /// In lookup order. A step env declaration can read its outer scopes.
+    fn env_scopes(self) -> impl Iterator<Item = EnvScope<'a, 'doc>> {
+        let local = match self {
+            Self::Step(step) => Some(EnvScope {
+                values: step.env(),
+                location: step.location(),
+                declared_at: Self::StepEnv(step),
+                may_be_overwritten: false,
+            }),
+            Self::CompositeStep(step) => Some(EnvScope {
                 values: &step.inner.env,
                 location: step.location(),
-                phase: Phase::Step,
-            }],
-            prior_steps: step.index > 0,
-            ..Self::default()
-        }
+                declared_at: Self::CompositeEnv,
+                may_be_overwritten: false,
+            }),
+            _ => None,
+        };
+        let prior_steps = match self {
+            Self::Step(step) | Self::StepEnv(step) => step
+                .job()
+                .steps()
+                .next()
+                .is_some_and(|first| first.ord() < step.ord()),
+            Self::JobOutput(_) => true,
+            _ => false,
+        };
+        let outer = self.job().into_iter().flat_map(move |job| {
+            let workflow = job.parent();
+            [
+                (&job.env, job.location()),
+                (&workflow.env, workflow.location()),
+            ]
+            .map(|(values, location)| EnvScope {
+                values,
+                location,
+                declared_at: Self::Job(job),
+                may_be_overwritten: prior_steps,
+            })
+        });
+        local.into_iter().chain(outer)
     }
 
-    pub(crate) fn evaluate(&self, expr: &Expr<'_>) -> Results<'doc> {
+    pub(crate) fn evaluate(&self, expr: &Expr<'_>) -> Evaluated<'doc> {
         self.evaluate_with(|eval, env| eval.evaluate(expr, env))
     }
 
     fn evaluate_with(
-        &self,
+        self,
         run: impl Fn(&mut Evaluator, &mut Environment<'_, 'doc>) -> Outcomes,
-    ) -> Results<'doc> {
-        let mut results = Results::default();
+    ) -> Evaluated<'doc> {
+        let mut evidence = Evidence::default();
         let mut eval = Evaluator::default();
         let outcomes = eval.within_limits(|eval| {
             let mut outcomes = Vec::new();
-            for inputs in inputs::environments(
-                self.job.as_ref().map(|job| job.parent()),
-                eval,
-                &mut results,
-            ) {
+            for inputs in
+                inputs::environments(self.job().map(|job| job.parent()), eval, &mut evidence)
+            {
                 let mut cache = Cache::default();
                 let env = Environment {
-                    context: self,
+                    site: self,
+                    row: None,
                     inputs: &inputs,
-                    results: &mut results,
+                    evidence: &mut evidence,
                     cache: &mut cache,
                     needs_row: None,
                 };
@@ -119,26 +122,29 @@ impl<'doc> Context<'doc> {
             }
             outcomes
         });
-        results.outcomes = outcomes;
-        results
+        Evaluated {
+            values: outcomes.into_iter().map(|outcome| outcome.value).collect(),
+            evidence,
+        }
     }
 }
 
-/// Outcomes and the source locations their evidence indices refer to.
+/// Possible values of an expression and their locations in this document.
 #[derive(Default)]
-pub(crate) struct Results<'doc> {
-    pub(crate) outcomes: Outcomes,
-    evidence: IndexMap<(yamlpath::Route<'doc>, Cow<'doc, str>), SymbolicLocation<'doc>>,
+pub(crate) struct Evaluated<'doc> {
+    pub(crate) values: Vec<TrackedValue>,
+    evidence: Evidence<'doc>,
 }
 
-impl<'doc> Results<'doc> {
+impl<'doc> Evaluated<'doc> {
     pub(crate) fn incomplete() -> Self {
         Self {
-            outcomes: vec![Outcome::new(TrackedValue::incomplete())],
+            values: vec![TrackedValue::incomplete()],
             ..Self::default()
         }
     }
 
+    /// The distinct locations that contributed to the selected values.
     pub(crate) fn locations<'a>(
         &self,
         values: impl IntoIterator<Item = &'a TrackedValue>,
@@ -148,13 +154,20 @@ impl<'doc> Results<'doc> {
             .flat_map(|value| value.dependencies().evidence)
             .collect();
         ids.into_iter()
-            .map(|id| self.evidence[id].clone())
+            .map(|id| self.evidence.locations[id].clone())
             .collect()
     }
+}
 
+#[derive(Default)]
+struct Evidence<'doc> {
+    locations: IndexMap<(yamlpath::Route<'doc>, Cow<'doc, str>), SymbolicLocation<'doc>>,
+}
+
+impl<'doc> Evidence<'doc> {
     fn record(&mut self, location: SymbolicLocation<'doc>) -> usize {
         let key = (location.route.clone(), location.annotation.clone());
-        self.evidence.insert_full(key, location).0
+        self.locations.insert_full(key, location).0
     }
 }
 
@@ -167,9 +180,10 @@ struct Cache {
 }
 
 struct Environment<'a, 'doc> {
-    context: &'a Context<'doc>,
+    site: Site<'a, 'doc>,
+    row: Option<&'a (usize, TrackedValue)>,
     inputs: &'a BTreeMap<String, Outcomes>,
-    results: &'a mut Results<'doc>,
+    evidence: &'a mut Evidence<'doc>,
     cache: &'a mut Cache,
     /// Set when a lookup requires a row during the first pass over a matrix job.
     needs_row: Option<&'a Cell<bool>>,
@@ -181,12 +195,12 @@ fn empty() -> Outcome {
 
 impl Bindings for Environment<'_, '_> {
     fn lookup(&mut self, path: &[Access], eval: &mut Evaluator) -> Outcomes {
-        let context = self.context;
+        let site = self.site;
         match path[0].text().to_ascii_lowercase().as_str() {
             "github" => vec![Outcome::new(TrackedValue::new(AbstractValue::Reference(
                 path.to_vec(),
             )))],
-            "inputs" if context.job.is_some() => {
+            "inputs" if site.job().is_some() => {
                 if let [_, Access::Key(name), rest @ ..] = path {
                     let values = self
                         .inputs
@@ -198,20 +212,20 @@ impl Bindings for Environment<'_, '_> {
                     self.runtime(path)
                 }
             }
-            "matrix" if context.phase != Phase::Matrix && context.job.is_some() => {
+            "matrix" if !matches!(site, Site::Matrix(_)) && site.job().is_some() => {
                 if self.defer_until_row() {
                     return vec![];
                 }
-                let Some((_, row)) = &context.row else {
+                let Some((_, row)) = self.row else {
                     return vec![empty()];
                 };
                 vec![Outcome::new(row.clone().apply_path(&path[1..]))]
             }
-            "env" if context.phase == Phase::Step => self.environment(eval, path),
+            "env" if !site.before_steps() => self.environment(eval, path),
             "needs" => self
                 .output(eval, path)
                 .unwrap_or_else(|| vec![Outcome::new(TrackedValue::incomplete())]),
-            "env" | "matrix" | "steps" | "runner" | "job" if context.phase != Phase::Step => {
+            "env" | "matrix" | "steps" | "runner" | "job" if site.before_steps() => {
                 vec![Outcome::new(TrackedValue::incomplete())]
             }
             _ => self.runtime(path),
@@ -220,11 +234,61 @@ impl Bindings for Environment<'_, '_> {
 }
 
 impl<'doc> Environment<'_, 'doc> {
-    fn at<'a>(&'a mut self, context: &'a Context<'doc>) -> Environment<'a, 'doc> {
+    fn in_rows(
+        mut self,
+        eval: &mut Evaluator,
+        run: impl Fn(&mut Evaluator, &mut Environment<'_, 'doc>) -> Outcomes,
+    ) -> Outcomes {
+        // A producer starts with its own bindings, even when its consumer
+        // is checking whether it needs a matrix row.
+        self.needs_row = None;
+        self.row = None;
+        let site = self.site;
+        let Some(job) = site.job() else {
+            return run(eval, &mut self);
+        };
+        let Some(matrix) = job.matrix() else {
+            return run(eval, &mut self);
+        };
+
+        // A large matrix must not consume the budget for an unrelated binding.
+        // Follow aliases and short circuits normally until a read needs a row.
+        let needed = Cell::new(false);
+        let mut env = self.at(site);
+        env.needs_row = Some(&needed);
+        let values = run(eval, &mut env);
+        if !needed.get() {
+            return values;
+        }
+
+        if !self.cache.rows.contains_key(job.id()) {
+            let mut env = self.at(Site::Matrix(job));
+            let rows = matrix.rows(eval, |eval, text, location| {
+                let values = eval.template(text, &mut env);
+                located(values, env.evidence.record(location))
+            });
+            let rows = rows
+                .into_iter()
+                .enumerate()
+                .map(|(index, row)| row.map(|value| (index, value)))
+                .collect();
+            self.cache.rows.insert(job.id().to_owned(), rows);
+        }
+
+        let rows = self.cache.rows[job.id()].clone();
+        eval.flat_map(rows, |eval, row| {
+            let mut env = self.at(site);
+            env.row = Some(row);
+            run(eval, &mut env)
+        })
+    }
+
+    fn at<'a>(&'a mut self, site: Site<'a, 'doc>) -> Environment<'a, 'doc> {
         Environment {
-            context,
+            site,
+            row: self.row,
             inputs: self.inputs,
-            results: self.results,
+            evidence: self.evidence,
             cache: self.cache,
             needs_row: self.needs_row,
         }
@@ -241,28 +305,28 @@ impl<'doc> Environment<'_, 'doc> {
     fn runtime(&self, path: &[Access]) -> Outcomes {
         let mut value = TrackedValue::unknown();
         let name = path.iter().map(Access::text).collect::<Vec<_>>().join(".");
-        let name = match &self.context.job {
-            Some(job) if !path[0].text().eq_ignore_ascii_case("inputs") => {
-                if self.defer_until_row() {
-                    return vec![];
-                }
-                match &self.context.row {
-                    Some((row, _)) => format!("job:{}[{row}]:{name}", job.id()),
-                    None => format!("job:{}:{name}", job.id()),
-                }
+        let mut source = Source::new(name);
+        if let Some(job) = self.site.job()
+            && !path[0].text().eq_ignore_ascii_case("inputs")
+        {
+            if self.defer_until_row() {
+                return vec![];
             }
-            _ => name,
-        };
-        value.provenance.sources.insert(name);
+            source.scope = Some(match self.row {
+                Some((row, _)) => format!("{}[{row}]", job.id()),
+                None => job.id().to_owned(),
+            });
+        }
+        value.provenance.sources.insert(source);
         vec![Outcome::new(value)]
     }
 
     fn environment(&mut self, eval: &mut Evaluator, path: &[Access]) -> Outcomes {
-        let context = self.context;
+        let site = self.site;
         let [_, Access::Key(name), rest @ ..] = path else {
             return self.runtime(path);
         };
-        for (index, scope) in context.envs.iter().enumerate().rev() {
+        for scope in site.env_scopes() {
             let LoE::Literal(env) = scope.values else {
                 return self.runtime(path);
             };
@@ -272,32 +336,26 @@ impl<'doc> Environment<'_, 'doc> {
             let location = scope
                 .location
                 .with_keys(["env".into(), name.clone().into()]);
-            let overwrite = (context.prior_steps && scope.phase == Phase::Job).then(|| {
-                self.results.record(
+            let overwrite = scope.may_be_overwritten.then(|| {
+                self.evidence.record(
                     location
                         .clone()
                         .annotated(format!("an earlier step may overwrite {name}")),
                 )
             });
             let id = self
-                .results
+                .evidence
                 .record(location.annotated(format!("{name} is defined here")));
             let key = (
                 id,
-                context.job.as_ref().map_or("", |j| j.id()).to_owned(),
-                context.row.as_ref().map(|(i, _)| *i),
-                context.prior_steps,
+                site.job().map_or("", |j| j.id()).to_owned(),
+                self.row.map(|(i, _)| *i),
+                scope.may_be_overwritten,
             );
             let values = if let Some(cached) = self.cache.env.get(&key) {
                 cached.clone()
             } else {
-                let child = Context {
-                    // A step's env can refer to the outer env.
-                    envs: context.envs[..index].to_vec(),
-                    phase: scope.phase,
-                    ..context.clone()
-                };
-                let mut values = eval.template(&value.to_string(), &mut self.at(&child));
+                let mut values = eval.template(&value.to_string(), &mut self.at(scope.declared_at));
                 if let Some(overwrite) = overwrite {
                     let decision = eval.decision();
                     values = values
@@ -336,44 +394,26 @@ impl<'doc> Environment<'_, 'doc> {
         if !field.eq_ignore_ascii_case("outputs") {
             return Some(self.runtime(path));
         }
-        let consumer = self.context.job.as_ref()?;
-        if !consumer
-            .needs
-            .iter()
-            .any(|need| need.eq_ignore_ascii_case(id))
-        {
-            return None;
-        }
-        let workflow = consumer.parent();
-        let (id, job) = workflow
-            .jobs
-            .iter()
-            .find(|(key, _)| key.eq_ignore_ascii_case(id))?;
-        let github_actions_models::workflow::Job::NormalJob(inner) = job else {
+        let super::workflow::Job::NormalJob(producer) = self.site.job()?.dependency(id)? else {
             return Some(self.runtime(path));
         };
-        let Some((name, value)) = inner
+        let id = producer.id();
+        let Some((name, value)) = producer
             .outputs
             .iter()
             .find(|(key, _)| key.eq_ignore_ascii_case(name))
         else {
             return Some(vec![empty()]);
         };
-        let key = (id.clone(), name.clone());
+        let key = (id.to_owned(), name.clone());
         if !self.cache.outputs.contains_key(&key) {
-            let producer = NormalJob::new(id, inner, workflow);
             let location = producer
                 .location()
                 .with_keys(["outputs".into(), name.as_str().into()])
                 .annotated(format!("this job declares output {name}"));
-            let child = Context {
-                phase: Phase::Step,
-                prior_steps: true,
-                ..Context::job(producer)
-            };
             let text = value.to_string();
             let values = self
-                .at(&child)
+                .at(Site::JobOutput(&producer))
                 .in_rows(eval, |eval, env| eval.template(&text, env));
             // Matrix jobs merge outputs by name. Each name can come from a
             // different row, but all reads of that name see the same value.
@@ -381,7 +421,7 @@ impl<'doc> Environment<'_, 'doc> {
             let decision = *self
                 .cache
                 .status
-                .entry(id.clone())
+                .entry(id.to_owned())
                 .or_insert_with(|| eval.decision());
             let values = values
                 .into_iter()
@@ -392,7 +432,7 @@ impl<'doc> Environment<'_, 'doc> {
                 .collect();
             self.cache
                 .outputs
-                .insert(key.clone(), located(values, self.results.record(location)));
+                .insert(key.clone(), located(values, self.evidence.record(location)));
         }
         Some(
             self.cache.outputs[&key]
@@ -407,4 +447,53 @@ fn located(values: Outcomes, id: usize) -> Outcomes {
         value.provenance.evidence.insert(id);
         value
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        InputKey,
+        models::workflow::{Job, Workflow},
+    };
+
+    #[test]
+    fn large_matrix_preserves_an_unrelated_binding() -> anyhow::Result<()> {
+        // All 128 rows run. Matching their include entries costs more than
+        // the evaluator's work limit, but the title is independent of them.
+        let rows: Vec<_> = (0..128).collect();
+        let include: Vec<_> = rows
+            .iter()
+            .map(|i| serde_json::json!({"i": i, "tag": "stable"}))
+            .collect();
+        let workflow = serde_json::json!({
+            "on": "issues",
+            "jobs": {"build": {
+                "runs-on": "ubuntu-latest",
+                "strategy": {"matrix": {"i": rows, "include": include}},
+                "env": {"TITLE": "${{ github.event.issue.title }}"},
+                "steps": [{"run": "echo building"}],
+            }},
+        });
+        let workflow = Workflow::from_string(
+            workflow.to_string(),
+            InputKey::local("test".into(), "build.yml", None, None),
+        )?;
+        let Job::NormalJob(job) = workflow.jobs().next().unwrap() else {
+            panic!("expected a build job");
+        };
+        let step = job.steps().next().unwrap();
+        let expr = Expr::parse("env.TITLE")?;
+        let results = step.evaluate(&expr);
+        let [title] = results.values.as_slice() else {
+            panic!("expected one title shared by all rows");
+        };
+        assert!(
+            title
+                .dependencies()
+                .sources
+                .contains(&Source::new("github.event.issue.title"))
+        );
+        Ok(())
+    }
 }

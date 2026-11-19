@@ -1,85 +1,46 @@
-//! Instantiate a job's bindings once per matrix row.
-use super::*;
+//! Expand a matrix into complete job rows, retaining the origin of each field.
+use std::{collections::BTreeMap, sync::Arc};
+
+use github_actions_expressions::evaluation::{
+    AbstractValue, Budget, Evaluator, Outcome, Outcomes, OutcomesExt as _, Provenance, TrackedValue,
+};
 use itertools::Itertools as _;
-use std::sync::Arc;
+
+use super::Matrix;
+use crate::finding::location::{Locatable as _, SymbolicLocation};
 
 type Row = BTreeMap<String, TrackedValue>;
 
-impl<'doc> Environment<'_, 'doc> {
-    pub(super) fn in_rows(
-        mut self,
+impl<'doc> Matrix<'doc> {
+    /// Evaluate strings in the declaring job and expand the resulting definitions.
+    pub(crate) fn rows(
+        &self,
         eval: &mut Evaluator,
-        run: impl Fn(&mut Evaluator, &mut Environment<'_, 'doc>) -> Outcomes,
+        mut evaluate: impl FnMut(&mut Evaluator, &str, SymbolicLocation<'doc>) -> Outcomes,
     ) -> Outcomes {
-        // A producer starts with its own bindings, even when its consumer
-        // is checking whether it needs a matrix row.
-        self.needs_row = None;
-        let context = self.context;
-        let Some(job) = &context.job else {
-            return run(eval, &mut self);
-        };
-        let Some(matrix) = job.strategy.as_ref().and_then(|s| s.matrix.as_ref()) else {
-            return run(eval, &mut self);
-        };
-
-        // A large matrix must not consume the budget for an unrelated binding.
-        // Follow aliases and short circuits normally until a read needs a row.
-        let needed = Cell::new(false);
-        let mut env = self.at(context);
-        env.needs_row = Some(&needed);
-        let values = run(eval, &mut env);
-        if !needed.get() {
-            return values;
-        }
-
-        if !self.cache.rows.contains_key(job.id()) {
-            let location = job
-                .location()
-                .with_keys(["strategy".into(), "matrix".into()])
-                .annotated("matrix value defined here");
-            let value = serde_json::to_value(matrix).expect("validated matrix");
-            let child = Context {
-                phase: Phase::Matrix,
-                ..context.clone()
-            };
-            let definitions = self.at(&child).decode(eval, &value, location);
-            let rows = eval.flat_map(definitions, |eval, value| {
-                expand_rows(value, &mut eval.budget)
-                    .into_iter()
-                    .map(|row| Outcome::new(row.with_provenance(&value.provenance)))
-                    .collect()
-            });
-            let rows = rows
+        let location = self.location().annotated("matrix value defined here");
+        let value = serde_json::to_value(self.inner).expect("validated matrix");
+        let definitions = Self::decode(eval, &value, location, &mut evaluate);
+        eval.flat_map(definitions, |eval, value| {
+            expand_rows(value, &mut eval.budget)
                 .into_iter()
-                .enumerate()
-                .map(|(index, row)| row.map(|value| (index, value)))
-                .collect();
-            self.cache.rows.insert(job.id().to_owned(), rows);
-        }
-
-        let rows = self.cache.rows[job.id()].clone();
-        eval.flat_map(rows, |eval, row| {
-            let child = Context {
-                row: Some(row.clone()),
-                ..context.clone()
-            };
-            run(eval, &mut self.at(&child))
+                .map(|row| Outcome::new(row.with_provenance(&value.provenance)))
+                .collect()
         })
     }
 
     fn decode(
-        &mut self,
         eval: &mut Evaluator,
         value: &serde_json::Value,
         location: SymbolicLocation<'doc>,
+        evaluate: &mut impl FnMut(&mut Evaluator, &str, SymbolicLocation<'doc>) -> Outcomes,
     ) -> Outcomes {
         if !eval.budget.checkpoint() {
             return vec![];
         }
         let entries: Vec<_> = match value {
             serde_json::Value::String(text) => {
-                let values = eval.template(text, self);
-                return located(values, self.results.record(location));
+                return evaluate(eval, text, location);
             }
             serde_json::Value::Array(items) => items
                 .iter()
@@ -97,7 +58,7 @@ impl<'doc> Environment<'_, 'doc> {
             }
         };
         eval.sequence(entries, |eval, (item, location)| {
-            self.decode(eval, item, location)
+            Self::decode(eval, item, location, evaluate)
         })
         .map(|items| {
             TrackedValue::new(match value {
@@ -201,54 +162,4 @@ fn expand_rows(value: &TrackedValue, budget: &mut Budget) -> Vec<TrackedValue> {
         rows.push(TrackedValue::unknown().with_provenance(&provenance));
     }
     budget.bound(rows)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        InputKey,
-        models::workflow::{Job, Workflow},
-    };
-
-    #[test]
-    fn large_matrix_preserves_an_unrelated_binding() -> anyhow::Result<()> {
-        // All 128 rows run. Matching their include entries costs more than
-        // the evaluator's work limit, but the title is independent of them.
-        let rows: Vec<_> = (0..128).collect();
-        let include: Vec<_> = rows
-            .iter()
-            .map(|i| serde_json::json!({"i": i, "tag": "stable"}))
-            .collect();
-        let workflow = serde_json::json!({
-            "on": "issues",
-            "jobs": {"build": {
-                "runs-on": "ubuntu-latest",
-                "strategy": {"matrix": {"i": rows, "include": include}},
-                "env": {"TITLE": "${{ github.event.issue.title }}"},
-                "steps": [{"run": "echo building"}],
-            }},
-        });
-        let workflow = Workflow::from_string(
-            workflow.to_string(),
-            InputKey::local("test".into(), "build.yml", None, None),
-        )?;
-        let Job::NormalJob(job) = workflow.jobs().next().unwrap() else {
-            panic!("expected a build job");
-        };
-        let step = job.steps().next().unwrap();
-        let expr = Expr::parse("env.TITLE")?;
-        let results = Context::workflow_step(&step).evaluate(&expr);
-        let [title] = results.outcomes.as_slice() else {
-            panic!("expected one title shared by all rows");
-        };
-        assert!(
-            title
-                .value
-                .dependencies()
-                .sources
-                .contains("github.event.issue.title")
-        );
-        Ok(())
-    }
 }

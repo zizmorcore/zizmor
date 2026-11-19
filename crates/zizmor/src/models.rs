@@ -185,8 +185,8 @@ pub(crate) trait StepCommon<'doc>: Locatable<'doc> + HasInputs {
     /// stack of traits implied by ordering (`PartialEq`, `PartialOrd`, etc).
     fn ord(&self) -> impl Ord;
 
-    /// Creates a workflow-aware expression analysis at this step.
-    fn expression_context(&self) -> evaluation::Context<'doc>;
+    /// Evaluate an expression with the bindings visible to this step.
+    fn evaluate(&self, expr: &Expr<'_>) -> evaluation::Evaluated<'doc>;
 
     /// Returns a [`common::Uses`] for this step, if it has one.
     fn uses(&self) -> Option<&'doc common::Uses>;

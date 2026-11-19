@@ -18,7 +18,7 @@
 use std::{env, ops::Deref as _, sync::LazyLock, vec};
 
 use fst::Map;
-use github_actions_expressions::evaluation::Outcome;
+use github_actions_expressions::evaluation::TrackedValue;
 use github_actions_expressions::{Error, Expr, context::Context, literal::Literal};
 use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
 use itertools::Itertools as _;
@@ -31,7 +31,10 @@ use crate::{
         location::{Routable as _, SymbolicLocation},
     },
     models::{
-        self, StepCommon, action::CompositeStep, inputs::Capability, uses::RepositoryUsesPattern,
+        self, StepCommon,
+        action::CompositeStep,
+        inputs::{Capability, HasInputs},
+        uses::RepositoryUsesPattern,
         workflow::Step,
     },
     state::AuditState,
@@ -365,16 +368,12 @@ impl TemplateInjection {
     }
 
     /// Rate a runtime context using its known capabilities and input type.
-    fn source_risk(source: &str, input: &dyn Fn(&str) -> Option<Capability>) -> Risk {
-        let source = source
-            .strip_prefix("job:")
-            .and_then(|scoped| scoped.split_once(':'))
-            .map_or(source, |(_, path)| path);
+    fn source_risk(source: &str, inputs: &impl HasInputs) -> Risk {
         let pattern = source.to_ascii_lowercase();
         let capability = source
             .split_once('.')
             .filter(|(root, _)| root.eq_ignore_ascii_case("inputs"))
-            .and_then(|(_, name)| input(name));
+            .and_then(|(_, name)| inputs.get_input(name));
         match Capability::from_context(&pattern).or(capability) {
             Some(Capability::Fixed) => return None,
             Some(Capability::Structured) => return Some((Severity::Medium, Confidence::High)),
@@ -404,13 +403,13 @@ impl TemplateInjection {
         }
     }
 
-    fn outcome_risk(value: &Outcome, input: &dyn Fn(&str) -> Option<Capability>) -> Risk {
-        let provenance = value.value.dependencies();
+    fn value_risk(value: &TrackedValue, inputs: &impl HasInputs) -> Risk {
+        let provenance = value.dependencies();
         let fallback = (Severity::Low, Confidence::Low);
         provenance
             .sources
             .iter()
-            .filter_map(|id| Self::source_risk(id, input))
+            .filter_map(|id| Self::source_risk(&id.path, inputs))
             .chain(provenance.incomplete.then_some(fallback))
             .max()
     }
@@ -421,25 +420,27 @@ impl TemplateInjection {
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
         let mut findings = vec![];
 
-        let context = std::cell::LazyCell::new(|| step.expression_context());
         for (script, script_loc, related_locs) in Self::scripts_with_location(step) {
             for (expression, span) in extract_fenced_expressions(script) {
                 let parsed = Expr::parse(expression.as_bare());
                 let evaluation = match &parsed {
-                    Ok(expr) => context.evaluate(expr),
-                    Err(Error::Depth) => models::evaluation::Results::incomplete(),
+                    Ok(expr) => step.evaluate(expr),
+                    Err(Error::Depth) => models::evaluation::Evaluated::incomplete(),
                     Err(_) => continue,
                 };
-                let outcomes = &evaluation.outcomes;
-                if outcomes.is_empty() {
+                if evaluation.values.is_empty() {
                     continue;
                 }
 
                 let parsed = parsed.ok();
-                let risk = outcomes
-                    .iter()
-                    .filter_map(|value| Self::outcome_risk(value, &|name| step.get_input(name)))
-                    .max();
+                let mut contributing = vec![];
+                let mut risk = None;
+                for value in &evaluation.values {
+                    if let Some(rating) = Self::value_risk(value, step) {
+                        contributing.push(value);
+                        risk = risk.max(Some(rating));
+                    }
+                }
                 let (severity, confidence) = risk.unwrap_or((Severity::Low, Confidence::High));
                 let persona = if risk.is_some() {
                     Persona::default()
@@ -472,11 +473,11 @@ impl TemplateInjection {
                             .annotated("may expand into attacker-controllable code".to_string()),
                     );
 
-                let contributing = outcomes.iter().filter(|value| {
-                    risk.is_none()
-                        || Self::outcome_risk(value, &|name| step.get_input(name)).is_some()
-                });
-                let locations = evaluation.locations(contributing.map(|outcome| &outcome.value));
+                let locations = if contributing.is_empty() {
+                    evaluation.locations(&evaluation.values)
+                } else {
+                    evaluation.locations(contributing)
+                };
                 for location in locations.into_iter().chain(related_locs.iter().cloned()) {
                     finding_builder = finding_builder.add_location(location);
                 }

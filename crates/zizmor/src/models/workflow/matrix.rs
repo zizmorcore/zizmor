@@ -1,5 +1,7 @@
 //! Strategy matrix modeling and APIs.
 
+mod rows;
+
 use crate::{
     finding::location::{Locatable, SymbolicLocation},
     models::workflow::NormalJob,
@@ -286,7 +288,6 @@ impl<'doc> Expansions<'doc> {
 pub(crate) struct Matrix<'doc> {
     inner: &'doc LoE<job::Matrix>,
     parent: NormalJob<'doc>,
-    expansions: Expansions<'doc>,
 }
 
 impl<'doc> Matrix<'doc> {
@@ -297,13 +298,12 @@ impl<'doc> Matrix<'doc> {
         Some(Self {
             inner: matrix,
             parent: parent.clone(),
-            expansions: Expansions::new(matrix, parent),
         })
     }
 
     /// The expansions for this matrix
-    pub(crate) fn expansions(&self) -> &Expansions<'doc> {
-        &self.expansions
+    pub(crate) fn expansions(&self) -> Expansions<'doc> {
+        Expansions::new(self.inner, &self.parent)
     }
 }
 
