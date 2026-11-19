@@ -4,7 +4,8 @@ use crate::finding::location::{Locatable, SymbolicLocation};
 use github_actions_expressions::{
     Evaluation,
     evaluation::{
-        AlternativeId, Evaluator, Outcome, Outcomes, OutcomesExt as _, Source, TrackedValue,
+        AbstractValue, AlternativeId, Evaluator, Outcome, Outcomes, OutcomesExt as _, Shape,
+        Source, TrackedValue,
     },
 };
 use github_actions_models::workflow::event::{
@@ -91,6 +92,14 @@ impl HasInputs for Workflow {
 }
 
 impl<'doc> WorkflowInputs<'doc> {
+    pub(super) fn names(self) -> Box<dyn Iterator<Item = &'doc String> + 'doc> {
+        match self {
+            Self::Call(_, call) => Box::new(call.inputs.keys()),
+            Self::Dispatch(_, dispatch) => Box::new(dispatch.inputs.keys()),
+            Self::Empty => Box::new(std::iter::empty()),
+        }
+    }
+
     /// Look up a declared input using Actions' case-insensitive property access.
     pub(super) fn get(self, name: &str) -> Option<InputDeclaration<'doc>> {
         fn lookup<'a, T>(
@@ -137,9 +146,10 @@ impl InputDeclaration<'_> {
     /// Possible values of this input for one invocation. Repeated reads use
     /// the same decision for the two values of a declared boolean.
     pub(super) fn values(&self, eval: &mut Evaluator) -> Outcomes {
+        use WorkflowCallInputType as Call;
+        use WorkflowDispatchInputType as Dispatch;
         let values = match self.kind {
-            InputType::Call(WorkflowCallInputType::Boolean)
-            | InputType::Dispatch(WorkflowDispatchInputType::Boolean) => {
+            InputType::Call(Call::Boolean) | InputType::Dispatch(Dispatch::Boolean) => {
                 let decision = eval.decision();
                 [false, true]
                     .into_iter()
@@ -149,7 +159,17 @@ impl InputDeclaration<'_> {
                     })
                     .collect()
             }
-            _ => vec![Outcome::new(TrackedValue::unknown())],
+            InputType::Call(Call::Number) | InputType::Dispatch(Dispatch::Number) => {
+                vec![Outcome::new(TrackedValue::new(AbstractValue::Unknown(
+                    Shape::Number,
+                )))]
+            }
+            InputType::Call(Call::String)
+            | InputType::Dispatch(Dispatch::String | Dispatch::Choice | Dispatch::Environment) => {
+                vec![Outcome::new(TrackedValue::new(AbstractValue::Unknown(
+                    Shape::String,
+                )))]
+            }
         };
         let source = Source::new(format!("inputs.{}", self.name));
         values.map(|mut value| {

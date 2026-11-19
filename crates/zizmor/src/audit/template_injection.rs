@@ -404,7 +404,9 @@ impl TemplateInjection {
     }
 
     fn value_risk(value: &TrackedValue, inputs: &impl HasInputs) -> Risk {
-        let provenance = value.dependencies();
+        // A collection's members reach a script through an explicit conversion
+        // such as toJSON. Direct interpolation cannot insert their contents.
+        let provenance = value.clone().into_string()?.provenance;
         let fallback = (Severity::Low, Confidence::Low);
         provenance
             .sources
@@ -441,11 +443,19 @@ impl TemplateInjection {
                         risk = risk.max(Some(rating));
                     }
                 }
-                let (severity, confidence) = risk.unwrap_or((Severity::Low, Confidence::High));
-                let persona = if risk.is_some() {
-                    Persona::default()
-                } else {
-                    Persona::Pedantic
+                let (severity, confidence, persona, annotation) = match risk {
+                    Some((severity, confidence)) => (
+                        severity,
+                        confidence,
+                        Persona::default(),
+                        "may expand into attacker-controllable code",
+                    ),
+                    None => (
+                        Severity::Low,
+                        Confidence::High,
+                        Persona::Pedantic,
+                        "prefer passing this value through the environment",
+                    ),
                 };
 
                 let fragment = parsed
@@ -470,11 +480,17 @@ impl TemplateInjection {
                             .clone()
                             .primary()
                             .subfeature(subfeature)
-                            .annotated("may expand into attacker-controllable code".to_string()),
+                            .annotated(annotation),
                     );
 
                 let locations = if contributing.is_empty() {
-                    evaluation.locations(&evaluation.values)
+                    // A pedantic finding concerns the interpolation site. Keep
+                    // its declarations available for inline ignores.
+                    evaluation
+                        .locations(&evaluation.values)
+                        .into_iter()
+                        .map(|loc| loc.hidden())
+                        .collect()
                 } else {
                     evaluation.locations(contributing)
                 };

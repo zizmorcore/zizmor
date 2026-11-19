@@ -12,6 +12,7 @@ use crate::finding::location::{Locatable as _, SymbolicLocation};
 use github_actions_expressions::{Evaluation, Expr, evaluation::*};
 use github_actions_models::common::{Env, expr::LoE};
 use indexmap::IndexMap;
+use itertools::Itertools as _;
 use std::{
     borrow::Cow,
     cell::Cell,
@@ -198,7 +199,13 @@ fn missing() -> Outcome {
 impl Bindings for Environment<'_, '_> {
     fn lookup(&mut self, path: &[Access], eval: &mut Evaluator) -> Outcomes {
         let site = self.site;
-        match path[0].text().to_ascii_lowercase().as_str() {
+        let context = path[0].text().to_ascii_lowercase();
+        if matches!(path.get(1), Some(Access::Unknown))
+            && let Some(values) = self.dynamic_binding(eval, &context, path)
+        {
+            return values;
+        }
+        match context.as_str() {
             "github" => vec![Outcome::new(TrackedValue::new(AbstractValue::Reference(
                 path.to_vec(),
             )))],
@@ -315,6 +322,43 @@ impl<'doc> Environment<'_, 'doc> {
         }
         value.provenance.sources.insert(source);
         vec![Outcome::new(value)]
+    }
+
+    /// A computed key may select any visible declaration, including one whose
+    /// value is itself an expression. Reuse named lookup for each candidate.
+    fn dynamic_binding(
+        &mut self,
+        eval: &mut Evaluator,
+        context: &str,
+        path: &[Access],
+    ) -> Option<Outcomes> {
+        let (names, mut values) = match context {
+            "inputs" if self.site.job().is_some() => (
+                eval.budget.bound(self.inputs.names()),
+                vec![missing().map(|value| value.apply_path(&path[2..]))],
+            ),
+            "env" if !self.site.before_steps() => {
+                let names = self
+                    .site
+                    .env_scopes()
+                    .filter_map(|scope| match scope.values {
+                        LoE::Literal(env) => Some(env.keys()),
+                        LoE::Expr(_) => None,
+                    })
+                    .flatten()
+                    .unique();
+                (eval.budget.bound(names), self.runtime(path))
+            }
+            _ => return None,
+        };
+
+        let mut path = path.to_vec();
+        let names = names.into_iter().map(Outcome::new).collect();
+        values.extend(eval.flat_map(names, |eval, name| {
+            path[1] = Access::from(name.as_str());
+            self.lookup(&path, eval)
+        }));
+        Some(values)
     }
 
     fn input(&mut self, eval: &mut Evaluator, path: &[Access]) -> Outcomes {

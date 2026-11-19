@@ -32,3 +32,11 @@ jobs:
 
       - name: Both reads see the same boolean
         run: echo "${{ inputs.manual && !inputs['MANUAL'] && github.ref_name || '' }}"
+
+      - name: A scalar input has no child properties
+        run: echo "${{ inputs.test.nested }}"
+
+      - name: Computed keys can select a declared string input through env
+        env:
+          VALUE: ${{ inputs[vars.INPUT_NAME] }}
+        run: echo "${{ env[vars.ENV_NAME] }}"

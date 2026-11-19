@@ -14,15 +14,10 @@ fn test_template_injection_static_matrix() -> Result<()> {
     help[template-injection]: code injection via template expansion
       --> @@INPUT@@:25:36
        |
-    20 |         frob: ["nothing", "special"]
-       |                ---------  --------- matrix value defined here
-       |                |
-       |                matrix value defined here
-    ...
     24 |         run: |
        |         --- this run block
     25 |           echo "issue created: ${{ matrix.frob }}"
-       |                                    ^^^^^^^^^^^ may expand into attacker-controllable code
+       |                                    ^^^^^^^^^^^ prefer passing this value through the environment
        |
        = note: audit confidence → High
 
@@ -491,16 +486,13 @@ fn test_multiline_expression_pedantic() -> Result<()> {
     help[template-injection]: code injection via template expansion
       --> @@INPUT@@:32:15
        |
-     5 |         free-threading:
-       |         -------------- input free-threading declared here
-    ...
     30 |           run: |
        |           --- this run block
     31 |             echo "TSAN_OPTIONS=log_path=${GITHUB_WORKSPACE}/tsan_log suppressions=${GITHUB_WORKSPACE}/Tools/tsan/suppressions${{
     32 | /               fromJSON(inputs.free-threading)
     33 | |               && '_free_threading'
     34 | |               || ''
-       | |___________________^ may expand into attacker-controllable code
+       | |___________________^ prefer passing this value through the environment
        |
        = note: audit confidence → High
 
@@ -526,7 +518,7 @@ fn test_issue_988_repro_pedantic() -> Result<()> {
        |         --- this run block
     ...
     19 |             event_name="${{ github.event_name }}"
-       |                             ^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |                             ^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
        |
        = note: audit confidence → High
 
@@ -537,7 +529,7 @@ fn test_issue_988_repro_pedantic() -> Result<()> {
        |         --- this run block
     29 |           curl -X POST https://api.example.com -H "Content-type: application/json" \
     30 |             -d "{\"text\":\"ドドド: https://github.com/${{ github.repository }}\"}"
-       |                                                            ^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |                                                            ^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
        |
        = note: audit confidence → High
 
@@ -571,7 +563,7 @@ fn test_issue_1638() -> Result<()> {
       --> @@INPUT@@:19:24
        |
     19 |         run: echo "${{ github.triggering_actor }}"
-       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
        |         |
        |         this run block
        |
@@ -605,7 +597,7 @@ fn test_issue_1664() -> Result<()> {
        |  _______________^
     18 | |           && 'true'
     19 | |           || 'echo "fallback"' }}
-       | |______________________________^ may expand into attacker-controllable code
+       | |______________________________^ prefer passing this value through the environment
        |
        = note: audit confidence → High
 
@@ -654,7 +646,7 @@ fn test_issue_1802() -> Result<()> {
     26 |       - run: |
        |         --- this run block
     27 |           test "${{ needs.test-matrix.result }}" = "success"
-       |                     ^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |                     ^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
        |
        = note: audit confidence → High
 
@@ -665,7 +657,7 @@ fn test_issue_1802() -> Result<()> {
        |         --- this run block
     27 |           test "${{ needs.test-matrix.result }}" = "success"
     28 |           test "${{ needs['test-matrix']['result'] }}" = "success"
-       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
        |
        = note: audit confidence → High
 
@@ -676,7 +668,7 @@ fn test_issue_1802() -> Result<()> {
        |         --- this run block
     ...
     29 |           test "${{ needs.TEST-MATRIX['result'] }}" = "success"
-       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
        |
        = note: audit confidence → High
 
@@ -1394,7 +1386,25 @@ fn test_workflow_input_types() -> Result<()> {
        |
        = note: audit confidence → High
 
-    6 findings (4 suppressed): 0 informational, 0 low, 0 medium, 2 high
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:42:24
+       |
+     5 |       test:
+       |       ---- input test declared here
+    ...
+    11 |       test:
+       |       ---- input test declared here
+    ...
+    41 |           VALUE: ${{ inputs[vars.INPUT_NAME] }}
+       |           ------------------------------------- VALUE is defined here
+    42 |         run: echo "${{ env[vars.ENV_NAME] }}"
+       |         ---            ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         |
+       |         this run block
+       |
+       = note: audit confidence → High
+
+    10 findings (7 suppressed): 0 informational, 0 low, 0 medium, 3 high
     "#
     );
     Ok(())
@@ -1514,8 +1524,14 @@ fn test_interpreted_indirections() -> Result<()> {
     error[template-injection]: code injection via template expansion
       --> @@INPUT@@:43:21
        |
+    34 |         os: [ubuntu, windows]
+       |                      ------- matrix value defined here
+    ...
     38 |           - {os: windows, label: included}
-       |             ------------------------------ matrix value defined here
+       |             ------------------------------
+       |             |
+       |             matrix value defined here
+       |             matrix value defined here
     ...
     41 |       - run: |
        |         --- this run block
@@ -1545,11 +1561,16 @@ fn test_interpreted_indirections() -> Result<()> {
     error[template-injection]: code injection via template expansion
       --> @@INPUT@@:64:24
        |
+    59 |         os: ["${{ vars.BUILD_OS }}"]
+       |              ---------------------- matrix value defined here
     60 |         version: [stable]
        |                   ------ matrix value defined here
     61 |         include:
     62 |           - {os: linux, label: included}
-       |             ---------------------------- matrix value defined here
+       |             ----------------------------
+       |             |
+       |             matrix value defined here
+       |             matrix value defined here
     63 |     steps:
     64 |       - run: echo "${{ matrix.version && matrix.label && github.event.issue.title }}"
        |         ---            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code

@@ -49,7 +49,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/build-dev-binaries.yml:165:18
     |
 165 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
-    |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         ---      ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |         |
     |         this run block
     |
@@ -61,7 +61,7 @@ help[template-injection]: code injection via template expansion
 169 |         run: |
     |         --- this run block
 170 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
-    |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -69,7 +69,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/build-dev-binaries.yml:200:18
     |
 200 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
-    |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         ---      ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |         |
     |         this run block
     |
@@ -81,7 +81,7 @@ help[template-injection]: code injection via template expansion
 204 |         run: |
     |         --- this run block
 205 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
-    |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -107,7 +107,7 @@ help[template-injection]: code injection via template expansion
     |         --- this run block
 ...
 253 |           IFS=',' read -r BASE_IMAGE BASE_TAGS <<< "${{ matrix.image-mapping }}"
-    |                                                         ^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                         ^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -137,7 +137,7 @@ help[template-injection]: code injection via template expansion
 877 |         run: |
     |         --- this run block
 878 |           docker run --rm -v ${{ github.workspace }}:/io -w /io --env MODULE_NAME --env PACKAGE_NAME alpine:3.12 sh -c "
-    |                                  ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                  ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -147,7 +147,7 @@ help[template-injection]: code injection via template expansion
 924 |         run: |
     |         --- this run block
 925 |           docker run --rm -v ${{ github.workspace }}:/io -w /io --env MODULE_NAME --env PACKAGE_NAME alpine:3.12 sh -c "
-    |                                  ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                  ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -227,7 +227,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/check-lint.yml:126:18
     |
 126 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
-    |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         ---      ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |         |
     |         this run block
     |
@@ -239,7 +239,7 @@ help[template-injection]: code injection via template expansion
 130 |         run: |
     |         --- this run block
 131 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
-    |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -799,7 +799,7 @@ help[template-injection]: code injection via template expansion
   --> .github/workflows/publish-versions.yml:30:36
    |
 30 |         run: git clone https://${{ secrets.ASTRAL_VERSIONS_PAT }}@github.com/astral-sh/versions.git astral-versions
-   |         --- this run block         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |         --- this run block         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -821,7 +821,7 @@ error[excessive-permissions]: overly broad permissions
    = note: audit confidence → High
 
 error[template-injection]: code injection via template expansion
-  --> .github/workflows/release.yml:83:102
+  --> .github/workflows/release.yml:83:20
    |
 44 |       tag:
    |       --- input tag declared here
@@ -829,51 +829,60 @@ error[template-injection]: code injection via template expansion
 82 |         run: |
    |         --- this run block
 83 |           dist ${{ (inputs.tag && inputs.tag != 'dry-run' && format('host --steps=create --tag={0}', inputs.tag)) || 'plan' }} --out...
-   |                                                                                                      ^^^^^^^^^^ may expand into attacker-controllable code
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
    = note: audit confidence → High
 
-info[template-injection]: code injection via template expansion
+error[template-injection]: code injection via template expansion
    --> .github/workflows/release.yml:147:26
     |
  44 |       tag:
     |       --- input tag declared here
+...
+ 57 |       tag-flag: ${{ inputs.tag && inputs.tag != 'dry-run' && format('--tag={0}', inputs.tag) || '' }}
+    |       ----------------------------------------------------------------------------------------------- this job declares output tag-flag
 ...
 146 |         run: |
     |         --- this run block
 147 |           dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json "--artifacts=global" > dist-manifest.json
     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
     |
-    = note: audit confidence → Low
+    = note: audit confidence → High
     = note: this finding has an auto-fix
 
-info[template-injection]: code injection via template expansion
+error[template-injection]: code injection via template expansion
    --> .github/workflows/release.yml:199:25
     |
  44 |       tag:
     |       --- input tag declared here
+...
+ 57 |       tag-flag: ${{ inputs.tag && inputs.tag != 'dry-run' && format('--tag={0}', inputs.tag) || '' }}
+    |       ----------------------------------------------------------------------------------------------- this job declares output tag-flag
 ...
 198 |         run: |
     |         --- this run block
 199 |           dist host ${{ needs.plan.outputs.tag-flag }} --steps=upload --steps=release --output-format=json > dist-manifest.json
     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
     |
-    = note: audit confidence → Low
+    = note: audit confidence → High
     = note: this finding has an auto-fix
 
-info[template-injection]: code injection via template expansion
+error[template-injection]: code injection via template expansion
    --> .github/workflows/release.yml:291:34
     |
  44 |       tag:
     |       --- input tag declared here
 ...
-287 | ...   run: |
-    |       --- this run block
+ 56 |       tag: ${{ (inputs.tag != 'dry-run' && inputs.tag) || '' }}
+    |       --------------------------------------------------------- this job declares output tag
 ...
-291 | ...     gh release create "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE"...
-    |                                ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+287 |         run: |
+    |         --- this run block
+...
+291 |           gh release create "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITL...
+    |                                  ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
     |
-    = note: audit confidence → Low
+    = note: audit confidence → High
     = note: this finding has an auto-fix
 
 help[undocumented-permissions]: permissions without explanatory comments
@@ -1323,7 +1332,7 @@ help[template-injection]: code injection via template expansion
 57 |         run: |
    |         --- this run block
 58 |           echo '${{ toJSON(matrix.commands) }}' | jq -r '.[]' | while read cmd; do
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -1349,7 +1358,7 @@ help[template-injection]: code injection via template expansion
    |         --- this run block
 ...
 47 |           echo "${{ github.workspace }}/nu-${nu_tag}-x86_64-unknown-linux-gnu" >> "${GITHUB_PATH}"
-   |                     ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                     ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -1357,7 +1366,7 @@ help[template-injection]: code injection via template expansion
   --> .github/workflows/test-integration.yml:64:30
    |
 64 |         run: overlay use ${{ github.workspace }}/.venv/bin/activate.nu
-   |         --- this run block   ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |         --- this run block   ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -1368,7 +1377,7 @@ help[template-injection]: code injection via template expansion
     |         --- this run block
 ...
 838 |             --domain-owner ${{ secrets.AWS_ACCOUNT_ID }} \
-    |                                ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                ^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1432,7 +1441,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/test-system.yml:741:24
     |
 741 |         run: echo "${{ github.workspace }}\embedded-python" >> $env:GITHUB_PATH
-    |         ---            ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         ---            ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |         |
     |         this run block
     |
@@ -1489,7 +1498,7 @@ help[template-injection]: code injection via template expansion
   --> .github/workflows/test-windows-trampolines.yml:43:18
    |
 43 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
-   |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |         ---      ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |         |
    |         this run block
    |
@@ -1501,7 +1510,7 @@ help[template-injection]: code injection via template expansion
 47 |         run: |
    |         --- this run block
 48 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
-   |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                                ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -1511,7 +1520,7 @@ help[template-injection]: code injection via template expansion
 56 |         run: |
    |         --- this run block
 57 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
-   |                                 ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                                 ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -1522,7 +1531,7 @@ help[template-injection]: code injection via template expansion
    |         --- this run block
 57 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
 58 |           rustup component add rust-src --target ${{ matrix.target-arch }}-pc-windows-msvc
-   |                                                      ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                                                      ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -1530,7 +1539,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/test-windows-trampolines.yml:103:18
     |
 103 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
-    |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         ---      ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |         |
     |         this run block
     |
@@ -1542,7 +1551,7 @@ help[template-injection]: code injection via template expansion
 106 |         run: |
     |         --- this run block
 107 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
-    |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1552,7 +1561,7 @@ help[template-injection]: code injection via template expansion
 113 |         run: |
     |         --- this run block
 114 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
-    |                                 ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                 ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1563,7 +1572,7 @@ help[template-injection]: code injection via template expansion
     |         --- this run block
 114 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
 115 |           rustup component add rust-src --target ${{ matrix.target-arch }}-pc-windows-msvc
-    |                                                      ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                      ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1573,7 +1582,7 @@ help[template-injection]: code injection via template expansion
 118 |         run: |
     |         --- this run block
 119 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
-    |                                 ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                 ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1584,7 +1593,7 @@ help[template-injection]: code injection via template expansion
     |         --- this run block
 119 |           rustup target add ${{ matrix.target-arch }}-pc-windows-msvc
 120 |           cargo test -p uv-trampoline-builder --target ${{ matrix.target-arch }}-pc-windows-msvc
-    |                                                            ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                            ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1594,7 +1603,7 @@ help[template-injection]: code injection via template expansion
 124 |         run: |
     |         --- this run block
 125 |           cargo build --target ${{ matrix.target-arch }}-pc-windows-msvc
-    |                                    ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                    ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1605,7 +1614,7 @@ help[template-injection]: code injection via template expansion
     |       --- this run block
 125 | ...     cargo build --target ${{ matrix.target-arch }}-pc-windows-msvc
 126 | ...     cp target/${{ matrix.target-arch }}-pc-windows-msvc/debug/uv-trampoline-console.exe ../uv-trampoline-builder/trampolines/uv...
-    |                       ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                       ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1616,7 +1625,7 @@ help[template-injection]: code injection via template expansion
     |       --- this run block
 125 | ...     cargo build --target ${{ matrix.target-arch }}-pc-windows-msvc
 126 | ...     cp target/${{ matrix.target-arch }}-pc-windows-msvc/debug/uv-trampoline-console.exe ../uv-trampoline-builder/trampolines/uv-trampoline-${{ matrix.target-arch }}...
-    |                                                                                                                                                    ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                                                                                                                    ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1627,7 +1636,7 @@ help[template-injection]: code injection via template expansion
     |       --- this run block
 ...
 127 | ...     cp target/${{ matrix.target-arch }}-pc-windows-msvc/debug/uv-trampoline-gui.exe ../uv-trampoline-builder/trampolines/uv-tra...
-    |                       ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                       ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1638,7 +1647,7 @@ help[template-injection]: code injection via template expansion
     |       --- this run block
 ...
 127 | ...     cp target/${{ matrix.target-arch }}-pc-windows-msvc/debug/uv-trampoline-gui.exe ../uv-trampoline-builder/trampolines/uv-trampoline-${{ matrix.target-arch }}...
-    |                                                                                                                                                ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                                                                                                                ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1649,7 +1658,7 @@ help[template-injection]: code injection via template expansion
     |         --- this run block
 131 |           # We turn off the default "production" test feature since these are debug binaries
 132 |           cargo test -p uv-trampoline-builder --target ${{ matrix.target-arch }}-pc-windows-msvc --no-default-features
-    |                                                            ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                            ^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1672,7 +1681,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/test.yml:167:18
     |
 167 |         run: ${{ github.workspace }}/.github/workflows/setup-dev-drive.ps1
-    |         ---      ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         ---      ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |         |
     |         this run block
     |
@@ -1684,7 +1693,7 @@ help[template-injection]: code injection via template expansion
 171 |         run: |
     |         --- this run block
 172 |           Copy-Item -Path "${{ github.workspace }}" -Destination "$Env:UV_WORKSPACE" -Recurse
-    |                                ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1695,7 +1704,7 @@ help[template-injection]: code injection via template expansion
     |         --- this run block
 ...
 214 |             --partition hash:${{ matrix.partition }}/3
-    |                                  ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                  ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -1714,4 +1723,4 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-155 findings (2 suppressed): 24 informational, 105 low, 16 medium, 8 high
+155 findings (2 suppressed): 21 informational, 105 low, 16 medium, 11 high

@@ -3,7 +3,7 @@ use indexmap::IndexMap;
 use std::sync::Arc;
 
 use github_actions_expressions::evaluation::{
-    AbstractValue, Budget, Evaluator, Outcome, Outcomes, OutcomesExt as _, TrackedValue,
+    AbstractValue, Budget, Evaluator, Outcome, Outcomes, OutcomesExt as _, Provenance, TrackedValue,
 };
 use itertools::Itertools as _;
 use serde_json::Value;
@@ -73,29 +73,26 @@ fn expand_rows(value: &TrackedValue, budget: &mut Budget) -> Vec<TrackedValue> {
         _ => return vec![],
     };
 
-    let mut unknown_include = false;
-    let includes = definition
-        .shift_remove("include")
-        .map_or_else(Vec::new, |value| {
-            value.elements().unwrap_or_else(|| {
-                unknown_include = true;
-                vec![]
-            })
-        });
-    let mut includes: Vec<_> = includes
-        .into_iter()
-        .filter_map(|include| {
+    let mut includes = vec![];
+    let mut unknown_include = None;
+    if let Some(value) = definition.shift_remove("include") {
+        for include in value.elements().unwrap_or_else(|| vec![value]) {
             let AbstractValue::Object(fields) = include.inner else {
-                unknown_include = true;
-                return None;
+                unknown_include
+                    .get_or_insert_with(Provenance::default)
+                    .extend(&include.dependencies());
+                continue;
             };
             let mut fields = Arc::unwrap_or_clone(fields);
             for value in fields.values_mut() {
                 value.provenance.extend(&include.provenance);
             }
-            Some((fields, true))
-        })
-        .collect();
+            includes.push(Include {
+                fields,
+                standalone: true,
+            });
+        }
+    }
     let excludes = definition
         .shift_remove("exclude")
         .and_then(|value| value.elements())
@@ -141,45 +138,75 @@ fn expand_rows(value: &TrackedValue, budget: &mut Budget) -> Vec<TrackedValue> {
             }
         }
         let mut variants = vec![original.clone()];
-        for (fields, standalone) in &mut includes {
+        for include in &mut includes {
             if !budget.checkpoint() {
                 return results;
             }
-            match matches_row(&original, fields, true) {
-                Some(false) => continue,
-                Some(true) => {
-                    *standalone = false;
-                    for row in &mut variants {
-                        row.extend(fields.clone());
-                    }
-                }
-                None => {
-                    // The unknown axis may match. Preserve both outcomes,
-                    // including any fields supplied by earlier includes.
-                    variants = budget.bound(variants.into_iter().flat_map(|row| {
-                        let mut merged = row.clone();
-                        merged.extend(fields.clone());
-                        [row, merged]
-                    }));
-                }
-            }
+            variants = include.apply(&original, variants, budget);
         }
         results.extend(variants.into_iter().map(row_value));
     }
     results.extend(
         includes
             .into_iter()
-            .filter(|(_, standalone)| *standalone)
-            .map(|(fields, _)| row_value(fields)),
+            .filter(|include| include.standalone)
+            .map(|include| row_value(include.fields)),
     );
-    if unknown_include {
-        results.push(TrackedValue::unknown().with_provenance(&value.dependencies()));
+    if let Some(include) = unknown_include {
+        // This include can add a standalone row or merge with an existing row.
+        // Only the include's location is common to both possibilities.
+        let mut possible = value.dependencies();
+        possible.evidence = include.evidence;
+        results.push(TrackedValue::unknown().with_provenance(&possible));
     }
     results
 }
 
 fn row_value(row: Row) -> TrackedValue {
     TrackedValue::new(AbstractValue::Object(Arc::new(row)))
+}
+
+struct Include {
+    fields: Row,
+    standalone: bool,
+}
+
+impl Include {
+    fn apply(&mut self, original: &Row, mut variants: Vec<Row>, budget: &mut Budget) -> Vec<Row> {
+        let matched = matches_row(original, &self.fields, true);
+        if matched == Some(false) {
+            return variants;
+        }
+
+        let mut control = Provenance::default();
+        for (key, expected) in &self.fields {
+            if let Some(axis) = original.get(key) {
+                control.extend(&axis.dependencies());
+                control.extend(&expected.dependencies());
+            }
+        }
+        let control = control.controlled();
+        let merge = |row: &mut Row| {
+            row.extend(
+                self.fields
+                    .iter()
+                    .map(|(key, value)| (key.clone(), value.clone().with_provenance(&control))),
+            )
+        };
+
+        if matched == Some(true) {
+            self.standalone = false;
+            variants.iter_mut().for_each(merge);
+            return variants;
+        }
+
+        // An unknown axis can either match or leave the original row alone.
+        budget.bound(variants.into_iter().flat_map(|row| {
+            let mut merged = row.clone();
+            merge(&mut merged);
+            [row, merged]
+        }))
+    }
 }
 
 /// An unresolved field may match. A single known mismatch rules out the row.
