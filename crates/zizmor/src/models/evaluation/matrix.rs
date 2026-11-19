@@ -7,17 +7,31 @@ type Row = BTreeMap<String, TrackedValue>;
 
 impl<'doc> Environment<'_, 'doc> {
     pub(super) fn in_rows(
-        &mut self,
+        mut self,
         eval: &mut Evaluator,
         run: impl Fn(&mut Evaluator, &mut Environment<'_, 'doc>) -> Outcomes,
     ) -> Outcomes {
+        // A producer starts with its own bindings, even when its consumer
+        // is checking whether it needs a matrix row.
+        self.needs_row = None;
         let context = self.context;
         let Some(job) = &context.job else {
-            return run(eval, self);
+            return run(eval, &mut self);
         };
         let Some(matrix) = job.strategy.as_ref().and_then(|s| s.matrix.as_ref()) else {
-            return run(eval, self);
+            return run(eval, &mut self);
         };
+
+        // A large matrix must not consume the budget for an unrelated binding.
+        // Follow aliases and short circuits normally until a read needs a row.
+        let needed = Cell::new(false);
+        let mut env = self.at(context);
+        env.needs_row = Some(&needed);
+        let values = run(eval, &mut env);
+        if !needed.get() {
+            return values;
+        }
+
         if !self.cache.rows.contains_key(job.id()) {
             let location = job
                 .location()
@@ -187,4 +201,54 @@ fn expand_rows(value: &TrackedValue, budget: &mut Budget) -> Vec<TrackedValue> {
         rows.push(TrackedValue::unknown().with_provenance(&provenance));
     }
     budget.bound(rows)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        InputKey,
+        models::workflow::{Job, Workflow},
+    };
+
+    #[test]
+    fn large_matrix_preserves_an_unrelated_binding() -> anyhow::Result<()> {
+        // All 128 rows run. Matching their include entries costs more than
+        // the evaluator's work limit, but the title is independent of them.
+        let rows: Vec<_> = (0..128).collect();
+        let include: Vec<_> = rows
+            .iter()
+            .map(|i| serde_json::json!({"i": i, "tag": "stable"}))
+            .collect();
+        let workflow = serde_json::json!({
+            "on": "issues",
+            "jobs": {"build": {
+                "runs-on": "ubuntu-latest",
+                "strategy": {"matrix": {"i": rows, "include": include}},
+                "env": {"TITLE": "${{ github.event.issue.title }}"},
+                "steps": [{"run": "echo building"}],
+            }},
+        });
+        let workflow = Workflow::from_string(
+            workflow.to_string(),
+            InputKey::local("test".into(), "build.yml", None, None),
+        )?;
+        let Job::NormalJob(job) = workflow.jobs().next().unwrap() else {
+            panic!("expected a build job");
+        };
+        let step = job.steps().next().unwrap();
+        let expr = Expr::parse("env.TITLE")?;
+        let results = Context::workflow_step(&step).evaluate(&expr);
+        let [title] = results.outcomes.as_slice() else {
+            panic!("expected one title shared by all rows");
+        };
+        assert!(
+            title
+                .value
+                .dependencies()
+                .sources
+                .contains("github.event.issue.title")
+        );
+        Ok(())
+    }
 }

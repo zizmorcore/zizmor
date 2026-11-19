@@ -1,6 +1,6 @@
 //! Bindings visible to an expression at a workflow job, step, or composite step.
-//! The same expression is evaluated once for each possible trigger and matrix
-//! row. Reading a job output switches to the producer's bindings.
+//! Each trigger supplies its input declarations. Expressions that use a matrix
+//! row run once per row. Reading a job output switches to the producer's bindings.
 
 mod inputs;
 mod matrix;
@@ -16,6 +16,7 @@ use github_actions_models::common::{Env, expr::LoE};
 use indexmap::IndexMap;
 use std::{
     borrow::Cow,
+    cell::Cell,
     collections::{BTreeMap, BTreeSet},
 };
 
@@ -107,11 +108,12 @@ impl<'doc> Context<'doc> {
                 &mut results,
             ) {
                 let mut cache = Cache::default();
-                let mut env = Environment {
+                let env = Environment {
                     context: self,
                     inputs: &inputs,
                     results: &mut results,
                     cache: &mut cache,
+                    needs_row: None,
                 };
                 outcomes.extend(env.in_rows(eval, &run));
             }
@@ -169,6 +171,8 @@ struct Environment<'a, 'doc> {
     inputs: &'a BTreeMap<String, Outcomes>,
     results: &'a mut Results<'doc>,
     cache: &'a mut Cache,
+    /// Set when a lookup requires a row during the first pass over a matrix job.
+    needs_row: Option<&'a Cell<bool>>,
 }
 
 fn empty() -> Outcome {
@@ -198,6 +202,10 @@ impl Bindings for Environment<'_, '_> {
                 }
             }
             "matrix" if context.phase != Phase::Matrix && context.job.is_some() => {
+                if let Some(needed) = self.needs_row {
+                    needed.set(true);
+                    return vec![];
+                }
                 let Some((_, row)) = &context.row else {
                     return vec![empty()];
                 };
@@ -226,6 +234,7 @@ impl<'doc> Environment<'_, 'doc> {
             inputs: self.inputs,
             results: self.results,
             cache: self.cache,
+            needs_row: self.needs_row,
         }
     }
 
@@ -234,6 +243,10 @@ impl<'doc> Environment<'_, 'doc> {
         let name = path.iter().map(Access::text).collect::<Vec<_>>().join(".");
         let name = match &self.context.job {
             Some(job) if !path[0].text().eq_ignore_ascii_case("inputs") => {
+                if let Some(needed) = self.needs_row {
+                    needed.set(true);
+                    return vec![];
+                }
                 match &self.context.row {
                     Some((row, _)) => format!("job:{}[{row}]:{name}", job.id()),
                     None => format!("job:{}:{name}", job.id()),
@@ -301,7 +314,10 @@ impl<'doc> Environment<'_, 'doc> {
                     );
                 }
                 let values = located(values, id);
-                self.cache.env.insert(key, values.clone());
+                // A read deferred to the per-row pass has no value to cache yet.
+                if !self.needs_row.is_some_and(Cell::get) {
+                    self.cache.env.insert(key, values.clone());
+                }
                 values
             };
             return values.map(|value| {
