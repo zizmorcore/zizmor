@@ -81,7 +81,7 @@ impl<'doc> NormalJob<'doc> {
         let mut evaluation = Site::Job(self).evaluate_template(template);
         if matches!(container, Container::Name(_)) {
             // An expression for the entire container can return a mapping.
-            let image = Access::Key("image".into());
+            let image = Access::from("image");
             for value in &mut evaluation.values {
                 if matches!(value.inner, AbstractValue::Object(_)) {
                     *value = value.apply_access(&image);

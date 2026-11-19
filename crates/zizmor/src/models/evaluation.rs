@@ -166,16 +166,16 @@ impl<'doc> Evaluated<'doc> {
     /// yield a string at runtime. Keep equal strings from different definitions
     /// separate so that inline ignores apply to their own definition.
     pub(super) fn scalar_strings(
-        &self,
+        self,
     ) -> impl Iterator<Item = (Option<String>, Vec<SymbolicLocation<'doc>>)> {
         let mut seen = HashSet::new();
-        self.values.iter().filter_map(move |value| {
-            let name = match &value.inner {
-                AbstractValue::Known(value) => Some(value.sema().to_string()),
-                AbstractValue::Unknown(_) | AbstractValue::Reference(_) => None,
-                AbstractValue::Array(_) | AbstractValue::Object(_) => return None,
+        self.values.into_iter().filter_map(move |value| {
+            let value = value.into_string()?;
+            let name = match value.inner {
+                AbstractValue::Known(Evaluation::String(name)) => Some(name),
+                _ => None,
             };
-            let ids = value.dependencies().evidence;
+            let ids = value.provenance.evidence;
             seen.insert((name.clone(), ids.clone()))
                 .then(|| (name, self.evidence.locations(ids)))
         })
