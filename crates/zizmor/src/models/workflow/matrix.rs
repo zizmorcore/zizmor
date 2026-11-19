@@ -288,6 +288,7 @@ impl<'doc> Expansions<'doc> {
 pub(crate) struct Matrix<'doc> {
     inner: &'doc LoE<job::Matrix>,
     parent: NormalJob<'doc>,
+    expansions: std::sync::OnceLock<Expansions<'doc>>,
 }
 
 impl<'doc> Matrix<'doc> {
@@ -298,12 +299,14 @@ impl<'doc> Matrix<'doc> {
         Some(Self {
             inner: matrix,
             parent: parent.clone(),
+            expansions: Default::default(),
         })
     }
 
     /// The expansions for this matrix
-    pub(crate) fn expansions(&self) -> Expansions<'doc> {
-        Expansions::new(self.inner, &self.parent)
+    pub(crate) fn expansions(&self) -> &Expansions<'doc> {
+        self.expansions
+            .get_or_init(|| Expansions::new(self.inner, &self.parent))
     }
 }
 

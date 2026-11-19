@@ -2,11 +2,10 @@
 //! Each trigger supplies its input declarations. Expressions that use a matrix
 //! row run once per row. Reading a job output switches to the producer's bindings.
 
-mod inputs;
-
 use super::{
     StepCommon as _,
     action::CompositeStep,
+    inputs::WorkflowInputs,
     workflow::{JobCommon as _, NormalJob, Step},
 };
 use crate::finding::location::{Locatable as _, SymbolicLocation};
@@ -106,14 +105,16 @@ impl<'a, 'doc> Site<'a, 'doc> {
         let mut eval = Evaluator::default();
         let outcomes = eval.within_limits(|eval| {
             let mut outcomes = Vec::new();
-            for inputs in
-                inputs::environments(self.job().map(|job| job.parent()), eval, &mut evidence)
-            {
+            let triggers = match self.job() {
+                Some(job) => job.parent().input_declarations().collect(),
+                None => vec![WorkflowInputs::Empty],
+            };
+            for inputs in triggers {
                 let mut cache = Cache::default();
                 let env = Environment {
                     site: self,
                     row: None,
-                    inputs: &inputs,
+                    inputs,
                     evidence: &mut evidence,
                     cache: &mut cache,
                     needs_row: None,
@@ -173,6 +174,7 @@ impl<'doc> Evidence<'doc> {
 
 #[derive(Default)]
 struct Cache {
+    inputs: BTreeMap<String, Outcomes>,
     rows: BTreeMap<String, Outcomes<(usize, TrackedValue)>>,
     outputs: BTreeMap<(String, String), Outcomes>,
     status: BTreeMap<String, DecisionId>,
@@ -182,7 +184,7 @@ struct Cache {
 struct Environment<'a, 'doc> {
     site: Site<'a, 'doc>,
     row: Option<&'a (usize, TrackedValue)>,
-    inputs: &'a BTreeMap<String, Outcomes>,
+    inputs: WorkflowInputs<'doc>,
     evidence: &'a mut Evidence<'doc>,
     cache: &'a mut Cache,
     /// Set when a lookup requires a row during the first pass over a matrix job.
@@ -200,18 +202,7 @@ impl Bindings for Environment<'_, '_> {
             "github" => vec![Outcome::new(TrackedValue::new(AbstractValue::Reference(
                 path.to_vec(),
             )))],
-            "inputs" if site.job().is_some() => {
-                if let [_, Access::Key(name), rest @ ..] = path {
-                    let values = self
-                        .inputs
-                        .get(&name.to_ascii_lowercase())
-                        .cloned()
-                        .unwrap_or_else(|| vec![empty()]);
-                    values.map(|value| value.apply_path(rest))
-                } else {
-                    self.runtime(path)
-                }
-            }
+            "inputs" if site.job().is_some() => self.input(eval, path),
             "matrix" if !matches!(site, Site::Matrix(_)) && site.job().is_some() => {
                 if self.defer_until_row() {
                     return vec![];
@@ -319,6 +310,26 @@ impl<'doc> Environment<'_, 'doc> {
         }
         value.provenance.sources.insert(source);
         vec![Outcome::new(value)]
+    }
+
+    fn input(&mut self, eval: &mut Evaluator, path: &[Access]) -> Outcomes {
+        let [_, Access::Key(name), rest @ ..] = path else {
+            return self.runtime(path);
+        };
+        let values = self
+            .cache
+            .inputs
+            .entry(name.to_ascii_lowercase())
+            .or_insert_with(|| {
+                let Some(input) = self.inputs.get(name) else {
+                    return vec![empty()];
+                };
+                let location = input
+                    .location()
+                    .annotated(format!("input {} declared here", input.name));
+                located(input.values(eval), self.evidence.record(location))
+            });
+        values.clone().map(|value| value.apply_path(rest))
     }
 
     fn environment(&mut self, eval: &mut Evaluator, path: &[Access]) -> Outcomes {

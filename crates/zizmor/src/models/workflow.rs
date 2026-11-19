@@ -901,7 +901,7 @@ name: Test Workflow
 on:
   workflow_dispatch:
     inputs:
-      foo:
+      FOO:
         type: string
         required: true
       bar:
@@ -928,7 +928,7 @@ jobs:
             crate::InputKey::local("fakegroup".into(), "dummy", None, None),
         )?;
 
-        // `foo` unifies in favor of the more permissive capability,
+        // `FOO` and `foo` unify in favor of the more permissive capability,
         // which is `Capability::Arbitrary` from the `string` input type
         // under `workflow_dispatch`.
         let foo_cap = workflow.get_input("foo").unwrap();
