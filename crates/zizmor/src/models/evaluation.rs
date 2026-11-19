@@ -1,23 +1,9 @@
-//! Build the context visible at a workflow expression.
-//!
-//! For `needs.build.outputs.image`, the build job's output template captures
-//! its own environment and matrix. The consumer's `needs` scope points to a
-//! choice between that job's outputs and its skipped outputs. The expression
-//! evaluator follows those definitions and returns the locations it visited.
+//! Bindings visible to an expression at a workflow job, step, or composite step.
+//! The same expression is evaluated once for each possible trigger and matrix
+//! row. Reading a job output switches to the producer's bindings.
 
 mod inputs;
 mod matrix;
-
-use std::collections::{BTreeMap, BTreeSet};
-
-use github_actions_expressions::{
-    Evaluation,
-    evaluation::{AbstractValue, Access, Definition, Outcome, Scope, TrackedValue},
-};
-use github_actions_models::{
-    common::{Env, expr::LoE},
-    workflow::Job,
-};
 
 use super::{
     StepCommon as _,
@@ -25,276 +11,390 @@ use super::{
     workflow::{JobCommon as _, NormalJob, Step},
 };
 use crate::finding::location::{Locatable as _, SymbolicLocation};
+use github_actions_expressions::{Evaluation, Expr, evaluation::*};
+use github_actions_models::common::{Env, expr::LoE};
+use indexmap::IndexMap;
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, BTreeSet},
+};
 
+#[derive(Clone, Copy, Default, PartialEq)]
+enum Phase {
+    #[default]
+    Step,
+    Job,
+    Matrix,
+}
+
+#[derive(Clone)]
+struct EnvScope<'doc> {
+    values: &'doc LoE<Env>,
+    location: SymbolicLocation<'doc>,
+    phase: Phase,
+}
+
+#[derive(Clone, Default)]
 pub(crate) struct Context<'doc> {
-    pub(crate) scope: Scope,
-    locations: Vec<SymbolicLocation<'doc>>,
-}
-
-#[derive(Default)]
-struct Builder<'doc> {
-    locations: Vec<SymbolicLocation<'doc>>,
-}
-
-impl<'doc> Builder<'doc> {
-    fn record(&mut self, location: SymbolicLocation<'doc>) -> usize {
-        let id = self.locations.len();
-        self.locations.push(location);
-        id
-    }
-}
-
-fn empty() -> Definition {
-    Definition::known(Evaluation::String(String::new()))
-}
-
-fn incomplete() -> Definition {
-    Definition::value(TrackedValue::incomplete())
-}
-
-fn runtime_scope(runtime: &Definition) -> Scope {
-    let mut scope = Scope::new(runtime.clone());
-    scope.bind(
-        "github",
-        Definition::value(TrackedValue::new(AbstractValue::Reference(vec![
-            Access::Key("github".into()),
-        ]))),
-    );
-    scope
+    row: Option<(usize, TrackedValue)>,
+    envs: Vec<EnvScope<'doc>>,
+    prior_steps: bool,
+    phase: Phase,
+    job: Option<NormalJob<'doc>>,
 }
 
 impl<'doc> Context<'doc> {
-    pub(crate) fn workflow_step(step: &Step<'doc>) -> Self {
-        let job = step.job();
-        let mut builder = Builder::default();
-        let scopes = builder.job_scopes(job);
-        let runtime = scopes.runtime.clone();
-        let prior_steps = job.steps().any(|prior| prior.ord() < step.ord());
-        let (mut scope, outer_env) = scopes.with_environment(job, prior_steps, &mut builder);
-        let env = builder.environment(
-            outer_env,
-            step.env(),
-            step.location(),
-            &scope,
-            &runtime,
-            false,
-        );
-        scope.bind("env", Definition::namespace(env));
+    pub(crate) fn job(job: NormalJob<'doc>) -> Self {
+        let workflow = job.parent();
         Self {
-            scope,
-            locations: builder.locations,
+            envs: vec![
+                EnvScope {
+                    values: &workflow.env,
+                    location: workflow.location(),
+                    phase: Phase::Job,
+                },
+                EnvScope {
+                    values: &job.env,
+                    location: job.location(),
+                    phase: Phase::Job,
+                },
+            ],
+            phase: Phase::Job,
+            job: Some(job),
+            ..Self::default()
         }
     }
 
+    pub(crate) fn workflow_step(step: &Step<'doc>) -> Self {
+        let mut context = Context::job(step.job().clone());
+        context.phase = Phase::Step;
+        context.envs.push(EnvScope {
+            values: step.env(),
+            location: step.location(),
+            phase: Phase::Step,
+        });
+        context.prior_steps = step.job().steps().any(|prior| prior.ord() < step.ord());
+        context
+    }
+
     pub(crate) fn composite_step(step: &CompositeStep<'doc>) -> Self {
-        let mut builder = Builder::default();
-        let runtime = Definition::runtime(String::new());
-        let mut scope = runtime_scope(&runtime);
-        scope.bind("needs", Definition::namespace(needs_scope(&runtime)));
-        let env = builder.environment(
-            Scope::new(runtime.clone()),
-            &step.inner.env,
-            step.location(),
-            &scope,
-            &runtime,
-            false,
-        );
-        scope.bind("env", Definition::namespace(env));
         Self {
-            scope,
-            locations: builder.locations,
+            envs: vec![EnvScope {
+                values: &step.inner.env,
+                location: step.location(),
+                phase: Phase::Step,
+            }],
+            prior_steps: step.index > 0,
+            ..Self::default()
+        }
+    }
+
+    pub(crate) fn evaluate(&self, expr: &Expr<'_>) -> Results<'doc> {
+        self.evaluate_with(|eval, env| eval.evaluate(expr, env))
+    }
+
+    fn evaluate_with(
+        &self,
+        run: impl Fn(&mut Evaluator, &mut Environment<'_, 'doc>) -> Outcomes,
+    ) -> Results<'doc> {
+        let mut results = Results::default();
+        let mut eval = Evaluator::default();
+        let outcomes = eval.within_limits(|eval| {
+            let mut outcomes = Vec::new();
+            for inputs in inputs::environments(
+                self.job.as_ref().map(|job| job.parent()),
+                eval,
+                &mut results,
+            ) {
+                let mut cache = Cache::default();
+                let mut env = Environment {
+                    context: self,
+                    inputs: &inputs,
+                    results: &mut results,
+                    cache: &mut cache,
+                };
+                outcomes.extend(env.in_rows(eval, &run));
+            }
+            outcomes
+        });
+        results.outcomes = outcomes;
+        results
+    }
+}
+
+/// Outcomes and the source locations their evidence indices refer to.
+#[derive(Default)]
+pub(crate) struct Results<'doc> {
+    pub(crate) outcomes: Outcomes,
+    evidence: IndexMap<(yamlpath::Route<'doc>, Cow<'doc, str>), SymbolicLocation<'doc>>,
+}
+
+impl<'doc> Results<'doc> {
+    pub(crate) fn incomplete() -> Self {
+        Self {
+            outcomes: vec![Outcome::new(TrackedValue::incomplete())],
+            ..Self::default()
         }
     }
 
     pub(crate) fn locations<'a>(
         &self,
-        outcomes: impl IntoIterator<Item = &'a Outcome>,
+        values: impl IntoIterator<Item = &'a TrackedValue>,
     ) -> Vec<SymbolicLocation<'doc>> {
-        let ids: BTreeSet<_> = outcomes
+        let ids: BTreeSet<_> = values
             .into_iter()
-            .flat_map(|outcome| outcome.value.dependencies().evidence)
+            .flat_map(|value| value.dependencies().evidence)
             .collect();
         ids.into_iter()
-            .map(|id| self.locations[id].clone())
+            .map(|id| self.evidence[id].clone())
             .collect()
     }
-}
 
-/// Contexts visible before steps run. The matrix captures the scope that
-/// existed before the job's own matrix became available.
-struct JobScope {
-    scope: Scope,
-    runtime: Definition,
-}
-
-impl JobScope {
-    fn with_environment<'doc>(
-        &self,
-        job: &NormalJob<'doc>,
-        prior_steps: bool,
-        builder: &mut Builder<'doc>,
-    ) -> (Scope, Scope) {
-        let mut env = Scope::new(self.runtime.clone());
-        for (values, location) in [
-            (&job.parent().env, job.parent().location()),
-            (&job.env, job.location()),
-        ] {
-            env = builder.environment(
-                env,
-                values,
-                location,
-                &self.scope,
-                &self.runtime,
-                prior_steps,
-            );
-        }
-        let mut scope = self.scope.clone();
-        for name in ["steps", "runner", "job"] {
-            scope.bind(name, self.runtime.clone());
-        }
-        scope.bind("env", Definition::namespace(env.clone()));
-        (scope, env)
+    fn record(&mut self, location: SymbolicLocation<'doc>) -> usize {
+        let key = (location.route.clone(), location.annotation.clone());
+        self.evidence.insert_full(key, location).0
     }
 }
 
-fn needs_scope(runtime: &Definition) -> Scope {
-    let mut unavailable = Scope::new(runtime.clone());
-    let outputs = Scope::new(runtime.clone()).with_missing(incomplete());
-    unavailable.bind("outputs", Definition::namespace(outputs));
-    Scope::new(runtime.clone()).with_missing(Definition::namespace(unavailable))
+#[derive(Default)]
+struct Cache {
+    rows: BTreeMap<String, Outcomes<(usize, TrackedValue)>>,
+    outputs: BTreeMap<(String, String), Outcomes>,
+    status: BTreeMap<String, DecisionId>,
+    env: BTreeMap<(usize, String, Option<usize>, bool), Outcomes>,
 }
 
-impl<'doc> Builder<'doc> {
-    fn environment(
-        &mut self,
-        mut env: Scope,
-        values: &LoE<Env>,
-        location: SymbolicLocation<'doc>,
-        scope: &Scope,
-        runtime: &Definition,
-        prior_steps: bool,
-    ) -> Scope {
-        let LoE::Literal(values) = values else {
-            return Scope::new(runtime.clone());
+struct Environment<'a, 'doc> {
+    context: &'a Context<'doc>,
+    inputs: &'a BTreeMap<String, Outcomes>,
+    results: &'a mut Results<'doc>,
+    cache: &'a mut Cache,
+}
+
+fn empty() -> Outcome {
+    Outcome::known(Evaluation::String(String::new()))
+}
+
+impl Bindings for Environment<'_, '_> {
+    fn lookup(&mut self, path: &[Access], eval: &mut Evaluator) -> Outcomes {
+        let context = self.context;
+        match path[0].text().to_ascii_lowercase().as_str() {
+            "github" => vec![Outcome::new(TrackedValue::new(AbstractValue::Reference(
+                path.to_vec(),
+            )))],
+            "inputs" if context.job.is_some() => {
+                if let [_, Access::Key(name), rest @ ..] = path {
+                    let values = self
+                        .inputs
+                        .get(&name.to_ascii_lowercase())
+                        .cloned()
+                        .unwrap_or_else(|| vec![empty()]);
+                    values.map(|value| {
+                        rest.iter()
+                            .fold(value, |value, key| value.apply_access(key))
+                    })
+                } else {
+                    self.runtime(path)
+                }
+            }
+            "matrix" if context.phase != Phase::Matrix && context.job.is_some() => {
+                let Some((_, row)) = &context.row else {
+                    return vec![empty()];
+                };
+                vec![Outcome::new(
+                    path[1..]
+                        .iter()
+                        .fold(row.clone(), |value, key| value.apply_access(key)),
+                )]
+            }
+            "env" if context.phase == Phase::Step => self.environment(eval, path),
+            "needs" => self
+                .output(eval, path)
+                .unwrap_or_else(|| vec![Outcome::new(TrackedValue::incomplete())]),
+            "env" | "matrix" | "steps" | "runner" | "job" if context.phase != Phase::Step => {
+                vec![Outcome::new(TrackedValue::incomplete())]
+            }
+            _ => self.runtime(path),
+        }
+    }
+}
+
+impl<'doc> Environment<'_, 'doc> {
+    fn at<'a>(&'a mut self, context: &'a Context<'doc>) -> Environment<'a, 'doc> {
+        Environment {
+            context,
+            inputs: self.inputs,
+            results: self.results,
+            cache: self.cache,
+        }
+    }
+
+    fn runtime(&self, path: &[Access]) -> Outcomes {
+        let mut value = TrackedValue::unknown();
+        let name = path.iter().map(Access::text).collect::<Vec<_>>().join(".");
+        let name = match &self.context.job {
+            Some(job) if !path[0].text().eq_ignore_ascii_case("inputs") => {
+                match &self.context.row {
+                    Some((row, _)) => format!("job:{}[{row}]:{name}", job.id()),
+                    None => format!("job:{}:{name}", job.id()),
+                }
+            }
+            _ => name,
         };
-        for (name, value) in values {
-            let location = location.with_keys(["env".into(), name.clone().into()]);
-            let mut definition = Definition::template(value.to_string(), scope.clone());
-            if prior_steps {
-                let overwrite = self.record(
+        value.provenance.sources.insert(name);
+        vec![Outcome::new(value)]
+    }
+
+    fn environment(&mut self, eval: &mut Evaluator, path: &[Access]) -> Outcomes {
+        let context = self.context;
+        let [_, Access::Key(name), rest @ ..] = path else {
+            return self.runtime(path);
+        };
+        for (index, scope) in context.envs.iter().enumerate().rev() {
+            let LoE::Literal(env) = scope.values else {
+                return self.runtime(path);
+            };
+            let Some((name, value)) = env.iter().find(|(k, _)| k.eq_ignore_ascii_case(name)) else {
+                continue;
+            };
+            let location = scope
+                .location
+                .with_keys(["env".into(), name.clone().into()]);
+            let overwrite = (context.prior_steps && scope.phase == Phase::Job).then(|| {
+                self.results.record(
                     location
                         .clone()
                         .annotated(format!("an earlier step may overwrite {name}")),
-                );
-                definition =
-                    Definition::choice(vec![definition, runtime.clone().located(overwrite)]);
-            }
-            env.bind(
-                name,
-                definition
-                    .located(self.record(location.annotated(format!("{name} is defined here")))),
+                )
+            });
+            let id = self.results.record(
+                location
+                    .clone()
+                    .annotated(format!("{name} is defined here")),
             );
+            let key = (
+                id,
+                context.job.as_ref().map_or("", |j| j.id()).to_owned(),
+                context.row.as_ref().map(|(i, _)| *i),
+                context.prior_steps,
+            );
+            let values = if let Some(cached) = self.cache.env.get(&key) {
+                cached.clone()
+            } else {
+                let child = Context {
+                    // A step's env can refer to the outer env.
+                    envs: context.envs[..index].to_vec(),
+                    phase: scope.phase,
+                    ..context.clone()
+                };
+                let mut values = eval.template(&value.to_string(), &mut self.at(&child));
+                if let Some(overwrite) = overwrite {
+                    let decision = eval.decision();
+                    values = values
+                        .into_iter()
+                        .filter_map(|v| v.assume(decision, AlternativeId::new(0)))
+                        .collect();
+                    values.extend(
+                        located(self.runtime(&path[..2]), overwrite)
+                            .into_iter()
+                            .filter_map(|v| v.assume(decision, AlternativeId::new(1))),
+                    );
+                }
+                let values = located(values, id);
+                self.cache.env.insert(key, values.clone());
+                values
+            };
+            return values.map(|value| {
+                rest.iter()
+                    .fold(value, |value, key| value.apply_access(key))
+            });
         }
-        env
+        self.runtime(path)
     }
 
-    /// Build producers before their consumers. Shared upstream jobs contribute
-    /// one output choice even when several dependency paths lead to them.
-    fn job_scopes(&mut self, target: &NormalJob<'doc>) -> JobScope {
-        let workflow = target.parent();
-        let inputs = self.inputs(workflow);
-        let jobs: BTreeMap<_, _> = workflow
+    fn output(&mut self, eval: &mut Evaluator, path: &[Access]) -> Option<Outcomes> {
+        let [
+            _,
+            Access::Key(id),
+            Access::Key(field),
+            Access::Key(name),
+            rest @ ..,
+        ] = path
+        else {
+            return Some(self.runtime(path));
+        };
+        if !field.eq_ignore_ascii_case("outputs") {
+            return Some(self.runtime(path));
+        }
+        let consumer = self.context.job.as_ref()?;
+        if !consumer
+            .needs
+            .iter()
+            .any(|need| need.eq_ignore_ascii_case(id))
+        {
+            return None;
+        }
+        let workflow = consumer.parent();
+        let (id, job) = workflow
             .jobs
             .iter()
-            .map(|(id, job)| (id.to_ascii_lowercase(), (id, job)))
-            .collect();
-        let mut outputs = BTreeMap::new();
-        let mut pending = vec![(target.clone(), false)];
-        while let Some((job, visited)) = pending.pop() {
-            let key = job.id().to_ascii_lowercase();
-            if outputs.contains_key(&key) {
-                continue;
-            }
-            if !visited {
-                pending.push((job.clone(), true));
-                for need in &job.needs {
-                    if let Some((id, Job::NormalJob(inner))) = jobs.get(&need.to_ascii_lowercase())
-                    {
-                        pending.push((NormalJob::new(id, inner, workflow), false));
-                    }
-                }
-                continue;
-            }
-
-            let scopes = self.job_scope(&job, &inputs, &outputs);
-            if job.id() == target.id() {
-                return scopes;
-            }
-            let (producer, _) = scopes.with_environment(&job, true, self);
-            let output = self.outputs(&job, &producer, &scopes.runtime);
-            outputs.insert(key, output);
-        }
-        unreachable!("the validated job graph includes the target")
-    }
-
-    fn job_scope(
-        &mut self,
-        job: &NormalJob<'doc>,
-        inputs: &Definition,
-        outputs: &BTreeMap<String, Definition>,
-    ) -> JobScope {
-        let runtime = Definition::runtime(format!("job:{}:", job.id()));
-        let mut needs = needs_scope(&runtime);
-        for name in &job.needs {
-            let key = name.to_ascii_lowercase();
-            if let Some(definition) = outputs.get(&key) {
-                let mut producer = Scope::new(runtime.clone());
-                producer.bind("outputs", definition.clone());
-                needs.bind(name, Definition::namespace(producer));
-            } else if job
-                .parent()
-                .jobs
-                .keys()
-                .any(|id| id.eq_ignore_ascii_case(name))
-            {
-                needs.bind(name, runtime.clone());
-            }
-        }
-
-        let mut scope = runtime_scope(&runtime);
-        scope.bind("inputs", inputs.clone());
-        scope.bind("needs", Definition::namespace(needs));
-        for name in ["env", "steps", "runner", "job", "matrix"] {
-            scope.bind(name, incomplete());
-        }
-        let matrix = self.matrix(job, &scope);
-        scope.bind("matrix", matrix);
-        JobScope { scope, runtime }
-    }
-
-    fn outputs(
-        &mut self,
-        job: &NormalJob<'doc>,
-        producer: &Scope,
-        runtime: &Definition,
-    ) -> Definition {
-        let mut ran = Scope::new(runtime.clone()).with_missing(empty());
-        let mut skipped = ran.clone();
-        for (name, value) in &job.outputs {
-            let location = job
+            .find(|(key, _)| key.eq_ignore_ascii_case(id))?;
+        let github_actions_models::workflow::Job::NormalJob(inner) = job else {
+            return Some(self.runtime(path));
+        };
+        let Some((name, value)) = inner
+            .outputs
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+        else {
+            return Some(vec![empty()]);
+        };
+        let key = (id.clone(), name.clone());
+        if !self.cache.outputs.contains_key(&key) {
+            let producer = NormalJob::new(id, inner, workflow);
+            let location = producer
                 .location()
                 .with_keys(["outputs".into(), name.as_str().into()])
                 .annotated(format!("this job declares output {name}"));
-            let id = self.record(location);
-            ran.bind(
-                name,
-                Definition::template(value.to_string(), producer.clone()).located(id),
-            );
-            skipped.bind(name, empty().located(id));
+            let child = Context {
+                phase: Phase::Step,
+                prior_steps: true,
+                ..Context::job(producer)
+            };
+            let text = value.to_string();
+            let values = self
+                .at(&child)
+                .in_rows(eval, |eval, env| eval.template(&text, env));
+            // Matrix jobs merge outputs by name. Each name can come from a
+            // different row, but all reads of that name see the same value.
+            let winner = eval.decision();
+            let decision = *self
+                .cache
+                .status
+                .entry(id.clone())
+                .or_insert_with(|| eval.decision());
+            let values = values
+                .into_iter()
+                .enumerate()
+                .filter_map(|(i, value)| value.assume(winner, AlternativeId::new(i)))
+                .filter_map(|value| value.assume(decision, AlternativeId::new(1)))
+                .chain(empty().assume(decision, AlternativeId::new(0)))
+                .collect();
+            self.cache
+                .outputs
+                .insert(key.clone(), located(values, self.results.record(location)));
         }
-        Definition::choice(vec![
-            Definition::namespace(ran),
-            Definition::namespace(skipped),
-        ])
+        Some(
+            self.cache.outputs[&key]
+                .clone()
+                .map(|value| rest.iter().fold(value, |v, k| v.apply_access(k))),
+        )
     }
+}
+
+fn located(values: Outcomes, id: usize) -> Outcomes {
+    values.map(|mut value| {
+        value.provenance.evidence.insert(id);
+        value
+    })
 }

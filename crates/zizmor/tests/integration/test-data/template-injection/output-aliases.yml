@@ -24,3 +24,23 @@ jobs:
       TITLE: ${{ needs.middle.outputs.title }}
     steps:
       - run: echo "${{ env.TITLE }}"
+
+  builds:
+    strategy:
+      matrix:
+        os: [linux, mac]
+    runs-on: ubuntu-latest
+    outputs:
+      os: ${{ matrix.os }}
+      linux: ${{ matrix.os == 'linux' && 'built' || '' }}
+      mac: ${{ matrix.os == 'mac' && 'built' || '' }}
+    steps:
+      - run: echo building
+
+  summary:
+    needs: builds
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "${{ needs.builds.outputs.linux && needs.builds.outputs.mac && github.event.issue.title }}"
+          echo "${{ needs.builds.outputs.os == 'linux' && needs.builds.outputs.os == 'mac' && github.event.issue.title }}"

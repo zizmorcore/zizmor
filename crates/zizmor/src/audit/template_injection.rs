@@ -18,7 +18,7 @@
 use std::{env, ops::Deref as _, sync::LazyLock, vec};
 
 use fst::Map;
-use github_actions_expressions::evaluation::{Outcome, TrackedValue};
+use github_actions_expressions::evaluation::Outcome;
 use github_actions_expressions::{Error, Expr, context::Context, literal::Literal};
 use github_actions_models::common::{EnvValue, RepositoryUses, Uses, expr::LoE};
 use itertools::Itertools as _;
@@ -425,11 +425,12 @@ impl TemplateInjection {
         for (script, script_loc, related_locs) in Self::scripts_with_location(step) {
             for (expression, span) in extract_fenced_expressions(script) {
                 let parsed = Expr::parse(expression.as_bare());
-                let outcomes = match &parsed {
-                    Ok(expr) => context.scope.evaluate(expr),
-                    Err(Error::Depth) => vec![Outcome::new(TrackedValue::incomplete())],
+                let evaluation = match &parsed {
+                    Ok(expr) => context.evaluate(expr),
+                    Err(Error::Depth) => models::evaluation::Results::incomplete(),
                     Err(_) => continue,
                 };
+                let outcomes = &evaluation.outcomes;
                 if outcomes.is_empty() {
                     continue;
                 }
@@ -471,10 +472,11 @@ impl TemplateInjection {
                             .annotated("may expand into attacker-controllable code".to_string()),
                     );
 
-                let locations = context.locations(outcomes.iter().filter(|value| {
+                let contributing = outcomes.iter().filter(|value| {
                     risk.is_none()
                         || Self::outcome_risk(value, &|name| step.get_input(name)).is_some()
-                }));
+                });
+                let locations = evaluation.locations(contributing.map(|outcome| &outcome.value));
                 for location in locations.into_iter().chain(related_locs.iter().cloned()) {
                     finding_builder = finding_builder.add_location(location);
                 }

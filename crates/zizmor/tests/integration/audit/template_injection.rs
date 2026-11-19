@@ -1573,7 +1573,27 @@ fn test_output_aliases() -> Result<()> {
        = note: audit confidence → High
        = note: this finding has an auto-fix
 
-    6 findings (5 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 1 high
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:45:21
+       |
+    31 |         os: [linux, mac]
+       |              -----  --- matrix value defined here
+       |              |
+       |              matrix value defined here
+    ...
+    35 |       linux: ${{ matrix.os == 'linux' && 'built' || '' }}
+       |       --------------------------------------------------- this job declares output linux
+    36 |       mac: ${{ matrix.os == 'mac' && 'built' || '' }}
+       |       ----------------------------------------------- this job declares output mac
+    ...
+    44 |       - run: |
+       |         --- this run block
+    45 |           echo "${{ needs.builds.outputs.linux && needs.builds.outputs.mac && github.event.issue.title }}"
+       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |
+       = note: audit confidence → High
+
+    10 findings (8 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 

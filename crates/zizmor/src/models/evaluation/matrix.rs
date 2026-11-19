@@ -1,66 +1,98 @@
-//! Bind a job's matrix to a choice of rows. The definition captures the scope
-//! available in `strategy.matrix`. Row expansion runs when the matrix is read.
-use std::{collections::BTreeMap, sync::Arc};
-
-use github_actions_expressions::evaluation::{
-    AbstractValue, Budget, Definition, Provenance, Scope, TrackedValue,
-};
+//! Instantiate a job's bindings once per matrix row.
+use super::*;
 use itertools::Itertools as _;
-
-use super::{Builder, empty};
-use crate::{
-    finding::location::{Locatable as _, SymbolicLocation},
-    models::workflow::NormalJob,
-};
+use std::sync::Arc;
 
 type Row = BTreeMap<String, TrackedValue>;
 
-impl<'doc> Builder<'doc> {
-    pub(super) fn matrix(&mut self, job: &NormalJob<'doc>, scope: &Scope) -> Definition {
-        let Some(matrix) = job
-            .strategy
-            .as_ref()
-            .and_then(|strategy| strategy.matrix.as_ref())
-        else {
-            return empty();
+impl<'doc> Environment<'_, 'doc> {
+    pub(super) fn in_rows(
+        &mut self,
+        eval: &mut Evaluator,
+        run: impl Fn(&mut Evaluator, &mut Environment<'_, 'doc>) -> Outcomes,
+    ) -> Outcomes {
+        let context = self.context;
+        let Some(job) = &context.job else {
+            return run(eval, self);
         };
-        let location = job
-            .location()
-            .with_keys(["strategy".into(), "matrix".into()])
-            .annotated("matrix value defined here");
-        let value = serde_json::to_value(matrix).expect("validated matrix");
-        self.matrix_value(&value, location, scope)
-            .expand(expand_rows)
+        let Some(matrix) = job.strategy.as_ref().and_then(|s| s.matrix.as_ref()) else {
+            return run(eval, self);
+        };
+        if !self.cache.rows.contains_key(job.id()) {
+            let location = job
+                .location()
+                .with_keys(["strategy".into(), "matrix".into()])
+                .annotated("matrix value defined here");
+            let value = serde_json::to_value(matrix).expect("validated matrix");
+            let child = Context {
+                phase: Phase::Matrix,
+                ..context.clone()
+            };
+            let definitions = self.at(&child).decode(eval, &value, location);
+            let rows = eval.flat_map(definitions, |eval, value| {
+                expand_rows(value, &mut eval.budget)
+                    .into_iter()
+                    .map(|row| Outcome::new(row.with_provenance(&value.provenance)))
+                    .collect()
+            });
+            let rows = rows
+                .into_iter()
+                .enumerate()
+                .map(|(index, row)| row.map(|value| (index, value)))
+                .collect();
+            self.cache.rows.insert(job.id().to_owned(), rows);
+        }
+
+        let rows = self.cache.rows[job.id()].clone();
+        eval.flat_map(rows, |eval, row| {
+            let child = Context {
+                row: Some(row.clone()),
+                ..context.clone()
+            };
+            run(eval, &mut self.at(&child))
+        })
     }
 
-    fn matrix_value(
+    fn decode(
         &mut self,
+        eval: &mut Evaluator,
         value: &serde_json::Value,
         location: SymbolicLocation<'doc>,
-        scope: &Scope,
-    ) -> Definition {
-        match value {
-            serde_json::Value::String(text) => {
-                Definition::template(text.clone(), scope.clone()).located(self.record(location))
-            }
-            serde_json::Value::Array(items) => Definition::array(
-                items
-                    .iter()
-                    .enumerate()
-                    .map(|(i, item)| self.matrix_value(item, location.with_keys([i.into()]), scope))
-                    .collect(),
-            ),
-            serde_json::Value::Object(fields) => Definition::object(
-                fields
-                    .iter()
-                    .map(|(key, item)| {
-                        let child = location.with_keys([key.clone().into()]);
-                        (key.clone(), self.matrix_value(item, child, scope))
-                    })
-                    .collect(),
-            ),
-            value => Definition::known(value.clone().try_into().expect("JSON scalar")),
+    ) -> Outcomes {
+        if !eval.budget.checkpoint() {
+            return vec![];
         }
+        let entries: Vec<_> = match value {
+            serde_json::Value::String(text) => {
+                let values = eval.template(text, self);
+                return located(values, self.results.record(location));
+            }
+            serde_json::Value::Array(items) => items
+                .iter()
+                .enumerate()
+                .map(|(i, item)| (item, location.with_keys([i.into()])))
+                .collect(),
+            serde_json::Value::Object(fields) => fields
+                .iter()
+                .map(|(k, item)| (item, location.with_keys([k.clone().into()])))
+                .collect(),
+            _ => {
+                return vec![Outcome::known(
+                    value.clone().try_into().expect("JSON scalar"),
+                )];
+            }
+        };
+        eval.sequence(entries, |eval, (item, location)| {
+            self.decode(eval, item, location)
+        })
+        .map(|items| {
+            TrackedValue::new(match value {
+                serde_json::Value::Object(fields) => {
+                    AbstractValue::Object(Arc::new(fields.keys().cloned().zip(items).collect()))
+                }
+                _ => AbstractValue::Array(Arc::new(items)),
+            })
+        })
     }
 }
 

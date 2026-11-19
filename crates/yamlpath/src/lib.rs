@@ -253,7 +253,7 @@ pub enum QueryError {
 ///
 /// The sub-list member `e` would be identified via the path
 /// `foo`, `bar`, `baz`, `1`, `1`.
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize)]
 pub struct Route<'a> {
     /// The individual top-down components of this route.
     route: Vec<Component<'a>>,
@@ -316,7 +316,7 @@ impl<'a> From<Vec<Component<'a>>> for Route<'a> {
 }
 
 /// A single `Route` component.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
 pub enum Component<'a> {
     /// A YAML key.
     Key(Cow<'a, str>),
