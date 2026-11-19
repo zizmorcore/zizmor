@@ -69,8 +69,8 @@ impl Evaluator {
     /// Allocate a new decision ID in this state.
     ///
     /// Keep the ID if later lookups depend on the same choice. For example,
-    /// all reads of a job's matrix fields depend on which row that job uses.
-    /// They share a decision ID, with a different alternative for each row.
+    /// each read of a boolean input uses the same ID and the same two
+    /// alternatives for false and true.
     pub fn decision(&mut self) -> DecisionId {
         let id = DecisionId(self.next_decision);
         self.next_decision += 1;

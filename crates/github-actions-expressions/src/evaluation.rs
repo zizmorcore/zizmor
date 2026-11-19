@@ -24,9 +24,9 @@
 //! result in imprecisions, since it would admit combinations like `a/b` when only `a/a`
 //! and `b/b` are actually possible.
 //!
-//! An evaluation's decisions are managed internally. The evaluator
-//! allocates new decisions and can also merge outcomes together when their
-//! assumptions agree.
+//! The evaluator allocates decision IDs. A bindings provider can request one
+//! with [`Evaluator::decision`] when it supplies alternatives of its own.
+//! Outcomes can be combined when their assumptions agree.
 //!
 //! Finally, each outcome of an evaluation comes with [`Provenance`], which
 //! records the inputs and source locations used to obtain a value.
@@ -50,8 +50,8 @@ use crate::{
 
 /// The context values visible at one evaluation site.
 pub trait Bindings {
-    /// Resolve a path with its computed indices already evaluated. Return an
-    /// unknown value for a runtime input, an empty string for a known missing
+    /// The first key names the context. Subsequent accesses have their
+    /// computed indices already evaluated. Return an unknown value for a runtime input, an empty string for a known missing
     /// property, or no outcomes for an evaluation that cannot succeed.
     fn lookup(&mut self, path: &[Access], evaluator: &mut Evaluator) -> Outcomes;
 }
@@ -59,10 +59,7 @@ pub trait Bindings {
 /// An object (or a runtime reference) can be used directly as an environment.
 impl Bindings for TrackedValue {
     fn lookup(&mut self, path: &[Access], _: &mut Evaluator) -> Outcomes {
-        vec![Outcome::new(
-            path.iter()
-                .fold(self.clone(), |value, key| value.apply_access(key)),
-        )]
+        vec![Outcome::new(self.clone().apply_path(path))]
     }
 }
 

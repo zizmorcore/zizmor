@@ -39,7 +39,7 @@ use std::{
 
 /// Identifies a decision.
 ///
-/// Decisions can be things like predicates, or the selection of a row from a matrix.
+/// A decision can represent a predicate or the choice between values supplied by a binding.
 /// Decisions appear as the keys in an outcome's choice map, where each decision
 /// is associated with the alternative (as [`AlternativeId`]) that's assumed
 /// by the overall outcome.
@@ -59,7 +59,7 @@ pub struct DecisionId(pub(super) usize);
 ///
 /// Alternatives are computed during evaluation and can be derived either from
 /// expression semantics (e.g. predicate semantics) or workflow definitions (e.g.
-/// matrix row alternatives or skipped/executed job alternatives).
+/// whether the job that supplies an output ran or was skipped).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AlternativeId(usize);
 
@@ -381,6 +381,11 @@ impl TrackedValue {
             )),
             _ => None,
         }
+    }
+
+    /// Follow a field or index path from this value. An empty path returns the value itself.
+    pub fn apply_path(self, path: &[Access]) -> Self {
+        path.iter().fold(self, |value, key| value.apply_access(key))
     }
 
     /// Applies a single access to this tracked value, returning
