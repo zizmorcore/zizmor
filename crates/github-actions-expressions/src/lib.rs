@@ -426,12 +426,13 @@ impl From<bool> for Expr<'_> {
 ///
 /// This type represents the possible values that can result from evaluating
 /// GitHub Actions expressions.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(untagged)]
 pub enum Evaluation {
     /// A string value (includes both string literals and stringified other types).
     String(String),
     /// A numeric value.
-    Number(f64),
+    Number(#[serde(serialize_with = "serialize_number")] f64),
     /// A boolean value.
     Boolean(bool),
     /// The null value.
@@ -442,76 +443,30 @@ pub enum Evaluation {
     Object(indexmap::IndexMap<String, Self>),
 }
 
+// Actions renders whole numbers without a trailing decimal point.
+fn serialize_number<S: serde::Serializer>(value: &f64, serializer: S) -> Result<S::Ok, S::Error> {
+    if !value.is_finite() {
+        return Err(serde::ser::Error::custom("non-finite JSON number"));
+    }
+    if value.fract() == 0.0 && (i64::MIN as f64..i64::MAX as f64).contains(value) {
+        return serializer.serialize_i64(*value as i64);
+    }
+    serializer.serialize_f64(*value)
+}
+
 impl TryFrom<serde_json::Value> for Evaluation {
     type Error = ();
 
     fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
-        match value {
-            serde_json::Value::Null => Ok(Self::Null),
-            serde_json::Value::Bool(b) => Ok(Self::Boolean(b)),
-            serde_json::Value::Number(n) => {
-                if let Some(f) = n.as_f64() {
-                    Ok(Self::Number(f))
-                } else {
-                    Err(())
-                }
-            }
-            serde_json::Value::String(s) => Ok(Self::String(s)),
-            serde_json::Value::Array(arr) => {
-                let elements = arr
-                    .into_iter()
-                    .map(|elem| elem.try_into())
-                    .collect::<Result<_, _>>()?;
-                Ok(Self::Array(elements))
-            }
-            serde_json::Value::Object(obj) => {
-                let mut map = indexmap::IndexMap::new();
-                for (key, value) in obj {
-                    map.insert(key, value.try_into()?);
-                }
-                Ok(Self::Object(map))
-            }
-        }
+        serde_json::from_value(value).map_err(|_| ())
     }
 }
 
-impl TryInto<serde_json::Value> for Evaluation {
+impl TryFrom<Evaluation> for serde_json::Value {
     type Error = ();
 
-    fn try_into(self) -> Result<serde_json::Value, Self::Error> {
-        match self {
-            Self::Null => Ok(serde_json::Value::Null),
-            Self::Boolean(b) => Ok(serde_json::Value::Bool(b)),
-            Self::Number(n) => {
-                // NOTE: serde_json has different internal representations
-                // for integers and floats, so we need to handle both cases
-                // to ensure we serialize integers without a decimal point.
-                if n.fract() == 0.0 {
-                    Ok(serde_json::Value::Number(serde_json::Number::from(
-                        n as i64,
-                    )))
-                } else if let Some(num) = serde_json::Number::from_f64(n) {
-                    Ok(serde_json::Value::Number(num))
-                } else {
-                    Err(())
-                }
-            }
-            Self::String(s) => Ok(serde_json::Value::String(s)),
-            Self::Array(arr) => {
-                let elements = arr
-                    .into_iter()
-                    .map(|elem| elem.try_into())
-                    .collect::<Result<_, _>>()?;
-                Ok(serde_json::Value::Array(elements))
-            }
-            Self::Object(obj) => {
-                let mut map = serde_json::Map::new();
-                for (key, value) in obj {
-                    map.insert(key, value.try_into()?);
-                }
-                Ok(serde_json::Value::Object(map))
-            }
-        }
+    fn try_from(value: Evaluation) -> Result<Self, Self::Error> {
+        serde_json::to_value(value).map_err(|_| ())
     }
 }
 

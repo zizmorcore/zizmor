@@ -342,11 +342,9 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let value = &args[0];
-        let json_value: serde_json::Value = value.clone().try_into().ok()?;
-        let json_str = serde_json::to_string_pretty(&json_value).ok()?;
-
-        Some(Evaluation::String(json_str))
+        serde_json::to_string_pretty(&args[0])
+            .ok()
+            .map(Evaluation::String)
     }
 
     /// Constant-evaluates a `fromJSON(json_string)` call.
@@ -357,17 +355,7 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let json_str = args[0].sema().to_string();
-
-        // Match reference implementation: error on empty input
-        if json_str.trim().is_empty() {
-            return None;
-        }
-
-        serde_json::from_str::<serde_json::Value>(&json_str)
-            .ok()?
-            .try_into()
-            .ok()
+        serde_json::from_str(&args[0].sema().to_string()).ok()
     }
 
     /// Constant-evaluates a `join(array, optionalSeparator)` call.

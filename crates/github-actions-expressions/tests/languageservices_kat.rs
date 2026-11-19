@@ -21,26 +21,13 @@ type TestSuite = HashMap<String, Vec<TestCase>>;
 struct TestCase {
     expr: String,
     result: Option<TestResult>,
-    contexts: Option<serde_json::Value>,
+    contexts: Option<Evaluation>,
     err: Option<TestError>,
-    #[allow(dead_code)]
-    options: Option<TestOptions>,
-}
-
-#[derive(Copy, Clone, Debug, Deserialize)]
-enum ValueKind {
-    Boolean,
-    Number,
-    String,
-    Null,
-    Array,
-    Object,
 }
 
 #[derive(Deserialize)]
 struct TestResult {
-    kind: ValueKind,
-    value: serde_json::Value,
+    value: Evaluation,
 }
 
 #[derive(Copy, Clone, Debug, Deserialize)]
@@ -55,25 +42,6 @@ enum ErrorKind {
 struct TestError {
     kind: ErrorKind,
     value: String,
-}
-
-#[derive(Deserialize)]
-struct TestOptions {
-    #[allow(dead_code)]
-    skip: Option<Vec<String>>,
-}
-
-fn to_evaluation(result: &TestResult) -> Result<Evaluation, String> {
-    match result.kind {
-        ValueKind::Boolean => Ok(Evaluation::Boolean(result.value.as_bool().unwrap())),
-        ValueKind::Number => Ok(Evaluation::Number(result.value.as_f64().unwrap())),
-        ValueKind::String => Ok(Evaluation::String(
-            result.value.as_str().unwrap().to_string(),
-        )),
-        ValueKind::Null => Ok(Evaluation::Null),
-        ValueKind::Array | ValueKind::Object => Evaluation::try_from(result.value.clone())
-            .map_err(|()| format!("failed to convert {:?} value to Evaluation", result.kind)),
-    }
 }
 
 /// Entire test suite groups to skip.
@@ -121,7 +89,7 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
             let evaluate = |expr: &Expr<'_>| match &case.contexts {
                 None => expr.consteval(),
                 Some(contexts) => {
-                    let mut bindings = TrackedValue::known(contexts.clone().try_into().unwrap());
+                    let mut bindings = TrackedValue::known(contexts.clone());
                     let outcomes = Evaluator::default().evaluate(expr, &mut bindings);
                     let [outcome] = outcomes.as_slice() else {
                         return None;
@@ -161,24 +129,12 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
                         continue;
                     }
                 };
-                match to_evaluation(expected) {
-                    Ok(expected_eval) => match evaluate(&parsed) {
-                        Some(actual) => {
-                            if expected_eval != actual {
-                                failures.push(format!(
-                                    "{label}: expected {expected_eval:?}, got {actual:?}"
-                                ));
-                            }
-                        }
-                        None => {
-                            failures.push(format!(
-                                "{label}: expected {expected_eval:?}, but evaluation returned None"
-                            ));
-                        }
-                    },
-                    Err(e) => {
-                        failures.push(format!("{label}: {e}"));
-                    }
+                let actual = evaluate(&parsed);
+                if actual.as_ref() != Some(&expected.value) {
+                    failures.push(format!(
+                        "{label}: expected {:?}, got {actual:?}",
+                        expected.value
+                    ));
                 }
             }
         }

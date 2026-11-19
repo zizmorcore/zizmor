@@ -479,10 +479,11 @@ impl TrackedValue {
                 self.collect_matches(access, &mut matches);
             }
             _ => {
-                return self
-                    .member(access)
-                    .unwrap_or_else(|| Self::known(Evaluation::Null))
-                    .with_provenance(&self.provenance);
+                return match self.member(access) {
+                    Some(value) => value.with_provenance(&self.provenance),
+                    None => Self::known(Evaluation::Null)
+                        .with_provenance(&self.provenance.clone().controlled()),
+                };
             }
         }
         Self::new(AbstractValue::FilteredArray(Arc::new(matches))).with_provenance(&self.provenance)
