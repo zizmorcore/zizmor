@@ -23,6 +23,7 @@ Output Options:
       --color <WHEN>            Control the use of color in output [possible values: auto, always, never]
       --render-links <WHEN>     Whether to render OSC 8 links in the output [env: ZIZMOR_RENDER_LINKS=] [default: auto] [possible values: auto, always, never]
       --show-audit-urls <WHEN>  Whether to render audit URLs in the output, separately from any URLs embedded in OSC 8 links [env: ZIZMOR_SHOW_AUDIT_URLS=] [default: auto] [possible values: auto, always, never]
+      --summary                 Show the number of findings for each file after the findings
       --no-exit-codes           Disable all error codes besides success and tool failure
 
 Network Options:
