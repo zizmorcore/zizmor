@@ -30,11 +30,14 @@ use super::{Audit, AuditLoadError, audit_meta};
 
 pub(crate) struct UnpinnedImages;
 
-/// Represents some image reference, whether direct (i.e. literal) or
-/// indirect (i.e. an expression).
+/// Represents an image reference or an expression for a whole container.
 enum Image<'doc> {
     Literal(&'doc DockerUses),
+    /// An expression in an image field, which must resolve to an image reference.
     Expr(&'doc ExplicitExpr),
+    /// An expression in `container`, which may resolve to an image reference
+    /// or a mapping containing an `image` member.
+    ContainerExpr(&'doc ExplicitExpr),
 }
 
 impl<'doc> From<&'doc LoE<DockerUses>> for Image<'doc> {
@@ -127,7 +130,7 @@ fn collect_candidates<'doc>(
             .collect(),
         // An expression, e.g. `image: ${{ matrix.image }}`. We expand it into
         // its possible leaf values and analyze each.
-        Image::Expr(expr) => {
+        Image::Expr(expr) | Image::ContainerExpr(expr) => {
             let Ok(parsed) = Expr::parse(expr.as_bare()) else {
                 // We can't even parse the expression, so we can't say anything
                 // precise about it.
@@ -151,7 +154,7 @@ fn collect_candidates<'doc>(
                             .subfeature(Subfeature::new(0, subfeature::Fragment::from(leaf)))
                     };
 
-                    candidates_for_leaf(leaf, leaf_location, matrix)
+                    candidates_for_leaf(&image, leaf, leaf_location, matrix)
                 })
                 .collect()
         }
@@ -159,7 +162,10 @@ fn collect_candidates<'doc>(
 }
 
 /// Collect candidate image references from a single leaf expression.
+/// Whole-container expressions may also select a mapping's immediate `image`
+/// member; expressions in image fields must only select the referenced value.
 fn candidates_for_leaf<'doc>(
+    image: &Image<'doc>,
     leaf: &SpannedExpr<'_>,
     location: SymbolicLocation<'doc>,
     matrix: Option<&Matrix<'doc>>,
@@ -191,7 +197,23 @@ fn candidates_for_leaf<'doc>(
             // First: evaluate candidates from static expansions
             let mut candidates = expansions
                 .iter()
-                .filter(|expansion| context.matches(expansion.path.as_str()))
+                .filter(|expansion| {
+                    // String-valued alternatives expand at the referenced path.
+                    if context.matches(expansion.path.as_str()) {
+                        return true;
+                    }
+
+                    // While expanding we flatten mappings into their leaves.
+                    // For a whole container, select only its immediate `image`
+                    // member, never unrelated leaves such as env or credentials
+                    matches!(&image, Image::ContainerExpr(_))
+                        && expansion
+                            .path
+                            .rsplit_once('.')
+                            .is_some_and(|(parent, member)| {
+                                member.eq_ignore_ascii_case("image") && context.matches(parent)
+                            })
+                })
                 .filter(|expansion| expansion.is_static())
                 .filter_map(|expansion| {
                     let annotations = vec![
@@ -313,8 +335,12 @@ impl Audit for UnpinnedImages {
 
         match &job.container {
             Some(Container::Name(image)) => {
+                let image = match image {
+                    LoE::Literal(image) => Image::Literal(image),
+                    LoE::Expr(expr) => Image::ContainerExpr(expr),
+                };
                 image_refs.push((
-                    image.into(),
+                    image,
                     job.location().primary().with_keys(["container".into()]),
                 ));
             }
