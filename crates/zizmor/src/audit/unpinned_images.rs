@@ -1,12 +1,7 @@
-use std::collections::HashSet;
-
-use github_actions_expressions::evaluation::{AbstractValue, Access};
 use github_actions_models::{
     action::DockerActionUses,
-    common::{DockerUses, Uses, expr::LoE},
-    workflow::job::{Container, UsesStep},
+    common::{DockerUses, expr::LoE},
 };
-use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, NormalJob, audit_meta};
 use crate::{
@@ -15,7 +10,10 @@ use crate::{
         Confidence, Finding, FindingBuilder, Persona, Severity,
         location::{Locatable as _, SymbolicLocation},
     },
-    models::{action::DockerAction, evaluation::Context, workflow::StepInner},
+    models::{
+        action::DockerAction,
+        workflow::images::{ContainerImage, ImageReference},
+    },
     registry::input::InputGroup,
     state::AuditState,
 };
@@ -58,86 +56,40 @@ impl UnpinnedImages {
         )
     }
 
-    fn check_container<'doc>(
-        container: &Container,
-        location: SymbolicLocation<'doc>,
-        job: &NormalJob<'doc>,
-    ) -> Vec<FindingBuilder<'doc>> {
-        let (image, location) = match container {
-            Container::Name(image) => (image, location),
-            Container::Container { image, .. } => (image, location.with_keys(["image".into()])),
-        };
-        let template = match image {
-            LoE::Literal(image) if !image.raw().contains("${{") => {
-                return Self::check_image(image, "container image", location)
-                    .into_iter()
-                    .collect();
+    fn check_container<'doc>(image: ContainerImage<'doc>) -> Option<FindingBuilder<'doc>> {
+        let finding = match image.reference {
+            ImageReference::Literal(reference) => {
+                Self::check_image(reference, "container image", image.location)?
             }
-            LoE::Literal(image) => image.raw(),
-            LoE::Expr(expr) => expr.as_raw(),
-        };
-
-        // A literal digest pins the image even when its name is only known at runtime.
-        if let Some((_, digest)) = template.trim_end().rsplit_once("@sha256:")
-            && digest.len() == 64
-            && digest.bytes().all(|b| b.is_ascii_hexdigit())
-        {
-            return vec![];
-        }
-
-        let evaluation = Context::job(job.clone()).evaluate_template(template);
-
-        let mut findings = vec![];
-        let mut seen = HashSet::new();
-        for outcome in &evaluation.outcomes {
-            // An expression for the whole container can return a mapping.
-            let image;
-            let value = if matches!(container, Container::Name(_))
-                && matches!(outcome.value.inner, AbstractValue::Object(_))
-            {
-                image = outcome.value.apply_access(&Access::Key("image".into()));
-                &image
-            } else {
-                &outcome.value
-            };
-
-            let name = match &value.inner {
-                AbstractValue::Known(value) => Some(value.sema().to_string()),
-                AbstractValue::Unknown(_) | AbstractValue::Reference(_) => None,
-                AbstractValue::Array(_) | AbstractValue::Object(_) => continue,
-            };
-            // Rows can reach the same image through the same definition. Keep
-            // different definitions separate so an inline ignore only covers its own.
-            if !seen.insert((name.clone(), value.dependencies().evidence)) {
-                continue;
+            ImageReference::Evaluated(reference) => {
+                let label = format!("container image {:?}", reference.raw());
+                Self::check_image(&reference, &label, image.location)?
             }
-
-            let mut finding = match name {
-                Some(name) => {
-                    let label = format!("container image {name:?}");
-                    let Some(finding) =
-                        Self::check_image(&DockerUses::parse(name), &label, location.clone())
-                    else {
-                        continue;
-                    };
-                    finding
+            ImageReference::Unknown(template) => {
+                // A literal digest pins an image whose name is only known at runtime.
+                if let Some((_, digest)) = template.trim_end().rsplit_once("@sha256:")
+                    && digest.len() == 64
+                    && digest.bytes().all(|b| b.is_ascii_hexdigit())
+                {
+                    return None;
                 }
-                None => Self::finding()
+                Self::finding()
                     .severity(Severity::High)
                     .confidence(Confidence::Low)
                     .add_location(
-                        location
-                            .clone()
+                        image
+                            .location
                             .primary()
                             .annotated("container image may be unpinned"),
-                    ),
-            };
-            for evidence in evaluation.locations([value]) {
-                finding = finding.add_location(evidence);
+                    )
             }
-            findings.push(finding);
-        }
-        findings
+        };
+        Some(
+            image
+                .evidence
+                .into_iter()
+                .fold(finding, FindingBuilder::add_location),
+        )
     }
 }
 
@@ -172,34 +124,9 @@ impl Audit for UnpinnedImages {
         job: &NormalJob<'doc>,
         _group: &InputGroup,
     ) -> Result<Vec<Finding<'doc>>, AuditError> {
-        let mut findings = vec![];
-        if let Some(container) = &job.container {
-            let location = job.location().with_keys(["container".into()]);
-            findings.extend(Self::check_container(container, location, job));
-        }
-        for (service, container) in &job.services {
-            let location = job
-                .location()
-                .with_keys(["services".into(), service.as_str().into()]);
-            findings.extend(Self::check_container(container, location, job));
-        }
-
-        for step in job.steps() {
-            if let StepInner::Uses(UsesStep {
-                uses: Uses::Docker(image),
-                ..
-            }) = &*step
-            {
-                let location = step
-                    .location()
-                    .with_keys(["uses".into()])
-                    .subfeature(Subfeature::new(0, image.raw()));
-                findings.extend(Self::check_image(image, "container image", location));
-            }
-        }
-
-        findings
+        job.container_images()
             .into_iter()
+            .filter_map(Self::check_container)
             .map(|finding| finding.build(job))
             .collect()
     }

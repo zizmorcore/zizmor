@@ -12,6 +12,7 @@ use std::sync::LazyLock;
 use terminal_link::Link;
 
 pub(crate) mod cache_mode;
+pub(crate) mod images;
 pub(crate) mod matrix;
 pub(crate) mod runners;
 
