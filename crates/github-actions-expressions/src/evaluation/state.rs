@@ -10,11 +10,10 @@ use super::{DecisionId, Outcome, Outcomes, TrackedValue};
 /// Both expressions can then refer to the same decisions and draw on the same
 /// work budget.
 #[derive(Default)]
-pub(super) struct State {
-    pub(super) definitions: BTreeMap<usize, DecisionId>,
-    pub(super) materialized: BTreeMap<(usize, Vec<String>), Outcomes>,
+pub struct Evaluator {
     depth: usize,
-    pub(super) budget: Budget,
+    /// Work shared with bindings that compute alternatives.
+    pub budget: Budget,
     next_decision: usize,
     predicates: BTreeMap<Predicate, DecisionId>,
 }
@@ -66,13 +65,13 @@ impl Budget {
     }
 }
 
-impl State {
+impl Evaluator {
     /// Allocate a new decision ID in this state.
     ///
     /// Keep the ID if later lookups depend on the same choice. For example,
     /// all reads of a job's matrix fields depend on which row that job uses.
     /// They share a decision ID, with a different alternative for each row.
-    pub(super) fn decision(&mut self) -> DecisionId {
+    pub fn decision(&mut self) -> DecisionId {
         let id = DecisionId(self.next_decision);
         self.next_decision += 1;
         id
@@ -115,7 +114,7 @@ impl State {
 
     /// Charge for visiting an expression and bound its outcomes. Only the
     /// outermost visit adds the unknown remainder if a limit was reached.
-    pub(super) fn within_limits(&mut self, visit: impl FnOnce(&mut Self) -> Outcomes) -> Outcomes {
+    pub fn within_limits(&mut self, visit: impl FnOnce(&mut Self) -> Outcomes) -> Outcomes {
         if self.exhausted() {
             return self.finish(vec![]);
         }
@@ -141,7 +140,7 @@ impl State {
     /// Evaluate each part and collect one value per part, in input order, for
     /// each compatible combination. For example, a function call uses this to
     /// build its possible argument lists. Empty input yields one empty list.
-    pub(super) fn sequence<T, U: Clone>(
+    pub fn sequence<T, U: Clone>(
         &mut self,
         parts: impl IntoIterator<Item = T>,
         mut evaluate: impl FnMut(&mut Self, T) -> Outcomes<U>,
@@ -158,6 +157,26 @@ impl State {
             }
         }
         combinations
+    }
+
+    /// Evaluate once per input and retain results compatible with that input.
+    pub fn flat_map<T: Clone>(
+        &mut self,
+        inputs: Outcomes<T>,
+        mut evaluate: impl FnMut(&mut Self, &T) -> Outcomes,
+    ) -> Outcomes {
+        let mut results = vec![];
+        for input in inputs {
+            if !self.budget.checkpoint() {
+                break;
+            }
+            let values = evaluate(self, &input.value);
+            results.extend(self.product(vec![input], values, |_, value| value));
+            if results.len() > MAX_ALTERNATIVES {
+                break;
+            }
+        }
+        self.budget.bound(results)
     }
 
     /// Combine each left outcome with each compatible right outcome.
@@ -197,19 +216,19 @@ mod tests {
 
     #[test]
     fn resource_limits_retain_an_unknown_remainder() {
-        let mut analysis = State {
+        let mut analysis = Evaluator {
             budget: Budget {
                 work: MAX_WORK,
                 ..Budget::default()
             },
-            ..State::default()
+            ..Evaluator::default()
         };
         let parsed = Expr::parse("config.x").unwrap();
-        let values = analysis.evaluate(&parsed, &super::super::Scope::default());
+        let values = analysis.evaluate(&parsed, &mut super::super::Constants);
         assert_eq!(values.len(), 1);
         assert!(values[0].value.provenance.incomplete);
 
-        let mut analysis = State::default();
+        let mut analysis = Evaluator::default();
         analysis.budget.bound(vec![(); MAX_ALTERNATIVES + 1]);
         let values = analysis.finish(Outcomes::default());
         assert_eq!(values.len(), 1);

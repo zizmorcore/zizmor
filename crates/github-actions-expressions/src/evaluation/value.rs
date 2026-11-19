@@ -555,11 +555,7 @@ impl<T> Outcome<T> {
     ///
     /// Return `None` if this outcome already assumes a different alternative for
     /// the same decision.
-    pub(super) fn assume(
-        mut self,
-        decision: DecisionId,
-        alternative: AlternativeId,
-    ) -> Option<Self> {
+    pub fn assume(mut self, decision: DecisionId, alternative: AlternativeId) -> Option<Self> {
         if self
             .choices
             .get(&decision)

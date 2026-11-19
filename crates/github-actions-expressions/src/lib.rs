@@ -720,7 +720,7 @@ impl<'src> Expr<'src> {
     /// assert_eq!(result, Evaluation::Boolean(false));
     /// ```
     pub fn consteval(&self) -> Option<Evaluation> {
-        let values = evaluation::Scope::default().evaluate(self);
+        let values = evaluation::Evaluator::default().evaluate(self, &mut evaluation::Constants);
         let [value] = &values[..] else {
             return None;
         };

@@ -1,10 +1,6 @@
 use super::*;
 use crate::Evaluation;
 
-fn bindings(root: &TrackedValue) -> Scope {
-    Scope::new(Definition::value(root.clone()))
-}
-
 #[test]
 fn incomplete_control_dependencies_remain_incomplete() {
     let mut root = TrackedValue::new(AbstractValue::Reference(vec![]));
@@ -19,7 +15,7 @@ fn incomplete_control_dependencies_remain_incomplete() {
         r#"fromJSON('{"key":"fixed"}')[inputs.value]"#,
     ] {
         let parsed = Expr::parse(source).expect("valid expression");
-        let values = bindings(&root).evaluate(&parsed);
+        let values = Evaluator::default().evaluate(&parsed, &mut root.clone());
         assert!(!values.is_empty(), "{source}");
         assert!(
             values
@@ -45,8 +41,8 @@ fn independent_choices_preserve_the_last_alternative() {
             "format('{{0}}{{1}}{{2}}{{3}}{{4}}{{5}}{{6}}{{7}}', {args}) == '11111111' && payload.text"
         );
         let parsed = Expr::parse(&source).expect("valid expression");
-        let mut analysis = State::default();
-        let values = analysis.evaluate(&parsed, &bindings(&context));
+        let mut analysis = Evaluator::default();
+        let values = analysis.evaluate(&parsed, &mut context.clone());
         assert_eq!(values.len(), 1 << 8);
         assert!(
             values
@@ -67,7 +63,7 @@ fn bindings_preserve_typed_values_and_provenance() {
     root.provenance.evidence.insert(7);
     let parsed =
         Expr::parse(r#"case(flags.enabled, fromJSON('{"n":20}'), fromJSON('{"n":1}')).n"#).unwrap();
-    let values = bindings(&root).evaluate(&parsed);
+    let values = Evaluator::default().evaluate(&parsed, &mut root.clone());
     assert_eq!(values.len(), 2);
     assert_eq!(values[0].value.concrete(), Some(Evaluation::Number(1.0)));
     assert_eq!(values[1].value.concrete(), Some(Evaluation::Number(20.0)));
@@ -88,60 +84,22 @@ fn bindings_preserve_typed_values_and_provenance() {
         "list != fromJSON('[]')",
     ] {
         let parsed = Expr::parse(source).unwrap();
-        let values = bindings(&root).evaluate(&parsed);
+        let values = Evaluator::default().evaluate(&parsed, &mut root.clone());
         assert_eq!(values[0].value.concrete(), Some(Evaluation::Boolean(true)));
     }
 }
 
 #[test]
-fn decisions_are_stable_across_reads_and_distinct_across_scopes() {
-    let mut state = State::default();
-    let external = state.decision();
-    let parsed = Expr::parse("case(config.enabled, 1, 2)").unwrap();
-    let scope = TrackedValue::new(AbstractValue::Reference(vec![]));
-    let first = state.evaluate(&parsed, &bindings(&scope));
-    let repeated = state.evaluate(&parsed, &bindings(&scope));
-    assert!(!first[0].choices.contains_key(&external));
-    assert_eq!(state.product(first.clone(), repeated, |a, _| a).len(), 2);
-
-    let scope = TrackedValue::new(AbstractValue::Reference(vec![Access::Key("other".into())]));
-    let other = state.evaluate(&parsed, &bindings(&scope));
-    assert_eq!(state.product(first, other, |a, _| a).len(), 4);
-}
-
-#[test]
-fn nested_definition_preserves_shared_choices_and_short_circuits() {
-    let known = |value| Definition::known(Evaluation::Boolean(value));
-    let mut producer = Scope::default();
-    producer.bind("flag", Definition::choice(vec![known(false), known(true)]));
-    let output = Definition::template(
-        "${{ flag || (false && fromJSON('invalid')) }}".into(),
-        producer,
-    );
-    let mut consumer = Scope::default();
-    consumer.bind("first", output.clone());
-    consumer.bind("second", output);
-    let values = consumer.evaluate(&Expr::parse("first == second").unwrap());
-    assert_eq!(values.len(), 2);
-    assert!(
-        values
-            .iter()
-            .all(|o| o.value.concrete() == Some(Evaluation::Boolean(true)))
-    );
-}
-
-#[test]
-fn bound_collections_preserve_identity_and_field_sources() {
-    let mut scope = Scope::default();
-    scope.bind(
-        "config",
-        Definition::object(std::collections::BTreeMap::from([(
-            "field".into(),
-            Definition::runtime(String::new()),
-        )])),
-    );
-    let values = scope.evaluate(&Expr::parse("config == CONFIG && config.field").unwrap());
+fn partial_object_distinguishes_unknown_field_contents_from_a_missing_field() {
+    let mut field = TrackedValue::unknown();
+    field.provenance.sources.insert("config.field".into());
+    let mut root = TrackedValue::new(AbstractValue::Object(std::sync::Arc::new(
+        [("field".into(), field)].into_iter().collect(),
+    )));
+    let values =
+        Evaluator::default().evaluate(&Expr::parse("missing || field").unwrap(), &mut root);
     assert_eq!(values.len(), 1);
+    assert!(values[0].value.concrete().is_none());
     assert!(
         values[0]
             .value
@@ -152,20 +110,56 @@ fn bound_collections_preserve_identity_and_field_sources() {
 }
 
 #[test]
-fn expansion_charges_only_the_branch_that_reads_it() {
-    let value = Definition::known(Evaluation::Boolean(true)).expand(|value, budget| {
-        // Even discarded intermediate candidates count toward the evaluation limits.
-        budget.bound(std::iter::repeat(()));
-        vec![value.clone()]
-    });
-    let mut scope = Scope::default();
-    scope.bind("value", value);
+fn decisions_are_stable_across_reads_and_distinct_across_scopes() {
+    let mut state = Evaluator::default();
+    let external = state.decision();
+    let parsed = Expr::parse("case(config.enabled, 1, 2)").unwrap();
+    let scope = TrackedValue::new(AbstractValue::Reference(vec![]));
+    let first = state.evaluate(&parsed, &mut scope.clone());
+    let repeated = state.evaluate(&parsed, &mut scope.clone());
+    assert!(!first[0].choices.contains_key(&external));
+    assert_eq!(state.product(first.clone(), repeated, |a, _| a).len(), 2);
 
-    let skipped = scope.evaluate(&Expr::parse("false && value").unwrap());
+    let scope = TrackedValue::new(AbstractValue::Reference(vec![Access::Key("other".into())]));
+    let other = state.evaluate(&parsed, &mut scope.clone());
+    assert_eq!(state.product(first, other, |a, _| a).len(), 4);
+}
+
+#[test]
+fn nested_lookup_uses_the_producers_bindings() {
+    struct Consumer(TrackedValue);
+    impl Bindings for Consumer {
+        fn lookup(&mut self, _: &[Access], evaluator: &mut Evaluator) -> Outcomes {
+            evaluator.template("${{ case(flag, true, false) }}", &mut self.0)
+        }
+    }
+
+    let mut consumer = Consumer(TrackedValue::new(AbstractValue::Reference(vec![])));
+    let values =
+        Evaluator::default().evaluate(&Expr::parse("first == second").unwrap(), &mut consumer);
+    assert_eq!(values.len(), 2);
+    assert!(
+        values
+            .iter()
+            .all(|o| o.value.concrete() == Some(Evaluation::Boolean(true)))
+    );
+}
+
+#[test]
+fn bindings_share_the_budget_only_when_read() {
+    struct Expensive;
+    impl Bindings for Expensive {
+        fn lookup(&mut self, _: &[Access], evaluator: &mut Evaluator) -> Outcomes {
+            evaluator.budget.bound(std::iter::repeat(()));
+            vec![Outcome::known(Evaluation::Boolean(true))]
+        }
+    }
+    let skipped =
+        Evaluator::default().evaluate(&Expr::parse("false && value").unwrap(), &mut Expensive);
     assert_eq!(skipped.len(), 1);
     assert!(!skipped[0].value.provenance.incomplete);
 
-    let read = scope.evaluate(&Expr::parse("value").unwrap());
+    let read = Evaluator::default().evaluate(&Expr::parse("value").unwrap(), &mut Expensive);
     assert!(
         read.iter()
             .any(|outcome| outcome.value.provenance.incomplete)

@@ -17,8 +17,9 @@ pub fn fenced_span(text: &str, offset: usize) -> Option<Range<usize>> {
     None
 }
 
-impl State {
-    pub(super) fn template(&mut self, text: &str, scope: &Scope) -> Outcomes {
+impl Evaluator {
+    /// Evaluate a YAML string. A single fenced expression retains its value type.
+    pub fn template(&mut self, text: &str, bindings: &mut dyn Bindings) -> Outcomes {
         if !text.contains("${{") {
             return vec![Outcome::known(Evaluation::String(text.into()))];
         }
@@ -36,7 +37,7 @@ impl State {
                 Err(_) => return Outcomes::default(),
             };
             if span == (0..text.len()) {
-                return self.evaluate(&parsed, scope);
+                return self.evaluate(&parsed, bindings);
             }
             format.push_str(&escape(&text[offset..span.start]));
             format.push_str(&format!("{{{}}}", args.len()));
@@ -58,6 +59,6 @@ impl State {
             func: Function::Format,
             args,
         });
-        self.evaluate(&expr, scope)
+        self.evaluate(&expr, bindings)
     }
 }
