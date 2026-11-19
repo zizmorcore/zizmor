@@ -1529,17 +1529,36 @@ fn test_interpreted_indirections() -> Result<()> {
       --> @@INPUT@@:44:21
        |
     39 |           - {os: extra, node: 99}
-       |             --------------------- matrix value defined here
+       |             ---------------------
+       |             |
+       |             matrix value defined here
+       |             matrix value defined here
     40 |     steps:
     41 |       - run: |
        |         --- this run block
     ...
-    44 |           echo "${{ matrix.os == 'extra' && github.event.issue.title || 'fixed' }}"
-       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    44 |           echo "${{ matrix.os == 'extra' && matrix.node == 99 && github.event.issue.title || 'fixed' }}"
+       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
        |
        = note: audit confidence → High
 
-    20 findings (11 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 9 high
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:64:24
+       |
+    60 |         version: [stable]
+       |                   ------ matrix value defined here
+    61 |         include:
+    62 |           - {os: linux, label: included}
+       |             ---------------------------- matrix value defined here
+    63 |     steps:
+    64 |       - run: echo "${{ matrix.version && matrix.label && github.event.issue.title }}"
+       |         ---            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |         |
+       |         this run block
+       |
+       = note: audit confidence → High
+
+    22 findings (12 suppressed, 2 unsafe fixes): 0 informational, 0 low, 0 medium, 10 high
     "#
     );
 
@@ -1574,26 +1593,48 @@ fn test_output_aliases() -> Result<()> {
        = note: this finding has an auto-fix
 
     error[template-injection]: code injection via template expansion
-      --> @@INPUT@@:45:21
+      --> @@INPUT@@:48:21
        |
     31 |         os: [linux, mac]
        |              -----  --- matrix value defined here
        |              |
        |              matrix value defined here
     ...
-    35 |       linux: ${{ matrix.os == 'linux' && 'built' || '' }}
+    36 |       linux: ${{ matrix.os == 'linux' && 'built' || '' }}
        |       --------------------------------------------------- this job declares output linux
-    36 |       mac: ${{ matrix.os == 'mac' && 'built' || '' }}
+    37 |       mac: ${{ matrix.os == 'mac' && 'built' || '' }}
        |       ----------------------------------------------- this job declares output mac
     ...
-    44 |       - run: |
+    47 |       - run: |
        |         --- this run block
-    45 |           echo "${{ needs.builds.outputs.linux && needs.builds.outputs.mac && github.event.issue.title }}"
+    48 |           echo "${{ needs.builds.outputs.linux && needs.builds.outputs.mac && github.event.issue.title }}"
        |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
        |
        = note: audit confidence → High
 
-    10 findings (8 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 2 high
+    error[template-injection]: code injection via template expansion
+      --> @@INPUT@@:50:21
+       |
+    31 |         os: [linux, mac]
+       |              -----  --- matrix value defined here
+       |              |
+       |              matrix value defined here
+    ...
+    34 |       enabled: ${{ matrix.os == 'other' }}
+       |       ------------------------------------ this job declares output enabled
+    ...
+    44 |       ENABLED: ${{ needs.builds.outputs.enabled == 'true' }}
+       |       ------------------------------------------------------ ENABLED is defined here
+    ...
+    47 |       - run: |
+       |         --- this run block
+    ...
+    50 |           echo "${{ env.ENABLED && needs.builds.outputs.enabled && github.event.issue.title }}"
+       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+       |
+       = note: audit confidence → High
+
+    11 findings (8 suppressed, 1 unsafe fixes): 0 informational, 0 low, 0 medium, 3 high
     "#
     );
 

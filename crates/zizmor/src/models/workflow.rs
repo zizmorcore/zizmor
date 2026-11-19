@@ -7,7 +7,7 @@ use github_actions_models::{
     common::{self, CacheMode, expr::LoE},
     workflow::{self, TriggerSyntax, event::BareEvent, job},
 };
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 use terminal_link::Link;
 
@@ -80,12 +80,16 @@ impl std::ops::Deref for Workflow {
 }
 
 impl Workflow {
-    /// Load a workflow from a buffer, with an assigned name.
-    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
-        let inner = Self::validate(&contents)?;
-
-        let mut pending = BTreeMap::new();
-        for (id, job) in &inner.jobs {
+    fn validate_jobs(workflow: &workflow::Workflow) -> Result<(), CollectionError> {
+        let ids: HashMap<_, _> = workflow
+            .jobs
+            .keys()
+            .enumerate()
+            .map(|(i, name)| (name.to_ascii_lowercase(), i))
+            .collect();
+        let mut dependents = vec![vec![]; workflow.jobs.len()];
+        let mut remaining = vec![0; workflow.jobs.len()];
+        for (i, (id, job)) in workflow.jobs.iter().enumerate() {
             let needs = match job {
                 workflow::Job::NormalJob(job) => {
                     if let Some(matrix) = job.strategy.as_ref().and_then(|s| s.matrix.as_ref()) {
@@ -99,27 +103,39 @@ impl Workflow {
                 }
                 workflow::Job::ReusableWorkflowCallJob(job) => &job.needs,
             };
-            pending.insert(id.to_ascii_lowercase(), needs);
+            for name in needs {
+                if let Some(&parent) = ids.get(&name.to_ascii_lowercase()) {
+                    dependents[parent].push(i);
+                    remaining[i] += 1;
+                }
+            }
         }
 
-        // Reject cycles before following output references between jobs.
-        while let Some(id) = pending
-            .iter()
-            .find(|(_, needs)| {
-                needs
-                    .iter()
-                    .all(|id| !pending.contains_key(&id.to_ascii_lowercase()))
-            })
-            .map(|(id, _)| id.clone())
-        {
-            pending.remove(&id);
+        // A job becomes ready once we have visited all its dependencies.
+        let mut ready: Vec<_> = (0..remaining.len())
+            .filter(|&i| remaining[i] == 0)
+            .collect();
+        while let Some(id) = ready.pop() {
+            for &child in &dependents[id] {
+                remaining[child] -= 1;
+                if remaining[child] == 0 {
+                    ready.push(child);
+                }
+            }
         }
-
-        if !pending.is_empty() {
+        if remaining.iter().any(|&count| count != 0) {
             return Err(CollectionError::InvalidInput(
                 "cyclic job dependencies".into(),
             ));
         }
+        Ok(())
+    }
+
+    /// Load a workflow from a buffer, with an assigned name.
+    pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
+        let inner = Self::validate(&contents)?;
+
+        Self::validate_jobs(&inner)?;
 
         let document = yamlpath::Document::new(&contents)?;
 

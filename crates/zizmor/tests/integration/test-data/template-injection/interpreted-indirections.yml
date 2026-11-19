@@ -41,7 +41,7 @@ jobs:
       - run: |
           echo "${{ matrix.os == 'ubuntu' && matrix.node == 18 && github.event.issue.title || 'fixed' }}"
           echo "${{ matrix.label && github.event.issue.title || 'fixed' }}"
-          echo "${{ matrix.os == 'extra' && github.event.issue.title || 'fixed' }}"
+          echo "${{ matrix.os == 'extra' && matrix.node == 99 && github.event.issue.title || 'fixed' }}"
           echo "${{ matrix.os == 'ubuntu' && matrix.label && github.event.issue.title || 'fixed' }}"
 
   failed-matrix:
@@ -51,3 +51,14 @@ jobs:
         value: ["${{ fromJSON('invalid') }}", "${{ github.event.issue.title }}"]
     steps:
       - run: echo "${{ matrix.value }}"
+
+  partial-include:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: ["${{ github.event.action }}"]
+        version: [stable]
+        include:
+          - {os: linux, label: included}
+    steps:
+      - run: echo "${{ matrix.version && matrix.label && github.event.issue.title }}"

@@ -191,8 +191,8 @@ struct Environment<'a, 'doc> {
     needs_row: Option<&'a Cell<bool>>,
 }
 
-fn empty() -> Outcome {
-    Outcome::known(Evaluation::String(String::new()))
+fn missing() -> Outcome {
+    Outcome::known(Evaluation::Null)
 }
 
 impl Bindings for Environment<'_, '_> {
@@ -208,7 +208,7 @@ impl Bindings for Environment<'_, '_> {
                     return vec![];
                 }
                 let Some((_, row)) = self.row else {
-                    return vec![empty()];
+                    return vec![missing().map(|value| value.apply_path(&path[1..]))];
                 };
                 vec![Outcome::new(row.clone().apply_path(&path[1..]))]
             }
@@ -254,8 +254,13 @@ impl<'doc> Environment<'_, 'doc> {
 
         if !self.cache.rows.contains_key(job.id()) {
             let mut env = self.at(Site::Matrix(job));
-            let rows = matrix.rows(eval, |eval, text, location| {
-                let values = eval.template(text, &mut env);
+            let rows = matrix.rows(eval, |eval, scalar, location| {
+                let values = match scalar.as_str() {
+                    Some(text) => eval.template(text, &mut env),
+                    None => vec![Outcome::known(
+                        scalar.clone().try_into().expect("JSON scalar"),
+                    )],
+                };
                 located(values, env.evidence.record(location))
             });
             let rows = rows
@@ -313,7 +318,7 @@ impl<'doc> Environment<'_, 'doc> {
     }
 
     fn input(&mut self, eval: &mut Evaluator, path: &[Access]) -> Outcomes {
-        let [_, Access::Key(name), rest @ ..] = path else {
+        let [_, Access::Key { name, .. }, rest @ ..] = path else {
             return self.runtime(path);
         };
         let values = self
@@ -322,7 +327,7 @@ impl<'doc> Environment<'_, 'doc> {
             .entry(name.to_ascii_lowercase())
             .or_insert_with(|| {
                 let Some(input) = self.inputs.get(name) else {
-                    return vec![empty()];
+                    return vec![missing()];
                 };
                 let location = input
                     .location()
@@ -332,9 +337,21 @@ impl<'doc> Environment<'_, 'doc> {
         values.clone().map(|value| value.apply_path(rest))
     }
 
+    /// Environment variables and job outputs are string fields. Even a lone
+    /// expression such as `${{ false }}` becomes the nonempty string `"false"`.
+    fn string_value(&mut self, eval: &mut Evaluator, text: &str) -> Outcomes {
+        eval.template(text, self)
+            .into_iter()
+            .filter_map(|mut outcome| {
+                outcome.value = outcome.value.into_string()?;
+                Some(outcome)
+            })
+            .collect()
+    }
+
     fn environment(&mut self, eval: &mut Evaluator, path: &[Access]) -> Outcomes {
         let site = self.site;
-        let [_, Access::Key(name), rest @ ..] = path else {
+        let [_, Access::Key { name, .. }, rest @ ..] = path else {
             return self.runtime(path);
         };
         for scope in site.env_scopes() {
@@ -366,7 +383,9 @@ impl<'doc> Environment<'_, 'doc> {
             let values = if let Some(cached) = self.cache.env.get(&key) {
                 cached.clone()
             } else {
-                let mut values = eval.template(&value.to_string(), &mut self.at(scope.declared_at));
+                let mut values = self
+                    .at(scope.declared_at)
+                    .string_value(eval, &value.to_string());
                 if let Some(overwrite) = overwrite {
                     let decision = eval.decision();
                     values = values
@@ -394,9 +413,9 @@ impl<'doc> Environment<'_, 'doc> {
     fn output(&mut self, eval: &mut Evaluator, path: &[Access]) -> Option<Outcomes> {
         let [
             _,
-            Access::Key(id),
-            Access::Key(field),
-            Access::Key(name),
+            Access::Key { name: id, .. },
+            Access::Key { name: field, .. },
+            Access::Key { name, .. },
             rest @ ..,
         ] = path
         else {
@@ -414,7 +433,7 @@ impl<'doc> Environment<'_, 'doc> {
             .iter()
             .find(|(key, _)| key.eq_ignore_ascii_case(name))
         else {
-            return Some(vec![empty()]);
+            return Some(vec![missing().map(|value| value.apply_path(rest))]);
         };
         let key = (id.to_owned(), name.clone());
         if !self.cache.outputs.contains_key(&key) {
@@ -425,7 +444,7 @@ impl<'doc> Environment<'_, 'doc> {
             let text = value.to_string();
             let values = self
                 .at(Site::JobOutput(&producer))
-                .in_rows(eval, |eval, env| eval.template(&text, env));
+                .in_rows(eval, |eval, env| env.string_value(eval, &text));
             // Matrix jobs merge outputs by name. Each name can come from a
             // different row, but all reads of that name see the same value.
             let winner = eval.decision();
@@ -439,7 +458,7 @@ impl<'doc> Environment<'_, 'doc> {
                 .enumerate()
                 .filter_map(|(i, value)| value.assume(winner, AlternativeId::new(i)))
                 .filter_map(|value| value.assume(decision, AlternativeId::new(1)))
-                .chain(empty().assume(decision, AlternativeId::new(0)))
+                .chain(missing().assume(decision, AlternativeId::new(0)))
                 .collect();
             self.cache
                 .outputs
