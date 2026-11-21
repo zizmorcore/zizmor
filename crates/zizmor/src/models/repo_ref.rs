@@ -69,6 +69,8 @@ pub(crate) enum RepoRef<'doc> {
     /// A repository reference from a `uses:` clause.
     Uses(&'doc RepositoryUses),
     /// A repository reference from a Git URL.
+    ///
+    /// Note that this can be a `file://` URL.
     Url {
         _url: &'doc Url,
 
@@ -242,6 +244,9 @@ impl<'doc> From<&'doc RemoteRepo> for RepoRef<'doc> {
         match &repo.repo {
             pre_commit_models::config::RemoteRepoTarget::Url(url) => Self::from_url(url, &repo.rev),
             pre_commit_models::config::RemoteRepoTarget::Scp(scp) => Self::from_scp(scp, &repo.rev),
+            pre_commit_models::config::RemoteRepoTarget::Path(path) => {
+                Self::from_url(&path.url, &repo.rev)
+            }
         }
     }
 }
