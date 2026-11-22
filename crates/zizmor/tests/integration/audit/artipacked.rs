@@ -217,16 +217,16 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @r#"
+        @"
     @@ -10,6 +10,7 @@
              with:
                  token: ${{ secrets.GITHUB_TOKEN }}
                  fetch-depth: 2
-    +            "persist-credentials": false
+    +            persist-credentials: false
            - name: Upload artifacts
              uses: actions/upload-artifact@v4
              with:
-    "#
+    "
     );
 
     Ok(())
@@ -261,7 +261,7 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @r#"
+        @"
     @@ -5,9 +5,12 @@
        test:
          runs-on: ubuntu-latest
@@ -271,13 +271,13 @@ jobs:
     +        name: Checkout
              uses: actions/checkout@v4
     -      - name: Upload artifacts
-    +        "with": {"persist-credentials": false}
+    +        with: {persist-credentials: false}
     +      -
     +        name: Upload artifacts
              uses: actions/upload-artifact@v4
              with:
                name: my-artifact
-    "#
+    "
     );
 
     Ok(())

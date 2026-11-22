@@ -882,7 +882,7 @@ jobs:
     +        run: echo "Event name is ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
              env:
                EXISTING_VAR: "existing_value"
-    +          "GITHUB_EVENT_HEAD_COMMIT_MESSAGE": "${{ github.event.head_commit.message }}"
+    +          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: "${{ github.event.head_commit.message }}"
     "#
     );
 
@@ -932,7 +932,7 @@ jobs:
     +          echo "User: ${GITHUB_ACTOR}"
     +          echo "Ref: ${GITHUB_REF_NAME}"
     +          echo "Commit: ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
-    +        "env": {"GITHUB_EVENT_HEAD_COMMIT_MESSAGE": "${{ github.event.head_commit.message }}"}
+    +        env: {GITHUB_EVENT_HEAD_COMMIT_MESSAGE: "${{ github.event.head_commit.message }}"}
     "#
     );
 
@@ -1306,7 +1306,7 @@ jobs:
              shell: cmd
     -        run: echo PR title is ${{ github.event.pull_request.title }}
     +        run: echo PR title is %GITHUB_EVENT_PULL_REQUEST_TITLE%
-    +        "env": {"GITHUB_EVENT_PULL_REQUEST_TITLE": "${{ github.event.pull_request.title }}"}
+    +        env: {GITHUB_EVENT_PULL_REQUEST_TITLE: "${{ github.event.pull_request.title }}"}
     "#
     );
 
@@ -1359,7 +1359,7 @@ jobs:
     -⏎
     -      - shell: bash
     +          echo "✓ ${GITHUB_EVENT_COMMENT_BODY}"
-    +        "env": {"GITHUB_EVENT_COMMENT_BODY": "${{ github.event.comment.body }}"}
+    +        env: {GITHUB_EVENT_COMMENT_BODY: "${{ github.event.comment.body }}"}
     +      -
     +        shell: bash
              run: echo ok

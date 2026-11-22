@@ -928,14 +928,14 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @r#"
+        @"
     @@ -12,4 +12,5 @@
                  ~/.cargo/registry
                  ~/.cargo/git
                key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    +          "lookup-only": true
+    +          lookup-only: true
            - uses: softprops/action-gh-release@v1
-    "#
+    "
     );
 
     Ok(())
@@ -1014,7 +1014,7 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @r#"
+        @"
     @@ -6,13 +6,18 @@
        test:
          runs-on: ubuntu-latest
@@ -1023,7 +1023,7 @@ jobs:
     -      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
     +      -
     +        uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
-    +        "with": {"enable-cache": false}
+    +        with: {enable-cache: false}
     +      -
     +        uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
              with:
@@ -1041,7 +1041,7 @@ jobs:
              with:
     -          enable-cache: ${{ github.ref == 'refs/heads/main' }}
     +          enable-cache: false
-    "#
+    "
     );
 
     Ok(())

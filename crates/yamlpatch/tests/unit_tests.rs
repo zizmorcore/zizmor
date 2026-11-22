@@ -58,6 +58,26 @@ fn add_rejects_an_existing_key() {
 }
 
 #[test]
+fn new_mapping_keys_use_plain_style_when_possible() {
+    let fixed = apply(
+        "'already-quoted': true\n",
+        route!(),
+        Op::Add {
+            key: "x,y".into(),
+            value: value(
+                r#"[{ordinary: "false", "x,y": 1, "true": 2, "007": 3, "key: value": 4}]"#,
+            ),
+        },
+    );
+    assert_eq!(
+        fixed,
+        r#"'already-quoted': true
+x,y: [{ordinary: "false", "x,y": 1, "true": 2, "007": 3, "key: value": 4}]
+"#
+    );
+}
+
+#[test]
 fn set_nested_field() {
     for (original, expected) in [
         (
