@@ -102,7 +102,7 @@ If you run into this issue, you have two options:
     in your repository secrets, you could do:
 
     ```yaml title="example/repoA/.github/workflows/ci.yml" hl_lines="3"
-    - uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+    - uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
       with:
         token: ${{ secrets.ZIZMOR_GH_TOKEN }}
     ```
