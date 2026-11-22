@@ -114,7 +114,7 @@ impl RemoteRepoTarget {
         match self {
             Self::Url(url) => url.as_str(),
             Self::Scp(scp) => scp.raw(),
-            Self::Path(path) => &path.path.as_str(),
+            Self::Path(path) => path.path.as_str(),
         }
     }
 }
