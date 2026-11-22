@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Bug Fixes 🐛
+
+- Fixed a bug where `zizmor` would fail to audit inputs containing
+  a `#!yaml services:` clause where the body is an expression
+  (#2579)
+
 ## 1.33.0
 
 ### New Features 🌈
