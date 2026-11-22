@@ -685,27 +685,98 @@ jobs:
           persist-credentials: false
 "#;
 
-    let expected = workflow_content.replace(
-        "actions/checkout@v6.0.1",
-        "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1",
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            Zizmor::cargo_bin()
+                .offline(NetworkMode::AssertOnline)
+                .output(zizmor_dev::OutputMode::Both)
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -6,7 +6,8 @@
+       test:
+         runs-on: ubuntu-latest
+         steps:
+    -      - name: Checkout with ref-pin
+    -        uses: actions/checkout@v6.0.1
+    +      -
+    +        name: Checkout with ref-pin
+    +        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+             with:
+               persist-credentials: false
+    "
     );
-    for newline in ["\n", "\r\n"] {
-        let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
-        workspace.add_file(
-            ".github/workflows/test.yml",
-            &workflow_content.replace('\n', newline),
-        );
-        Zizmor::cargo_bin()
-            .offline(NetworkMode::AssertOnline)
-            .args(["--fix=all"])
-            .input(workspace.path())
-            .run()?;
-        super::assert_fixed_uses(
-            &workspace,
-            &expected,
-            yamlpath::route!("jobs", "test", "steps", 0, "uses"),
-        )?;
-    }
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_crlf() -> anyhow::Result<()> {
+    use zizmor_dev::{NetworkMode, WorkspaceBuilder};
+
+    let workflow_content = r#"
+name: Test
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with ref-pin
+        uses: actions/checkout@v6.0.1
+        with:
+          persist-credentials: false
+"#
+    .replace("\n", "\r\n");
+
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            Zizmor::cargo_bin()
+                .offline(NetworkMode::AssertOnline)
+                .output(zizmor_dev::OutputMode::Both)
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -1,12 +1,13 @@
+    -⏎
+    -name: Test
+    -on: push
+    -permissions: {}
+    -jobs:
+    -  test:
+    -    runs-on: ubuntu-latest
+    -    steps:
+    -      - name: Checkout with ref-pin
+    -        uses: actions/checkout@v6.0.1
+    -        with:
+    -          persist-credentials: false
+    +⏎
+    +name: Test
+    +on: push
+    +permissions: {}
+    +jobs:
+    +  test:
+    +    runs-on: ubuntu-latest
+    +    steps:
+    +      -
+    +        name: Checkout with ref-pin
+    +        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    +        with:
+    +          persist-credentials: false
+    "
+    );
+
     Ok(())
 }
 

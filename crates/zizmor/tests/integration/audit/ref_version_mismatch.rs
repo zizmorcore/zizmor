@@ -452,24 +452,96 @@ jobs:
           persist-credentials: false
 "#;
 
-    let expected = workflow_content.replace(" # v3.0.0", " # v2.0.0");
-    for newline in ["\n", "\r\n"] {
-        let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
-        workspace.add_file(
-            ".github/workflows/test.yml",
-            &workflow_content.replace('\n', newline),
-        );
-        Zizmor::cargo_bin()
-            .offline(NetworkMode::AssertOnline)
-            .args(["--fix=all", "--persona=pedantic"])
-            .input(workspace.path())
-            .run()?;
-        super::assert_fixed_uses(
-            &workspace,
-            &expected,
-            yamlpath::route!("jobs", "test", "steps", 0, "uses"),
-        )?;
-    }
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            Zizmor::cargo_bin()
+                .args(["--fix=all", "--persona=pedantic"])
+                .offline(NetworkMode::AssertOnline)
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -6,7 +6,8 @@
+       test:
+         runs-on: ubuntu-latest
+         steps:
+    -      - name: Checkout with mismatched version comment
+    -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+    +      -
+    +        name: Checkout with mismatched version comment
+    +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+             with:
+               persist-credentials: false
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_fix_version_comment_mismatch_crlf() -> anyhow::Result<()> {
+    use zizmor_dev::WorkspaceBuilder;
+
+    let workflow_content = r#"
+name: Test Version Comment Mismatch
+on: push
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with mismatched version comment
+        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+        with:
+          persist-credentials: false
+"#
+    .replace('\n', "\r\n");
+
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+    workspace.add_file(".github/workflows/test.yml", &workflow_content);
+
+    insta::assert_snapshot!(
+        &workspace.diff(".github/workflows/test.yml", |workspace| {
+            Zizmor::cargo_bin()
+                .args(["--fix=all", "--persona=pedantic"])
+                .offline(NetworkMode::AssertOnline)
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -1,12 +1,13 @@
+    -⏎
+    -name: Test Version Comment Mismatch
+    -on: push
+    -permissions: {}
+    -jobs:
+    -  test:
+    -    runs-on: ubuntu-latest
+    -    steps:
+    -      - name: Checkout with mismatched version comment
+    -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+    -        with:
+    -          persist-credentials: false
+    +⏎
+    +name: Test Version Comment Mismatch
+    +on: push
+    +permissions: {}
+    +jobs:
+    +  test:
+    +    runs-on: ubuntu-latest
+    +    steps:
+    +      -
+    +        name: Checkout with mismatched version comment
+    +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
+    +        with:
+    +          persist-credentials: false
+    "
+    );
+
     Ok(())
 }
 
