@@ -1,0 +1,14 @@
+name: repro
+on:
+  workflow_call:
+    inputs:
+      services:
+        type: string
+        default: ""
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env: ${{ fromJSON(vars.CI_JOB_ENV || '{}') }}
+    services: ${{ fromJSON(inputs.services || vars.CI_SERVICES || '{}') }}
+    steps:
+      - run: echo ok
