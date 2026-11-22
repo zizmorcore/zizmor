@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.33.1
+
 ### Bug Fixes 🐛
 
 - Fixed a bug where `zizmor` would fail to audit inputs containing
