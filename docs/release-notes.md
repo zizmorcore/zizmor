@@ -2273,6 +2273,7 @@ This is one of `zizmor`'s bigger recent releases! Key enhancements include:
 [self-repository]: ./audits.md#self-repository
 [ref-confusion]: ./audits.md#ref-confusion
 [self-hosted-runner]: ./audits.md#self-hosted-runner
+[dangerous-checkout]: ./audits.md#dangerous-checkout
 
 [exit code]: ./usage.md#exit-codes
 
