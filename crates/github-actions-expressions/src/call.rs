@@ -69,6 +69,66 @@ impl Function {
     }
 }
 
+/// A parsed Actions format string. Argument indices refer to the arguments
+/// after the format string, so `{0}` selects the first substitution.
+pub(crate) struct FormatString<'a>(Vec<FormatPart<'a>>);
+
+enum FormatPart<'a> {
+    Text(&'a str),
+    Argument(u8),
+}
+
+impl<'a> FormatString<'a> {
+    pub(crate) fn parse(mut text: &'a str) -> Option<Self> {
+        let mut parts = vec![];
+        while let Some(i) = text.find(['{', '}']) {
+            parts.push(FormatPart::Text(&text[..i]));
+            let brace = &text[i..i + 1];
+            text = &text[i + 1..];
+            if let Some(rest) = text.strip_prefix(brace) {
+                parts.push(FormatPart::Text(brace));
+                text = rest;
+                continue;
+            }
+            if brace == "}" {
+                return None;
+            }
+
+            let (placeholder, rest) = text.split_once('}')?;
+            // The runner accepts an empty format specifier (`{0:}`).
+            let index = placeholder.strip_suffix(':').unwrap_or(placeholder);
+            if !index.bytes().all(|b| b.is_ascii_digit()) {
+                return None;
+            }
+            parts.push(FormatPart::Argument(index.parse().ok()?));
+            text = rest;
+        }
+        parts.push(FormatPart::Text(text));
+        Some(Self(parts))
+    }
+
+    pub(crate) fn arguments(&self) -> impl Iterator<Item = usize> {
+        self.0.iter().filter_map(|part| match part {
+            FormatPart::Argument(i) => Some(usize::from(*i)),
+            FormatPart::Text(_) => None,
+        })
+    }
+
+    pub(crate) fn render<S: AsRef<str>>(
+        &self,
+        mut argument: impl FnMut(usize) -> Option<S>,
+    ) -> Option<String> {
+        let mut result = String::new();
+        for part in &self.0 {
+            match part {
+                FormatPart::Text(text) => result.push_str(text),
+                FormatPart::Argument(i) => result.push_str(argument(usize::from(*i))?.as_ref()),
+            }
+        }
+        Some(result)
+    }
+}
+
 /// Represents a function call in a GitHub Actions expression.
 #[derive(Debug, PartialEq)]
 pub struct Call<'src> {
@@ -114,24 +174,20 @@ impl<'src> Call<'src> {
         Ok(Self { func, args })
     }
 
-    /// Performs constant evaluation of a GitHub Actions expression
-    /// function call.
-    pub(crate) fn consteval(&self) -> Option<Evaluation> {
-        let args = self
-            .args
-            .iter()
-            .map(|arg| arg.consteval())
-            .collect::<Option<Vec<Evaluation>>>()?;
-
-        match &self.func {
-            Function::Format => Self::consteval_format(&args),
-            Function::Contains => Self::consteval_contains(&args),
-            Function::StartsWith => Self::consteval_startswith(&args),
-            Function::EndsWith => Self::consteval_endswith(&args),
-            Function::ToJSON => Self::consteval_tojson(&args),
-            Function::FromJSON => Self::consteval_fromjson(&args),
-            Function::Join => Self::consteval_join(&args),
-            Function::Case => Self::consteval_case(&args),
+    /// Applies a function to already evaluated arguments.
+    ///
+    /// Returns `None` for invalid arguments or functions requiring runtime state.
+    /// Argument counts must satisfy the same constraints as a parsed call.
+    pub fn evaluate(func: Function, args: &[Evaluation]) -> Option<Evaluation> {
+        match func {
+            Function::Format => Self::consteval_format(args),
+            Function::Contains | Function::StartsWith | Function::EndsWith => {
+                Self::consteval_search(func, args)
+            }
+            Function::ToJSON => Self::consteval_tojson(args),
+            Function::FromJSON => Self::consteval_fromjson(args),
+            Function::Join => Self::consteval_join(args),
+            Function::Case => Self::consteval_case(args),
             _ => None,
         }
     }
@@ -140,202 +196,37 @@ impl<'src> Call<'src> {
     ///
     /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/format.ts>
     fn consteval_format(args: &[Evaluation]) -> Option<Evaluation> {
-        if args.is_empty() {
-            return None;
-        }
-
-        let template = args[0].sema().to_string();
-        let mut result = String::new();
-        let mut index = 0;
-
-        while index < template.len() {
-            let lbrace = template[index..].find('{').map(|pos| index + pos);
-            let rbrace = template[index..].find('}').map(|pos| index + pos);
-
-            // Left brace
-            #[allow(clippy::unwrap_used)]
-            if let Some(lbrace_pos) = lbrace
-                && (rbrace.is_none() || rbrace.unwrap() > lbrace_pos)
-            {
-                // Escaped left brace
-                if template.as_bytes().get(lbrace_pos + 1) == Some(&b'{') {
-                    result.push_str(&template[index..=lbrace_pos]);
-                    index = lbrace_pos + 2;
-                    continue;
-                }
-
-                // Left brace, number, optional format specifiers, right brace
-                if let Some(rbrace_pos) = rbrace
-                    && rbrace_pos > lbrace_pos + 1
-                    && let Some(arg_index) = Self::read_arg_index(&template, lbrace_pos + 1)
-                {
-                    // Check parameter count
-                    if 1 + arg_index > args.len() - 1 {
-                        // Invalid format string - too few arguments
-                        return None;
-                    }
-
-                    // Append the portion before the left brace
-                    if lbrace_pos > index {
-                        result.push_str(&template[index..lbrace_pos]);
-                    }
-
-                    // Append the arg
-                    result.push_str(&args[1 + arg_index].sema().to_string());
-                    index = rbrace_pos + 1;
-                    continue;
-                }
-
-                // Invalid format string
-                return None;
-            }
-
-            // Right brace
-            if let Some(rbrace_pos) = rbrace {
-                #[allow(clippy::unwrap_used)]
-                if lbrace.is_none() || lbrace.unwrap() > rbrace_pos {
-                    // Escaped right brace
-                    if template.as_bytes().get(rbrace_pos + 1) == Some(&b'}') {
-                        result.push_str(&template[index..=rbrace_pos]);
-                        index = rbrace_pos + 2;
-                    } else {
-                        // Invalid format string
-                        return None;
-                    }
-                }
-            } else {
-                // Last segment
-                result.push_str(&template[index..]);
-                break;
-            }
-        }
-
+        let (template, args) = args.split_first()?;
+        let template = template.sema().to_string();
+        let result =
+            FormatString::parse(&template)?.render(|i| Some(args.get(i)?.sema().to_string()))?;
         Some(Evaluation::String(result))
     }
 
-    /// Helper function to read argument index from format string.
-    fn read_arg_index(string: &str, start_index: usize) -> Option<usize> {
-        let mut length = 0;
-        let chars: Vec<char> = string.chars().collect();
-
-        // Count the number of digits
-        while start_index + length < chars.len() {
-            let next_char = chars[start_index + length];
-            if next_char.is_ascii_digit() {
-                length += 1;
-            } else {
-                break;
-            }
-        }
-
-        // Validate at least one digit
-        if length < 1 {
+    /// String searches use Actions' case-insensitive comparison. Only
+    /// `contains` also accepts an array, where it compares each element.
+    fn consteval_search(function: Function, args: &[Evaluation]) -> Option<Evaluation> {
+        let [haystack, needle] = args else {
             return None;
-        }
-
-        // Parse the number
-        let number_str: String = chars[start_index..start_index + length].iter().collect();
-        number_str.parse::<usize>().ok()
-    }
-
-    /// Constant-evaluates a `contains(haystack, needle)` call.
-    ///
-    /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/contains.ts>
-    fn consteval_contains(args: &[Evaluation]) -> Option<Evaluation> {
-        if args.len() != 2 {
-            return None;
-        }
-
-        let search = &args[0];
-        let item = &args[1];
-
-        match search {
-            // For primitive types (strings, numbers, booleans, null), do case-insensitive string search
-            Evaluation::String(_)
-            | Evaluation::Number(_)
-            | Evaluation::Boolean(_)
-            | Evaluation::Null => {
-                let search_str = search.sema().to_string().to_uppercase();
-                let item_str = item.sema().to_string().to_uppercase();
-                Some(Evaluation::Boolean(search_str.contains(&item_str)))
+        };
+        let found = match (haystack, needle) {
+            (Evaluation::Array(items), _) if function == Function::Contains => {
+                items.iter().any(|item| item.sema() == needle.sema())
             }
-            // For arrays, check if any element equals the item
-            Evaluation::Array(arr) => {
-                if arr.iter().any(|element| element.sema() == item.sema()) {
-                    Some(Evaluation::Boolean(true))
-                } else {
-                    Some(Evaluation::Boolean(false))
+            (Evaluation::Array(_) | Evaluation::Object(_), _)
+            | (_, Evaluation::Array(_) | Evaluation::Object(_)) => false,
+            _ => {
+                let haystack = EvaluationSema::upper_special(&haystack.sema().to_string());
+                let needle = EvaluationSema::upper_special(&needle.sema().to_string());
+                match function {
+                    Function::Contains => haystack.contains(&needle),
+                    Function::StartsWith => haystack.starts_with(&needle),
+                    Function::EndsWith => haystack.ends_with(&needle),
+                    _ => unreachable!("expected a search function"),
                 }
             }
-            // `contains(object, ...)` is not defined in the reference implementation
-            Evaluation::Object(_) => None,
-        }
-    }
-
-    /// Constant-evaluates a `startsWith(string, prefix)` call.
-    ///
-    /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/startswith.ts>
-    fn consteval_startswith(args: &[Evaluation]) -> Option<Evaluation> {
-        if args.len() != 2 {
-            return None;
-        }
-
-        let search_string = &args[0];
-        let search_value = &args[1];
-
-        // Both arguments must be primitive types (not arrays or dictionaries)
-        match (search_string, search_value) {
-            (
-                Evaluation::String(_)
-                | Evaluation::Number(_)
-                | Evaluation::Boolean(_)
-                | Evaluation::Null,
-                Evaluation::String(_)
-                | Evaluation::Number(_)
-                | Evaluation::Boolean(_)
-                | Evaluation::Null,
-            ) => {
-                // Case-insensitive comparison
-                let haystack = EvaluationSema::upper_special(&search_string.sema().to_string());
-                let needle = EvaluationSema::upper_special(&search_value.sema().to_string());
-                Some(Evaluation::Boolean(haystack.starts_with(&needle)))
-            }
-            // If either argument is not primitive (array or dictionary), return false
-            _ => Some(Evaluation::Boolean(false)),
-        }
-    }
-
-    /// Constant-evaluates an `endsWith(string, suffix)` call.
-    ///
-    /// See: <https://github.com/actions/languageservices/blob/1f3436c3cacc0f99d5d79e7120a5a9270cf13a72/expressions/src/funcs/endswith.ts>
-    fn consteval_endswith(args: &[Evaluation]) -> Option<Evaluation> {
-        if args.len() != 2 {
-            return None;
-        }
-
-        let search_string = &args[0];
-        let search_value = &args[1];
-
-        // Both arguments must be primitive types (not arrays or dictionaries)
-        match (search_string, search_value) {
-            (
-                Evaluation::String(_)
-                | Evaluation::Number(_)
-                | Evaluation::Boolean(_)
-                | Evaluation::Null,
-                Evaluation::String(_)
-                | Evaluation::Number(_)
-                | Evaluation::Boolean(_)
-                | Evaluation::Null,
-            ) => {
-                // Case-insensitive comparison
-                let haystack = EvaluationSema::upper_special(&search_string.sema().to_string());
-                let needle = EvaluationSema::upper_special(&search_value.sema().to_string());
-                Some(Evaluation::Boolean(haystack.ends_with(&needle)))
-            }
-            // If either argument is not primitive (array or dictionary), return false
-            _ => Some(Evaluation::Boolean(false)),
-        }
+        };
+        Some(Evaluation::Boolean(found))
     }
 
     /// Constant-evaluates a `toJSON(value)` call.
@@ -346,11 +237,9 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let value = &args[0];
-        let json_value: serde_json::Value = value.clone().try_into().ok()?;
-        let json_str = serde_json::to_string_pretty(&json_value).ok()?;
-
-        Some(Evaluation::String(json_str))
+        serde_json::to_string_pretty(&args[0])
+            .ok()
+            .map(Evaluation::String)
     }
 
     /// Constant-evaluates a `fromJSON(json_string)` call.
@@ -361,17 +250,7 @@ impl<'src> Call<'src> {
             return None;
         }
 
-        let json_str = args[0].sema().to_string();
-
-        // Match reference implementation: error on empty input
-        if json_str.trim().is_empty() {
-            return None;
-        }
-
-        serde_json::from_str::<serde_json::Value>(&json_str)
-            .ok()?
-            .try_into()
-            .ok()
+        serde_json::from_str(&args[0].sema().to_string()).ok()
     }
 
     /// Constant-evaluates a `join(array, optionalSeparator)` call.
@@ -384,11 +263,9 @@ impl<'src> Call<'src> {
 
         let array_or_string = &args[0];
 
-        // Get separator (default is comma)
-        let separator = if args.len() > 1 {
-            args[1].sema().to_string()
-        } else {
-            ",".to_string()
+        let separator = match args.get(1) {
+            None | Some(Evaluation::Array(_) | Evaluation::Object(_)) => ",".to_owned(),
+            Some(separator) => separator.sema().to_string(),
         };
 
         match array_or_string {
@@ -494,12 +371,12 @@ mod tests {
             // Objects
             (
                 "fromJSON('{}')",
-                Evaluation::Object(std::collections::HashMap::new()),
+                Evaluation::Object(indexmap::IndexMap::new()),
             ),
             (
                 "fromJSON('{\"key\": \"value\"}')",
                 Evaluation::Object({
-                    let mut map = std::collections::HashMap::new();
+                    let mut map = indexmap::IndexMap::new();
                     map.insert("key".to_string(), Evaluation::String("value".to_string()));
                     map
                 }),
@@ -507,7 +384,7 @@ mod tests {
             (
                 "fromJSON('{\"num\": 42, \"bool\": true, \"null\": null}')",
                 Evaluation::Object({
-                    let mut map = std::collections::HashMap::new();
+                    let mut map = indexmap::IndexMap::new();
                     map.insert("num".to_string(), Evaluation::Number(42.0));
                     map.insert("bool".to_string(), Evaluation::Boolean(true));
                     map.insert("null".to_string(), Evaluation::Null);
@@ -518,12 +395,12 @@ mod tests {
             (
                 "fromJSON('{\"array\": [1, 2], \"object\": {\"nested\": true}}')",
                 Evaluation::Object({
-                    let mut map = std::collections::HashMap::new();
+                    let mut map = indexmap::IndexMap::new();
                     map.insert(
                         "array".to_string(),
                         Evaluation::Array(vec![Evaluation::Number(1.0), Evaluation::Number(2.0)]),
                     );
-                    let mut nested_map = std::collections::HashMap::new();
+                    let mut nested_map = indexmap::IndexMap::new();
                     nested_map.insert("nested".to_string(), Evaluation::Boolean(true));
                     map.insert("object".to_string(), Evaluation::Object(nested_map));
                     map
@@ -569,10 +446,7 @@ mod tests {
 
         let test_cases = &[
             (Evaluation::Array(vec![Evaluation::Number(1.0)]), "Array"),
-            (
-                Evaluation::Object(std::collections::HashMap::new()),
-                "Object",
-            ),
+            (Evaluation::Object(indexmap::IndexMap::new()), "Object"),
         ];
 
         for (result, expected) in test_cases {
@@ -686,6 +560,11 @@ mod tests {
                 "format('Hello world')",
                 Evaluation::String("Hello world".to_string()),
             ),
+            ("format('é {0:}', 'ok')", Evaluation::String("é ok".into())),
+            (
+                "format('fixed', fromJSON('invalid'))",
+                Evaluation::String("fixed".into()),
+            ),
             // Trailing fragments
             ("format('abc {{')", Evaluation::String("abc {".to_string())),
             ("format('abc }}')", Evaluation::String("abc }".to_string())),
@@ -714,7 +593,9 @@ mod tests {
             "format('{1}', 'test')",       // Argument index out of bounds
             "format('{0} {2}', 'a', 'b')", // Argument index out of bounds
             "format('{}', 'test')",        // Empty braces
-            "format('{-1}', 'test')",      // Negative index (invalid)
+            "format('{0suffix}', 'test')",
+            "format('{256}', 'test')",
+            "format('{-1}', 'test')", // Negative index (invalid)
         ];
 
         for expr_str in error_cases {
@@ -784,6 +665,14 @@ mod tests {
             (
                 "contains(fromJSON('[true, false, null]'), null)",
                 Evaluation::Boolean(true),
+            ),
+            (
+                "contains(fromJSON('{}'), 'key')",
+                Evaluation::Boolean(false),
+            ),
+            (
+                "contains('Array', fromJSON('[]'))",
+                Evaluation::Boolean(false),
             ),
             // Empty array
             (
@@ -1104,6 +993,14 @@ mod tests {
             ),
             // Invalid: `case` with non-boolean predicate
             ("case(1, 'yes', 0, 'no', 'maybe')", None),
+            ("case('yes', 'a', 'b')", None),
+            ("case(null, 'a', 'b')", None),
+            ("case(fromJSON('[]'), 'a', 'b')", None),
+            ("case(hashFiles('*.txt'), 'a', 'b')", None),
+            (
+                "case(false, fromJSON('invalid'), 'b')",
+                Some(Evaluation::String("b".into())),
+            ),
         ];
 
         for (expr_str, expected) in test_cases {
@@ -1188,7 +1085,7 @@ mod tests {
             (
                 "fromJSON('{\"key\": \"value\"}')",
                 Evaluation::Object({
-                    let mut map = std::collections::HashMap::new();
+                    let mut map = indexmap::IndexMap::new();
                     map.insert("key".to_string(), Evaluation::String("value".to_string()));
                     map
                 }),

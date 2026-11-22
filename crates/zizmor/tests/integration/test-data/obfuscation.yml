@@ -55,3 +55,7 @@ jobs:
           echo ${{ format('{0}, {1}', github.event.number, format('{0} {1}', github.event.number, true || false)) }}
           # inner [...] is reducible
           echo ${{ foobar[format('{0}', 'event')]}}
+
+      # Removing even an unreachable status check would restore the implicit success() guard.
+      - if: ${{ true || cancelled() }}
+        run: echo done

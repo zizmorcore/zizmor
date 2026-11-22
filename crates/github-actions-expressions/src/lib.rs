@@ -14,6 +14,7 @@ use crate::{
 
 pub mod call;
 pub mod context;
+pub mod evaluation;
 pub mod identifier;
 mod lexer;
 pub mod literal;
@@ -103,32 +104,10 @@ impl<'a> SpannedExpr<'a> {
     /// For dataflow contexts, see [`SpannedExpr::dataflow_contexts`].
     pub fn contexts(&self) -> Vec<(&Context<'a>, &Origin<'a>)> {
         let mut contexts = vec![];
-
-        match self.deref() {
-            Expr::Index(expr) => contexts.extend(expr.contexts()),
-            Expr::Call(Call { func: _, args }) => {
-                for arg in args {
-                    contexts.extend(arg.contexts());
-                }
-            }
-            Expr::Context(ctx) => {
-                // Record the context itself.
-                contexts.push((ctx, &self.origin));
-
-                // The context's parts can also contain independent contexts,
-                // e.g. computed indices like `bar.baz` in `foo[bar.baz]`.
-                ctx.parts
-                    .iter()
-                    .for_each(|part| contexts.extend(part.contexts()));
-            }
-            Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {
-                contexts.extend(lhs.contexts());
-                contexts.extend(rhs.contexts());
-            }
-            Expr::UnExpr { op: _, expr } => contexts.extend(expr.contexts()),
-            _ => (),
+        if let Expr::Context(ctx) = &self.inner {
+            contexts.push((ctx, &self.origin));
         }
-
+        contexts.extend(self.children().flat_map(Self::contexts));
         contexts
     }
 
@@ -227,73 +206,26 @@ impl<'a> SpannedExpr<'a> {
     /// A computed index is any index operation with a non-literal
     /// evaluation, e.g. `foo[a.b.c]`.
     pub fn computed_indices(&self) -> Vec<&Self> {
-        let mut index_exprs = vec![];
-
-        match self.deref() {
-            Expr::Call(Call { func: _, args }) => {
-                for arg in args {
-                    index_exprs.extend(arg.computed_indices());
-                }
-            }
-            Expr::Index(spanned_expr)
-                // NOTE: We consider any non-literal, non-star index computed.
-                if !spanned_expr.is_literal() && !matches!(spanned_expr.inner, Expr::Star) => {
-                    index_exprs.push(self);
-                }
-            Expr::Context(context) => {
-                for part in &context.parts {
-                    index_exprs.extend(part.computed_indices());
-                }
-            }
-            Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {
-                index_exprs.extend(lhs.computed_indices());
-                index_exprs.extend(rhs.computed_indices());
-            }
-            Expr::UnExpr { op: _, expr } => {
-                index_exprs.extend(expr.computed_indices());
-            }
-            _ => {}
+        if let Expr::Index(index) = &self.inner
+            && !matches!(index.inner, Expr::Literal(_) | Expr::Star)
+        {
+            return vec![self];
         }
-
-        index_exprs
+        self.children().flat_map(Self::computed_indices).collect()
     }
 
     /// Returns all non-literal subexpressions within this expression
-    /// that can be constant-evaluated, along with their evaluations.
+    /// that can be replaced by their constant evaluations. See [`Expr::reducible_constant`].
     ///
     /// Literals are skipped because they are already simplified.
     pub fn consteval_subexprs(&self) -> Vec<(&Self, Evaluation)> {
         if !self.is_literal()
-            && let Some(evaluation) = self.consteval()
+            && let Some(evaluation) = self.reducible_constant()
         {
             return vec![(self, evaluation)];
         }
 
-        let mut subexprs = vec![];
-
-        match self.deref() {
-            Expr::Call(Call { func: _, args }) => {
-                for arg in args {
-                    subexprs.extend(arg.consteval_subexprs());
-                }
-            }
-            Expr::Context(ctx) => {
-                // Context indices may contain constant subexpressions.
-                for part in &ctx.parts {
-                    subexprs.extend(part.consteval_subexprs());
-                }
-            }
-            Expr::BinExpr(BinExpr { lhs, op: _, rhs }) => {
-                subexprs.extend(lhs.consteval_subexprs());
-                subexprs.extend(rhs.consteval_subexprs());
-            }
-            Expr::UnExpr { op: _, expr } => subexprs.extend(expr.consteval_subexprs()),
-
-            Expr::Index(expr) => subexprs.extend(expr.consteval_subexprs()),
-            _ => {}
-        }
-
-        subexprs
+        self.children().flat_map(Self::consteval_subexprs).collect()
     }
 }
 
@@ -344,6 +276,43 @@ pub enum Expr<'src> {
 }
 
 impl<'src> Expr<'src> {
+    /// Immediate operands in source order, including computed context indices.
+    fn children(&self) -> impl Iterator<Item = &SpannedExpr<'src>> {
+        use std::slice::from_ref;
+
+        let (operands, last): (&[_], _) = match self {
+            Self::Call(call) => (call.args.as_slice(), None),
+            Self::Context(context) => (context.parts.as_slice(), None),
+            Self::BinExpr(bin) => (from_ref(bin.lhs.as_ref()), Some(bin.rhs.as_ref())),
+            Self::Index(expr) | Self::UnExpr { expr, .. } => (from_ref(expr.as_ref()), None),
+            Self::Literal(_) | Self::Star | Self::Identifier(_) => (&[], None),
+        };
+        operands.iter().chain(last)
+    }
+
+    fn has_status_check(&self) -> bool {
+        matches!(
+            self,
+            Self::Call(Call {
+                func: Function::Always
+                    | Function::Success
+                    | Function::Failure
+                    | Function::Cancelled,
+                ..
+            })
+        ) || self.children().any(|child| child.has_status_check())
+    }
+
+    /// A constant that can replace this expression without removing an Actions
+    /// status check. In an `if`, the presence of even an unreachable status
+    /// check suppresses the runner's implicit `success()` condition.
+    pub fn reducible_constant(&self) -> Option<Evaluation> {
+        if self.has_status_check() {
+            return None;
+        }
+        self.consteval()
+    }
+
     /// Convenience API for making an [`Expr::Identifier`].
     fn ident(i: &'src str) -> Self {
         Self::Identifier(Identifier(i))
@@ -425,12 +394,13 @@ impl From<bool> for Expr<'_> {
 ///
 /// This type represents the possible values that can result from evaluating
 /// GitHub Actions expressions.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(untagged)]
 pub enum Evaluation {
     /// A string value (includes both string literals and stringified other types).
     String(String),
     /// A numeric value.
-    Number(f64),
+    Number(#[serde(serialize_with = "serialize_number")] f64),
     /// A boolean value.
     Boolean(bool),
     /// The null value.
@@ -438,79 +408,33 @@ pub enum Evaluation {
     /// An array value. Array evaluations can only be realized through `fromJSON`.
     Array(Vec<Self>),
     /// An object value. Object evaluations can only be realized through `fromJSON`.
-    Object(std::collections::HashMap<String, Self>),
+    Object(indexmap::IndexMap<String, Self>),
+}
+
+// Actions renders whole numbers without a trailing decimal point.
+fn serialize_number<S: serde::Serializer>(value: &f64, serializer: S) -> Result<S::Ok, S::Error> {
+    if !value.is_finite() {
+        return Err(serde::ser::Error::custom("non-finite JSON number"));
+    }
+    if value.fract() == 0.0 && (i64::MIN as f64..i64::MAX as f64).contains(value) {
+        return serializer.serialize_i64(*value as i64);
+    }
+    serializer.serialize_f64(*value)
 }
 
 impl TryFrom<serde_json::Value> for Evaluation {
     type Error = ();
 
     fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
-        match value {
-            serde_json::Value::Null => Ok(Self::Null),
-            serde_json::Value::Bool(b) => Ok(Self::Boolean(b)),
-            serde_json::Value::Number(n) => {
-                if let Some(f) = n.as_f64() {
-                    Ok(Self::Number(f))
-                } else {
-                    Err(())
-                }
-            }
-            serde_json::Value::String(s) => Ok(Self::String(s)),
-            serde_json::Value::Array(arr) => {
-                let elements = arr
-                    .into_iter()
-                    .map(|elem| elem.try_into())
-                    .collect::<Result<_, _>>()?;
-                Ok(Self::Array(elements))
-            }
-            serde_json::Value::Object(obj) => {
-                let mut map = std::collections::HashMap::new();
-                for (key, value) in obj {
-                    map.insert(key, value.try_into()?);
-                }
-                Ok(Self::Object(map))
-            }
-        }
+        serde_json::from_value(value).map_err(|_| ())
     }
 }
 
-impl TryInto<serde_json::Value> for Evaluation {
+impl TryFrom<Evaluation> for serde_json::Value {
     type Error = ();
 
-    fn try_into(self) -> Result<serde_json::Value, Self::Error> {
-        match self {
-            Self::Null => Ok(serde_json::Value::Null),
-            Self::Boolean(b) => Ok(serde_json::Value::Bool(b)),
-            Self::Number(n) => {
-                // NOTE: serde_json has different internal representations
-                // for integers and floats, so we need to handle both cases
-                // to ensure we serialize integers without a decimal point.
-                if n.fract() == 0.0 {
-                    Ok(serde_json::Value::Number(serde_json::Number::from(
-                        n as i64,
-                    )))
-                } else if let Some(num) = serde_json::Number::from_f64(n) {
-                    Ok(serde_json::Value::Number(num))
-                } else {
-                    Err(())
-                }
-            }
-            Self::String(s) => Ok(serde_json::Value::String(s)),
-            Self::Array(arr) => {
-                let elements = arr
-                    .into_iter()
-                    .map(|elem| elem.try_into())
-                    .collect::<Result<_, _>>()?;
-                Ok(serde_json::Value::Array(elements))
-            }
-            Self::Object(obj) => {
-                let mut map = serde_json::Map::new();
-                for (key, value) in obj {
-                    map.insert(key, value.try_into()?);
-                }
-                Ok(serde_json::Value::Object(map))
-            }
-        }
+    fn try_from(value: Evaluation) -> Result<Self, Self::Error> {
+        serde_json::to_value(value).map_err(|_| ())
     }
 }
 
@@ -703,7 +627,7 @@ impl<'src> Expr<'src> {
     /// if successful.
     ///
     /// This implementation follows GitHub Actions' evaluation semantics as documented at:
-    /// https://docs.github.com/en/actions/reference/workflows-and-actions/expressions
+    /// <https://docs.github.com/en/actions/reference/workflows-and-actions/expressions>
     ///
     /// # Examples
     ///
@@ -719,51 +643,11 @@ impl<'src> Expr<'src> {
     /// assert_eq!(result, Evaluation::Boolean(false));
     /// ```
     pub fn consteval(&self) -> Option<Evaluation> {
-        match self {
-            Expr::Literal(literal) => Some(literal.consteval()),
-
-            Expr::BinExpr(BinExpr { lhs, op, rhs }) => {
-                let lhs_val = lhs.consteval()?;
-                let rhs_val = rhs.consteval()?;
-
-                match op {
-                    BinOp::And => {
-                        // GitHub Actions && semantics: if LHS is falsy, return LHS, else return RHS
-                        if lhs_val.as_boolean() {
-                            Some(rhs_val)
-                        } else {
-                            Some(lhs_val)
-                        }
-                    }
-                    BinOp::Or => {
-                        // GitHub Actions || semantics: if LHS is truthy, return LHS, else return RHS
-                        if lhs_val.as_boolean() {
-                            Some(lhs_val)
-                        } else {
-                            Some(rhs_val)
-                        }
-                    }
-                    BinOp::Eq => Some(Evaluation::Boolean(lhs_val.sema() == rhs_val.sema())),
-                    BinOp::Neq => Some(Evaluation::Boolean(lhs_val.sema() != rhs_val.sema())),
-                    BinOp::Lt => Some(Evaluation::Boolean(lhs_val.sema() < rhs_val.sema())),
-                    BinOp::Le => Some(Evaluation::Boolean(lhs_val.sema() <= rhs_val.sema())),
-                    BinOp::Gt => Some(Evaluation::Boolean(lhs_val.sema() > rhs_val.sema())),
-                    BinOp::Ge => Some(Evaluation::Boolean(lhs_val.sema() >= rhs_val.sema())),
-                }
-            }
-
-            Expr::UnExpr { op, expr } => {
-                let val = expr.consteval()?;
-                match op {
-                    UnOp::Not => Some(Evaluation::Boolean(!val.as_boolean())),
-                }
-            }
-
-            Expr::Call(call) => call.consteval(),
-
-            // Non-constant expressions
-            _ => None,
-        }
+        let values = evaluation::Evaluator::default().evaluate(self, &mut evaluation::Constants);
+        let [value] = &values[..] else {
+            return None;
+        };
+        value.value.concrete()
     }
 }
 
@@ -2150,7 +2034,7 @@ mod tests {
             (Evaluation::String("".to_string()), false),
             (Evaluation::String("hello".to_string()), true),
             (Evaluation::Array(vec![]), true), // Arrays are always truthy
-            (Evaluation::Object(std::collections::HashMap::new()), true), // Dictionaries are always truthy
+            (Evaluation::Object(indexmap::IndexMap::new()), true), // Dictionaries are always truthy
         ];
 
         for (result, expected) in test_cases {
@@ -2364,6 +2248,11 @@ mod tests {
         for (source, expected) in [
             // Literals cannot be simplified further.
             ("'foo'", vec![]),
+            // Keep the status check and fold its independent sibling.
+            (
+                "always() && (1 == 1)",
+                vec![("(1 == 1)", Evaluation::Boolean(true))],
+            ),
             // Return only the outermost evaluable expression in each subtree.
             (
                 "format('{0}, {1}', github.event.number, format('{0}', fromJSON('\"abc\"')))",
