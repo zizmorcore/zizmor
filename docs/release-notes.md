@@ -9,6 +9,8 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+## 1.33.0
+
 ### New Features 🌈
 
 * **New audit**: [dangerous-checkout] detects dangerous Git checkout
