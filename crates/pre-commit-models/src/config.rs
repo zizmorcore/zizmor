@@ -4,6 +4,7 @@
 
 use crate::common::{self, FilePattern, LanguageVersion};
 use indexmap::IndexMap;
+use serde::de::Error as _;
 
 /// A single pre-commit configuration, containing one or more repositories,
 /// each of which may reference one or more hooks.
@@ -103,6 +104,9 @@ pub enum RemoteRepoTarget {
 
     /// Covers SCP-style Git targets.
     Scp(Scp),
+
+    /// Covers paths passed directly into Git, e.g. `.` or `../foo`.
+    Path(RepoPath),
 }
 
 impl RemoteRepoTarget {
@@ -110,6 +114,7 @@ impl RemoteRepoTarget {
         match self {
             Self::Url(url) => url.as_str(),
             Self::Scp(scp) => scp.raw(),
+            Self::Path(path) => path.path.as_str(),
         }
     }
 }
@@ -214,6 +219,37 @@ impl Scp {
     /// For example, this will be `/abcd` in `foo@example.com/abcd`.
     pub fn path(&self) -> &str {
         self.borrow_dependent().path
+    }
+}
+
+/// A Git repository path, i.e. a bare bath passed to `repo: ...`.
+///
+/// We store a second copy of this path in `file://{path}` form as well.
+#[derive(Debug, PartialEq)]
+pub struct RepoPath {
+    /// The verbatim path.
+    pub path: String,
+
+    /// The path, but in `file://` URL form.
+    pub url: url::Url,
+}
+
+impl<'de> serde::Deserialize<'de> for RepoPath {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let path = String::deserialize(deserializer)?;
+
+        // Note: this is slightly pessimized. The first URL parse should always fail since
+        // `RepoPath` is deserialized through `RemoteRepoTarget` and the URL variant matches before it.
+        // However, trying it first ensures that we don't accidentally do `file://file://` or similar
+        // by changing our callsites in the future.
+        let url = url::Url::parse(&path)
+            .or_else(|_| url::Url::parse(&format!("file://{path}")))
+            .map_err(D::Error::custom)?;
+
+        Ok(Self { path, url })
     }
 }
 

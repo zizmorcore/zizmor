@@ -1,0 +1,5 @@
+repos:
+  - repo: .
+    rev: v1.0.0
+    hooks:
+      - id: my-hook
