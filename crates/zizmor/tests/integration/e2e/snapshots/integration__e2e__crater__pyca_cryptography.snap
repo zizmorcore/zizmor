@@ -220,7 +220,7 @@ help[template-injection]: code injection via template expansion
    |       --- this run block
 ...
 90 | ...     OPENSSL_HASH=$(echo "${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-$CONFIG_FLAGS" | sha1sum | sed '...
-   |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -231,7 +231,7 @@ help[template-injection]: code injection via template expansion
    |         --- this run block
 ...
 90 |           OPENSSL_HASH=$(echo "${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-$CONFIG_FLAGS" | sha1sum | sed...
-   |                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -242,7 +242,7 @@ help[template-injection]: code injection via template expansion
    |         --- this run block
 ...
 93 |           echo "OSSL_INFO=${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${CONFIG_FLAGS}" >> $GITHUB_ENV
-   |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -253,7 +253,7 @@ help[template-injection]: code injection via template expansion
    |         --- this run block
 ...
 93 |           echo "OSSL_INFO=${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${CONFIG_FLAGS}" >> $GITHUB_ENV
-   |                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -264,7 +264,7 @@ help[template-injection]: code injection via template expansion
    |       --- this run block
 ...
 94 | ...     echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${O...
-   |                             ^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                             ^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -275,7 +275,7 @@ help[template-injection]: code injection via template expansion
    |         --- this run block
 ...
 94 |           echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-$...
-   |                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -286,7 +286,7 @@ help[template-injection]: code injection via template expansion
    |       --- this run block
 ...
 94 | ...     echo "OSSL_PATH=${{ github.workspace }}/osslcache/${{ matrix.PYTHON.OPENSSL.TYPE }}-${{ matrix.PYTHON.OPENSSL.VERSION }}-${O...
-   |                                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |                                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
    |
    = note: audit confidence → High
 
@@ -296,7 +296,7 @@ help[template-injection]: code injection via template expansion
 141 |         run: |
     |         --- this run block
 142 |             nox --no-install --  --color=yes --wycheproof-root=wycheproof --x509-limbo-root=x509-limbo ${{ matrix.PYTHON.NOXARGS }}
-    |                                                                                                            ^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                                                                            ^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -306,7 +306,7 @@ help[template-injection]: code injection via template expansion
 389 |         run: |
     |         --- this run block
 390 |             echo "OPENSSL_DIR=C:/openssl-${{ matrix.WINDOWS.WINDOWS }}" >> $GITHUB_ENV
-    |                                              ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -314,7 +314,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/ci.yml:498:70
     |
 498 |       - run: source .venv/bin/activate && ./.github/downstream.d/${{ matrix.DOWNSTREAM }}.sh install
-    |         --- this run block                                           ^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         --- this run block                                           ^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -322,7 +322,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/ci.yml:519:70
     |
 519 |       - run: source .venv/bin/activate && ./.github/downstream.d/${{ matrix.DOWNSTREAM }}.sh run
-    |         --- this run block                                           ^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         --- this run block                                           ^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -776,7 +776,7 @@ help[template-injection]: code injection via template expansion
 142 |         run: |
     |         --- this run block
 143 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
-    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -787,7 +787,7 @@ help[template-injection]: code injection via template expansion
     |         --- this run block
 143 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
 144 |               PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}"
-    |                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -798,7 +798,7 @@ help[template-injection]: code injection via template expansion
     |         --- this run block
 ...
 152 |               manylinux-entrypoint uv build --python=/opt/python/${{ matrix.PYTHON.VERSION }}/bin/python --wheel --require-hashes -...
-    |                                                                      ^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                                      ^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -806,7 +806,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/wheel-builder.yml:155:43
     |
 155 |       - run: auditwheel repair --plat ${{ matrix.MANYLINUX.NAME }} tmpwheelhouse/cryptography*.whl -w wheelhouse/
-    |         --- this run block                ^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         --- this run block                ^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -814,7 +814,7 @@ help[template-injection]: code injection via template expansion
    --> .github/workflows/wheel-builder.yml:275:18
     |
 275 |       - run: ${{ matrix.PYTHON.BIN_PATH }} -m pip install -r "${UV_REQUIREMENTS_PATH}"
-    |         ---      ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |         ---      ^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |         |
     |         this run block
     |
@@ -826,7 +826,7 @@ help[template-injection]: code injection via template expansion
 284 |         run: |
     |         --- this run block
 285 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
-    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -837,7 +837,7 @@ help[template-injection]: code injection via template expansion
     |         --- this run block
 285 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
 286 |               PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}"
-    |                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -847,7 +847,7 @@ help[template-injection]: code injection via template expansion
 366 |         run: |
     |         --- this run block
 367 |             echo "OPENSSL_DIR=C:/openssl-${{ matrix.WINDOWS.WINDOWS }}" >> $GITHUB_ENV
-    |                                              ^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -857,7 +857,7 @@ help[template-injection]: code injection via template expansion
 374 |       - run: |
     |         --- this run block
 375 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
-    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 
@@ -868,7 +868,7 @@ help[template-injection]: code injection via template expansion
     |         --- this run block
 375 |           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; then
 376 |               PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}"
-    |                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ prefer passing this value through the environment
     |
     = note: audit confidence → High
 

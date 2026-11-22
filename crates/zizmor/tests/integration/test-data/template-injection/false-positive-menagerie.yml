@@ -12,8 +12,6 @@ jobs:
     steps:
       - name: false-positive-menagerie
         run: |
-          # PR#402
-          echo "${{ github.action_path }}"
           # PR#412
           echo "${{ github.server_url }}"
           # PR#445

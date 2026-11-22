@@ -3,16 +3,11 @@
 //! These models enrich the models under [`github_actions_models::workflow`],
 //! providing higher-level APIs for zizmor to use.
 
-use github_actions_expressions::context::{self};
 use github_actions_models::{
     common::{self, CacheMode, expr::LoE},
-    workflow::{
-        self, TriggerSyntax,
-        event::{BareEvent, OptionalBody},
-        job,
-    },
+    workflow::{self, TriggerSyntax, event::BareEvent, job},
 };
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 use terminal_link::Link;
 
@@ -30,7 +25,7 @@ use crate::{
         workflow::matrix::Matrix,
     },
     registry::input::CollectionError,
-    utils::{self, once::warn_once},
+    utils::once::warn_once,
 };
 
 static WORKFLOW_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
@@ -84,64 +79,63 @@ impl std::ops::Deref for Workflow {
     }
 }
 
-impl HasInputs for workflow::event::WorkflowCall {
-    fn get_input(&self, name: &str) -> Option<Capability> {
-        let input = self.inputs.get(name)?;
-
-        Some(match input.r#type {
-            workflow::event::WorkflowCallInputType::Boolean => Capability::Fixed,
-            workflow::event::WorkflowCallInputType::Number => Capability::Fixed,
-            workflow::event::WorkflowCallInputType::String => Capability::Arbitrary,
-        })
-    }
-}
-
-impl HasInputs for workflow::event::WorkflowDispatch {
-    fn get_input(&self, name: &str) -> Option<Capability> {
-        let input = self.inputs.get(name)?;
-
-        Some(match input.r#type {
-            workflow::event::WorkflowDispatchInputType::Boolean => Capability::Fixed,
-            workflow::event::WorkflowDispatchInputType::Choice => Capability::Fixed,
-            workflow::event::WorkflowDispatchInputType::Environment => Capability::Fixed,
-            workflow::event::WorkflowDispatchInputType::Number => Capability::Fixed,
-            workflow::event::WorkflowDispatchInputType::String => Capability::Arbitrary,
-        })
-    }
-}
-
-impl HasInputs for Workflow {
-    fn get_input(&self, name: &str) -> Option<Capability> {
-        let events = &self.on.events;
-
-        let wc_cap = {
-            if let OptionalBody::Body(wc) = &events.workflow_call {
-                wc.get_input(name)
-            } else {
-                None
-            }
-        };
-
-        let wd_cap = {
-            if let OptionalBody::Body(wd) = &events.workflow_dispatch {
-                wd.get_input(name)
-            } else {
-                None
-            }
-        };
-
-        match (wc_cap, wd_cap) {
-            (Some(cap1), Some(cap2)) => Some(cap1.unify(cap2)),
-            (Some(single), None) | (None, Some(single)) => Some(single),
-            (None, None) => None,
-        }
-    }
-}
-
 impl Workflow {
+    fn validate_jobs(workflow: &workflow::Workflow) -> Result<(), CollectionError> {
+        let ids: HashMap<_, _> = workflow
+            .jobs
+            .keys()
+            .enumerate()
+            .map(|(i, name)| (name.to_ascii_lowercase(), i))
+            .collect();
+        let mut dependents = vec![vec![]; workflow.jobs.len()];
+        let mut remaining = vec![0; workflow.jobs.len()];
+        for (i, (id, job)) in workflow.jobs.iter().enumerate() {
+            let needs = match job {
+                workflow::Job::NormalJob(job) => {
+                    if let Some(matrix) = job.strategy.as_ref().and_then(|s| s.matrix.as_ref()) {
+                        serde_json::to_value(matrix).map_err(|error| {
+                            CollectionError::InvalidInput(format!(
+                                "invalid matrix in job {id}: {error}"
+                            ))
+                        })?;
+                    }
+                    &job.needs
+                }
+                workflow::Job::ReusableWorkflowCallJob(job) => &job.needs,
+            };
+            for name in needs {
+                if let Some(&parent) = ids.get(&name.to_ascii_lowercase()) {
+                    dependents[parent].push(i);
+                    remaining[i] += 1;
+                }
+            }
+        }
+
+        // A job becomes ready once we have visited all its dependencies.
+        let mut ready: Vec<_> = (0..remaining.len())
+            .filter(|&i| remaining[i] == 0)
+            .collect();
+        while let Some(id) = ready.pop() {
+            for &child in &dependents[id] {
+                remaining[child] -= 1;
+                if remaining[child] == 0 {
+                    ready.push(child);
+                }
+            }
+        }
+        if remaining.iter().any(|&count| count != 0) {
+            return Err(CollectionError::InvalidInput(
+                "cyclic job dependencies".into(),
+            ));
+        }
+        Ok(())
+    }
+
     /// Load a workflow from a buffer, with an assigned name.
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
         let inner = Self::validate(&contents)?;
+
+        Self::validate_jobs(&inner)?;
 
         let document = yamlpath::Document::new(&contents)?;
 
@@ -268,6 +262,23 @@ pub(crate) struct NormalJob<'doc> {
 impl<'doc> NormalJob<'doc> {
     pub(crate) fn new(id: &'doc str, inner: &'doc job::NormalJob, parent: &'doc Workflow) -> Self {
         Self { id, inner, parent }
+    }
+
+    /// The job named by a direct `needs` dependency.
+    pub(crate) fn dependency(&self, name: &str) -> Option<Job<'doc>> {
+        if !self
+            .needs
+            .iter()
+            .any(|need| need.eq_ignore_ascii_case(name))
+        {
+            return None;
+        }
+        let (id, model) = self
+            .parent
+            .jobs
+            .iter()
+            .find(|(id, _)| id.eq_ignore_ascii_case(name))?;
+        Some(Job::new(id, model, self.parent))
     }
 
     /// This job's matrix, if it has one.
@@ -612,8 +623,11 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         (self.steps_index, self.parallel_index)
     }
 
-    fn env_is_static(&self, ctx: &context::Context) -> bool {
-        utils::env_is_static(ctx, &[self.env(), &self.job().env, &self.workflow().env])
+    fn evaluate(
+        &self,
+        expr: &github_actions_expressions::Expr<'_>,
+    ) -> super::evaluation::Evaluated<'doc> {
+        super::evaluation::Site::Step(self).evaluate(expr)
     }
 
     fn uses(&self) -> Option<&'doc common::Uses> {
@@ -622,10 +636,6 @@ impl<'doc> StepCommon<'doc> for Step<'doc> {
         };
 
         Some(uses)
-    }
-
-    fn matrix(&self) -> Option<Matrix<'doc>> {
-        self.job().matrix()
     }
 
     fn body(&self) -> Option<StepBodyCommon<'doc>> {
@@ -907,7 +917,7 @@ name: Test Workflow
 on:
   workflow_dispatch:
     inputs:
-      foo:
+      FOO:
         type: string
         required: true
       bar:
@@ -934,7 +944,7 @@ jobs:
             crate::InputKey::local("fakegroup".into(), "dummy", None, None),
         )?;
 
-        // `foo` unifies in favor of the more permissive capability,
+        // `FOO` and `foo` unify in favor of the more permissive capability,
         // which is `Capability::Arbitrary` from the `string` input type
         // under `workflow_dispatch`.
         let foo_cap = workflow.get_input("foo").unwrap();

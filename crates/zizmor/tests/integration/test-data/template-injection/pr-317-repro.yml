@@ -14,15 +14,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - foo: 123
-            bar: abc
+          - bar: abc
+            owner: abc
 
-          - foo: 456
-            # BUG: this should be detected as a matrix expansion
-            # candidate containing an expression, but was not
-            # before #317.
-            bar: prefix-${{ github.repository_owner }}
+          # Both values contain an expression, but only the title is arbitrary.
+          - bar: prefix-${{ github.event.pull_request.title }}
+            owner: prefix-${{ github.repository_owner }}
 
     steps:
       - run: |
           echo ${{ matrix.bar }}
+          echo ${{ matrix.owner }}

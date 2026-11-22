@@ -1,8 +1,7 @@
 //! Helper routines.
 
 use camino::Utf8Path;
-use github_actions_expressions::context::{Context, ContextPattern};
-use github_actions_models::common::{Env, expr::LoE};
+use github_actions_expressions::context::ContextPattern;
 use std::ops::{Deref, Range};
 use std::sync::LazyLock;
 
@@ -363,27 +362,8 @@ pub(crate) fn extract_fenced_expression(
     text: &str,
     offset: usize,
 ) -> Option<(ExtractedExpr<'_>, Range<usize>)> {
-    let view = &text[offset..];
-    let start = view.find("${{")?;
-
-    let mut end = None;
-    let mut in_string = false;
-
-    for (idx, char) in view.bytes().enumerate().skip(start) {
-        if char == b'\'' {
-            in_string = !in_string;
-        } else if !in_string && view.as_bytes()[idx] == b'}' && view.as_bytes()[idx - 1] == b'}' {
-            end = Some(idx);
-            break;
-        }
-    }
-
-    end.map(|end| {
-        (
-            ExtractedExpr::from_fenced(&view[start..=end]).expect("impossible"),
-            start + offset..end + offset + 1,
-        )
-    })
+    let span = github_actions_expressions::evaluation::fenced_span(text, offset)?;
+    Some((ExtractedExpr::from_fenced(&text[span.clone()])?, span))
 }
 
 /// Extract zero or more fenced expressions from the given free-form text.
@@ -456,55 +436,6 @@ pub(crate) fn parse_fenced_expressions_from_routable<
     }
 
     exprs
-}
-
-/// Returns whether the given `env.name` environment access is "static,"
-/// i.e. is not influenced by another expression.
-///
-/// NOTE: This function assumes that you pass it an `env`-prefixed
-/// context, e.g. `env.FOOBAR` or `env['FOOBAR']`. Passing it any other
-/// context does not have well-defined behavior.
-pub(crate) fn env_is_static(env_ctx: &Context, envs: &[&LoE<Env>]) -> bool {
-    // First, see if this environment context matches any of the default
-    // non-static environment variables.
-    for (_, env_ctx_pat, _, is_static) in DEFAULT_ENVIRONMENT_VARIABLES {
-        if env_ctx_pat.matches(env_ctx) {
-            return *is_static;
-        }
-    }
-
-    let Some(env_name) = env_ctx.single_tail() else {
-        // We expect exactly one tail, e.g. `env.FOOBAR` or `env['FOOBAR']`.
-        // Anything other than that suggests that the user has given us
-        // a semantically invalid env context, so we assume it's not static.
-        return false;
-    };
-
-    for env in envs {
-        match env {
-            // Any `env:` that is wholly an expression cannot be static.
-            LoE::Expr(_) => return false,
-            LoE::Literal(env) => {
-                // TODO: We probably need to do a case-insensitive lookup here.
-                let Some(value) = env.get(env_name) else {
-                    continue;
-                };
-
-                // A present `env:` value is static if it has no interior expressions.
-                // TODO: We could instead return the interior expressions here
-                // for further analysis, to further eliminate false positives
-                // e.g. `env.foo: ${{ something-safe }}`.
-                return extract_fenced_expressions(&value.to_string()).is_empty();
-            }
-        }
-    }
-
-    // If we don't have an explicit `env:` block containing this variable
-    // and it isn't a default variable, then we assume it's not static.
-    // This is probably slightly over sensitive, but assuming the opposite
-    // would leave open `GITHUB_ENV` interactions that we can't otherwise
-    // reason about.
-    false
 }
 
 /// Returns the name within the given `shell:` stanza.
@@ -611,14 +542,13 @@ pub(crate) fn is_ci() -> bool {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use github_actions_expressions::Expr;
 
     use crate::{
         audit::AuditInput,
         models::{action::Action, workflow::Workflow},
         registry::input::InputKey,
         utils::{
-            env_is_static, extract_fenced_expression, extract_fenced_expressions, normalize_shell,
+            extract_fenced_expression, extract_fenced_expressions, normalize_shell,
             parse_fenced_expressions_from_routable,
         },
     };
@@ -834,30 +764,6 @@ jobs:
             ("/bin/bash -e {0}", "bash"),
         ] {
             assert_eq!(normalize_shell(actual), *expected)
-        }
-    }
-
-    #[test]
-    fn test_env_is_static_default() {
-        for (env_ctx, is_static) in &[
-            // CI is not static
-            ("env.CI", false),
-            // all other default environment contexts are static
-            ("env.GITHUB_ACTION", true),
-            ("env['GITHUB_ACTION']", true),
-            ("env.GITHUB_ACTIONS", true),
-            ("env.RUNNER_OS", true),
-            ("env.runner_os", true),
-            ("env['runner_os']", true),
-            // anything else not known by default is not static
-            ("env.UNKNOWN", false),
-            ("env['UNKNOWN']", false),
-        ] {
-            let Expr::Context(ctx) = &*Expr::parse(env_ctx).unwrap() else {
-                panic!("expected a context expression for {env_ctx}");
-            };
-
-            assert_eq!(env_is_static(ctx, &[]), *is_static, "for {env_ctx}");
         }
     }
 }

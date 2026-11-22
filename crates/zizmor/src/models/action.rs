@@ -5,7 +5,6 @@
 
 use std::sync::LazyLock;
 
-use github_actions_expressions::context;
 use github_actions_models::{
     action,
     common::{self, expr::LoE},
@@ -18,10 +17,8 @@ use crate::{
     models::{
         AsDocument, StepBodyCommon, StepCommon, Validatable,
         inputs::{Capability, HasInputs},
-        workflow::matrix::Matrix,
     },
     registry::input::CollectionError,
-    utils,
 };
 
 static ACTION_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
@@ -266,8 +263,11 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         self.index
     }
 
-    fn env_is_static(&self, ctx: &context::Context) -> bool {
-        utils::env_is_static(ctx, &[&self.env])
+    fn evaluate(
+        &self,
+        expr: &github_actions_expressions::Expr<'_>,
+    ) -> super::evaluation::Evaluated<'doc> {
+        super::evaluation::Site::CompositeStep(self).evaluate(expr)
     }
 
     fn uses(&self) -> Option<&'doc common::Uses> {
@@ -276,10 +276,6 @@ impl<'doc> StepCommon<'doc> for CompositeStep<'doc> {
         };
 
         Some(uses)
-    }
-
-    fn matrix(&self) -> Option<Matrix<'doc>> {
-        None
     }
 
     fn body(&self) -> Option<StepBodyCommon<'doc>> {

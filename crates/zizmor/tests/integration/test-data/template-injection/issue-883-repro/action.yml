@@ -26,6 +26,14 @@
 name: issue-883-repro
 description: issue 883 repro
 
+inputs:
+  pyproject-toml:
+    description: Path to pyproject.toml
+    required: true
+  data:
+    description: Additional change note data
+    required: false
+
 runs:
   using: composite
   steps:
@@ -33,8 +41,8 @@ runs:
       id: create-chango-fragment
       uses: jannekem/run-python-script-action@bbfca66c612a28f3eeca0ae40e1f810265e2ea68 # v1.7
       env:
-        CUSTOM_OUTPUT: ${{ steps.fetch-linked-issues-custom-token.outputs.data }}
-        DEFAULT_OUTPUT: ${{ steps.fetch-linked-issues-default-token.outputs.data }}
+        CHANGE_DATA: ${{ inputs.data }}
+        DEFAULT_DATA: '{}'
       with:
         script: |
           import base64
@@ -51,14 +59,9 @@ runs:
           false = False
           true = True
 
-          # Merge additionally fetched data into the data passed by the user
-          output = (
-              ${{ toJson(env.CUSTOM_OUTPUT) }}
-              or ${{ toJson(env.DEFAULT_OUTPUT) }}
-          )
-          data = (
-              ${{ inputs.data }}
-              or ChanGoActionData.model_validate_json(output)
+          data = ChanGoActionData.model_validate_json(
+              ${{ toJson(env.CHANGE_DATA) }}
+              or ${{ toJson(env.DEFAULT_DATA) }}
           )
 
           change_note = chango_instance.build_github_event_change_note(

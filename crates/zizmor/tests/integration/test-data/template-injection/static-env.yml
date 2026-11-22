@@ -1,55 +1,38 @@
 name: static-env
-on:
-  pull_request:
-
-env:
-  foo: foo
-  bar: ${{ github.event.issue.title }}
-  baz: baz
-  quux: ${{ github.event.issue.title }}
-
+on: pull_request
 permissions: {}
 
-jobs:
-  static-env-1:
-    name: static-env
-    runs-on: ubuntu-latest
+env:
+  WORKFLOW_LITERAL: fixed
+  WORKFLOW_TITLE: ${{ github.event.pull_request.title }}
+  JOB_LITERAL: ${{ github.event.pull_request.title }}
+  JOB_TITLE: fixed
 
+jobs:
+  scopes:
+    name: Environment scopes
+    runs-on: ubuntu-latest
     env:
-      foo: ${{ github.event.issue.title }}
-      bar: bar
+      JOB_LITERAL: fixed
+      JOB_TITLE: ${{ github.event.pull_request.title }}
+      STEP_LITERAL: ${{ github.event.pull_request.title }}
+      STEP_TITLE: fixed
 
     steps:
-      # OK: foo is static (step-level)
-      - name: step-level-static
-        run: |
-          echo ${{ env.foo }}
+      - name: Read the most specific definition of each variable
         env:
-          foo: foo
-
-      # OK: bar is static (job-level)
-      - name: job-level-static
+          STEP_LITERAL: fixed
+          STEP_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          echo ${{ env.bar }}
+          echo "${{ env.STEP_LITERAL }}"
+          echo "${{ env.JOB_LITERAL }}"
+          echo "${{ env.WORKFLOW_LITERAL }}"
 
-      # OK: baz is static (workflow-level)
-      - name: workflow-level-static
-        run: |
-          echo ${{ env.baz }}
+          echo "${{ env.STEP_TITLE }}"
+          echo "${{ env.JOB_TITLE }}"
+          echo "${{ env.WORKFLOW_TITLE }}"
 
-      # NOT OK: bar is not static (step-level)
-      - name: step-level-non-static
-        run: |
-          echo ${{ env.bar }}
-        env:
-          bar: ${{ github.event.issue.title }}
+          echo "WORKFLOW_LITERAL=$GITHUB_HEAD_REF" >> "$GITHUB_ENV"
 
-      # NOT OK: foo is not static (job-level)
-      - name: job-level-non-static
-        run: |
-          echo ${{ env.foo }}
-
-      # NOT OK: quux is not static (workflow-level)
-      - name: workflow-level-non-static
-        run: |
-          echo ${{ env.quux }}
+      - name: Read a workflow variable after an earlier step overwrote it
+        run: echo "${{ env.WORKFLOW_LITERAL }}"

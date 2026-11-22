@@ -17,4 +17,6 @@ jobs:
     name: Repro
     runs-on: ubuntu-latest
     steps:
-      - run: echo "${{ steps.fake.outcome }}"
+      - id: build
+        run: echo building
+      - run: echo "${{ steps.build.outcome }}"
