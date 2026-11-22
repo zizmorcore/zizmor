@@ -1,5 +1,5 @@
 use github_actions_models::{
-    common::expr::ExplicitExpr,
+    common::expr::{ExplicitExpr, LoE},
     workflow::job::{Container, DockerCredentials},
 };
 
@@ -66,7 +66,13 @@ impl Audit for HardcodedContainerCredentials {
                 }
             }
 
-            for (service, config) in job.services.iter() {
+            let LoE::Literal(services) = &job.services else {
+                // TODO: Handle this? The container credential could
+                // be hard-coded via a context somewhere.
+                continue;
+            };
+
+            for (service, config) in services.iter() {
                 if let Container::Container {
                     image: _,
                     credentials:

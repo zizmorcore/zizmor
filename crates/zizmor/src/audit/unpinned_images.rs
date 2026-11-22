@@ -329,17 +329,22 @@ impl Audit for UnpinnedImages {
             None => {}
         }
 
-        for (service, config) in job.services.iter() {
-            if let Container::Container { image, .. } = &config {
-                image_refs.push((
-                    image.into(),
-                    job.location().primary().with_keys([
-                        "services".into(),
-                        service.as_str().into(),
-                        "image".into(),
-                    ]),
-                ));
+        if let LoE::Literal(services) = &job.services {
+            for (service, config) in services.iter() {
+                if let Container::Container { image, .. } = &config {
+                    image_refs.push((
+                        image.into(),
+                        job.location().primary().with_keys([
+                            "services".into(),
+                            service.as_str().into(),
+                            "image".into(),
+                        ]),
+                    ));
+                }
             }
+        } else {
+            // The entire `services:` clause is an expression.
+            // TODO: Analyze this.
         }
 
         for step in job.steps() {

@@ -38,7 +38,7 @@ pub struct NormalJob {
     pub continue_on_error: BoE,
     pub container: Option<Container>,
     #[serde(default)]
-    pub services: IndexMap<String, Container>,
+    pub services: LoE<IndexMap<String, Container>>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
