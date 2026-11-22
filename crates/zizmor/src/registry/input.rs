@@ -49,11 +49,6 @@ pub(crate) enum CollectionError {
     #[error("couldn't turn input into a an appropriate model")]
     Model(#[from] astral_yaml_serde::Error),
 
-    /// The input couldn't be loaded into an internal yamlpath document.
-    /// This typically indicates a bug in `yamlpath`.
-    #[error("failed to load internal pathing document")]
-    Yamlpath(#[from] yamlpath::QueryError),
-
     /// An error in a group or global configuration.
     #[error(transparent)]
     Config(#[from] ConfigError),
@@ -116,6 +111,12 @@ pub(crate) enum CollectionError {
         .slug.git_ref.as_deref().unwrap_or("HEAD"))
     ]
     AmbiguousRemoteRef { slug: InputSlug },
+}
+
+impl From<astral_yaml::Error> for CollectionError {
+    fn from(error: astral_yaml::Error) -> Self {
+        Self::Syntax(error.into())
+    }
 }
 
 impl CollectionError {

@@ -1661,12 +1661,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "libyaml-rs"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e126dda6f34391ab7b444f9922055facc83c07a910da3eb16f1e4d9c45dc777"
-
-[[package]]
 name = "line-index"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3325,28 +3319,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "tree-sitter-iter"
-version = "1.33.1"
-dependencies = [
- "tree-sitter",
- "tree-sitter-yaml",
-]
-
-[[package]]
 name = "tree-sitter-language"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0af592be68c579aa78a16846bd19422978c3c52e438523d45ff5d1bff1f9d4a"
-
-[[package]]
-name = "tree-sitter-yaml"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53c223db85f05e34794f065454843b0668ebc15d240ada63e2b5939f43ce7c97"
-dependencies = [
- "cc",
- "tree-sitter-language",
-]
 
 [[package]]
 name = "try-lock"
@@ -4220,29 +4196,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aee1b19627c7c60102ab80d3a9cbe18de90bfe03bfa6c3715447681f0e8c8af6"
 
 [[package]]
-name = "yaml_serde"
-version = "0.10.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33b729a08a9a6be689bbad3e2bf8015926db54b6622cc89c3a5f7dc174b9e918"
-dependencies = [
- "indexmap",
- "itoa",
- "libyaml-rs",
- "ryu",
- "serde",
-]
-
-[[package]]
 name = "yamlpatch"
 version = "1.33.1"
 dependencies = [
- "indexmap",
- "insta",
- "line-index",
- "serde_json",
+ "astral-yaml-serde",
  "subfeature",
  "thiserror 2.0.21",
- "yaml_serde",
  "yamlpath",
 ]
 
@@ -4256,10 +4215,6 @@ dependencies = [
  "self_cell",
  "serde",
  "thiserror 2.0.21",
- "tree-sitter",
- "tree-sitter-iter",
- "tree-sitter-yaml",
- "yaml_serde",
 ]
 
 [[package]]
@@ -4373,6 +4328,7 @@ dependencies = [
  "annotate-snippets",
  "anstream",
  "anyhow",
+ "astral-yaml",
  "astral-yaml-serde",
  "async-trait",
  "camino",
@@ -4422,7 +4378,6 @@ dependencies = [
  "typomania",
  "url",
  "woodruffw-trough-tree-sitter-powershell",
- "yaml_serde",
  "yamlpatch",
  "yamlpath",
  "zizmor-dev",

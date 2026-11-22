@@ -271,15 +271,15 @@ expression: output
               "column": 8
             },
             "end_point": {
-              "row": 18,
-              "column": 0
+              "row": 17,
+              "column": 36
             },
             "offset_span": {
               "start": 295,
-              "end": 372
+              "end": 371
             }
           },
-          "feature": "uses: actions/checkout@v3\n        with:\n          persist-credentials: false\n",
+          "feature": "uses: actions/checkout@v3\n        with:\n          persist-credentials: false",
           "comments": []
         }
       },
@@ -398,7 +398,7 @@ expression: output
               "end": 343
             }
           },
-          "feature": "        if: ${{ contains('refs/heads/main refs/heads/develop', github.ref) }}",
+          "feature": "if: ${{ contains('refs/heads/main refs/heads/develop', github.ref) }}",
           "comments": []
         }
       }
@@ -461,7 +461,7 @@ expression: output
               "end": 460
             }
           },
-          "feature": "        if: ${{ contains('main,develop', env.GITHUB_REF_NAME) }}",
+          "feature": "if: ${{ contains('main,develop', env.GITHUB_REF_NAME) }}",
           "comments": []
         }
       }
@@ -524,7 +524,7 @@ expression: output
               "end": 633
             }
           },
-          "feature": "        if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true",
+          "feature": "if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true",
           "comments": []
         }
       }
@@ -587,7 +587,7 @@ expression: output
               "end": 633
             }
           },
-          "feature": "        if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true",
+          "feature": "if: contains('main,prod', github.ref_name) || contains('longusername anotherlongusername', github.actor) == true",
           "comments": []
         }
       }
@@ -650,7 +650,7 @@ expression: output
               "end": 763
             }
           },
-          "feature": "        if: contains('runner1,runner2', runner.name)",
+          "feature": "if: contains('runner1,runner2', runner.name)",
           "comments": []
         }
       }

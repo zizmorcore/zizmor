@@ -423,17 +423,12 @@ pub(crate) fn parse_fenced_expressions_from_routable<
 ) -> Vec<(ExtractedExpr<'doc>, Range<usize>)> {
     let doc = input.as_document();
 
-    let (content, feature) = {
-        // NOTE: expect here because a failure in feature extraction here indicates a
-        // significant internal error, not something the user can recover from.
-        let feature = doc
-            .query_pretty(&input.route())
-            .expect("invalid route when extracting fenced expressions");
-        (doc.extract(&feature), feature)
-    };
-
+    let range = doc
+        .entry_range(&input.route())
+        .expect("invalid expression route");
+    let content = &doc.source()[range.clone()];
     let mut exprs = vec![];
-    let bias = feature.location.byte_span.0;
+    let bias = range.start;
     let mut offset = 0;
 
     while let Some((expr, span)) = extract_fenced_expression(content, offset) {
@@ -448,7 +443,7 @@ pub(crate) fn parse_fenced_expressions_from_routable<
 
         exprs.push((expr, (span.start + bias..span.end + bias)));
 
-        if span.end >= feature.location.byte_span.1 {
+        if span.end >= content.len() {
             break;
         } else {
             offset = span.end;

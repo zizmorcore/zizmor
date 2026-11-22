@@ -6,7 +6,7 @@ use yamlpatch::{Op, Patch};
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, AuditState, audit_meta},
     finding::{
-        Confidence, Finding, Fix, Persona, Severity,
+        Confidence, Finding, Fix, FixEdit, Persona, Severity,
         location::{Comment, Feature, Locatable, Location, Routable as _},
     },
     github,
@@ -73,12 +73,12 @@ impl RefVersionMismatch {
             title: format!("update version comment to match pinned hash: {correct_tag}"),
             key: parent.location().key,
             disposition: Default::default(),
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: parent.route().with_key("uses"),
                 operation: Op::ReplaceComment {
                     new: format!("# {correct_tag}").into(),
                 },
-            }],
+            }]),
         }
     }
 
@@ -91,12 +91,12 @@ impl RefVersionMismatch {
             title: format!("add version comment: {tag}"),
             key: parent.location().key,
             disposition: Default::default(),
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: parent.route().with_key("uses"),
                 operation: Op::EmplaceComment {
                     new: format!("# {tag}").into(),
                 },
-            }],
+            }]),
         }
     }
 

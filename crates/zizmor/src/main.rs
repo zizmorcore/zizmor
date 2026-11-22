@@ -536,7 +536,7 @@ async fn main() -> ExitCode {
                         Some(report)
                     }
                     // These errors only happen if something is wrong with zizmor itself.
-                    CollectionError::Yamlpath(..) | CollectionError::Model(..) => {
+                    CollectionError::Model(..) => {
                         let group = Group::with_title(Level::ERROR.primary_title(err.to_string())).elements([
                             Level::HELP.message("this typically indicates a bug in zizmor; please report it"),
                             Level::HELP.message(

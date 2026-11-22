@@ -26,7 +26,7 @@ use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{
-        Confidence, Finding, Fix, Persona, Severity,
+        Confidence, Finding, Fix, FixEdit, Persona, Severity,
         location::{Routable as _, SymbolicLocation},
     },
     models::{
@@ -325,7 +325,7 @@ impl TemplateInjection {
         let mut patches = vec![];
         patches.push(Patch {
             route: step.route().with_key("run"),
-            operation: Op::RewriteFragment {
+            operation: Op::RewriteString {
                 from: subfeature::Subfeature::new(0, raw.as_raw()),
                 to: var_expansion.into(),
             },
@@ -343,12 +343,10 @@ impl TemplateInjection {
         if needs_new_env {
             patches.push(Patch {
                 route: step.route(),
-                operation: Op::MergeInto {
-                    key: "env".to_string(),
-                    updates: indexmap::IndexMap::from_iter([(
-                        env_var.clone(),
-                        yaml_serde::Value::String(raw.as_raw().into()),
-                    )]),
+                operation: Op::SetField {
+                    mapping: "env",
+                    key: env_var.clone(),
+                    value: astral_yaml_serde::Value::String(raw.as_raw().into()),
                 },
             });
         }
@@ -357,7 +355,7 @@ impl TemplateInjection {
             title: "replace expression with environment variable".into(),
             key: step.location().key,
             disposition: Default::default(),
-            patches,
+            edit: FixEdit::Yaml(patches),
         })
     }
 

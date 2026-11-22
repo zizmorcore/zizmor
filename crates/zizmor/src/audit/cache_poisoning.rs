@@ -11,7 +11,7 @@ use github_actions_models::workflow::event::{BranchFilters, OptionalBody};
 
 use crate::audit::{Audit, AuditError, audit_meta};
 use crate::finding::location::{Locatable as _, Routable as _};
-use crate::finding::{Confidence, Finding, Fix, FixDisposition, Persona, Severity};
+use crate::finding::{Confidence, Finding, Fix, FixDisposition, FixEdit, Persona, Severity};
 use crate::models::coordinate::{
     ActionCoordinate, ControlExpr, ControlFieldType, ControlOrigin, Toggle, Usage, VersionBound,
 };
@@ -22,7 +22,6 @@ use crate::models::{StepBodyCommon, StepCommon};
 use crate::state::AuditState;
 use crate::utils::ExtractedExpr;
 
-use indexmap::IndexMap;
 use yamlpatch::{Op, Patch};
 
 use super::AuditLoadError;
@@ -538,10 +537,10 @@ impl CachePoisoning {
             title: "set `cache-mode: none` to disable dangerous cache writes".into(),
             key: &job.parent().key,
             disposition: FixDisposition::Safe,
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: cache_mode_location.route.clone(),
-                operation: Op::Replace("none".into()),
-            }],
+                operation: Op::Replace(astral_yaml_serde::Value::String("none".into())),
+            }]),
         };
 
         Ok(Some(
@@ -639,16 +638,14 @@ impl CachePoisoning {
             title: format!("Set {field_name}: {field_value} to disable caching"),
             key: step.location().key,
             disposition: FixDisposition::default(),
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: step.route(),
-                operation: Op::MergeInto {
-                    key: "with".to_string(),
-                    updates: IndexMap::from([(
-                        field_name.to_string(),
-                        yaml_serde::Value::Bool(*field_value),
-                    )]),
+                operation: Op::SetField {
+                    mapping: "with",
+                    key: field_name.to_string(),
+                    value: astral_yaml_serde::Value::Bool(*field_value),
                 },
-            }],
+            }]),
         })
     }
 

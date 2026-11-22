@@ -33,10 +33,10 @@ jobs:
     4 | |     runs-on: ubuntu-latest
     5 | |     steps:
     6 | |       - uses: actions/checkout@v3
-      | |                                  ^
-      | |                                  |
-      | |__________________________________this job
-      |                                    default permissions used due to no permissions: block
+      | |                                 ^
+      | |                                 |
+      | |_________________________________this job
+      |                                   default permissions used due to no permissions: block
       |
       = note: audit confidence → Medium
 
@@ -323,10 +323,10 @@ jobs:
                                 "uri": "<stdin>"
                               },
                               "region": {
-                                "endColumn": 1,
-                                "endLine": 7,
+                                "endColumn": 34,
+                                "endLine": 6,
                                 "snippet": {
-                                  "text": "uses: actions/checkout@v3\n"
+                                  "text": "uses: actions/checkout@v3"
                                 },
                                 "sourceLanguage": "yaml",
                                 "startColumn": 9,
@@ -382,10 +382,10 @@ jobs:
                       "uri": "<stdin>"
                     },
                     "region": {
-                      "endColumn": 1,
-                      "endLine": 7,
+                      "endColumn": 34,
+                      "endLine": 6,
                       "snippet": {
-                        "text": "uses: actions/checkout@v3\n"
+                        "text": "uses: actions/checkout@v3"
                       },
                       "sourceLanguage": "yaml",
                       "startColumn": 9,
@@ -445,10 +445,10 @@ jobs:
                                 "uri": "<stdin>"
                               },
                               "region": {
-                                "endColumn": 1,
-                                "endLine": 7,
+                                "endColumn": 34,
+                                "endLine": 6,
                                 "snippet": {
-                                  "text": "  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n"
+                                  "text": "test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3"
                                 },
                                 "sourceLanguage": "yaml",
                                 "startColumn": 3,
@@ -492,10 +492,10 @@ jobs:
                                 "uri": "<stdin>"
                               },
                               "region": {
-                                "endColumn": 1,
-                                "endLine": 7,
+                                "endColumn": 34,
+                                "endLine": 6,
                                 "snippet": {
-                                  "text": "  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n"
+                                  "text": "test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3"
                                 },
                                 "sourceLanguage": "yaml",
                                 "startColumn": 3,
@@ -545,10 +545,10 @@ jobs:
                       "uri": "<stdin>"
                     },
                     "region": {
-                      "endColumn": 1,
-                      "endLine": 7,
+                      "endColumn": 34,
+                      "endLine": 6,
                       "snippet": {
-                        "text": "  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n"
+                        "text": "test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3"
                       },
                       "sourceLanguage": "yaml",
                       "startColumn": 3,

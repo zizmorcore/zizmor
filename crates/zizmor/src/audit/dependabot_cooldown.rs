@@ -1,7 +1,7 @@
 use crate::{
     audit::{Audit, AuditError, audit_meta},
     finding::{
-        Confidence, Finding, Fix, FixDisposition, Severity,
+        Confidence, Finding, Fix, FixDisposition, FixEdit, Severity,
         location::{Locatable as _, SymbolicLocation},
     },
     models::dependabot::{self, Dependabot},
@@ -84,13 +84,13 @@ impl DependabotCooldown {
             title: "add default-days to cooldown".to_string(),
             key: update.location().key,
             disposition: FixDisposition::Safe,
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: update.location().route.with_keys(["cooldown".into()]),
                 operation: Op::Add {
                     key: days_key.to_string(),
-                    value: yaml_serde::Value::Number(minimum_days.into()),
+                    value: astral_yaml_serde::Value::Unsigned(minimum_days as u128),
                 },
-            }],
+            }]),
         }
     }
 
@@ -104,13 +104,13 @@ impl DependabotCooldown {
             title: format!("increase default-days to {minimum_days}"),
             key: update.location().key,
             disposition: FixDisposition::Safe,
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: update
                     .location()
                     .route
                     .with_keys(["cooldown".into(), days_key.into()]),
-                operation: Op::Replace(yaml_serde::Value::Number(minimum_days.into())),
-            }],
+                operation: Op::Replace(astral_yaml_serde::Value::Unsigned(minimum_days as u128)),
+            }]),
         }
     }
 
@@ -123,20 +123,16 @@ impl DependabotCooldown {
             title: "add cooldown configuration".to_string(),
             key: update.location().key,
             disposition: FixDisposition::Safe,
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: update.location().route,
                 operation: Op::Add {
                     key: "cooldown".to_string(),
-                    value: yaml_serde::Value::Mapping({
-                        let mut map = yaml_serde::Mapping::new();
-                        map.insert(
-                            yaml_serde::Value::String("default-days".to_string()),
-                            yaml_serde::Value::Number(minimum_days.into()),
-                        );
-                        map
-                    }),
+                    value: astral_yaml_serde::Value::Mapping(vec![(
+                        astral_yaml_serde::Value::String("default-days".into()),
+                        astral_yaml_serde::Value::Unsigned(minimum_days as u128),
+                    )]),
                 },
-            }],
+            }]),
         }
     }
 }

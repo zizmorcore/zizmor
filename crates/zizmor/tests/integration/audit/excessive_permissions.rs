@@ -59,7 +59,7 @@ fn test_workflow_default_perms_pedantic() -> Result<()> {
     ...  |
     19 | |         with:
     20 | |           persist-credentials: false
-       | |_____________________________________^ default permissions used due to no permissions: block
+       | |____________________________________^ default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
 
@@ -73,10 +73,10 @@ fn test_workflow_default_perms_pedantic() -> Result<()> {
     18 | |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     19 | |         with:
     20 | |           persist-credentials: false
-       | |                                     ^
-       | |                                     |
-       | |_____________________________________this job
-       |                                       default permissions used due to no permissions: block
+       | |                                    ^
+       | |                                    |
+       | |____________________________________this job
+       |                                      default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
 
@@ -184,7 +184,7 @@ fn test_jobs_broaden_permissions() -> Result<()> {
     ...  |
     23 | |         with:
     24 | |           persist-credentials: false
-       | |_____________________________________- this job
+       | |____________________________________- this job
        |
        = note: audit confidence → High
 
@@ -267,10 +267,10 @@ fn test_issue_472_repro() -> Result<()> {
     23 | |     # responsible for setting permissions, even if the workflow
     24 | |     # is reusable-only
     25 | |     uses: $/.github/workflows/fake.yml
-       | |                                       ^
-       | |                                       |
-       | |_______________________________________this job
-       |                                         default permissions used due to no permissions: block
+       | |                                      ^
+       | |                                      |
+       | |______________________________________this job
+       |                                        default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
 
@@ -297,10 +297,10 @@ fn test_reusable_workflow_call() -> Result<()> {
      8 | |     name: job1
      9 | |     # finding: reusable jobs should always specify their permissions
     10 | |     uses: $/.github/workflows/zizmor-child.yml
-       | |                                               ^
-       | |                                               |
-       | |_______________________________________________this job
-       |                                                 default permissions used due to no permissions: block
+       | |                                              ^
+       | |                                              |
+       | |______________________________________________this job
+       |                                                default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
 
@@ -330,7 +330,7 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
     ...  |
     22 | |     # responsible for setting permissions
     23 | |     uses: $/.github/workflows/fake.yml
-       | |_______________________________________^ default permissions used due to no permissions: block
+       | |______________________________________^ default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
 
@@ -359,10 +359,10 @@ fn test_reusable_workflow_other_triggers() -> Result<()> {
     21 | |     # normal permissions finding here, since callers are always
     22 | |     # responsible for setting permissions
     23 | |     uses: $/.github/workflows/fake.yml
-       | |                                       ^
-       | |                                       |
-       | |_______________________________________this job
-       |                                         default permissions used due to no permissions: block
+       | |                                      ^
+       | |                                      |
+       | |______________________________________this job
+       |                                        default permissions used due to no permissions: block
        |
        = note: audit confidence → Medium
 

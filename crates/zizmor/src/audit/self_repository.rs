@@ -5,7 +5,7 @@ use yamlpatch::{Op, Patch};
 use crate::{
     audit::{Audit, AuditError, AuditLoadError, audit_meta},
     finding::{
-        Confidence, Finding, Fix, FixDisposition, Severity,
+        Confidence, Finding, Fix, FixDisposition, FixEdit, Severity,
         location::{Locatable, Routable as _},
     },
     models::{
@@ -61,13 +61,13 @@ impl SelfRepository {
                         // old relative syntax to invoke actions/workflows
                         // within it.
                         disposition: FixDisposition::Unsafe,
-                        patches: vec![Patch {
+                        edit: FixEdit::Yaml(vec![Patch {
                             route: parent.route().with_key("uses"),
-                            operation: Op::RewriteFragment {
+                            operation: Op::RewriteString {
                                 from: Subfeature::new(0, uses.raw()),
                                 to: format!("${path}", path = &uses.raw()[1..]).into(),
                             },
-                        }],
+                        }]),
                     })
                     .build(parent)?,
             );

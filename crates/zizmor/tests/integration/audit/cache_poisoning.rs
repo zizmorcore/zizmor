@@ -928,14 +928,14 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
+        @r#"
     @@ -12,4 +12,5 @@
                  ~/.cargo/registry
                  ~/.cargo/git
                key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    +          lookup-only: true
+    +          "lookup-only": true
            - uses: softprops/action-gh-release@v1
-    "
+    "#
     );
 
     Ok(())
@@ -1014,26 +1014,34 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
-    @@ -7,12 +7,14 @@
+        @r#"
+    @@ -6,13 +6,18 @@
+       test:
          runs-on: ubuntu-latest
          steps:
-           - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
-    +        with:
-    +          enable-cache: false
-           - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+    -      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+    -      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+    +      -
+    +        uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+    +        "with": {"enable-cache": false}
+    +      -
+    +        uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
              with:
     -          enable-cache: true
+    -      - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
     +          enable-cache: false
-           - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
+    +      -
+    +        uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
              with:
     -          enable-cache: auto
+    -      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
     +          enable-cache: false
-           - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+    +      -
+    +        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
              with:
     -          enable-cache: ${{ github.ref == 'refs/heads/main' }}
     +          enable-cache: false
-    "
+    "#
     );
 
     Ok(())

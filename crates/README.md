@@ -10,10 +10,9 @@ See the table and each subdirectory for more details on each crate.
 | [`zizmor-dev`][zizmor-dev-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor-dev)][zizmor-dev-crates] | [![docs.rs](https://img.shields.io/docsrs/zizmor-dev)][zizmor-dev-docs] | Shared helpers for `zizmor`'s tests and benchmarks. |
 | [`subfeature`][subfeature-dir] | [![Crates.io](https://img.shields.io/crates/v/subfeature)][subfeature-crates] | [![docs.rs](https://img.shields.io/docsrs/subfeature)][subfeature-docs] | Subfeature handling APIs. |
 | [`yamlpath`][yamlpath-dir] | [![Crates.io](https://img.shields.io/crates/v/yamlpath)][yamlpath-crates] | [![docs.rs](https://img.shields.io/docsrs/yamlpath)][yamlpath-docs] | Format-preserving YAML feature extraction. |
-| [`yamlpatch`][yamlpath-dir] | [![Crates.io](https://img.shields.io/crates/v/yamlpatch)][yamlpath-crates] | [![docs.rs](https://img.shields.io/docsrs/yamlpatch)][yamlpath-docs] | Comment and format-preserving YAML patch operations. |
+| [`yamlpatch`][yamlpatch-dir] | [![Crates.io](https://img.shields.io/crates/v/yamlpatch)][yamlpatch-crates] | [![docs.rs](https://img.shields.io/docsrs/yamlpatch)][yamlpatch-docs] | Comment and format-preserving YAML patch operations. |
 | [`github-actions-models`][github-actions-models-dir] | [![Crates.io](https://img.shields.io/crates/v/github-actions-models)][github-actions-models-crates] | [![docs.rs](https://img.shields.io/docsrs/github-actions-models)][github-actions-models-docs] | Unofficial, high-quality data models for GitHub Actions workflows, actions, and related components. |
 | [`github-actions-expressions`][github-actions-expressions-dir] | [![Crates.io](https://img.shields.io/crates/v/github-actions-expressions)][github-actions-expressions-crates] | [![docs.rs](https://img.shields.io/docsrs/github-actions-expressions)][github-actions-expressions-docs] | Parser and library for GitHub Actions expressions. |
-| [`tree-sitter-iter`][tree-sitter-iter-dir] | [![Crates.io](https://img.shields.io/crates/v/tree-sitter-iter)][tree-sitter-iter-crates] | [![docs.rs](https://img.shields.io/docsrs/tree-sitter-iter)][tree-sitter-iter-docs] | A very simple pre-order iterator for tree-sitter CSTs. |
 | [`zizmor-sarif`][zizmor-sarif-dir] | [![Crates.io](https://img.shields.io/crates/v/zizmor-sarif)][zizmor-sarif-crates] | [![docs.rs](https://img.shields.io/docsrs/zizmor-sarif)][zizmor-sarif-docs] | Minimal SARIF 2.1.0 data models used by `zizmor`. |
 | [`pre-commit-models`][pre-commit-models-dir] | [![Crates.io](https://img.shields.io/crates/v/pre-commit-models)][pre-commit-models-crates] | [![docs.rs](https://img.shields.io/docsrs/pre-commit-models)][zizmor-sarif-docs] | Unofficial, high-quality data models for pre-commit. |
 
@@ -44,10 +43,6 @@ See the table and each subdirectory for more details on each crate.
 [github-actions-expressions-dir]: ./github-actions-expressions
 [github-actions-expressions-crates]: https://crates.io/crates/github-actions-expressions
 [github-actions-expressions-docs]: https://docs.rs/github-actions-expressions
-
-[tree-sitter-iter-dir]: ./tree-sitter-iter
-[tree-sitter-iter-crates]: https://crates.io/crates/tree-sitter-iter
-[tree-sitter-iter-docs]: https://docs.rs/tree-sitter-iter
 
 [zizmor-sarif-dir]: ./zizmor-sarif
 [zizmor-sarif-crates]: https://crates.io/crates/zizmor-sarif

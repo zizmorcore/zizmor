@@ -2,7 +2,7 @@ use github_actions_models::dependabot::v2::AllowDeny;
 
 use crate::{
     audit::{Audit, AuditError, audit_meta},
-    finding::{Fix, FixDisposition, location::Locatable as _},
+    finding::{Fix, FixDisposition, FixEdit, location::Locatable as _},
 };
 use yamlpatch::{Op, Patch};
 
@@ -21,13 +21,13 @@ impl DependabotExecution {
             title: "set insecure-external-code-execution to deny".to_string(),
             key: update.location().key,
             disposition: FixDisposition::Unsafe,
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: update
                     .location()
                     .route
                     .with_keys(["insecure-external-code-execution".into()]),
-                operation: Op::Replace(yaml_serde::Value::String("deny".to_string())),
-            }],
+                operation: Op::Replace(astral_yaml_serde::Value::String("deny".to_string())),
+            }]),
         }
     }
 }

@@ -10,7 +10,8 @@ use super::{AuditLoadError, Job, audit_meta};
 use crate::audit::{Audit, AuditError};
 use crate::finding::location::Locatable as _;
 use crate::finding::{
-    Confidence, Finding, Fix, FixDisposition, Persona, Severity, location::SymbolicLocation,
+    Confidence, Finding, Fix, FixDisposition, FixEdit, Persona, Severity,
+    location::SymbolicLocation,
 };
 use crate::models::workflow::StepInner;
 use crate::models::{AsDocument, workflow::Steps, workflow::Workflow};
@@ -31,12 +32,12 @@ impl InsecureCommands {
             title: "remove ACTIONS_ALLOW_UNSECURE_COMMANDS environment variable".into(),
             key: location.key,
             disposition: FixDisposition::default(),
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: location
                     .route
                     .with_keys(["env".into(), "ACTIONS_ALLOW_UNSECURE_COMMANDS".into()]),
                 operation: Op::Remove,
-            }],
+            }]),
         }
     }
 

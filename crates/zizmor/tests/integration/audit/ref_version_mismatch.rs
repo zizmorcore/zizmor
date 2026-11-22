@@ -368,11 +368,14 @@ runs:
                 .run()
         })?,
         @"
-    @@ -5,6 +5,6 @@
+    @@ -4,7 +4,8 @@
+     runs:
        using: composite
        steps:
-         - name: Checkout without version comment
+    -    - name: Checkout without version comment
     -      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    +    -
+    +      name: Checkout without version comment
     +      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
            with:
              persist-credentials: false
@@ -413,11 +416,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -7,6 +7,6 @@
+    @@ -6,7 +6,8 @@
+       test:
          runs-on: ubuntu-latest
          steps:
-           - name: Checkout without version comment
+    -      - name: Checkout without version comment
     -        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    +      -
+    +        name: Checkout without version comment
     +        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
              with:
                persist-credentials: false
@@ -446,75 +452,24 @@ jobs:
           persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", workflow_content);
-
-    insta::assert_snapshot!(
-        &workspace.diff(".github/workflows/test.yml", |workspace| {
-            Zizmor::cargo_bin()
-                .args(["--fix=all", "--persona=pedantic"])
-                .offline(NetworkMode::AssertOnline)
-                .input(workspace.path())
-                .run()
-        })?,
-        @"
-    @@ -7,6 +7,6 @@
-         runs-on: ubuntu-latest
-         steps:
-           - name: Checkout with mismatched version comment
-    -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
-    +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
-             with:
-               persist-credentials: false
-    "
-    );
-
-    Ok(())
-}
-
-#[cfg(feature = "gh-token-tests")]
-#[test]
-fn test_fix_version_comment_mismatch_crlf() -> anyhow::Result<()> {
-    use zizmor_dev::WorkspaceBuilder;
-
-    let workflow_content = r#"
-name: Test Version Comment Mismatch
-on: push
-permissions: {}
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout with mismatched version comment
-        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
-        with:
-          persist-credentials: false
-"#
-    .replace('\n', "\r\n");
-
-    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
-
-    insta::assert_snapshot!(
-        &workspace.diff(".github/workflows/test.yml", |workspace| {
-            Zizmor::cargo_bin()
-                .args(["--fix=all", "--persona=pedantic"])
-                .offline(NetworkMode::AssertOnline)
-                .input(workspace.path())
-                .run()
-        })?,
-        @"
-    @@ -7,6 +7,6 @@
-         runs-on: ubuntu-latest
-         steps:
-           - name: Checkout with mismatched version comment
-    -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
-    +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
-             with:
-               persist-credentials: false
-    "
-    );
-
+    let expected = workflow_content.replace(" # v3.0.0", " # v2.0.0");
+    for newline in ["\n", "\r\n"] {
+        let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+        workspace.add_file(
+            ".github/workflows/test.yml",
+            &workflow_content.replace('\n', newline),
+        );
+        Zizmor::cargo_bin()
+            .offline(NetworkMode::AssertOnline)
+            .args(["--fix=all", "--persona=pedantic"])
+            .input(workspace.path())
+            .run()?;
+        super::assert_fixed_uses(
+            &workspace,
+            &expected,
+            yamlpath::route!("jobs", "test", "steps", 0, "uses"),
+        )?;
+    }
     Ok(())
 }
 
@@ -602,21 +557,28 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -7,14 +7,14 @@
+    @@ -6,15 +6,18 @@
+       test:
          runs-on: ubuntu-latest
          steps:
-           - name: Tag format
+    -      - name: Tag format
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # tag=v3.0.0
+    +      -
+    +        name: Tag format
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
                persist-credentials: false
-           - name: Simple format
+    -      - name: Simple format
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+    +      -
+    +        name: Simple format
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
                persist-credentials: false
-           - name: Version format
+    -      - name: Version format
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # version: v3.0.0
+    +      -
+    +        name: Version format
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
                persist-credentials: false
@@ -660,11 +622,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -12,4 +12,4 @@
+    @@ -11,5 +11,6 @@
+         name: test
          runs-on: ubuntu-latest
          steps:
-           - name: Setup Go
+    -      - name: Setup Go
     -        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v9.9.9
+    +      -
+    +        name: Setup Go
     +        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
     "
     );

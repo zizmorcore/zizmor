@@ -685,77 +685,27 @@ jobs:
           persist-credentials: false
 "#;
 
-    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
-
-    insta::assert_snapshot!(
-        &workspace.diff(".github/workflows/test.yml", |workspace| {
-            Zizmor::cargo_bin()
-                .offline(NetworkMode::AssertOnline)
-                .output(zizmor_dev::OutputMode::Both)
-                .args(["--fix=all"])
-                .input(workspace.path())
-                .run()
-        })?,
-        @"
-    @@ -7,6 +7,6 @@
-         runs-on: ubuntu-latest
-         steps:
-           - name: Checkout with ref-pin
-    -        uses: actions/checkout@v6.0.1
-    +        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-             with:
-               persist-credentials: false
-    "
+    let expected = workflow_content.replace(
+        "actions/checkout@v6.0.1",
+        "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1",
     );
-
-    Ok(())
-}
-
-#[cfg(feature = "gh-token-tests")]
-#[test]
-fn test_fix_crlf() -> anyhow::Result<()> {
-    use zizmor_dev::{NetworkMode, WorkspaceBuilder};
-
-    let workflow_content = r#"
-name: Test
-on: push
-permissions: {}
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout with ref-pin
-        uses: actions/checkout@v6.0.1
-        with:
-          persist-credentials: false
-"#
-    .replace("\n", "\r\n");
-
-    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
-    workspace.add_file(".github/workflows/test.yml", &workflow_content);
-
-    insta::assert_snapshot!(
-        &workspace.diff(".github/workflows/test.yml", |workspace| {
-            Zizmor::cargo_bin()
-                .offline(NetworkMode::AssertOnline)
-                .output(zizmor_dev::OutputMode::Both)
-                .args(["--fix=all"])
-                .input(workspace.path())
-                .run()
-        })?,
-        @"
-    @@ -7,6 +7,6 @@
-         runs-on: ubuntu-latest
-         steps:
-           - name: Checkout with ref-pin
-    -        uses: actions/checkout@v6.0.1
-    +        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-             with:
-               persist-credentials: false
-    "
-    );
-
+    for newline in ["\n", "\r\n"] {
+        let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+        workspace.add_file(
+            ".github/workflows/test.yml",
+            &workflow_content.replace('\n', newline),
+        );
+        Zizmor::cargo_bin()
+            .offline(NetworkMode::AssertOnline)
+            .args(["--fix=all"])
+            .input(workspace.path())
+            .run()?;
+        super::assert_fixed_uses(
+            &workspace,
+            &expected,
+            yamlpath::route!("jobs", "test", "steps", 0, "uses"),
+        )?;
+    }
     Ok(())
 }
 
@@ -791,11 +741,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -7,6 +7,6 @@
+    @@ -6,7 +6,8 @@
+         test:
              runs-on: ubuntu-latest
              steps:
-             - name: Checkout with ref-pin
+    -        - name: Checkout with ref-pin
     -          uses: actions/checkout@v6.0.1 # old comment
+    +        -
+    +          name: Checkout with ref-pin
     +          uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
                with:
                  persist-credentials: false
@@ -880,12 +833,13 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,4 +6,4 @@
+    @@ -6,4 +6,5 @@
        test:
          runs-on: ubuntu-latest
          steps:
     -      - uses: bytecodealliance/actions/wasmtime/setup@v1.1.3
-    +      - uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
+    +      -
+    +        uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
     "
     );
 
@@ -926,11 +880,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -7,6 +7,6 @@
+    @@ -6,7 +6,8 @@
+       test:
          runs-on: ubuntu-latest
          steps:
-           - name: Checkout with major-only ref
+    -      - name: Checkout with major-only ref
     -        uses: actions/checkout@v1
+    +      -
+    +        name: Checkout with major-only ref
     +        uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
              with:
                persist-credentials: false

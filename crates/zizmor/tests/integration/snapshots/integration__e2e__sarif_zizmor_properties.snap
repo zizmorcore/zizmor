@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
-expression: "zizmor().input(input_under_test(\"several-vulnerabilities.yml\")).args([\"--format=sarif\"]).run()?"
+expression: "Zizmor::cargo_bin().input(input_under_test(\"several-vulnerabilities.yml\")).args([\"--format=sarif\"]).run()?"
 ---
 {
   "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json",
@@ -58,7 +58,7 @@ expression: "zizmor().input(input_under_test(\"several-vulnerabilities.yml\")).a
                             "endColumn": 1,
                             "endLine": 17,
                             "snippet": {
-                              "text": "  hackme:\n    name: hackme\n    runs-on: ubuntu-latest\n    permissions: write-all\n\n    steps:\n      - name: hackme\n        run: |\n          echo \"${{ github.event.pull_request.title }}\"\n"
+                              "text": "hackme:\n    name: hackme\n    runs-on: ubuntu-latest\n    permissions: write-all\n\n    steps:\n      - name: hackme\n        run: |\n          echo \"${{ github.event.pull_request.title }}\"\n"
                             },
                             "sourceLanguage": "yaml",
                             "startColumn": 3,
@@ -110,7 +110,7 @@ expression: "zizmor().input(input_under_test(\"several-vulnerabilities.yml\")).a
                             "endColumn": 27,
                             "endLine": 11,
                             "snippet": {
-                              "text": "    permissions: write-all"
+                              "text": "permissions: write-all"
                             },
                             "sourceLanguage": "yaml",
                             "startColumn": 5,
@@ -168,7 +168,7 @@ expression: "zizmor().input(input_under_test(\"several-vulnerabilities.yml\")).a
                   "endColumn": 27,
                   "endLine": 11,
                   "snippet": {
-                    "text": "    permissions: write-all"
+                    "text": "permissions: write-all"
                   },
                   "sourceLanguage": "yaml",
                   "startColumn": 5,

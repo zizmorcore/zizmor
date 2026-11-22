@@ -134,54 +134,42 @@ impl<'doc> SymbolicLocation<'doc> {
         self,
         document: &'doc yamlpath::Document,
     ) -> anyhow::Result<Location<'doc>> {
-        let (extracted, location, feature) = match &self.feature_kind {
+        let (extracted, location, range) = match &self.feature_kind {
             SymbolicFeature::Subfeature(subfeature) => {
                 // If we have a subfeature, we have to extract its exact
                 // parent feature.
-                let feature = document.query_exact(&self.route)?.ok_or_else(|| {
-                    // This should never fail in practice, unless our
-                    // route is malformed or ends in a key-only feature
-                    // (e.g. `foo:`). The latter shouldn't really happen,
-                    // since there's no meaningful subfeature in that case.
-                    anyhow::anyhow!(
-                        "failed to extract exact feature for symbolic location: {}",
-                        self.annotation
-                    )
+                let range = document.value_range(&self.route)?.ok_or_else(|| {
+                    anyhow::anyhow!("missing value for subfeature: {}", self.annotation)
                 })?;
-
-                let extracted = document.extract(&feature);
-
-                let subfeature_span = subfeature
+                let extracted = &document.source()[range.clone()];
+                let span = subfeature
                     .locate_within(extracted)
                     .ok_or_else(|| {
                         anyhow::anyhow!(
-                            "failed to locate subfeature '{subfeature:?}' in feature '{extracted}'",
+                            "failed to locate subfeature '{subfeature:?}' in feature '{extracted}'"
                         )
                     })?
-                    .adjust(feature.location.byte_span.0);
-
+                    .adjust(range.start);
                 (
                     extracted,
-                    ConcreteLocation::from_span(subfeature_span.as_range(), document),
-                    feature,
+                    ConcreteLocation::from_span(span.as_range(), document),
+                    range,
                 )
             }
             SymbolicFeature::Normal => {
-                let feature = document.query_pretty(&self.route)?;
-
+                let range = document.entry_range(&self.route)?;
                 (
-                    document.extract_with_leading_whitespace(&feature),
-                    ConcreteLocation::from(&feature.location),
-                    feature,
+                    &document.source()[range.clone()],
+                    ConcreteLocation::from_span(range.clone(), document),
+                    range,
                 )
             }
             SymbolicFeature::KeyOnly => {
-                let feature = document.query_key_only(&self.route)?;
-
+                let range = document.key_range(&self.route)?;
                 (
-                    document.extract(&feature),
-                    ConcreteLocation::from(&feature.location),
-                    feature,
+                    &document.source()[range.clone()],
+                    ConcreteLocation::from_span(range.clone(), document),
+                    range,
                 )
             }
         };
@@ -191,11 +179,7 @@ impl<'doc> SymbolicLocation<'doc> {
             concrete: Feature {
                 location,
                 feature: extracted,
-                comments: document
-                    .feature_comments(&feature)
-                    .into_iter()
-                    .map(|f| Comment::extract(document, &f))
-                    .collect(),
+                comments: Comment::in_range(document, range),
             },
         })
     }
@@ -272,31 +256,9 @@ impl ConcreteLocation {
         let start_point = doc.line_index().line_col(start);
         let end_point = doc.line_index().line_col(end);
 
-        Self {
-            start_point: start_point.into(),
-            end_point: end_point.into(),
-            offset_span: span.clone(),
-        }
+        Self::new(start_point.into(), end_point.into(), span)
     }
 }
-
-impl From<&yamlpath::Location> for ConcreteLocation {
-    fn from(value: &yamlpath::Location) -> Self {
-        Self {
-            start_point: Point {
-                row: value.point_span.0.0,
-                column: value.point_span.0.1,
-            },
-            end_point: Point {
-                row: value.point_span.1.0,
-                column: value.point_span.1.1,
-            },
-            offset_span: value.byte_span.0..value.byte_span.1,
-        }
-    }
-}
-
-static_regex!(ANY_COMMENT, r"#.*$");
 
 static_regex!(IGNORE_EXPR, r"# zizmor: ignore\[(.+)\](?:\s+.*)?$");
 
@@ -311,15 +273,22 @@ pub(crate) struct Comment<'doc> {
 }
 
 impl<'doc> Comment<'doc> {
-    pub(crate) fn extract(document: &'doc yamlpath::Document, feature: &yamlpath::Feature) -> Self {
-        Self::new(
-            document.extract(feature),
-            ConcreteLocation::from(&feature.location),
-        )
-    }
-
     pub(crate) fn new(raw: &'doc str, location: ConcreteLocation) -> Self {
         Self { raw, location }
+    }
+
+    fn in_range(document: &'doc yamlpath::Document, range: Range<usize>) -> Vec<Self> {
+        document
+            .comments(range)
+            .iter()
+            .map(|comment| {
+                let span = comment.span.start()..comment.span.end();
+                Self::new(
+                    &document.source()[span.clone()],
+                    ConcreteLocation::from_span(span, document),
+                )
+            })
+            .collect()
     }
 
     pub(crate) fn is_meaningful(&self) -> bool {
@@ -383,56 +352,10 @@ impl<'doc> Feature<'doc> {
 
     pub(crate) fn from_span<'a>(span: &Range<usize>, input: &'a impl AsDocument<'a, 'doc>) -> Self {
         let document = input.as_document();
-        let raw = input.as_document().source();
-        let start = TextSize::new(span.start as u32);
-        let end = TextSize::new(span.end as u32);
-
-        let start_point = document.line_index().line_col(start);
-        let end_point = document.line_index().line_col(end);
-
-        // Extract any comments within the feature's line span.
-        //
-        // This is slightly less precise than comment extraction
-        // when concretizing a symbolic location, since we're operating
-        // on a raw span rather than an AST-aware YAML path.
-        //
-        // NOTE: We can't use LineIndex::lines() to extract the comment-eligible
-        // lines, because it doesn't include full line spans if the input
-        // span is a strict subset of a single line.
-        let comments = (start_point.line..=end_point.line)
-            .flat_map(|line| {
-                // NOTE: We don't really expect this to fail, since this
-                // line range comes from the line index itself.
-                let line_range = document.line_index().line(line)?;
-                // Chomp the trailing newline rather than enabling
-                // multi-line mode in ANY_COMMENT, on the theory that
-                // chomping is a little faster.
-                let line = raw[line_range].trim_end();
-
-                if let Some(raw_comment) = ANY_COMMENT.find(line) {
-                    // We need to transform this comment match back into
-                    // a concrete location using its offsets within the line.
-                    let line_start: usize = line_range.start().into();
-                    let comment_location = ConcreteLocation::from_span(
-                        line_start + raw_comment.start()..line_start + raw_comment.end(),
-                        document,
-                    );
-
-                    Some(Comment::new(raw_comment.as_str(), comment_location))
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        Feature {
-            location: ConcreteLocation::new(
-                start_point.into(),
-                end_point.into(),
-                span.start..span.end,
-            ),
-            feature: &raw[span.start..span.end],
-            comments,
+        Self {
+            location: ConcreteLocation::from_span(span.clone(), document),
+            feature: &document.source()[span.clone()],
+            comments: Comment::in_range(document, span.clone()),
         }
     }
 }
@@ -474,7 +397,7 @@ foo: # comment
     - b
     - c # third comment
   baz: |- # fourth comment
-    some content
+    some content # inside a scalar
 "#;
 
         let doc = yamlpath::Document::new(input)?;

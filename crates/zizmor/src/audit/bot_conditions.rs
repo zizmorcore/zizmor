@@ -12,7 +12,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::{
     audit::AuditError,
     finding::{
-        Confidence, Fix, FixDisposition, Severity,
+        Confidence, Fix, FixDisposition, FixEdit, Severity,
         location::{Locatable as _, SymbolicLocation},
     },
     models::workflow::{JobCommon as _, Workflow},
@@ -417,13 +417,13 @@ impl BotConditions {
             title: "replace spoofable actor context".into(),
             key: &workflow.key,
             disposition: FixDisposition::Safe,
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: if_route,
-                operation: Op::RewriteFragment {
+                operation: Op::RewriteString {
                     from: subfeature::Subfeature::new(0, spoofable_context_raw),
                     to: safe_context.into(),
                 },
-            }],
+            }]),
         })
     }
 }

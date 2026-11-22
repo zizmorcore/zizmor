@@ -83,13 +83,13 @@ pub(crate) fn apply_fixes(
         let file_path = local.path();
 
         let mut file_applied_fixes = Vec::new();
-        let mut current_document = input.as_document().clone();
+        let mut edited = None;
 
         // Then apply successful fixes sequentially, handling conflicts gracefully
         for (fix, finding) in fixes {
-            match fix.apply(&current_document) {
+            match fix.apply(edited.as_ref().unwrap_or(input.as_document())) {
                 Ok(new_document) => {
-                    current_document = new_document;
+                    edited = Some(new_document);
                     file_applied_fixes.push((finding.ident, fix, finding));
                     total_applied += 1;
                 }
@@ -106,7 +106,9 @@ pub(crate) fn apply_fixes(
         }
 
         // Only proceed if there are changes to apply
-        if current_document.source() != input.as_document().source() {
+        if let Some(current_document) = edited
+            && current_document.source() != input.as_document().source()
+        {
             let num_fixes = file_applied_fixes.len();
 
             std::fs::write(file_path, current_document.source())

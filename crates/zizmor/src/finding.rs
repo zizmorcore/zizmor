@@ -10,7 +10,7 @@ use crate::{
     InputKey, audit::AuditError, finding::location::LocationKind, models::AsDocument,
     registry::input::GroupID,
 };
-use yamlpatch::{self, Patch};
+use yamlpatch::Patch;
 
 pub(crate) mod location;
 
@@ -98,7 +98,7 @@ impl fmt::Display for FixDisposition {
 /// Represents a suggested fix for a finding.
 ///
 /// A fix is associated with a specific input via its [`Fix::key`],
-/// and contains one or more [`Patch`] operations to apply to the input.
+/// and describes a change to that input.
 pub(crate) struct Fix<'doc> {
     /// A short title describing the fix.
     pub(crate) title: String,
@@ -106,8 +106,16 @@ pub(crate) struct Fix<'doc> {
     pub(crate) key: &'doc InputKey,
     /// The fix's disposition.
     pub(crate) disposition: FixDisposition,
-    /// One or more YAML patches to apply as part of this fix.
-    pub(crate) patches: Vec<Patch<'doc>>,
+    pub(crate) edit: FixEdit<'doc>,
+}
+
+pub(crate) enum FixEdit<'doc> {
+    Yaml(Vec<Patch<'doc>>),
+    /// A source-level audit identified a fragment using original file offsets.
+    RewriteSource {
+        from: subfeature::Subfeature<'doc>,
+        to: String,
+    },
 }
 
 impl Fix<'_> {
@@ -116,9 +124,22 @@ impl Fix<'_> {
         &self,
         document: &yamlpath::Document,
     ) -> anyhow::Result<yamlpath::Document> {
-        match yamlpatch::apply_yaml_patches(document, &self.patches) {
-            Ok(new_document) => Ok(new_document),
-            Err(e) => Err(anyhow!("fix failed: {e}")),
+        match &self.edit {
+            FixEdit::Yaml(patches) => {
+                let source = yamlpatch::apply_yaml_patches(document, patches)?;
+                Ok(yamlpath::Document::new(source)?)
+            }
+            FixEdit::RewriteSource { from, to } => {
+                let mut source = document.source().to_owned();
+                let span = from
+                    .locate_within(&source)
+                    .ok_or_else(|| anyhow!("no match for {from:?}"))?;
+                source.replace_range(span.as_range(), to);
+                let edited = yamlpath::Document::new(source)?;
+                // A text splice can introduce duplicate keys or another document.
+                astral_yaml_serde::from_stream::<astral_yaml_serde::Value>(edited.stream())?;
+                Ok(edited)
+            }
         }
     }
 }

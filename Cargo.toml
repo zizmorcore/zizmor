@@ -5,7 +5,6 @@ members = [
   "crates/github-actions-models",
   "crates/pre-commit-models",
   "crates/subfeature",
-  "crates/tree-sitter-iter",
   "crates/yamlpatch",
   "crates/yamlpath",
   "crates/zizmor",
@@ -26,7 +25,6 @@ github-actions-expressions = { path = "crates/github-actions-expressions", versi
 github-actions-models = { path = "crates/github-actions-models", version = "1.33.1" }
 pre-commit-models = { path = "crates/pre-commit-models", version = "1.33.1" }
 subfeature = { path = "crates/subfeature", version = "1.33.1" }
-tree-sitter-iter = { path = "crates/tree-sitter-iter", version = "1.33.1" }
 yamlpatch = { path = "crates/yamlpatch", version = "1.33.1" }
 yamlpath = { path = "crates/yamlpath", version = "1.33.1" }
 zizmor-dev = { path = "crates/zizmor-dev" }
@@ -85,11 +83,9 @@ tree-sitter = "0.27.0"
 tree-sitter-bash = "0.25.1"
 # Exact version because the PowerShell audit queries depend on the grammar's tree structure.
 tree-sitter-powershell = { package = "woodruffw-trough-tree-sitter-powershell", version = "=0.1.6" }
-tree-sitter-yaml = "0.7.2"
 typomania = { version = "0.2.0", default-features = false }
 url = { version = "2.5.8", features = ["serde"] }
 walkdir = "2.5.0"
-yaml_serde = "0.10"
 
 [workspace.lints.clippy]
 dbg_macro = "warn"

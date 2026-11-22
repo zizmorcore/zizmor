@@ -111,7 +111,7 @@ warning[excessive-permissions]: overly broad permissions
 ...  |
 22 | |           close-issue-message: "This issue has not received a reporter response and has been auto-closed. If the issue is still re...
 23 | |           close-issue-reason: completed
-   | |________________________________________^ default permissions used due to no permissions: block
+   | |_______________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
@@ -682,7 +682,7 @@ warning[excessive-permissions]: overly broad permissions
 ...  |
 18 | |           issue-inactive-days: 90
 19 | |           pr-inactive-days: 90
-   | |_______________________________^ default permissions used due to no permissions: block
+   | |______________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 

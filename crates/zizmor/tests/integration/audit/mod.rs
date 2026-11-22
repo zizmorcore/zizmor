@@ -42,3 +42,27 @@ mod unsound_condition;
 mod unsound_contains;
 mod unsound_ternary;
 mod use_trusted_publishing;
+
+/// Compare the complete fixed workflow and the version comment on the selected step.
+#[cfg(feature = "gh-token-tests")]
+fn assert_fixed_uses(
+    workspace: &zizmor_dev::Workspace,
+    expected: &str,
+    uses: yamlpath::Route<'_>,
+) -> anyhow::Result<()> {
+    let path = workspace.path().join(".github/workflows/test.yml");
+    let actual = yamlpath::Document::new(std::fs::read_to_string(path)?)?;
+    let expected = yamlpath::Document::new(expected)?;
+    assert_eq!(
+        astral_yaml_serde::from_stream::<astral_yaml_serde::Value>(actual.stream())?,
+        astral_yaml_serde::from_stream::<astral_yaml_serde::Value>(expected.stream())?,
+    );
+    let [actual_comment] = actual.comments(actual.entry_range(&uses)?) else {
+        anyhow::bail!("expected a version comment on the fixed uses field");
+    };
+    let [expected_comment] = expected.comments(expected.entry_range(&uses)?) else {
+        anyhow::bail!("the fixture must specify a version comment");
+    };
+    assert_eq!(actual_comment.text, expected_comment.text);
+    Ok(())
+}

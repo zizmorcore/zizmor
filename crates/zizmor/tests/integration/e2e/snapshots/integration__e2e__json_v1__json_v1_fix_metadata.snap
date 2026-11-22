@@ -52,7 +52,7 @@ expression: output
               "end": 180
             }
           },
-          "feature": "    insecure-external-code-execution: allow",
+          "feature": "insecure-external-code-execution: allow",
           "comments": []
         }
       },

@@ -232,14 +232,20 @@ updates:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
-    @@ -7,3 +7,5 @@
+        @r#"
+    @@ -2,8 +2,10 @@
+     version: 2
+     ⏎
+     updates:
+    -  - package-ecosystem: pip
+    +  -
+    +    package-ecosystem: pip
+         directory: /
          schedule:
            interval: daily
          insecure-external-code-execution: deny
-    +    cooldown:
-    +      default-days: 7
-    "
+    +    "cooldown": {"default-days": 7}
+    "#
     );
     Ok(())
 }
@@ -268,17 +274,17 @@ updates:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
+        @r#"
     @@ -4,7 +4,7 @@
      updates:
        - package-ecosystem: pip
          directory: /
     -    cooldown: {}
-    +    cooldown: { default-days: 7 }
+    +    cooldown: {"default-days": 7}
          schedule:
            interval: daily
          insecure-external-code-execution: deny
-    "
+    "#
     );
     Ok(())
 }
@@ -393,17 +399,17 @@ updates:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
+        @r#"
     @@ -6,6 +6,7 @@
          directory: /
          cooldown:
            semver-major-days: 14
     -      semver-minor-days: 2
     +      semver-minor-days: 7
-    +      default-days: 7
+    +      "default-days": 7
          schedule:
            interval: daily
-    "
+    "#
     );
     Ok(())
 }
@@ -437,22 +443,29 @@ updates:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
-    @@ -6,10 +6,12 @@
+        @r#"
+    @@ -2,14 +2,16 @@
+     version: 2
+     ⏎
+     updates:
+    -  - package-ecosystem: pip
+    +  -
+    +    package-ecosystem: pip
          directory: /
          schedule:
            interval: daily
-    +    cooldown:
-    +      default-days: 7
-     ⏎
-       - package-ecosystem: npm
+    -⏎
+    -  - package-ecosystem: npm
+    +    "cooldown": {"default-days": 7}
+    +  -
+    +    package-ecosystem: npm
          directory: /
          cooldown:
     -      default-days: 1
     +      default-days: 7
          schedule:
            interval: weekly
-    "
+    "#
     );
     Ok(())
 }

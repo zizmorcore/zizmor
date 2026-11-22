@@ -12,7 +12,8 @@ fn test_normal_persona() -> anyhow::Result<()> {
        |
     27 | /         if: |
     28 | |           ${{ some.context }}
-       | |_____________________________^ condition always evaluates to true
+    29 | |         run: echo not ok
+       | |_^ condition always evaluates to true
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -22,7 +23,8 @@ fn test_normal_persona() -> anyhow::Result<()> {
        |
     33 | /         if: >
     34 | |           ${{ some.context }}
-       | |_____________________________^ condition always evaluates to true
+    35 | |         run: echo not ok
+       | |_^ condition always evaluates to true
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -34,7 +36,8 @@ fn test_normal_persona() -> anyhow::Result<()> {
     61 | |           ${{ some.context
     62 | |             && other.context
     63 | |           }}
-       | |____________^ condition always evaluates to true
+    64 | |         run: echo not ok
+       | |_^ condition always evaluates to true
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -121,11 +124,14 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -6,6 +6,6 @@
+    @@ -5,7 +5,8 @@
+       test:
          runs-on: ubuntu-latest
          steps:
-           - name: simple case
+    -      - name: simple case
     -        if: |
+    +      -
+    +        name: simple case
     +        if: |-
                ${{ github.event_name == 'push' }}
              run: echo "test"
@@ -162,11 +168,14 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -6,6 +6,6 @@
+    @@ -5,7 +5,8 @@
+       test:
          runs-on: ubuntu-latest
          steps:
-           - name: folded case
+    -      - name: folded case
     -        if: >
+    +      -
+    +        name: folded case
     +        if: >-
                ${{ github.actor == 'dependabot[bot]' }}
              run: echo "test"
@@ -204,11 +213,14 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -6,7 +6,7 @@
+    @@ -5,8 +5,9 @@
+       test:
          runs-on: ubuntu-latest
          steps:
-           - name: multiline case
+    -      - name: multiline case
     -        if: |
+    +      -
+    +        name: multiline case
     +        if: |-
                ${{ github.event_name == 'push'
                  && github.ref == 'refs/heads/main' }}
@@ -250,11 +262,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,7 +6,7 @@
+    @@ -5,8 +5,9 @@
+       test:
          runs-on: ubuntu-latest
          steps:
-           - name: complex case
+    -      - name: complex case
     -        if: |
+    +      -
+    +        name: complex case
     +        if: |-
                ${{
                  github.event_name == 'push' &&
