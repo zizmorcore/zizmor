@@ -76,42 +76,57 @@ help[undocumented-permissions]: permissions without explanatory comments
 error[unpinned-images]: unpinned image references
   --> .github/workflows/ci.yml:64:7
    |
+20 |       buildId: ${{ steps.build.outputs.build-id}}
+   |       ------------------------------------------- this job declares output buildId
+...
 64 |       image: registry.depot.dev/rltf7cln5v:${{ needs.build.outputs.buildId }}
-   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
    |
-   = note: audit confidence → High
+   = note: audit confidence → Low
 
 error[unpinned-images]: unpinned image references
-  --> .github/workflows/ci.yml:71:48
+  --> .github/workflows/ci.yml:71:9
    |
+46 |           - name: Tests
+   |             ----------- matrix value defined here
+...
 71 |         image: ${{ (matrix.name == 'Tests') && 'postgres:17.5' || '' }}
-   |                                                ^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "postgres:17.5" is not pinned to a SHA256 hash
    |
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> .github/workflows/ci.yml:80:48
+  --> .github/workflows/ci.yml:80:9
    |
+46 |           - name: Tests
+   |             ----------- matrix value defined here
+...
 80 |         image: ${{ (matrix.name == 'Tests') && 'redis:7.0' || '' }}
-   |                                                ^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "redis:7.0" is not pinned to a SHA256 hash
    |
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
-  --> .github/workflows/ci.yml:84:48
+  --> .github/workflows/ci.yml:84:9
    |
+46 |           - name: Tests
+   |             ----------- matrix value defined here
+...
 84 |         image: ${{ (matrix.name == 'Tests') && 'stripe/stripe-mock:v0.162.0' || '' }}
-   |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "stripe/stripe-mock:v0.162.0" is not pinned to a SHA256 hash
    |
    = note: audit confidence → High
 
 error[unpinned-images]: unpinned image references
    --> .github/workflows/ci.yml:109:7
     |
+ 20 |       buildId: ${{ steps.build.outputs.build-id}}
+    |       ------------------------------------------- this job declares output buildId
+...
 109 |       image: registry.depot.dev/rltf7cln5v:${{ needs.build.outputs.buildId }}
-    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is not pinned to a SHA256 hash
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image may be unpinned
     |
-    = note: audit confidence → High
+    = note: audit confidence → Low
 
 error[unpinned-images]: unpinned image references
    --> .github/workflows/ci.yml:114:9

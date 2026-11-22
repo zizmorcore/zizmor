@@ -6,6 +6,13 @@ on:
     branches:
       - master
   workflow_dispatch:
+    inputs:
+      use-redis:
+        description: Start the Redis service
+        type: boolean
+      image:
+        description: Override the default image
+        type: string
 
 name: unpinned-images
 
@@ -98,6 +105,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       redis:
+        image: ${{ inputs.use-redis == true && 'redis:7' || '' }}
+      redis-string-comparison:
         image: ${{ inputs.use-redis == 'true' && 'redis:7' || '' }}
     steps:
       - run: echo 'not vulnerable!'
@@ -107,7 +116,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       redis:
-        image: ${{ inputs.use-redis == 'true' && 'redis@sha256:...' || '' }}
+        image: ${{ inputs.use-redis && 'redis@sha256:7df1eeff67eb0ba84f6b9d2940765a6bb1158081426745c185a03b1507de6a09' || '' }}
     steps:
       - run: echo 'not vulnerable!'
 

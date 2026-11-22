@@ -16,7 +16,7 @@ use itertools::Itertools as _;
 use std::{
     borrow::Cow,
     cell::Cell,
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashSet},
 };
 
 /// The part of the document that supplies the bindings for a read.
@@ -98,6 +98,10 @@ impl<'a, 'doc> Site<'a, 'doc> {
         self.evaluate_with(|eval, env| eval.evaluate(expr, env))
     }
 
+    pub(super) fn evaluate_template(self, text: &str) -> Evaluated<'doc> {
+        self.evaluate_with(|eval, env| eval.template(text, env))
+    }
+
     fn evaluate_with(
         self,
         run: impl Fn(&mut Evaluator, &mut Environment<'_, 'doc>) -> Outcomes,
@@ -155,9 +159,26 @@ impl<'doc> Evaluated<'doc> {
             .into_iter()
             .flat_map(|value| value.dependencies().evidence)
             .collect();
-        ids.into_iter()
-            .map(|id| self.evidence.locations[id].clone())
-            .collect()
+        self.evidence.locations(ids)
+    }
+
+    /// Possible scalar strings after Actions coercion. An unknown value may
+    /// yield a string at runtime. Keep equal strings from different definitions
+    /// separate so that inline ignores apply to their own definition.
+    pub(super) fn scalar_strings(
+        self,
+    ) -> impl Iterator<Item = (Option<String>, Vec<SymbolicLocation<'doc>>)> {
+        let mut seen = HashSet::new();
+        self.values.into_iter().filter_map(move |value| {
+            let value = value.into_string()?;
+            let name = match value.inner {
+                AbstractValue::Known(Evaluation::String(name)) => Some(name),
+                _ => None,
+            };
+            let ids = value.provenance.evidence;
+            seen.insert((name.clone(), ids.clone()))
+                .then(|| (name, self.evidence.locations(ids)))
+        })
     }
 }
 
@@ -167,6 +188,12 @@ struct Evidence<'doc> {
 }
 
 impl<'doc> Evidence<'doc> {
+    fn locations(&self, ids: BTreeSet<usize>) -> Vec<SymbolicLocation<'doc>> {
+        ids.into_iter()
+            .map(|id| self.locations[id].clone())
+            .collect()
+    }
+
     fn record(&mut self, location: SymbolicLocation<'doc>) -> usize {
         let key = (location.route.clone(), location.annotation.clone());
         self.locations.insert_full(key, location).0

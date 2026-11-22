@@ -338,7 +338,153 @@ error[unpinned-images]: unpinned image references
    --> .github/workflows/ci.yml:152:5
     |
 152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-bookworm" is unpinned
+...
+157 |           - {IMAGE: "bookworm", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
+    |             ----------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-trixie" is unpinned
+...
+158 |           - {IMAGE: "trixie", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
+    |             --------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-sid" is unpinned
+...
+159 |           - {IMAGE: "sid", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
+    |             ------------------------------------------------------------ matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-ubuntu-jammy" is unpinned
+...
+160 |           - {IMAGE: "ubuntu-jammy", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
+    |             --------------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-ubuntu-noble" is unpinned
+...
+161 |           - {IMAGE: "ubuntu-noble", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
+    |             --------------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-ubuntu-rolling" is unpinned
+...
+162 |           - {IMAGE: "ubuntu-rolling", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
+    |             ----------------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-fedora" is unpinned
+...
+163 |           - {IMAGE: "fedora", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
+    |             --------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-centos-stream9" is unpinned
+...
+164 |           - {IMAGE: "centos-stream9", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
+    |             ----------------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-centos-stream9-fips" is unpinned
+...
+165 |           - {IMAGE: "centos-stream9-fips", NOXSESSION: "tests", RUNNER: "ubuntu-latest", FIPS: true}
+    |             ---------------------------------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-centos-stream10" is unpinned
+...
+166 |           - {IMAGE: "centos-stream10", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
+    |             ------------------------------------------------------------------------ matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-centos-stream10-fips" is unpinned
+...
+167 |           - {IMAGE: "centos-stream10-fips", NOXSESSION: "tests", RUNNER: "ubuntu-latest", FIPS: true}
+    |             ----------------------------------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-ubuntu-rolling:aarch64" is not pinned to a SHA256 hash
+...
+169 |           - {IMAGE: "ubuntu-rolling:aarch64", NOXSESSION: "tests", RUNNER: "ubuntu-24.04-arm"}
+    |             ---------------------------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-ubuntu-rolling:armv7l" is not pinned to a SHA256 hash
+...
+171 |           - {IMAGE: "ubuntu-rolling:armv7l", NOXSESSION: "tests", RUNNER: "ubuntu-24.04-arm"}
+    |             --------------------------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:152:5
+    |
+152 |     container: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-ubuntu-rolling:ppc64le" is not pinned to a SHA256 hash
+...
+174 |           - {IMAGE: "ubuntu-rolling:ppc64le", NOXSESSION: "tests-nocoverage", RUNNER: "ubuntu-24.04-ppc64le"}
+    |             ------------------------------------------------------------------------------------------------- matrix value defined here
     |
     = note: audit confidence → High
 
@@ -346,7 +492,21 @@ error[unpinned-images]: unpinned image references
    --> .github/workflows/ci.yml:215:7
     |
 215 |       image: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
-    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-alpine" is unpinned
+...
+224 |           - {IMAGE: "alpine", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
+    |             --------------------------------------------------------------- matrix value defined here
+    |
+    = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+   --> .github/workflows/ci.yml:215:7
+    |
+215 |       image: ghcr.io/pyca/cryptography-runner-${{ matrix.IMAGE.IMAGE }}
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-runner-alpine:aarch64" is not pinned to a SHA256 hash
+...
+225 |           - {IMAGE: "alpine:aarch64", NOXSESSION: "tests", RUNNER: "ubuntu-24.04-arm"}
+    |             -------------------------------------------------------------------------- matrix value defined here
     |
     = note: audit confidence → High
 
@@ -892,7 +1052,120 @@ error[unpinned-images]: unpinned image references
   --> .github/workflows/wheel-builder.yml:60:7
    |
 60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
-   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image is unpinned
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-manylinux2014:x86_64" is not pinned to a SHA256 hash
+...
+74 |           - { NAME: "manylinux2014_x86_64", CONTAINER: "cryptography-manylinux2014:x86_64", RUNNER: "ubuntu-latest" }
+   |             --------------------------------------------------------------------------------------------------------- matrix value defined here
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-manylinux_2_28:x86_64" is not pinned to a SHA256 hash
+...
+75 |           - { NAME: "manylinux_2_28_x86_64", CONTAINER: "cryptography-manylinux_2_28:x86_64", RUNNER: "ubuntu-latest"}
+   |             ---------------------------------------------------------------------------------------------------------- matrix value defined here
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-manylinux_2_34:x86_64" is not pinned to a SHA256 hash
+...
+76 |           - { NAME: "manylinux_2_34_x86_64", CONTAINER: "cryptography-manylinux_2_34:x86_64", RUNNER: "ubuntu-latest"}
+   |             ---------------------------------------------------------------------------------------------------------- matrix value defined here
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-musllinux_1_2:x86_64" is not pinned to a SHA256 hash
+...
+77 |           - { NAME: "musllinux_1_2_x86_64", CONTAINER: "cryptography-musllinux_1_2:x86_64", RUNNER: "ubuntu-latest"}
+   |             -------------------------------------------------------------------------------------------------------- matrix value defined here
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-manylinux2014_aarch64" is unpinned
+...
+79 |           - { NAME: "manylinux2014_aarch64", CONTAINER: "cryptography-manylinux2014_aarch64", RUNNER: "ubuntu-24.04-arm" }
+   |             -------------------------------------------------------------------------------------------------------------- matrix value defined here
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-manylinux_2_28:aarch64" is not pinned to a SHA256 hash
+...
+80 |           - { NAME: "manylinux_2_28_aarch64", CONTAINER: "cryptography-manylinux_2_28:aarch64", RUNNER: "ubuntu-24.04-arm" }
+   |             ---------------------------------------------------------------------------------------------------------------- matrix value defined here
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-manylinux_2_34:aarch64" is not pinned to a SHA256 hash
+...
+81 |           - { NAME: "manylinux_2_34_aarch64", CONTAINER: "cryptography-manylinux_2_34:aarch64", RUNNER: "ubuntu-24.04-arm" }
+   |             ---------------------------------------------------------------------------------------------------------------- matrix value defined here
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-musllinux_1_2:aarch64" is not pinned to a SHA256 hash
+...
+82 |           - { NAME: "musllinux_1_2_aarch64", CONTAINER: "cryptography-musllinux_1_2:aarch64", RUNNER: "ubuntu-24.04-arm" }
+   |             -------------------------------------------------------------------------------------------------------------- matrix value defined here
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-manylinux_2_31:armv7l" is not pinned to a SHA256 hash
+...
+84 |           - { NAME: "manylinux_2_31_armv7l", CONTAINER: "cryptography-manylinux_2_31:armv7l", RUNNER: "ubuntu-24.04-arm" }
+   |             -------------------------------------------------------------------------------------------------------------- matrix value defined here
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-manylinux_2_28:ppc64le" is not pinned to a SHA256 hash
+...
+86 |           - { NAME: "manylinux_2_28_ppc64le", CONTAINER: "cryptography-manylinux_2_28:ppc64le", RUNNER: "ubuntu-24.04-ppc64le" }
+   |             -------------------------------------------------------------------------------------------------------------------- matrix value defined here
+   |
+   = note: audit confidence → High
+
+error[unpinned-images]: unpinned image references
+  --> .github/workflows/wheel-builder.yml:60:7
+   |
+60 |       image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ container image "ghcr.io/pyca/cryptography-manylinux_2_34:ppc64le" is not pinned to a SHA256 hash
+...
+87 |           - { NAME: "manylinux_2_34_ppc64le", CONTAINER: "cryptography-manylinux_2_34:ppc64le", RUNNER: "ubuntu-24.04-ppc64le" }
+   |             -------------------------------------------------------------------------------------------------------------------- matrix value defined here
    |
    = note: audit confidence → High
 
@@ -1028,4 +1301,4 @@ info[superfluous-actions]: action functionality is already included by the runne
    |
    = note: audit confidence → Low
 
-102 findings (9 suppressed): 19 informational, 56 low, 7 medium, 11 high
+126 findings (9 suppressed): 19 informational, 56 low, 7 medium, 35 high
