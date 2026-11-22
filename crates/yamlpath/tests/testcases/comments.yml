@@ -13,9 +13,15 @@ testcase:
     # comment doesn't interfere with indexing
     - ghi
 
+  steps:
+    - run: setup # On the last child.
+
+    # Before the next step.
+    - run: build
+
 queries:
   - query: [foo]
-    expected: "  foo: # comment here\n    bar:\n      - 123 # another comment"
+    expected: "foo: # comment here\n    bar:\n      - 123"
 
   - query: [foo, bar, 0]
     # TODO: ideally would be "- 123 # another comment"
@@ -23,7 +29,10 @@ queries:
 
   - query: [flow]
     # TODO: ideally would be "flow: [1, 2, 3] # another comment"
-    expected: "  flow: [1, 2, 3]"
+    expected: "flow: [1, 2, 3]"
 
   - query: [indexing, 2]
     expected: "ghi"
+
+  - query: [steps, 0]
+    expected: "run: setup"

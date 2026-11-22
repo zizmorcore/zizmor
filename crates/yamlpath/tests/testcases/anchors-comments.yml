@@ -19,16 +19,16 @@ testcase:
     &flow {key: one},
     # Before the alias.
     *flow
-  ]
+    ]
 
 queries:
   - query: [jobs, first, steps]
     mode: exact
-    expected: "        - name: Checkout\n          uses: actions/checkout@v4"
+    expected: "&steps\n        # Before the anchored list's first item.\n        - name: Checkout\n          uses: actions/checkout@v4"
 
   - query: [jobs, second, steps]
     mode: exact
-    expected: "        - name: Checkout\n          uses: actions/checkout@v4"
+    expected: "&steps\n        # Before the anchored list's first item.\n        - name: Checkout\n          uses: actions/checkout@v4"
 
   - query: [jobs, first, steps, 0, name]
     mode: exact
@@ -40,7 +40,7 @@ queries:
 
   - query: [alias]
     mode: exact
-    expected: "    key: value"
+    expected: "&source\n    key: value"
 
   - query: [alias, key]
     mode: exact

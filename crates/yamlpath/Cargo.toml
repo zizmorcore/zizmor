@@ -11,6 +11,7 @@ homepage.workspace = true
 license.workspace = true
 
 [dependencies]
+astral-yaml.workspace = true
 line-index.workspace = true
 self_cell.workspace = true
 serde.workspace = true
@@ -20,6 +21,7 @@ tree-sitter-iter = { workspace = true }
 tree-sitter-yaml = { workspace = true }
 
 [dev-dependencies]
+astral-yaml-serde.workspace = true
 yaml_serde.workspace = true
 
 [lints]

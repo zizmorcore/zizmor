@@ -12,6 +12,9 @@
 #![deny(missing_docs)]
 #![allow(clippy::redundant_field_names)]
 
+/// Source queries backed by Astral YAML.
+pub mod document;
+
 use std::{
     borrow::Cow,
     collections::{BTreeMap, HashMap},

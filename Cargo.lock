@@ -4250,6 +4250,8 @@ dependencies = [
 name = "yamlpath"
 version = "1.33.1"
 dependencies = [
+ "astral-yaml",
+ "astral-yaml-serde",
  "line-index",
  "self_cell",
  "serde",

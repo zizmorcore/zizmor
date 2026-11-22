@@ -57,16 +57,11 @@ queries:
 
   - query: [even, deeper, block]
     mode: exact
-    expected: |2-
-      |
-              foo
-              bar baz
+    expected: "|\n        foo\n        bar baz\n\n"
 
   - query: [flow, 0, list]
     mode: exact
-    expected: |2-
-      >-
-              abc
+    expected: ">-\n        abc\n\n"
 
   - query: [flow2, emptykey]
     mode: exact
@@ -76,10 +71,9 @@ queries:
     mode: exact
     expected: "<<empty>>"
 
-  # BUG: should be "<<empty>>"
   - query: [flow4, emptykey]
     mode: exact
-    expected: "emptykey"
+    expected: "<<empty>>"
 
   - query: [comments, foo]
     mode: exact
@@ -91,9 +85,7 @@ queries:
 
   - query: [comments, ghi]
     mode: exact
-    expected: |2-
-            foo: bar # comment
-            baz: qux # another comment
+    expected: "foo: bar # comment\n      baz: qux"
 
   - query: [jobs, test, steps, 0, with]
     mode: exact

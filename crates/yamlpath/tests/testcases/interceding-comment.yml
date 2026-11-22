@@ -23,13 +23,13 @@ testcase:
 
 queries:
   - query: [foo, 0, bar]
-    expected: "      bar: baz"
+    expected: "bar: baz"
 
   - query: [multiple, 0, bar]
-    expected: "      bar: baz"
+    expected: "bar: baz"
 
   - query: [many-children, 1, bar]
-    expected: "      bar: baz"
+    expected: "bar: baz"
 
   - query: [after-key, foo]
     mode: exact

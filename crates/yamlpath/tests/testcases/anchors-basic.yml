@@ -35,7 +35,7 @@ queries:
 
   - query: [jobs, job2, env, DATABASE_URL]
     mode: key-only
-    expected: "        DATABASE_URL"
+    expected: "DATABASE_URL"
 
   # job2 uses the first env_vars definition (production)
   - query: [jobs, job2, env, NODE_ENV]
