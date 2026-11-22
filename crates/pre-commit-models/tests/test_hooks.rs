@@ -9,6 +9,6 @@ fn test_load_all() {
     for sample_hook in std::fs::read_dir(sample_hooks).unwrap() {
         let sample_hook = sample_hook.unwrap().path();
         let hook_contents = std::fs::read_to_string(sample_hook).unwrap();
-        yaml_serde::from_str::<Hooks>(&hook_contents).unwrap();
+        astral_yaml_serde::from_str::<Hooks>(&hook_contents).unwrap();
     }
 }

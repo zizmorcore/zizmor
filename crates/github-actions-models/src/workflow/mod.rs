@@ -164,11 +164,11 @@ mod tests {
     #[test]
     fn test_concurrency() {
         let bare = "foo";
-        let concurrency: Concurrency = yaml_serde::from_str(bare).unwrap();
+        let concurrency: Concurrency = astral_yaml_serde::from_str(bare).unwrap();
         assert!(matches!(concurrency, Concurrency::Bare(_)));
 
         let rich = "group: foo\ncancel-in-progress: true";
-        let concurrency: Concurrency = yaml_serde::from_str(rich).unwrap();
+        let concurrency: Concurrency = astral_yaml_serde::from_str(rich).unwrap();
         assert!(matches!(
             concurrency,
             Concurrency::Rich {
@@ -193,7 +193,7 @@ mod tests {
   pull_request_target:
         ";
 
-        let trigger: Trigger = yaml_serde::from_str(on).unwrap();
+        let trigger: Trigger = astral_yaml_serde::from_str(on).unwrap();
         let events = &trigger.events;
 
         assert!(matches!(events.issues, OptionalBody::Default));

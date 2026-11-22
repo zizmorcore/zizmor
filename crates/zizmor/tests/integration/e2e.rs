@@ -290,7 +290,7 @@ fn invalid_config_file() -> Result<()> {
     Caused by:
         0: configuration error in @@CONFIG@@
         1: invalid configuration syntax
-        2: missing field `rules`
+        2: expected exactly one document at bytes 0..0
     "
     );
 
@@ -362,8 +362,8 @@ fn test_issue_1394() -> Result<()> {
     failed to load file://@@INPUT@@ as workflow
 
     Caused by:
-        0: invalid YAML syntax: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
-        1: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+        0: invalid YAML syntax: $["jobs"]["demo"]["steps"][0].key_at(3): duplicate mapping key at bytes 292..295
+        1: $["jobs"]["demo"]["steps"][0].key_at(3): duplicate mapping key at bytes 292..295
     "#
     );
 
@@ -377,7 +377,7 @@ fn test_issue_1394() -> Result<()> {
             .run()?,
         @r#"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
-     WARN collect_inputs: zizmor::registry::input: failed to parse input: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+     WARN collect_inputs: zizmor::registry::input: failed to parse input: $["jobs"]["demo"]["steps"][0].key_at(3): duplicate mapping key at bytes 292..295
     fatal: no audit was performed
     error: no inputs collected
      |

@@ -414,7 +414,7 @@ fn test_invalid_wrong_policy_object() -> Result<()> {
     Caused by:
         0: configuration error in @@CONFIG@@
         1: invalid syntax for audit `unpinned-uses`
-        2: invalid type: sequence, expected a map
+        2: expected a mapping
     "
     );
 

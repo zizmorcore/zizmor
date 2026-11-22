@@ -192,7 +192,7 @@ mod tests {
     #[test]
     fn test_empty_rules() {
         let empty = "rules: {}";
-        let instance = yaml_serde::from_str::<serde_json::Value>(empty).unwrap();
+        let instance = astral_yaml_serde::from_str::<serde_json::Value>(empty).unwrap();
 
         SCHEMA_VALIDATOR
             .validate(&instance)
@@ -209,7 +209,7 @@ mod tests {
           unpinned-uses:
             disable: false
         "#;
-        let instance = yaml_serde::from_str::<serde_json::Value>(disabled).unwrap();
+        let instance = astral_yaml_serde::from_str::<serde_json::Value>(disabled).unwrap();
 
         SCHEMA_VALIDATOR
             .validate(&instance)
@@ -226,7 +226,7 @@ mod tests {
               - foo.yml:10
               - foo.yml:10:20
         "#;
-        let instance = yaml_serde::from_str::<serde_json::Value>(ignore).unwrap();
+        let instance = astral_yaml_serde::from_str::<serde_json::Value>(ignore).unwrap();
 
         SCHEMA_VALIDATOR
             .validate(&instance)
@@ -239,7 +239,7 @@ mod tests {
             ignore:
               - foo.yml:invalid
         "#;
-        let instance = yaml_serde::from_str::<serde_json::Value>(invalid_ignore).unwrap();
+        let instance = astral_yaml_serde::from_str::<serde_json::Value>(invalid_ignore).unwrap();
         let error = SCHEMA_VALIDATOR
             .validate(&instance)
             .expect_err("invalid workflow rule should be rejected");
@@ -253,7 +253,7 @@ mod tests {
           this-audit-does-not-exist:
             disable: false
         "#;
-        let instance = yaml_serde::from_str::<serde_json::Value>(unknown_audit).unwrap();
+        let instance = astral_yaml_serde::from_str::<serde_json::Value>(unknown_audit).unwrap();
 
         let result = SCHEMA_VALIDATOR.validate(&instance);
         assert!(result.is_err(), "unknown audit should be invalid");
@@ -270,7 +270,8 @@ mod tests {
                 - actions/setup-node@v3
                 - foo/*
         "#;
-        let instance = yaml_serde::from_str::<serde_json::Value>(forbidden_uses_allow).unwrap();
+        let instance =
+            astral_yaml_serde::from_str::<serde_json::Value>(forbidden_uses_allow).unwrap();
 
         SCHEMA_VALIDATOR
             .validate(&instance)
@@ -285,7 +286,8 @@ mod tests {
                 - actions/setup-node@v1
                 - foo/*
         "#;
-        let instance = yaml_serde::from_str::<serde_json::Value>(forbidden_uses_deny).unwrap();
+        let instance =
+            astral_yaml_serde::from_str::<serde_json::Value>(forbidden_uses_deny).unwrap();
 
         SCHEMA_VALIDATOR
             .validate(&instance)
@@ -303,7 +305,7 @@ mod tests {
                 - ALSO_NOT_SO_SECRET
         "#;
 
-        let instance = yaml_serde::from_str::<serde_json::Value>(secrets_allow).unwrap();
+        let instance = astral_yaml_serde::from_str::<serde_json::Value>(secrets_allow).unwrap();
         SCHEMA_VALIDATOR
             .validate(&instance)
             .expect("secrets-outside-env allow config should be valid");
@@ -321,7 +323,7 @@ mod tests {
               - foo.yml
         "#;
 
-        let instance = yaml_serde::from_str::<serde_json::Value>(secrets_allow).unwrap();
+        let instance = astral_yaml_serde::from_str::<serde_json::Value>(secrets_allow).unwrap();
         SCHEMA_VALIDATOR
             .validate(&instance)
             .expect("secrets-outside-env allow config with base config should be valid");
@@ -336,7 +338,7 @@ mod tests {
               policies:
                 actions/checkout: hash-pin
         "#;
-        let instance = yaml_serde::from_str::<serde_json::Value>(valid).unwrap();
+        let instance = astral_yaml_serde::from_str::<serde_json::Value>(valid).unwrap();
         SCHEMA_VALIDATOR
             .validate(&instance)
             .expect("unpinned uses config should be valid");
@@ -348,7 +350,7 @@ mod tests {
               policies:
                 actions/checkout: unknown-policy
         "#;
-        let instance = yaml_serde::from_str::<serde_json::Value>(unknown_policy).unwrap();
+        let instance = astral_yaml_serde::from_str::<serde_json::Value>(unknown_policy).unwrap();
         let error = SCHEMA_VALIDATOR
             .validate(&instance)
             .expect_err("unknown pinning policy should be rejected");
@@ -359,7 +361,7 @@ mod tests {
     fn test_remap_severity() {
         for sev in ["informational", "low", "medium", "high"] {
             let yaml = format!("rules:\n  artipacked:\n    remap:\n      severity: {sev}");
-            let instance = yaml_serde::from_str::<serde_json::Value>(&yaml).unwrap();
+            let instance = astral_yaml_serde::from_str::<serde_json::Value>(&yaml).unwrap();
             SCHEMA_VALIDATOR
                 .validate(&instance)
                 .unwrap_or_else(|_| panic!("severity '{sev}' should be valid in remap"));
@@ -369,7 +371,7 @@ mod tests {
     #[test]
     fn test_remap_invalid_severity() {
         let invalid = "rules:\n  artipacked:\n    remap:\n      severity: Ultra";
-        let instance = yaml_serde::from_str::<serde_json::Value>(invalid).unwrap();
+        let instance = astral_yaml_serde::from_str::<serde_json::Value>(invalid).unwrap();
         assert!(
             SCHEMA_VALIDATOR.validate(&instance).is_err(),
             "unknown severity 'Ultra' should be invalid"

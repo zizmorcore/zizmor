@@ -90,37 +90,26 @@ fn parse_validation_errors(errors: Vec<jsonschema::ErrorEntry<'_>>) -> anyhow::E
 /// as provide more useful errors for the latter case.
 pub(crate) trait Validatable<'de> {
     type Target: serde::Deserialize<'de>;
-    type Skeleton: serde::Deserialize<'de> + serde::Serialize;
+    type Skeleton: serde::Deserialize<'de> + serde::Serialize + Default;
 
     fn validator() -> &'static jsonschema::Validator;
 
     fn validate(contents: &'de str) -> Result<Self::Target, CollectionError> {
-        match yaml_serde::from_str::<Self::Target>(contents) {
+        match astral_yaml_serde::from_str::<Self::Target>(contents) {
             Ok(value) => Ok(value),
             Err(e) => {
-                // Something a little wonky happens here: we want
-                // to distinguish between syntax and semantic errors,
-                // but serde-yaml doesn't give us an API to do that.
-                // To approximate it, we re-parse the input as a
-                // `Self::Skeleton`, then convert that `Self::Skeleton`
-                // into a `serde_json::Value` and use it as an oracle -- a successful
-                // re-parse indicates that the input is valid YAML and
-                // that our error is semantic, while a failed re-parse
-                // indicates a syntax error.
-                //
-                // We need to round-trip through a `Self::Skeleton` to ensure that
-                // all of YAML's validity rules are preserved -- directly deserializing
-                // into a `serde_json::Value` would miss some YAML-specific checks,
-                // like duplicate keys within mappings. See #1395 for an example of this.
-                //
-                // We do this in a nested fashion to avoid re-parsing the input twice if we
-                // can help it, and because the more obvious trick (`yaml_serde::from_value`)
-                // doesn't work due to a lack of referential transparency.
-                //
-                // See: https://github.com/dtolnay/serde-yaml/issues/170
-                // See: https://github.com/dtolnay/serde-yaml/issues/395
-
-                match yaml_serde::from_str::<Self::Skeleton>(contents) {
+                // Parse just the expected root shape to distinguish invalid YAML from
+                // a document whose fields violate the model or its JSON schema.
+                let skeleton = if contents.lines().all(|line| {
+                    let line = line.trim();
+                    line.is_empty() || line.starts_with('#')
+                }) {
+                    // An empty stream has no fields to validate against the input schema.
+                    Ok(Self::Skeleton::default())
+                } else {
+                    astral_yaml_serde::from_str::<Self::Skeleton>(contents)
+                };
+                match skeleton {
                     // We know we have valid YAML, so one of two things happened here:
                     // 1. The input is semantically valid, but we have a bug in
                     //    `github-actions-models`.

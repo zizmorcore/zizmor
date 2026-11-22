@@ -40,7 +40,7 @@ pub(crate) struct PreCommitConfig {
 impl<'de> Validatable<'de> for PreCommitConfig {
     type Target = pre_commit_models::config::Config;
 
-    type Skeleton = yaml_serde::Mapping;
+    type Skeleton = indexmap::IndexMap<String, astral_yaml_serde::Value>;
 
     fn validator() -> &'static jsonschema::Validator {
         &PRE_COMMIT_CONFIG_VALIDATOR
@@ -191,7 +191,7 @@ pub(crate) struct PreCommitHooks {
 impl<'de> Validatable<'de> for PreCommitHooks {
     type Target = pre_commit_models::hooks::Hooks;
 
-    type Skeleton = yaml_serde::Sequence;
+    type Skeleton = Vec<astral_yaml_serde::Value>;
 
     fn validator() -> &'static jsonschema::Validator {
         &PRE_COMMIT_HOOKS_VALIDATOR

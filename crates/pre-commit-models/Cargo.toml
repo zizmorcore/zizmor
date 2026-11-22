@@ -18,8 +18,8 @@ serde.workspace = true
 url.workspace = true
 
 [dev-dependencies]
+astral-yaml-serde.workspace = true
 insta.workspace = true
-yaml_serde.workspace = true
 
 [lints]
 workspace = true

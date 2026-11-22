@@ -1,11 +1,11 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
-expression: "zizmor().expects_failure(1).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).args([\"--strict-collection\"]).run()?"
+expression: "Zizmor::cargo_bin().expects_failure(1).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).args([\"--strict-collection\"]).run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
 fatal: no audit was performed
 failed to load file://@@INPUT@@ as workflow
 
 Caused by:
-    0: invalid YAML syntax: invalid type: string "lol", expected a YAML mapping
-    1: invalid type: string "lol", expected a YAML mapping
+    0: invalid YAML syntax: $: expected a mapping at bytes 0..3
+    1: $: expected a mapping at bytes 0..3

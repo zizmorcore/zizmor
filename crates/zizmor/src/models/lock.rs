@@ -31,7 +31,7 @@ pub(crate) struct Lock {
 impl<'de> Validatable<'de> for Lock {
     type Target = lock::Lock;
 
-    type Skeleton = yaml_serde::Mapping;
+    type Skeleton = indexmap::IndexMap<String, astral_yaml_serde::Value>;
 
     fn validator() -> &'static jsonschema::Validator {
         &LOCK_VALIDATOR

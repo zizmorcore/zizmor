@@ -5,6 +5,7 @@ use crate::{
     models::workflow::NormalJob,
     utils::extract_fenced_expressions,
 };
+use astral_yaml_serde::Value;
 use github_actions_expressions::context::Context;
 use github_actions_models::{common::expr::LoE, workflow::job};
 use indexmap::IndexMap;
@@ -194,88 +195,96 @@ impl<'doc> Expansions<'doc> {
     }
 
     fn expand_explicit_rows(
-        include: &IndexMap<String, yaml_serde::Value>,
+        row: &IndexMap<String, Value>,
         base: SymbolicLocation<'doc>,
     ) -> Vec<Expansion<'doc>> {
-        let normalized = include
-            .iter()
-            .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
-            .collect::<IndexMap<_, _>>();
-
-        Self::expand(normalized, base)
-    }
-
-    fn expand_dimensions(
-        dimensions: &IndexMap<String, LoE<Vec<yaml_serde::Value>>>,
-        base: SymbolicLocation<'doc>,
-    ) -> Vec<Expansion<'doc>> {
-        let normalized = dimensions
-            .iter()
-            .map(|(k, v)| (k.to_owned(), serde_json::json!(v)))
-            .collect::<IndexMap<_, _>>();
-
-        Self::expand(normalized, base)
-    }
-
-    fn expand(
-        values: IndexMap<String, serde_json::Value>,
-        base: SymbolicLocation<'doc>,
-    ) -> Vec<Expansion<'doc>> {
-        values
-            .into_iter()
+        row.iter()
             .flat_map(|(key, value)| {
-                Self::walk_path(
-                    value,
-                    format!("matrix.{key}"),
-                    base.with_keys([key.into()]).annotated("this expansion"),
-                )
+                let base = base
+                    .with_keys([key.clone().into()])
+                    .annotated("this expansion");
+                Self::walk_path(value, format!("matrix.{key}"), base)
             })
             .collect()
     }
 
-    // Walks recursively a serde_json::Value tree, expanding it into a Vec<(String, String)>
-    // according to the inner value of each node
-    fn walk_path(
-        tree: serde_json::Value,
-        current_path: String,
+    fn expand_dimensions(
+        dimensions: &IndexMap<String, LoE<Vec<Value>>>,
         base: SymbolicLocation<'doc>,
     ) -> Vec<Expansion<'doc>> {
-        match tree {
-            serde_json::Value::Null => vec![],
-
-            // In the case of scalars, we just convert the value to a string
-            serde_json::Value::Bool(inner) => {
-                vec![Expansion::new(current_path, inner.to_string(), base)]
+        let mut expansions = Vec::new();
+        for (key, values) in dimensions {
+            let path = format!("matrix.{key}");
+            let base = base
+                .with_keys([key.clone().into()])
+                .annotated("this expansion");
+            match values {
+                LoE::Expr(expr) => {
+                    expansions.push(Expansion::new(path, expr.as_raw().into(), base))
+                }
+                LoE::Literal(items) => {
+                    for (idx, value) in items.iter().enumerate() {
+                        expansions.extend(Self::walk_path(
+                            value,
+                            path.clone(),
+                            base.with_keys([idx.into()]),
+                        ));
+                    }
+                }
             }
-            serde_json::Value::Number(inner) => {
-                vec![Expansion::new(current_path, inner.to_string(), base)]
-            }
-            serde_json::Value::String(inner) => {
-                vec![Expansion::new(current_path, inner.to_string(), base)]
-            }
-
-            // In the case of an array, we recursively create on expansion pair for each item
-            serde_json::Value::Array(inner) => inner
-                .into_iter()
-                .enumerate()
-                .flat_map(|(idx, value)| {
-                    Self::walk_path(value, current_path.clone(), base.with_keys([idx.into()]))
-                })
-                .collect(),
-
-            // In the case of an object, we recursively create on expansion pair for each
-            // value in the key/value set, using the key to form the expanded path using
-            // the dot notation
-            serde_json::Value::Object(inner) => inner
-                .into_iter()
-                .flat_map(|(key, value)| {
-                    let mut new_path = current_path.clone();
-                    new_path.push('.');
-                    new_path.push_str(&key);
-                    Self::walk_path(value, new_path, base.with_keys([key.into()]))
-                })
-                .collect(),
         }
+        expansions
+    }
+
+    fn walk_path(
+        value: &Value,
+        path: String,
+        base: SymbolicLocation<'doc>,
+    ) -> Vec<Expansion<'doc>> {
+        let scalar = match value {
+            Value::String(s) => s.clone(),
+            Value::Bool(b) => b.to_string(),
+            Value::Integer(i) => i.to_string(),
+            Value::Unsigned(u) => u.to_string(),
+            Value::Float(f) => {
+                let Some(number) = serde_json::Number::from_f64(*f) else {
+                    return vec![];
+                };
+                number.to_string()
+            }
+            Value::Null => return vec![],
+            Value::Tagged(tag) => return Self::walk_path(&tag.value, path, base),
+            Value::Sequence(items) => {
+                return items
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(idx, item)| {
+                        Self::walk_path(item, path.clone(), base.with_keys([idx.into()]))
+                    })
+                    .collect();
+            }
+            Value::Mapping(entries) => {
+                return entries
+                    .iter()
+                    .flat_map(|(key, item)| {
+                        let name = match key {
+                            Value::String(s) => s.clone(),
+                            Value::Integer(i) => i.to_string(),
+                            Value::Unsigned(u) => u.to_string(),
+                            Value::Bool(b) => b.to_string(),
+                            Value::Float(f) => f.to_string(),
+                            _ => return vec![],
+                        };
+                        Self::walk_path(
+                            item,
+                            format!("{path}.{name}"),
+                            base.with_keys([name.into()]),
+                        )
+                    })
+                    .collect();
+            }
+        };
+        vec![Expansion::new(path, scalar, base)]
     }
 }
 

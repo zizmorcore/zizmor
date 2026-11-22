@@ -85,7 +85,7 @@ fn test_config_not_number() -> anyhow::Result<()> {
             .config(input_under_test("dependabot-cooldown/configs/invalid-cooldown-not-number.yml"))
             .output(OutputMode::Stderr)
             .run()?,
-        @r#"
+        @"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
     fatal: no audit was performed
     error: configuration error in @@CONFIG@@
@@ -96,8 +96,8 @@ fn test_config_not_number() -> anyhow::Result<()> {
     Caused by:
         0: configuration error in @@CONFIG@@
         1: invalid syntax for audit `dependabot-cooldown`
-        2: invalid type: string "lol", expected a nonzero usize
-    "#
+        2: expected an integer
+    "
     );
 
     Ok(())
@@ -150,7 +150,7 @@ fn test_invalid_config_negative_days() -> anyhow::Result<()> {
     Caused by:
         0: configuration error in @@CONFIG@@
         1: invalid syntax for audit `dependabot-cooldown`
-        2: invalid value: integer `-1`, expected a nonzero usize
+        2: integer out of range
     "
     );
 

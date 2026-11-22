@@ -3,7 +3,7 @@ use subfeature::Subfeature;
 
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
-use crate::config::{Config, ForbiddenUsesConfigInner};
+use crate::config::{Config, ForbiddenUsesConfig};
 use crate::finding::location::Locatable as _;
 use crate::finding::{Confidence, Finding, Persona, Severity};
 use crate::models::pre_commit::PreCommitConfig;
@@ -22,17 +22,15 @@ impl ForbiddenUses {
     fn use_denied<'doc>(
         &self,
         repo: impl Into<RepoRef<'doc>>,
-        config: &ForbiddenUsesConfigInner,
+        config: &ForbiddenUsesConfig,
     ) -> bool {
         let repo = repo.into();
 
         match config {
-            ForbiddenUsesConfigInner::Allow(allow) => {
+            ForbiddenUsesConfig::Allow(allow) => {
                 !allow.iter().any(|pattern| pattern.matches(&repo))
             }
-            ForbiddenUsesConfigInner::Deny(deny) => {
-                deny.iter().any(|pattern| pattern.matches(&repo))
-            }
+            ForbiddenUsesConfig::Deny(deny) => deny.iter().any(|pattern| pattern.matches(&repo)),
         }
     }
 

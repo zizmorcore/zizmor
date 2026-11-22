@@ -12,11 +12,11 @@ homepage.workspace = true
 license.workspace = true
 
 [dependencies]
+astral-yaml-serde.workspace = true
 indexmap.workspace = true
 self_cell.workspace = true
 serde.workspace = true
 tracing.workspace = true
-yaml_serde.workspace = true
 
 [dev-dependencies]
 insta.workspace = true

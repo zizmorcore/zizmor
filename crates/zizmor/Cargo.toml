@@ -16,6 +16,7 @@ license.workspace = true
 annotate-snippets.workspace = true
 anstream.workspace = true
 anyhow.workspace = true
+astral-yaml-serde.workspace = true
 async-trait.workspace = true
 camino = { workspace = true, features = ["serde1"] }
 clap = { workspace = true, features = ["derive", "env"] }
