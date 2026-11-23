@@ -48,9 +48,9 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "annotate-snippets"
-version = "0.12.17"
+version = "0.12.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2a5b0a5ab8561c603f16c3b78c24a386b1f70e7fc1b1b1e8c15738828e4a176"
+checksum = "0258346f92c78dbc5b336b9a5b27c64447aa10643bc64e651db2edb145361564"
 dependencies = [
  "anstyle",
  "memchr",
@@ -1141,9 +1141,9 @@ dependencies = [
 
 [[package]]
 name = "http-cache"
-version = "1.0.0-alpha.9"
+version = "1.0.0-alpha.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b668f8d78e9c962a3abf1ba5b457366f91f39a4d98df92dc615aa82455805e5"
+checksum = "3f73227598c305455fc0ca3a601e6d842ba4476f3db2c76d24d821005b93f7db"
 dependencies = [
  "bytes",
  "cacache",
@@ -1162,9 +1162,9 @@ dependencies = [
 
 [[package]]
 name = "http-cache-reqwest"
-version = "1.0.0-alpha.10"
+version = "1.0.0-alpha.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "062cdf758bb9b88858411e354135c819251a0597147db53de9b337e8717e6f26"
+checksum = "d88c679f570367a474b098da5986d115008951ed8ad0437f8790cda31c3f7d86"
 dependencies = [
  "anyhow",
  "async-trait",
