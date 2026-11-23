@@ -381,6 +381,7 @@
         "discussion_comment",
         "fork",
         "gollum",
+        "image_version",
         "issue_comment",
         "issues",
         "label",
@@ -1424,6 +1425,38 @@
               "$ref": "#/definitions/eventObject",
               "description": "Runs your workflow when someone creates or updates a Wiki page, which triggers the gollum event."
             },
+            "image_version": {
+              "$comment": "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#image_version",
+              "$ref": "#/definitions/eventObject",
+              "description": "Runs your workflow when a new version of a specified image becomes available for use. Both image names and versions support glob patterns.",
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "names": {
+                      "description": "Image names (glob patterns) that trigger the workflow.",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1
+                    },
+                    "versions": {
+                      "description": "Image versions (glob patterns) that trigger the workflow.",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            },
             "issue_comment": {
               "$comment": "https://help.github.com/en/github/automating-your-workflow-with-github-actions/events-that-trigger-workflows#issue-comment-event-issue_comment",
               "$ref": "#/definitions/eventObject",
@@ -1484,7 +1517,8 @@
                           "typed",
                           "untyped",
                           "field_added",
-                          "field_removed"
+                          "field_removed",
+                          "status_changed"
                         ]
                       },
                       "default": [
@@ -1507,7 +1541,8 @@
                         "typed",
                         "untyped",
                         "field_added",
-                        "field_removed"
+                        "field_removed",
+                        "status_changed"
                       ]
                     }
                   }
@@ -1871,10 +1906,14 @@
                               "ready_for_review",
                               "locked",
                               "unlocked",
+                              "milestoned",
+                              "demilestoned",
                               "review_requested",
                               "review_request_removed",
                               "auto_merge_enabled",
-                              "auto_merge_disabled"
+                              "auto_merge_disabled",
+                              "enqueued",
+                              "dequeued"
                             ]
                           },
                           "default": ["opened", "synchronize", "reopened"]
