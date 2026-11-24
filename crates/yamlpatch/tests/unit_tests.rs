@@ -1,342 +1,345 @@
 use astral_yaml_serde::Value;
 use subfeature::Subfeature;
-use yamlpatch::{Op, Patch};
+use yamlpatch::{Error, Op, Patch, apply_yaml_patches};
 use yamlpath::{Document, Route, route};
 
-fn apply_yaml_patches(source: &str, patches: &[Patch<'_>]) -> Result<String, yamlpatch::Error> {
-    yamlpatch::apply_yaml_patches(&Document::new(source).unwrap(), patches)
-}
-
-fn value(yaml: &str) -> Value {
-    astral_yaml_serde::from_str(yaml).unwrap()
-}
-
-fn apply(source: &str, route: Route<'_>, operation: Op<'_>) -> String {
-    apply_yaml_patches(source, &[Patch { route, operation }]).unwrap()
+fn patch(source: &str, route: Route<'_>, operation: Op<'_>) -> Result<String, Error> {
+    let doc = Document::new(source).expect("valid YAML fixture");
+    apply_yaml_patches(&doc, &[Patch { route, operation }])
 }
 
 #[test]
-fn replace_preserves_yaml_types_and_siblings() {
-    let original = "é: 'before\u{80}after' # keep\r\nsteps:\r  - run: old\r  - run: other\n";
-    for replacement in [
-        "'false'",
-        "false",
-        "'key: value'",
-        "null",
-        "{}",
-        "[a, {b: 2}]",
-    ] {
-        let result = apply(
-            original,
-            route!("steps", 0, "run"),
-            Op::Replace(value(replacement)),
-        );
-        assert_eq!(
-            value(&result),
-            value(&original.replace("run: old", &format!("run: {replacement}")))
-        );
-        let doc = Document::new(result).unwrap();
-        assert_eq!(doc.stream().comments()[0].text, " keep");
-    }
+fn replace_writes_a_boolean_looking_string_as_a_string() -> Result<(), Error> {
+    let fixed = patch(
+        "env:\n  FLAG: true # toggle\n  OTHER: false",
+        route!("env", "FLAG"),
+        Op::Replace(Value::String("false".into())),
+    )?;
+    insta::assert_snapshot!(fixed, @r#"
+    env:
+      FLAG: "false" # toggle
+      OTHER: false
+    "#);
+    Ok(())
 }
 
 #[test]
-fn add_inherits_mapping_style_and_rejects_an_existing_key() {
-    let patch = Patch {
-        route: route!("parent"),
-        operation: Op::Add {
-            key: "new".into(),
-            value: value(r#"{"007": {1: [true]}}"#),
-        },
-    };
-    for (original, expected) in [
-        (
-            "parent: {old: 1}\n",
-            "parent: {old: 1, new: {\"007\": {1: [true]}}}\n",
-        ),
-        (
-            "parent:\n  old: 1\n",
-            "parent:\n  old: 1\n  new:\n    \"007\":\n      1: [true]\n",
-        ),
-    ] {
-        let result = apply_yaml_patches(original, std::slice::from_ref(&patch)).unwrap();
-        assert_eq!(result, expected);
-        assert!(apply_yaml_patches(&result, std::slice::from_ref(&patch)).is_err());
-    }
-}
-
-#[test]
-fn added_string_keys_use_plain_style_when_possible() {
-    for (source, key, expected) in [
-        (
-            "'already-quoted': true\n",
-            "ordinary",
-            "'already-quoted': true\nordinary: false\n",
-        ),
-        ("old: true", "x,y", "old: true\nx,y: false"),
-        ("{old: true}", "x,y", r#"{old: true, "x,y": false}"#),
-        ("{}", "true", r#"{"true": false}"#),
-        ("{}", "007", r#"{"007": false}"#),
-        ("{}", "key: value", r#"{"key: value": false}"#),
-    ] {
-        let fixed = apply(
-            source,
-            route!(),
-            Op::Add {
-                key: key.into(),
-                value: Value::Bool(false),
-            },
-        );
-        assert_eq!(fixed, expected);
-    }
-}
-
-#[test]
-fn set_nested_field() {
-    for (original, expected) in [
-        (
-            "step: {uses: action}",
-            "step: {uses: action, with: {flag: false}}",
-        ),
-        (
-            "step:\n  uses: action",
-            "step:\n  uses: action\n  with:\n    flag: false",
-        ),
-        ("step:\n  with:", "step:\n  with:\n    flag: false"),
-        (
-            "step:\n  with: # keep",
-            "step:\n  with: # keep\n    flag: false",
-        ),
-        ("step: {with: null}", "step: {with: {flag: false}}"),
-        ("step:\n  with: {}", "step:\n  with: {flag: false}"),
-        (
-            "step:\n  with: {keep: 1}",
-            "step:\n  with: {keep: 1, flag: false}",
-        ),
-        (
-            "step:\n  with:\n    keep: 'é' # retain\n    flag: true",
-            "step:\n  with:\n    keep: 'é' # retain\n    flag: false",
-        ),
-    ] {
-        let result = apply(
-            original,
-            route!("step"),
-            Op::SetField {
-                mapping: "with",
-                key: "flag".into(),
-                value: Value::Bool(false),
-            },
-        );
-        assert_eq!(result, expected, "{original}");
-    }
-    for invalid in ["{with: false}", "{with: ''}", "{with: [a]}"] {
-        let patch = Patch {
-            route: route!(),
-            operation: Op::SetField {
-                mapping: "with",
-                key: "flag".into(),
-                value: Value::Bool(false),
-            },
-        };
-        assert!(apply_yaml_patches(invalid, &[patch]).is_err());
-    }
-}
-
-#[test]
-fn set_mapping_field_inherits_or_preserves_its_style() {
-    for (original, expected) in [
-        (
-            "with:\n  keep: 1",
-            "with:\n  keep: 1\n  options:\n    200: true",
-        ),
-        (
-            "with:\n  options: {old: 1}",
-            "with:\n  options: {200: true}",
-        ),
-    ] {
-        let result = apply(
-            original,
-            route!(),
-            Op::SetField {
-                mapping: "with",
-                key: "options".into(),
-                value: value("{200: true}"),
-            },
-        );
-        assert_eq!(result, expected);
-    }
-}
-
-#[test]
-fn remove_only_the_selected_member() {
-    for (original, route, expected) in [
-        ("s: [a, b, c]", route!("s", 1), "s: [a, c]"),
-        (
-            "s:\n  - # item\n    a: 1\n  - other\n",
-            route!("s", 0),
-            "s: [other]",
-        ),
-        ("m: {k: {a: 1}, keep: 2}", route!("m", "k"), "m: {keep: 2}"),
-        (
-            "steps:\n  - env:\n      ONLY: 1\n    run: echo",
-            route!("steps", 0, "env", "ONLY"),
-            "steps: [{env: {}, run: echo}]",
-        ),
-        (
-            "list:\n  - only\nother: 2",
-            route!("list", 0),
-            "list: []\nother: 2",
-        ),
-        ("single: true", route!("single"), "{}"),
-        ("[single]", route!(0), "[]"),
-        ("a: &x 1\nb: *x", route!("b"), "a: 1"),
-    ] {
-        assert_eq!(value(&apply(original, route, Op::Remove)), value(expected));
-    }
-    for route in [route!(), route!("missing"), route!("a", 1)] {
-        assert!(
-            apply_yaml_patches(
-                "a: [x]",
-                &[Patch {
-                    route,
-                    operation: Op::Remove
-                }]
-            )
-            .is_err()
-        );
-    }
-}
-
-#[test]
-fn rewrite_the_decoded_string() {
-    let source = "run: \"é\\nold old\"\nother: old";
-    let result = apply(
-        source,
+fn rewrite_matches_the_decoded_string_after_the_offset() -> Result<(), Error> {
+    let fixed = patch(
+        r#"run: "é\nfirst\né\nfirst" # script"#,
         route!("run"),
         Op::RewriteString {
-            from: Subfeature::new("é\nold".len(), "old"),
-            to: "quoted: 'x'".into(),
+            from: Subfeature::new("é\nfirst\n".len(), "é\nfirst"),
+            to: "updated".into(),
         },
-    );
-    assert_eq!(
-        value(&result),
-        value("run: |-\n  é\n  old quoted: 'x'\nother: old")
-    );
+    )?;
+    insta::assert_snapshot!(fixed, @r#"run: "é\nfirst\nupdated" # script"#);
+    Ok(())
 }
 
 #[test]
-fn edits_through_an_alias_are_local_to_its_use() {
-    let source =
-        "original: &step {run: old, env: &env {a: 1}}\ncopy: *step\nother: *step\nvars: *env";
-    let patches = [
-        Patch {
-            route: route!("copy", "run"),
-            operation: Op::RewriteString {
-                from: Subfeature::new(0, "old"),
-                to: "new".into(),
-            },
-        },
-        Patch {
-            route: route!("copy"),
-            operation: Op::SetField {
-                mapping: "env",
-                key: "b".into(),
-                value: Value::Bool(false),
-            },
-        },
-        Patch {
-            route: route!("vars", "a"),
-            operation: Op::Remove,
-        },
-    ];
-    let result = apply_yaml_patches(source, &patches).unwrap();
-    assert_eq!(
-        value(&result),
-        value(
-            "original: &step {run: old, env: {a: 1}}\ncopy: {run: new, env: {a: 1, b: false}}\nother: *step\nvars: {}"
-        )
-    );
+fn added_mappings_inherit_block_or_flow_style() -> Result<(), Error> {
+    let add = Op::Add {
+        key: "strategy".into(),
+        value: astral_yaml_serde::from_str("{matrix: {version: [1, 2]}}")?,
+    };
+
+    let block = patch("runs-on: linux", route!(), add.clone())?;
+    insta::assert_snapshot!(block, @r#"
+    runs-on: linux
+    strategy:
+      "matrix":
+        "version": [1, 2]
+    "#);
+
+    let flow = patch("{runs-on: linux}", route!(), add)?;
+    insta::assert_snapshot!(flow, @r#"{runs-on: linux, strategy: {"matrix": {"version": [1, 2]}}}"#);
+    Ok(())
 }
 
 #[test]
-fn version_comments_stay_on_the_selected_node() {
-    let source = "steps:\n  - uses: 'org/a@sha' # v1\n  - uses: org/b@ref # zizmor: ignore[unpinned-uses]\n  - uses: org/c@sha\n";
-    let patches = [
-        Patch {
-            route: route!("steps", 0, "uses"),
-            operation: Op::ReplaceComment { new: "# v2".into() },
+fn duplicate_add_fails_the_batch_and_allows_a_retry() -> Result<(), Error> {
+    let doc = Document::new("env: {}").expect("valid YAML fixture");
+    let add = Patch {
+        route: route!("env"),
+        operation: Op::Add {
+            key: "007".into(),
+            value: Value::Bool(true),
         },
-        Patch {
-            route: route!("steps", 2, "uses"),
-            operation: Op::EmplaceComment { new: "# v3".into() },
-        },
-    ];
-    let result = apply_yaml_patches(source, &patches).unwrap();
-    assert_eq!(value(&result), value(source));
-    let doc = Document::new(result).unwrap();
-    for (i, text) in [" v2", " zizmor: ignore[unpinned-uses]", " v3"]
-        .iter()
-        .enumerate()
-    {
-        let span = doc.entry_range(&route!("steps", i, "uses")).unwrap();
-        assert_eq!(doc.comments(span)[0].text, *text);
-    }
-    let plain = apply(
-        "uses: org/a@sha",
-        route!("uses"),
-        Op::ReplaceComment { new: "# v2".into() },
-    );
-    assert!(Document::new(plain).unwrap().stream().comments().is_empty());
+    };
+
+    let err = apply_yaml_patches(&doc, &[add.clone(), add.clone()])
+        .expect_err("adding the same key twice must fail");
+    assert_eq!(err.to_string(), "key '007' already exists");
+
+    let retried = apply_yaml_patches(&doc, &[add])?;
+    insta::assert_snapshot!(retried, @r#"env: {"007": true}"#);
+    Ok(())
 }
 
 #[test]
-fn failure_discards_the_whole_fix() {
-    let original = "a: old\nb: other";
-    let doc = Document::new(original).unwrap();
-    let result = apply_yaml_patches(
-        doc.source(),
-        &[
-            Patch {
-                route: route!("a"),
-                operation: Op::Replace(value("new")),
-            },
-            Patch {
-                route: route!("b"),
-                operation: Op::RewriteString {
-                    from: Subfeature::new(0, "missing"),
-                    to: "new".into(),
-                },
-            },
-        ],
-    );
-    assert!(result.is_err());
-    assert_eq!(doc.source(), original);
+fn set_field_uses_the_enclosing_or_existing_mapping_style() -> Result<(), Error> {
+    let set = Op::SetField {
+        mapping: "with",
+        key: "persist-credentials".into(),
+        value: Value::Bool(false),
+    };
+
+    let null = patch(
+        "uses: actions/checkout@v4\nwith: # inputs",
+        route!(),
+        set.clone(),
+    )?;
+    insta::assert_snapshot!(null, @"
+    uses: actions/checkout@v4
+    with: # inputs
+      persist-credentials: false
+    ");
+
+    let missing = patch("{uses: actions/checkout@v4}", route!(), set.clone())?;
+    insta::assert_snapshot!(missing, @"{uses: actions/checkout@v4, with: {persist-credentials: false}}");
+
+    let empty = patch("uses: actions/checkout@v4\nwith: {}", route!(), set)?;
+    insta::assert_snapshot!(empty, @"
+    uses: actions/checkout@v4
+    with: {persist-credentials: false}
+    ");
+    Ok(())
 }
 
 #[test]
-fn a_context_specific_fix_cannot_change_other_users_of_a_definition() {
-    let source = "steps:\n  - run: &script echo old\n  - run: *script";
-    let patches = [
-        Patch {
-            route: route!("steps", 0, "run"),
-            operation: Op::RewriteString {
-                from: Subfeature::new(0, "old"),
-                to: "$FIXED".into(),
-            },
-        },
-        Patch {
+fn set_field_preserves_an_explicit_flow_value() -> Result<(), Error> {
+    let set = Op::SetField {
+        mapping: "strategy",
+        key: "matrix".into(),
+        value: astral_yaml_serde::from_str("{version: [1, 2]}")?,
+    };
+
+    let added = patch("strategy:\n  fail-fast: false", route!(), set.clone())?;
+    insta::assert_snapshot!(added, @r#"
+    strategy:
+      fail-fast: false
+      matrix:
+        "version": [1, 2]
+    "#);
+
+    let replaced = patch("strategy:\n  matrix: {version: [0]}", route!(), set)?;
+    insta::assert_snapshot!(replaced, @r#"
+    strategy:
+      matrix: {"version": [1, 2]}
+    "#);
+    Ok(())
+}
+
+#[test]
+fn set_field_reuses_the_mapping_created_by_an_earlier_patch() -> Result<(), Error> {
+    let doc = Document::new("steps:\n  - run: build # keep").expect("valid YAML fixture");
+    let patches =
+        [("MODE", "test"), ("CI", "true"), ("MODE", "release")].map(|(key, value)| Patch {
             route: route!("steps", 0),
             operation: Op::SetField {
                 mapping: "env",
-                key: "FIXED".into(),
-                value: Value::String("old".into()),
+                key: key.into(),
+                value: Value::String(value.into()),
             },
+        });
+
+    let fixed = apply_yaml_patches(&doc, &patches)?;
+    insta::assert_snapshot!(fixed, @r#"
+    steps:
+      - run: build # keep
+        env:
+          MODE: "release"
+          CI: "true"
+    "#);
+    Ok(())
+}
+
+#[test]
+fn set_field_rejects_non_mapping_values() {
+    let set = Op::SetField {
+        mapping: "with",
+        key: "flag".into(),
+        value: Value::Bool(false),
+    };
+    for source in ["with: false", "with: ''", "with: [input]"] {
+        assert!(patch(source, route!(), set.clone()).is_err(), "{source}");
+    }
+}
+
+#[test]
+fn removing_a_sequence_item_preserves_neighboring_comments() -> Result<(), Error> {
+    let steps = "steps:\n  - run: first # remove\n  - run: second # keep";
+    let block = patch(steps, route!("steps", 0), Op::Remove)?;
+    insta::assert_snapshot!(block, @"
+    steps:
+      - run: second # keep
+    ");
+
+    let matrix = "matrix: {os: [linux, macos, windows]} # supported platforms";
+    let flow = patch(matrix, route!("matrix", "os", 1), Op::Remove)?;
+    insta::assert_snapshot!(flow, @"matrix: {os: [linux, windows]} # supported platforms");
+    Ok(())
+}
+
+#[test]
+fn removing_the_last_member_keeps_an_empty_collection() -> Result<(), Error> {
+    let steps = "\
+steps:
+  - env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+    run: echo hi";
+    let fixed = patch(
+        steps,
+        route!("steps", 0, "env", "ACTIONS_ALLOW_UNSECURE_COMMANDS"),
+        Op::Remove,
+    )?;
+    insta::assert_snapshot!(fixed, @"
+    steps:
+      - env:
+          {}
+        run: echo hi
+    ");
+
+    let last = patch(
+        "steps:\n  - run: build\nname: Build",
+        route!("steps", 0),
+        Op::Remove,
+    )?;
+    insta::assert_snapshot!(last, @"
+    steps:
+      []
+    name: Build
+    ");
+    Ok(())
+}
+
+#[test]
+fn remove_rejects_the_root_and_missing_members() {
+    for route in [route!(), route!("missing"), route!("steps", 1)] {
+        assert!(
+            patch("steps: []", route.clone(), Op::Remove).is_err(),
+            "{route:?}"
+        );
+    }
+}
+
+#[test]
+fn editing_through_an_alias_changes_only_that_use() -> Result<(), Error> {
+    let source = "\
+defaults: &step {env: {CI: false}}
+first: *step
+second: *step";
+    let fixed = patch(
+        source,
+        route!("first", "env", "CI"),
+        Op::Replace(Value::Bool(true)),
+    )?;
+    insta::assert_snapshot!(fixed, @r#"
+    defaults: &step {env: {CI: false}}
+    first: {"env": {"CI": true}}
+    second: *step
+    "#);
+    Ok(())
+}
+
+#[test]
+fn set_field_extends_an_aliased_mapping_locally() -> Result<(), Error> {
+    let source = "\
+inputs: &inputs {fetch-depth: 1}
+with: *inputs
+other: *inputs";
+    let fixed = patch(
+        source,
+        route!(),
+        Op::SetField {
+            mapping: "with",
+            key: "persist-credentials".into(),
+            value: Value::Bool(false),
         },
-    ];
-    assert!(apply_yaml_patches(source, &patches).is_err());
-    let fixed = apply_yaml_patches("steps: [{run: &unused echo old}]", &patches).unwrap();
-    assert_eq!(
-        value(&fixed),
-        value("steps: [{run: echo $FIXED, env: {FIXED: old}}]")
-    );
+    )?;
+    insta::assert_snapshot!(fixed, @r#"
+    inputs: &inputs {fetch-depth: 1}
+    with: {"fetch-depth": 1, persist-credentials: false}
+    other: *inputs
+    "#);
+    Ok(())
+}
+
+#[test]
+fn removing_an_alias_leaves_its_definition_and_other_uses() -> Result<(), Error> {
+    let fixed = patch(
+        "original: &input 1\nfirst: *input\nsecond: *input",
+        route!("first"),
+        Op::Remove,
+    )?;
+    insta::assert_snapshot!(fixed, @"
+    original: &input 1
+    second: *input
+    ");
+    Ok(())
+}
+
+#[test]
+fn only_referenced_anchor_definitions_are_protected() -> Result<(), Error> {
+    let change = Op::Replace(Value::Bool(true));
+    let err = patch(
+        "defaults: &env {CI: false}\ncopy: *env",
+        route!("defaults", "CI"),
+        change.clone(),
+    )
+    .expect_err("editing the definition would also change its alias");
+    assert_eq!(err.to_string(), "cannot edit shared YAML anchor &env");
+
+    let fixed = patch(
+        "defaults: &env {CI: false}",
+        route!("defaults", "CI"),
+        change,
+    )?;
+    insta::assert_snapshot!(fixed, @"defaults: &env {CI: true}");
+    Ok(())
+}
+
+#[test]
+fn version_comment_edits_preserve_the_adjacent_ignore_comment() -> Result<(), Error> {
+    let doc = Document::new(
+        "\
+steps:
+  - uses: org/a@sha # v1
+  - uses: org/b@sha # zizmor: ignore[unpinned-uses]
+  - uses: org/c@sha",
+    )
+    .expect("valid YAML fixture");
+    let fixed = apply_yaml_patches(
+        &doc,
+        &[
+            Patch {
+                route: route!("steps", 0, "uses"),
+                operation: Op::ReplaceComment { new: "# v2".into() },
+            },
+            Patch {
+                route: route!("steps", 2, "uses"),
+                operation: Op::EmplaceComment { new: "# v3".into() },
+            },
+        ],
+    )?;
+    insta::assert_snapshot!(fixed, @"
+    steps:
+      - uses: org/a@sha # v2
+      - uses: org/b@sha # zizmor: ignore[unpinned-uses]
+      - uses: org/c@sha # v3
+    ");
+    Ok(())
+}
+
+#[test]
+fn replacing_a_missing_inline_comment_leaves_the_source_alone() -> Result<(), Error> {
+    let source = "uses: org/a@sha\n# a separate comment";
+    let fixed = patch(
+        source,
+        route!("uses"),
+        Op::ReplaceComment { new: "# v2".into() },
+    )?;
+    assert_eq!(fixed, source);
+    Ok(())
 }

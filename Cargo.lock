@@ -4200,6 +4200,7 @@ name = "yamlpatch"
 version = "1.33.1"
 dependencies = [
  "astral-yaml-serde",
+ "insta",
  "subfeature",
  "thiserror 2.0.21",
  "yamlpath",

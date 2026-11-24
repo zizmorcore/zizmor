@@ -15,5 +15,8 @@ subfeature.workspace = true
 thiserror.workspace = true
 yamlpath.workspace = true
 
+[dev-dependencies]
+insta.workspace = true
+
 [lints]
 workspace = true
