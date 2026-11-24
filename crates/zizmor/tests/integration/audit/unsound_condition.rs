@@ -124,14 +124,11 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -5,7 +5,8 @@
-       test:
+    @@ -6,6 +6,6 @@
          runs-on: ubuntu-latest
          steps:
-    -      - name: simple case
+           - name: simple case
     -        if: |
-    +      -
-    +        name: simple case
     +        if: |-
                ${{ github.event_name == 'push' }}
              run: echo "test"
@@ -168,14 +165,11 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -5,7 +5,8 @@
-       test:
+    @@ -6,6 +6,6 @@
          runs-on: ubuntu-latest
          steps:
-    -      - name: folded case
+           - name: folded case
     -        if: >
-    +      -
-    +        name: folded case
     +        if: >-
                ${{ github.actor == 'dependabot[bot]' }}
              run: echo "test"
@@ -213,14 +207,11 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -5,8 +5,9 @@
-       test:
+    @@ -6,7 +6,7 @@
          runs-on: ubuntu-latest
          steps:
-    -      - name: multiline case
+           - name: multiline case
     -        if: |
-    +      -
-    +        name: multiline case
     +        if: |-
                ${{ github.event_name == 'push'
                  && github.ref == 'refs/heads/main' }}
@@ -262,14 +253,11 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -5,8 +5,9 @@
-       test:
+    @@ -6,7 +6,7 @@
          runs-on: ubuntu-latest
          steps:
-    -      - name: complex case
+           - name: complex case
     -        if: |
-    +      -
-    +        name: complex case
     +        if: |-
                ${{
                  github.event_name == 'push' &&

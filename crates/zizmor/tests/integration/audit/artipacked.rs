@@ -262,21 +262,14 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -5,9 +5,12 @@
-       test:
-         runs-on: ubuntu-latest
+    @@ -7,6 +7,7 @@
          steps:
-    -      - name: Checkout
-    +      -
-    +        name: Checkout
+           - name: Checkout
              uses: actions/checkout@v4
-    -      - name: Upload artifacts
     +        with: {persist-credentials: false}
-    +      -
-    +        name: Upload artifacts
+           - name: Upload artifacts
              uses: actions/upload-artifact@v4
              with:
-               name: my-artifact
     "
     );
 

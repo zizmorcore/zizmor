@@ -368,14 +368,11 @@ runs:
                 .run()
         })?,
         @"
-    @@ -4,7 +4,8 @@
-     runs:
+    @@ -5,6 +5,6 @@
        using: composite
        steps:
-    -    - name: Checkout without version comment
+         - name: Checkout without version comment
     -      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-    +    -
-    +      name: Checkout without version comment
     +      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
            with:
              persist-credentials: false
@@ -416,14 +413,11 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,7 +6,8 @@
-       test:
+    @@ -7,6 +7,6 @@
          runs-on: ubuntu-latest
          steps:
-    -      - name: Checkout without version comment
+           - name: Checkout without version comment
     -        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-    +      -
-    +        name: Checkout without version comment
     +        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
              with:
                persist-credentials: false
@@ -464,14 +458,11 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,7 +6,8 @@
-       test:
+    @@ -7,6 +7,6 @@
          runs-on: ubuntu-latest
          steps:
-    -      - name: Checkout with mismatched version comment
+           - name: Checkout with mismatched version comment
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
-    +      -
-    +        name: Checkout with mismatched version comment
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
                persist-credentials: false
@@ -513,7 +504,7 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -1,12 +1,13 @@
+    @@ -1,12 +1,12 @@
     -⏎
     -name: Test Version Comment Mismatch
     -on: push
@@ -534,8 +525,7 @@ jobs:
     +  test:
     +    runs-on: ubuntu-latest
     +    steps:
-    +      -
-    +        name: Checkout with mismatched version comment
+    +      - name: Checkout with mismatched version comment
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
     +        with:
     +          persist-credentials: false
@@ -629,28 +619,21 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,15 +6,18 @@
-       test:
+    @@ -7,14 +7,14 @@
          runs-on: ubuntu-latest
          steps:
-    -      - name: Tag format
+           - name: Tag format
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # tag=v3.0.0
-    +      -
-    +        name: Tag format
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
                persist-credentials: false
-    -      - name: Simple format
+           - name: Simple format
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
-    +      -
-    +        name: Simple format
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
                persist-credentials: false
-    -      - name: Version format
+           - name: Version format
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # version: v3.0.0
-    +      -
-    +        name: Version format
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
              with:
                persist-credentials: false
@@ -694,14 +677,11 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -11,5 +11,6 @@
-         name: test
+    @@ -12,4 +12,4 @@
          runs-on: ubuntu-latest
          steps:
-    -      - name: Setup Go
+           - name: Setup Go
     -        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v9.9.9
-    +      -
-    +        name: Setup Go
     +        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
     "
     );

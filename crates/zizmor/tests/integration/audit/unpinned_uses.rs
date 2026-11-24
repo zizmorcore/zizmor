@@ -698,14 +698,11 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,7 +6,8 @@
-       test:
+    @@ -7,6 +7,6 @@
          runs-on: ubuntu-latest
          steps:
-    -      - name: Checkout with ref-pin
+           - name: Checkout with ref-pin
     -        uses: actions/checkout@v6.0.1
-    +      -
-    +        name: Checkout with ref-pin
     +        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
              with:
                persist-credentials: false
@@ -748,7 +745,7 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -1,12 +1,13 @@
+    @@ -1,12 +1,12 @@
     -⏎
     -name: Test
     -on: push
@@ -769,8 +766,7 @@ jobs:
     +  test:
     +    runs-on: ubuntu-latest
     +    steps:
-    +      -
-    +        name: Checkout with ref-pin
+    +      - name: Checkout with ref-pin
     +        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     +        with:
     +          persist-credentials: false
@@ -812,14 +808,11 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,7 +6,8 @@
-         test:
+    @@ -7,6 +7,6 @@
              runs-on: ubuntu-latest
              steps:
-    -        - name: Checkout with ref-pin
+             - name: Checkout with ref-pin
     -          uses: actions/checkout@v6.0.1 # old comment
-    +        -
-    +          name: Checkout with ref-pin
     +          uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
                with:
                  persist-credentials: false
@@ -904,13 +897,12 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,4 +6,5 @@
+    @@ -6,4 +6,4 @@
        test:
          runs-on: ubuntu-latest
          steps:
     -      - uses: bytecodealliance/actions/wasmtime/setup@v1.1.3
-    +      -
-    +        uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
+    +      - uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
     "
     );
 
@@ -951,14 +943,11 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -6,7 +6,8 @@
-       test:
+    @@ -7,6 +7,6 @@
          runs-on: ubuntu-latest
          steps:
-    -      - name: Checkout with major-only ref
+           - name: Checkout with major-only ref
     -        uses: actions/checkout@v1
-    +      -
-    +        name: Checkout with major-only ref
     +        uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
              with:
                persist-credentials: false

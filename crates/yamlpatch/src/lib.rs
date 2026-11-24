@@ -106,7 +106,6 @@ impl Patch<'_> {
             }
             Op::Add { key, value } => {
                 let mut mapping = mapping(root, path, document)?;
-                let index = mapping.len();
                 let entry = mapping.entry(key)?;
                 if entry.is_occupied() {
                     return Err(Error::InvalidOperation(format!(
@@ -114,7 +113,6 @@ impl Patch<'_> {
                     )));
                 }
                 prefer_plain_keys(entry.or_insert(value)?)?;
-                prefer_plain_mapping_keys(&mut mapping, index)?;
             }
             Op::SetField {
                 mapping: name,
@@ -122,7 +120,6 @@ impl Patch<'_> {
                 value,
             } => {
                 let mut parent = mapping(root, path, document)?;
-                let parent_len = parent.len();
                 let empty = Value::Mapping(Vec::new());
                 let mut field = parent.entry(name)?.or_insert(&empty)?;
                 check_anchor(&field, document)?;
@@ -133,13 +130,10 @@ impl Patch<'_> {
                     field.set(empty)?;
                 }
                 let mut mapping = field.into_mapping()?;
-                let len = mapping.len();
                 if let Some(target) = mapping.get(key)? {
                     check_anchor(&target, document)?;
                 }
                 prefer_plain_keys(mapping.set(key, value)?)?;
-                prefer_plain_mapping_keys(&mut mapping, len)?;
-                prefer_plain_mapping_keys(&mut parent, parent_len)?;
             }
             Op::ReplaceComment { new } | Op::EmplaceComment { new } => {
                 let mut cursor = select(root, path, document)?;
@@ -180,14 +174,22 @@ fn mapping<'edit, 'doc>(
     Ok(cursor.into_mapping()?)
 }
 
-// Astral serializes new string keys in double quotes, including keys nested in
-// a replacement value. Only visit values created by the edit.
+// Astral styles keys inserted through its mapping API. Keys inside a whole
+// serialized value still arrive quoted.
 fn prefer_plain_keys(cursor: Cursor<'_, '_>) -> Result<(), Error> {
     match cursor.node()?.kind() {
-        NodeKind::Mapping { .. } => {
+        NodeKind::Mapping { style, .. } => {
+            let block = *style == CollectionStyle::Block;
             let mut mapping = cursor.into_mapping()?;
-            prefer_plain_mapping_keys(&mut mapping, 0)?;
             for index in 0..mapping.len() {
+                let mut key = mapping.key_at(index)?;
+                match key.node()?.kind() {
+                    NodeKind::Scalar { value, .. } if can_be_plain_key(value, block) => {
+                        key.set_scalar_style(ScalarStyle::Plain)?;
+                    }
+                    NodeKind::Mapping { .. } | NodeKind::Sequence { .. } => prefer_plain_keys(key)?,
+                    _ => {}
+                }
                 prefer_plain_keys(mapping.value_at(index)?)?;
             }
         }
@@ -198,27 +200,6 @@ fn prefer_plain_keys(cursor: Cursor<'_, '_>) -> Result<(), Error> {
             }
         }
         _ => {}
-    }
-    Ok(())
-}
-
-fn prefer_plain_mapping_keys(mapping: &mut MappingMut<'_, '_>, start: usize) -> Result<(), Error> {
-    let block = matches!(
-        mapping.node()?.kind(),
-        NodeKind::Mapping {
-            style: CollectionStyle::Block,
-            ..
-        }
-    );
-    for index in start..mapping.len() {
-        let mut key = mapping.key_at(index)?;
-        match key.node()?.kind() {
-            NodeKind::Scalar { value, .. } if can_be_plain_key(value, block) => {
-                key.set_scalar_style(ScalarStyle::Plain)?;
-            }
-            NodeKind::Mapping { .. } | NodeKind::Sequence { .. } => prefer_plain_keys(key)?,
-            _ => {}
-        }
     }
     Ok(())
 }

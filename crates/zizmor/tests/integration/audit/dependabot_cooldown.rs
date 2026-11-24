@@ -233,14 +233,7 @@ updates:
                 .run()
         })?,
         @"
-    @@ -2,8 +2,10 @@
-     version: 2
-     ⏎
-     updates:
-    -  - package-ecosystem: pip
-    +  -
-    +    package-ecosystem: pip
-         directory: /
+    @@ -7,3 +7,4 @@
          schedule:
            interval: daily
          insecure-external-code-execution: deny
@@ -444,21 +437,13 @@ updates:
                 .run()
         })?,
         @"
-    @@ -2,14 +2,16 @@
-     version: 2
-     ⏎
-     updates:
-    -  - package-ecosystem: pip
-    +  -
-    +    package-ecosystem: pip
+    @@ -6,10 +6,11 @@
          directory: /
          schedule:
            interval: daily
-    -⏎
-    -  - package-ecosystem: npm
     +    cooldown: {default-days: 7}
-    +  -
-    +    package-ecosystem: npm
+     ⏎
+       - package-ecosystem: npm
          directory: /
          cooldown:
     -      default-days: 1

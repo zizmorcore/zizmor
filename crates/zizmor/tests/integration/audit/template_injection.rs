@@ -831,13 +831,9 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -5,7 +5,8 @@
-       test:
-         runs-on: ubuntu-latest
+    @@ -7,5 +7,5 @@
          steps:
-    -      - name: Vulnerable step
-    +      -
-    +        name: Vulnerable step
+           - name: Vulnerable step
              run: |
     -          echo "Hello ${{ github.actor }}"
     +          echo "Hello ${GITHUB_ACTOR}"
@@ -917,13 +913,8 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -5,9 +5,11 @@
-       test:
-         runs-on: ubuntu-latest
-         steps:
-    -      - name: Multiple vulnerable expressions
-    +      -
-    +        name: Multiple vulnerable expressions
+    @@ -8,6 +8,7 @@
+           - name: Multiple vulnerable expressions
              # All expressions are replaced and environment variables are created in a single comprehensive fix
              run: |
     -          echo "User: ${{ github.actor }}"
@@ -966,13 +957,9 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -5,8 +5,9 @@
-       test:
-         runs-on: ubuntu-latest
+    @@ -7,6 +7,6 @@
          steps:
-    -      - name: Duplicate vulnerable expressions
-    +      -
-    +        name: Duplicate vulnerable expressions
+           - name: Duplicate vulnerable expressions
              run: |
     -          echo "User: ${{ github.actor }}"
     -          echo "User again: ${{ github.actor }}"
@@ -1015,13 +1002,9 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -5,9 +5,10 @@
-       test:
-         runs-on: ubuntu-latest
+    @@ -7,7 +7,7 @@
          steps:
-    -      - name: Equivalent vulnerable expressions
-    +      -
-    +        name: Equivalent vulnerable expressions
+           - name: Equivalent vulnerable expressions
              run: |
     -          echo "User: ${{ github.actor }}"
     -          echo "User: ${{ env.GITHUB_ACTOR }}"
@@ -1066,13 +1049,9 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -5,6 +5,7 @@
-       test:
-         runs-on: ubuntu-latest
+    @@ -7,4 +7,4 @@
          steps:
-    -      - name: Equivalent vulnerable expressions
-    +      -
-    +        name: Equivalent vulnerable expressions
+           - name: Equivalent vulnerable expressions
              run: |
     -          echo "User: ${{ env.THIS_IS_NOT_A_DEFAULT }}"
     +          echo "User: ${THIS_IS_NOT_A_DEFAULT}"
@@ -1296,13 +1275,9 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -5,6 +5,8 @@
-       test:
-         runs-on: windows-latest
+    @@ -7,4 +7,5 @@
          steps:
-    -      - name: Vulnerable step with custom context
-    +      -
-    +        name: Vulnerable step with custom context
+           - name: Vulnerable step with custom context
              shell: cmd
     -        run: echo PR title is ${{ github.event.pull_request.title }}
     +        run: echo PR title is %GITHUB_EVENT_PULL_REQUEST_TITLE%
@@ -1347,21 +1322,15 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -7,9 +7,11 @@
-       repro:
-         runs-on: ubuntu-latest
+    @@ -9,7 +9,7 @@
          steps:
-    -      - shell: bash
-    +      -
-    +        shell: bash
+           - shell: bash
              run: |
     -          echo "✓ ${{ github.event.comment.body }}"
     -⏎
-    -      - shell: bash
     +          echo "✓ ${GITHUB_EVENT_COMMENT_BODY}"
     +        env: {GITHUB_EVENT_COMMENT_BODY: "${{ github.event.comment.body }}"}
-    +      -
-    +        shell: bash
+           - shell: bash
              run: echo ok
     "#
     );
