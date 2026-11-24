@@ -290,7 +290,7 @@ fn invalid_config_file() -> Result<()> {
     Caused by:
         0: configuration error in @@CONFIG@@
         1: invalid configuration syntax
-        2: expected exactly one document at bytes 0..0
+        2: expected a mapping at bytes 0..0
     "
     );
 

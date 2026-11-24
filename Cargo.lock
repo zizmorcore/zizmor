@@ -136,18 +136,18 @@ dependencies = [
 
 [[package]]
 name = "astral-yaml"
-version = "0.0.6"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e533894cd3a18cec8b02492c1356c1d800151b525446079c2a7b81c5da7eb9ac"
+checksum = "7ceecf101d3d1683acc194dda360a4093088f8e4470d2a32d3ebe13111887bff"
 dependencies = [
  "memchr",
 ]
 
 [[package]]
 name = "astral-yaml-serde"
-version = "0.0.6"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92471a182690236dd252ce286e3cffb2760f3c291b4483ea6b67c2ea6e5fda6a"
+checksum = "373a2148cbc078e90d38edd4064a83cd59bc9a3a5daa7c98cfcfae8f48bda704"
 dependencies = [
  "astral-yaml",
  "memchr",
