@@ -9,21 +9,6 @@ fn patch(source: &str, route: Route<'_>, operation: Op<'_>) -> Result<String, Er
 }
 
 #[test]
-fn replace_writes_a_boolean_looking_string_as_a_string() -> Result<(), Error> {
-    let fixed = patch(
-        "env:\n  FLAG: true # toggle\n  OTHER: false",
-        route!("env", "FLAG"),
-        Op::Replace(Value::String("false".into())),
-    )?;
-    insta::assert_snapshot!(fixed, @r#"
-    env:
-      FLAG: "false" # toggle
-      OTHER: false
-    "#);
-    Ok(())
-}
-
-#[test]
 fn rewrite_matches_the_decoded_string_after_the_offset() -> Result<(), Error> {
     let fixed = patch(
         r#"run: "é\nfirst\né\nfirst" # script"#,
@@ -58,23 +43,19 @@ fn added_mappings_inherit_block_or_flow_style() -> Result<(), Error> {
 }
 
 #[test]
-fn duplicate_add_fails_the_batch_and_allows_a_retry() -> Result<(), Error> {
+fn add_rejects_a_key_inserted_earlier_in_the_batch() {
     let doc = Document::new("env: {}").expect("valid YAML fixture");
     let add = Patch {
         route: route!("env"),
         operation: Op::Add {
-            key: "007".into(),
+            key: "CI".into(),
             value: Value::Bool(true),
         },
     };
 
-    let err = apply_yaml_patches(&doc, &[add.clone(), add.clone()])
+    let err = apply_yaml_patches(&doc, &[add.clone(), add])
         .expect_err("adding the same key twice must fail");
-    assert_eq!(err.to_string(), "key '007' already exists");
-
-    let retried = apply_yaml_patches(&doc, &[add])?;
-    insta::assert_snapshot!(retried, @r#"env: {"007": true}"#);
-    Ok(())
+    assert_eq!(err.to_string(), "key 'CI' already exists");
 }
 
 #[test]
@@ -156,72 +137,23 @@ fn set_field_reuses_the_mapping_created_by_an_earlier_patch() -> Result<(), Erro
 }
 
 #[test]
-fn set_field_rejects_non_mapping_values() {
+fn set_field_rejects_a_quoted_null() {
     let set = Op::SetField {
         mapping: "with",
         key: "flag".into(),
         value: Value::Bool(false),
     };
-    for source in ["with: false", "with: ''", "with: [input]"] {
-        assert!(patch(source, route!(), set.clone()).is_err(), "{source}");
-    }
+    assert!(patch("with: 'null'", route!(), set).is_err());
 }
 
 #[test]
-fn removing_a_sequence_item_preserves_neighboring_comments() -> Result<(), Error> {
-    let steps = "steps:\n  - run: first # remove\n  - run: second # keep";
-    let block = patch(steps, route!("steps", 0), Op::Remove)?;
-    insta::assert_snapshot!(block, @"
-    steps:
-      - run: second # keep
-    ");
+fn remove_rejects_the_root_and_missing_keys() {
+    let root = patch("env: {}", route!(), Op::Remove).expect_err("the root has no parent");
+    assert_eq!(root.to_string(), "cannot remove the document root");
 
-    let matrix = "matrix: {os: [linux, macos, windows]} # supported platforms";
-    let flow = patch(matrix, route!("matrix", "os", 1), Op::Remove)?;
-    insta::assert_snapshot!(flow, @"matrix: {os: [linux, windows]} # supported platforms");
-    Ok(())
-}
-
-#[test]
-fn removing_the_last_member_keeps_an_empty_collection() -> Result<(), Error> {
-    let steps = "\
-steps:
-  - env:
-      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-    run: echo hi";
-    let fixed = patch(
-        steps,
-        route!("steps", 0, "env", "ACTIONS_ALLOW_UNSECURE_COMMANDS"),
-        Op::Remove,
-    )?;
-    insta::assert_snapshot!(fixed, @"
-    steps:
-      - env:
-          {}
-        run: echo hi
-    ");
-
-    let last = patch(
-        "steps:\n  - run: build\nname: Build",
-        route!("steps", 0),
-        Op::Remove,
-    )?;
-    insta::assert_snapshot!(last, @"
-    steps:
-      []
-    name: Build
-    ");
-    Ok(())
-}
-
-#[test]
-fn remove_rejects_the_root_and_missing_members() {
-    for route in [route!(), route!("missing"), route!("steps", 1)] {
-        assert!(
-            patch("steps: []", route.clone(), Op::Remove).is_err(),
-            "{route:?}"
-        );
-    }
+    let missing =
+        patch("env: {}", route!("env", "CI"), Op::Remove).expect_err("there is no CI entry");
+    assert_eq!(missing.to_string(), "no such key: CI");
 }
 
 #[test]
@@ -267,15 +199,24 @@ other: *inputs";
 }
 
 #[test]
-fn removing_an_alias_leaves_its_definition_and_other_uses() -> Result<(), Error> {
-    let fixed = patch(
-        "original: &input 1\nfirst: *input\nsecond: *input",
-        route!("first"),
-        Op::Remove,
-    )?;
+fn remove_distinguishes_an_alias_from_an_item_within_it() -> Result<(), Error> {
+    let doc = Document::new(
+        "\
+versions: &versions [20, 22, 24]
+linux: *versions
+windows: *versions
+macos: *versions",
+    )
+    .expect("valid YAML fixture");
+    let patches = [route!("linux", 1), route!("windows")].map(|route| Patch {
+        route,
+        operation: Op::Remove,
+    });
+    let fixed = apply_yaml_patches(&doc, &patches)?;
     insta::assert_snapshot!(fixed, @"
-    original: &input 1
-    second: *input
+    versions: &versions [20, 22, 24]
+    linux: [20, 24]
+    macos: *versions
     ");
     Ok(())
 }

@@ -135,7 +135,7 @@ fn test_issue_839_repro() -> Result<()> {
 }
 
 #[test]
-fn test_fix_job_level() -> anyhow::Result<()> {
+fn test_fix_job_and_step_env() -> anyhow::Result<()> {
     let workflow_content = r#"
 on: push
 
@@ -147,7 +147,9 @@ jobs:
       OTHER_VAR: keep-me
       ANOTHER_VAR: also-keep
     steps:
-      - run: echo "test"
+      - env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        run: echo "test"
 "#;
 
     let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
@@ -160,8 +162,8 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
-    @@ -5,7 +5,6 @@
+        @r#"
+    @@ -5,10 +5,9 @@
        test:
          runs-on: ubuntu-latest
          env:
@@ -169,7 +171,11 @@ jobs:
            OTHER_VAR: keep-me
            ANOTHER_VAR: also-keep
          steps:
-    "
+           - env:
+    -          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+    +          {}
+             run: echo "test"
+    "#
     );
 
     Ok(())
