@@ -125,12 +125,10 @@ impl DependabotCooldown {
             disposition: FixDisposition::Safe,
             edit: FixEdit::Yaml(vec![Patch {
                 route: update.location().route,
-                operation: Op::Add {
-                    key: "cooldown".to_string(),
-                    value: astral_yaml_serde::Value::Mapping(vec![(
-                        astral_yaml_serde::Value::String("default-days".into()),
-                        astral_yaml_serde::Value::Unsigned(minimum_days as u128),
-                    )]),
+                operation: Op::SetField {
+                    mapping: "cooldown",
+                    key: "default-days".into(),
+                    value: astral_yaml_serde::Value::Unsigned(minimum_days as u128),
                 },
             }]),
         }

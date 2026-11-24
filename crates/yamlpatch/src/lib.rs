@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use astral_yaml_serde::{
     EditableYaml, Value,
-    edit::{CollectionStyle, CommentPlacement, Cursor, MappingMut, NodeKind, ScalarStyle},
+    edit::{CollectionStyle, CommentPlacement, Cursor, MappingMut, NodeKind},
 };
 use thiserror::Error;
 use yamlpath::{Component, Document, Route};
@@ -93,7 +93,7 @@ impl Patch<'_> {
             Op::Replace(value) => {
                 let mut cursor = select(root, path, document)?;
                 cursor.set(value)?;
-                style_value(cursor, None)?;
+                inherit_mapping_style(cursor, None)?;
             }
             Op::RewriteString { from, to } => {
                 let mut cursor = select(root, path, document)?;
@@ -113,7 +113,7 @@ impl Patch<'_> {
                         "key '{key}' already exists"
                     )));
                 }
-                style_value(entry.or_insert(value)?, Some(parent_style))?;
+                inherit_mapping_style(entry.or_insert(value)?, Some(parent_style))?;
             }
             Op::SetField {
                 mapping: name,
@@ -138,7 +138,7 @@ impl Patch<'_> {
                 } else {
                     Some(mapping_style(&mapping)?)
                 };
-                style_value(mapping.set(key, value)?, inherited_style)?;
+                inherit_mapping_style(mapping.set(key, value)?, inherited_style)?;
             }
             Op::ReplaceComment { new } | Op::EmplaceComment { new } => {
                 let mut cursor = select(root, path, document)?;
@@ -186,9 +186,8 @@ fn mapping_style(mapping: &MappingMut<'_, '_>) -> Result<CollectionStyle, Error>
     Ok(*style)
 }
 
-// Astral serializes a whole value with flow collections and quoted keys.
-// Let new mappings inherit their parent's layout and use plain keys where possible.
-fn style_value(
+// Astral serializes new collections in flow style. Match mappings to their parent.
+fn inherit_mapping_style(
     mut cursor: Cursor<'_, '_>,
     parent_style: Option<CollectionStyle>,
 ) -> Result<(), Error> {
@@ -200,39 +199,19 @@ fn style_value(
             }
             let mut mapping = cursor.into_mapping()?;
             for index in 0..mapping.len() {
-                let mut key = mapping.key_at(index)?;
-                match key.node()?.kind() {
-                    NodeKind::Scalar { value, .. } if can_be_plain_key(value, style) => {
-                        key.set_scalar_style(ScalarStyle::Plain)?;
-                    }
-                    NodeKind::Mapping { .. } | NodeKind::Sequence { .. } => style_value(key, None)?,
-                    _ => {}
-                }
-                style_value(mapping.value_at(index)?, Some(style))?;
+                inherit_mapping_style(mapping.value_at(index)?, Some(style))?;
             }
         }
         NodeKind::Sequence { style, .. } => {
             let style = *style;
             let mut sequence = cursor.into_sequence()?;
             for index in 0..sequence.len() {
-                style_value(sequence.item(index)?, Some(style))?;
+                inherit_mapping_style(sequence.item(index)?, Some(style))?;
             }
         }
         _ => {}
     }
     Ok(())
-}
-
-fn can_be_plain_key(key: &str, style: CollectionStyle) -> bool {
-    // Let Astral check both the spelling and the implicit type in key position.
-    let entry = match style {
-        CollectionStyle::Block => format!("{key}: ~"),
-        CollectionStyle::Flow => format!("{{{key}: ~}}"),
-    };
-    let Ok(Value::Mapping(entries)) = astral_yaml_serde::from_str(&entry) else {
-        return false;
-    };
-    matches!(entries.as_slice(), [(Value::String(parsed), Value::Null)] if parsed == key)
 }
 
 fn select<'edit, 'doc>(
@@ -256,7 +235,6 @@ fn select<'edit, 'doc>(
 fn expand_alias(cursor: &mut Cursor<'_, '_>) -> Result<(), Error> {
     if matches!(cursor.node()?.kind(), NodeKind::Alias { .. }) {
         cursor.update::<Value>(std::convert::identity)?;
-        style_value(cursor.reborrow(), None)?;
     }
     Ok(())
 }

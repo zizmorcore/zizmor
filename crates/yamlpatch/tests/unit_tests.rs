@@ -46,17 +46,17 @@ fn add_inherits_mapping_style_and_rejects_an_existing_key() {
         route: route!("parent"),
         operation: Op::Add {
             key: "new".into(),
-            value: value("{nested: {items: [true]}}"),
+            value: value(r#"{"007": {1: [true]}}"#),
         },
     };
     for (original, expected) in [
         (
             "parent: {old: 1}\n",
-            "parent: {old: 1, new: {nested: {items: [true]}}}\n",
+            "parent: {old: 1, new: {\"007\": {1: [true]}}}\n",
         ),
         (
             "parent:\n  old: 1\n",
-            "parent:\n  old: 1\n  new:\n    nested:\n      items: [true]\n",
+            "parent:\n  old: 1\n  new:\n    \"007\":\n      1: [true]\n",
         ),
     ] {
         let result = apply_yaml_patches(original, std::slice::from_ref(&patch)).unwrap();
@@ -66,23 +66,29 @@ fn add_inherits_mapping_style_and_rejects_an_existing_key() {
 }
 
 #[test]
-fn new_mapping_keys_use_plain_style_when_possible() {
-    let fixed = apply(
-        "'already-quoted': true\n",
-        route!(),
-        Op::Add {
-            key: "x,y".into(),
-            value: value(
-                r#"[{ordinary: "false", "x,y": 1, "true": 2, "007": 3, "key: value": 4}]"#,
-            ),
-        },
-    );
-    assert_eq!(
-        fixed,
-        r#"'already-quoted': true
-x,y: [{ordinary: "false", "x,y": 1, "true": 2, "007": 3, "key: value": 4}]
-"#
-    );
+fn added_string_keys_use_plain_style_when_possible() {
+    for (source, key, expected) in [
+        (
+            "'already-quoted': true\n",
+            "ordinary",
+            "'already-quoted': true\nordinary: false\n",
+        ),
+        ("old: true", "x,y", "old: true\nx,y: false"),
+        ("{old: true}", "x,y", r#"{old: true, "x,y": false}"#),
+        ("{}", "true", r#"{"true": false}"#),
+        ("{}", "007", r#"{"007": false}"#),
+        ("{}", "key: value", r#"{"key: value": false}"#),
+    ] {
+        let fixed = apply(
+            source,
+            route!(),
+            Op::Add {
+                key: key.into(),
+                value: Value::Bool(false),
+            },
+        );
+        assert_eq!(fixed, expected);
+    }
 }
 
 #[test]
@@ -141,11 +147,11 @@ fn set_mapping_field_inherits_or_preserves_its_style() {
     for (original, expected) in [
         (
             "with:\n  keep: 1",
-            "with:\n  keep: 1\n  options:\n    new: true",
+            "with:\n  keep: 1\n  options:\n    200: true",
         ),
         (
             "with:\n  options: {old: 1}",
-            "with:\n  options: {new: true}",
+            "with:\n  options: {200: true}",
         ),
     ] {
         let result = apply(
@@ -154,7 +160,7 @@ fn set_mapping_field_inherits_or_preserves_its_style() {
             Op::SetField {
                 mapping: "with",
                 key: "options".into(),
-                value: value("{new: true}"),
+                value: value("{200: true}"),
             },
         );
         assert_eq!(result, expected);
