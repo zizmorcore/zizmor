@@ -262,11 +262,12 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -7,6 +7,7 @@
+    @@ -7,6 +7,8 @@
          steps:
            - name: Checkout
              uses: actions/checkout@v4
-    +        with: {persist-credentials: false}
+    +        with:
+    +          persist-credentials: false
            - name: Upload artifacts
              uses: actions/upload-artifact@v4
              with:

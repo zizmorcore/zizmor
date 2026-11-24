@@ -913,7 +913,7 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -8,6 +8,7 @@
+    @@ -8,6 +8,8 @@
            - name: Multiple vulnerable expressions
              # All expressions are replaced and environment variables are created in a single comprehensive fix
              run: |
@@ -923,7 +923,8 @@ jobs:
     +          echo "User: ${GITHUB_ACTOR}"
     +          echo "Ref: ${GITHUB_REF_NAME}"
     +          echo "Commit: ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
-    +        env: {GITHUB_EVENT_HEAD_COMMIT_MESSAGE: "${{ github.event.head_commit.message }}"}
+    +        env:
+    +          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: "${{ github.event.head_commit.message }}"
     "#
     );
 
@@ -1275,13 +1276,14 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -7,4 +7,5 @@
+    @@ -7,4 +7,6 @@
          steps:
            - name: Vulnerable step with custom context
              shell: cmd
     -        run: echo PR title is ${{ github.event.pull_request.title }}
     +        run: echo PR title is %GITHUB_EVENT_PULL_REQUEST_TITLE%
-    +        env: {GITHUB_EVENT_PULL_REQUEST_TITLE: "${{ github.event.pull_request.title }}"}
+    +        env:
+    +          GITHUB_EVENT_PULL_REQUEST_TITLE: "${{ github.event.pull_request.title }}"
     "#
     );
 
@@ -1322,14 +1324,15 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -9,7 +9,7 @@
+    @@ -9,7 +9,8 @@
          steps:
            - shell: bash
              run: |
     -          echo "✓ ${{ github.event.comment.body }}"
     -⏎
     +          echo "✓ ${GITHUB_EVENT_COMMENT_BODY}"
-    +        env: {GITHUB_EVENT_COMMENT_BODY: "${{ github.event.comment.body }}"}
+    +        env:
+    +          GITHUB_EVENT_COMMENT_BODY: "${{ github.event.comment.body }}"
            - shell: bash
              run: echo ok
     "#

@@ -41,20 +41,28 @@ fn replace_preserves_yaml_types_and_siblings() {
 }
 
 #[test]
-fn add_rejects_an_existing_key() {
+fn add_inherits_mapping_style_and_rejects_an_existing_key() {
     let patch = Patch {
-        route: route!("flow"),
+        route: route!("parent"),
         operation: Op::Add {
             key: "new".into(),
-            value: value("{nested: [true]}"),
+            value: value("{nested: {items: [true]}}"),
         },
     };
-    let result = apply_yaml_patches("flow: {old: 1}", std::slice::from_ref(&patch)).unwrap();
-    assert_eq!(
-        value(&result),
-        value("flow: {old: 1, new: {nested: [true]}}")
-    );
-    assert!(apply_yaml_patches(&result, &[patch]).is_err());
+    for (original, expected) in [
+        (
+            "parent: {old: 1}\n",
+            "parent: {old: 1, new: {nested: {items: [true]}}}\n",
+        ),
+        (
+            "parent:\n  old: 1\n",
+            "parent:\n  old: 1\n  new:\n    nested:\n      items: [true]\n",
+        ),
+    ] {
+        let result = apply_yaml_patches(original, std::slice::from_ref(&patch)).unwrap();
+        assert_eq!(result, expected);
+        assert!(apply_yaml_patches(&result, std::slice::from_ref(&patch)).is_err());
+    }
 }
 
 #[test]
@@ -84,12 +92,24 @@ fn set_nested_field() {
             "step: {uses: action}",
             "step: {uses: action, with: {flag: false}}",
         ),
-        ("step:\n  with:", "step: {with: {flag: false}}"),
+        (
+            "step:\n  uses: action",
+            "step:\n  uses: action\n  with:\n    flag: false",
+        ),
+        ("step:\n  with:", "step:\n  with:\n    flag: false"),
+        (
+            "step:\n  with: # keep",
+            "step:\n  with: # keep\n    flag: false",
+        ),
         ("step: {with: null}", "step: {with: {flag: false}}"),
-        ("step: {with: {}}", "step: {with: {flag: false}}"),
+        ("step:\n  with: {}", "step:\n  with: {flag: false}"),
+        (
+            "step:\n  with: {keep: 1}",
+            "step:\n  with: {keep: 1, flag: false}",
+        ),
         (
             "step:\n  with:\n    keep: 'é' # retain\n    flag: true",
-            "step: {with: {keep: é, flag: false}}",
+            "step:\n  with:\n    keep: 'é' # retain\n    flag: false",
         ),
     ] {
         let result = apply(
@@ -101,12 +121,7 @@ fn set_nested_field() {
                 value: Value::Bool(false),
             },
         );
-        assert_eq!(value(&result), value(expected));
-        if original.contains("# retain") {
-            let doc = Document::new(result).unwrap();
-            let span = doc.entry_range(&route!("step", "with", "keep")).unwrap();
-            assert_eq!(doc.comments(span)[0].text, " retain");
-        }
+        assert_eq!(result, expected, "{original}");
     }
     for invalid in ["{with: false}", "{with: ''}", "{with: [a]}"] {
         let patch = Patch {
@@ -118,6 +133,31 @@ fn set_nested_field() {
             },
         };
         assert!(apply_yaml_patches(invalid, &[patch]).is_err());
+    }
+}
+
+#[test]
+fn set_mapping_field_inherits_or_preserves_its_style() {
+    for (original, expected) in [
+        (
+            "with:\n  keep: 1",
+            "with:\n  keep: 1\n  options:\n    new: true",
+        ),
+        (
+            "with:\n  options: {old: 1}",
+            "with:\n  options: {new: true}",
+        ),
+    ] {
+        let result = apply(
+            original,
+            route!(),
+            Op::SetField {
+                mapping: "with",
+                key: "options".into(),
+                value: value("{new: true}"),
+            },
+        );
+        assert_eq!(result, expected);
     }
 }
 

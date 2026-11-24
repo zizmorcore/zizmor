@@ -93,7 +93,7 @@ impl Patch<'_> {
             Op::Replace(value) => {
                 let mut cursor = select(root, path, document)?;
                 cursor.set(value)?;
-                prefer_plain_keys(cursor)?;
+                style_value(cursor, None)?;
             }
             Op::RewriteString { from, to } => {
                 let mut cursor = select(root, path, document)?;
@@ -106,13 +106,14 @@ impl Patch<'_> {
             }
             Op::Add { key, value } => {
                 let mut mapping = mapping(root, path, document)?;
+                let parent_style = mapping_style(&mapping)?;
                 let entry = mapping.entry(key)?;
                 if entry.is_occupied() {
                     return Err(Error::InvalidOperation(format!(
                         "key '{key}' already exists"
                     )));
                 }
-                prefer_plain_keys(entry.or_insert(value)?)?;
+                style_value(entry.or_insert(value)?, Some(parent_style))?;
             }
             Op::SetField {
                 mapping: name,
@@ -120,20 +121,24 @@ impl Patch<'_> {
                 value,
             } => {
                 let mut parent = mapping(root, path, document)?;
-                let empty = Value::Mapping(Vec::new());
-                let mut field = parent.entry(name)?.or_insert(&empty)?;
+                let parent_style = mapping_style(&parent)?;
+                let mut field = parent.entry(name)?.or_insert(Value::Null)?;
                 check_anchor(&field, document)?;
                 expand_alias(&mut field)?;
                 if matches!(field.node()?.kind(), NodeKind::Scalar { .. })
                     && field.read::<Value>()? == Value::Null
                 {
-                    field.set(empty)?;
+                    field.set(Value::Mapping(Vec::new()))?;
+                    field.set_collection_style(parent_style)?;
                 }
                 let mut mapping = field.into_mapping()?;
-                if let Some(target) = mapping.get(key)? {
+                let inherited_style = if let Some(target) = mapping.get(key)? {
                     check_anchor(&target, document)?;
-                }
-                prefer_plain_keys(mapping.set(key, value)?)?;
+                    None
+                } else {
+                    Some(mapping_style(&mapping)?)
+                };
+                style_value(mapping.set(key, value)?, inherited_style)?;
             }
             Op::ReplaceComment { new } | Op::EmplaceComment { new } => {
                 let mut cursor = select(root, path, document)?;
@@ -174,29 +179,43 @@ fn mapping<'edit, 'doc>(
     Ok(cursor.into_mapping()?)
 }
 
-// Astral styles keys inserted through its mapping API. Keys inside a whole
-// serialized value still arrive quoted.
-fn prefer_plain_keys(cursor: Cursor<'_, '_>) -> Result<(), Error> {
+fn mapping_style(mapping: &MappingMut<'_, '_>) -> Result<CollectionStyle, Error> {
+    let NodeKind::Mapping { style, .. } = mapping.node()?.kind() else {
+        unreachable!("MappingMut selects a mapping")
+    };
+    Ok(*style)
+}
+
+// Astral serializes a whole value with flow collections and quoted keys.
+// Let new mappings inherit their parent's layout and use plain keys where possible.
+fn style_value(
+    mut cursor: Cursor<'_, '_>,
+    parent_style: Option<CollectionStyle>,
+) -> Result<(), Error> {
     match cursor.node()?.kind() {
-        NodeKind::Mapping { style, .. } => {
-            let block = *style == CollectionStyle::Block;
+        NodeKind::Mapping { style: current, .. } => {
+            let style = parent_style.unwrap_or(*current);
+            if style != *current {
+                cursor.set_collection_style(style)?;
+            }
             let mut mapping = cursor.into_mapping()?;
             for index in 0..mapping.len() {
                 let mut key = mapping.key_at(index)?;
                 match key.node()?.kind() {
-                    NodeKind::Scalar { value, .. } if can_be_plain_key(value, block) => {
+                    NodeKind::Scalar { value, .. } if can_be_plain_key(value, style) => {
                         key.set_scalar_style(ScalarStyle::Plain)?;
                     }
-                    NodeKind::Mapping { .. } | NodeKind::Sequence { .. } => prefer_plain_keys(key)?,
+                    NodeKind::Mapping { .. } | NodeKind::Sequence { .. } => style_value(key, None)?,
                     _ => {}
                 }
-                prefer_plain_keys(mapping.value_at(index)?)?;
+                style_value(mapping.value_at(index)?, Some(style))?;
             }
         }
-        NodeKind::Sequence { .. } => {
+        NodeKind::Sequence { style, .. } => {
+            let style = *style;
             let mut sequence = cursor.into_sequence()?;
             for index in 0..sequence.len() {
-                prefer_plain_keys(sequence.item(index)?)?;
+                style_value(sequence.item(index)?, Some(style))?;
             }
         }
         _ => {}
@@ -204,12 +223,11 @@ fn prefer_plain_keys(cursor: Cursor<'_, '_>) -> Result<(), Error> {
     Ok(())
 }
 
-fn can_be_plain_key(key: &str, block: bool) -> bool {
+fn can_be_plain_key(key: &str, style: CollectionStyle) -> bool {
     // Let Astral check both the spelling and the implicit type in key position.
-    let entry = if block {
-        format!("{key}: ~")
-    } else {
-        format!("{{{key}: ~}}")
+    let entry = match style {
+        CollectionStyle::Block => format!("{key}: ~"),
+        CollectionStyle::Flow => format!("{{{key}: ~}}"),
     };
     let Ok(Value::Mapping(entries)) = astral_yaml_serde::from_str(&entry) else {
         return false;
@@ -238,7 +256,7 @@ fn select<'edit, 'doc>(
 fn expand_alias(cursor: &mut Cursor<'_, '_>) -> Result<(), Error> {
     if matches!(cursor.node()?.kind(), NodeKind::Alias { .. }) {
         cursor.update::<Value>(std::convert::identity)?;
-        prefer_plain_keys(cursor.reborrow())?;
+        style_value(cursor.reborrow(), None)?;
     }
     Ok(())
 }

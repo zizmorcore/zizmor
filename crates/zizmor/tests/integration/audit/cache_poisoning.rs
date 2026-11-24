@@ -1015,11 +1015,12 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -7,12 +7,13 @@
+    @@ -7,12 +7,14 @@
          runs-on: ubuntu-latest
          steps:
            - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
-    +        with: {enable-cache: false}
+    +        with:
+    +          enable-cache: false
            - uses: astral-sh/setup-uv@d9e0f98d3fc6adb07d1e3d37f3043649ddad06a1 # v6.5.0
              with:
     -          enable-cache: true

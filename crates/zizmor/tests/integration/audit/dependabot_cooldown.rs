@@ -233,11 +233,12 @@ updates:
                 .run()
         })?,
         @"
-    @@ -7,3 +7,4 @@
+    @@ -7,3 +7,5 @@
          schedule:
            interval: daily
          insecure-external-code-execution: deny
-    +    cooldown: {default-days: 7}
+    +    cooldown:
+    +      default-days: 7
     "
     );
     Ok(())
@@ -437,11 +438,12 @@ updates:
                 .run()
         })?,
         @"
-    @@ -6,10 +6,11 @@
+    @@ -6,10 +6,12 @@
          directory: /
          schedule:
            interval: daily
-    +    cooldown: {default-days: 7}
+    +    cooldown:
+    +      default-days: 7
      ⏎
        - package-ecosystem: npm
          directory: /
