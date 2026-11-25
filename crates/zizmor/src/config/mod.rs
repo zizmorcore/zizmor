@@ -208,18 +208,16 @@ impl RawConfig {
     where
         T: DeserializeOwned,
     {
-        self.rules
-            .get(ident)
-            .and_then(|rule| rule.config.as_ref())
-            .map(|config| {
-                let entries = config.iter().map(|(key, value)| (key.as_str(), value));
-                let mut map = de::value::MapDeserializer::new(entries);
-                let parsed = T::deserialize(de::value::MapAccessDeserializer::new(&mut map))?;
-                // Reject extra keys after an enum such as `forbidden-uses` reads its variant.
-                map.end()?;
-                Ok(parsed)
-            })
-            .transpose()
+        let Some(options) = self.rules.get(ident).and_then(|rule| rule.config.as_ref()) else {
+            return Ok(None);
+        };
+
+        let entries = options
+            .iter()
+            .map(|(key, value)| (Value::String(key.clone()), value.clone()))
+            .collect();
+        T::deserialize(&Value::Mapping(entries))
+            .map(Some)
             .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))
     }
 }
