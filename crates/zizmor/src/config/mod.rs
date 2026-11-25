@@ -9,6 +9,7 @@ use anyhow::{Context as _, anyhow};
 use astral_yaml_serde::Value;
 use camino::Utf8Path;
 use github_actions_models::common::RepositoryUses;
+use indexmap::IndexMap;
 use serde::{
     Deserialize,
     de::{self, DeserializeOwned},
@@ -181,21 +182,11 @@ pub(crate) struct AuditRuleConfig {
     #[serde(default)]
     ignore: Vec<WorkflowRule>,
     /// Rule-specific configuration.
-    #[serde(default, deserialize_with = "optional_mapping")]
-    config: Option<Value>,
+    #[serde(default)]
+    config: Option<IndexMap<String, Value>>,
     /// Remapping configuration.
     #[serde(default)]
     remap: Option<RemapConfig>,
-}
-
-fn optional_mapping<'de, D>(deserializer: D) -> Result<Option<Value>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    match Option::<Value>::deserialize(deserializer)? {
-        value @ (None | Some(Value::Mapping(_))) => Ok(value),
-        Some(_) => Err(de::Error::custom("expected a mapping")),
-    }
 }
 
 /// Data model for zizmor's configuration file.
@@ -219,8 +210,15 @@ impl RawConfig {
     {
         self.rules
             .get(ident)
-            .and_then(|rule_config| rule_config.config.as_ref())
-            .map(T::deserialize)
+            .and_then(|rule| rule.config.as_ref())
+            .map(|config| {
+                let entries = config.iter().map(|(key, value)| (key.as_str(), value));
+                let mut map = de::value::MapDeserializer::new(entries);
+                let parsed = T::deserialize(de::value::MapAccessDeserializer::new(&mut map))?;
+                // Reject extra keys after an enum such as `forbidden-uses` reads its variant.
+                map.end()?;
+                Ok(parsed)
+            })
             .transpose()
             .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))
     }
@@ -839,6 +837,14 @@ mod tests {
     use std::str::FromStr as _;
 
     use super::WorkflowRule;
+
+    #[test]
+    fn audit_without_options_rejects_scalar_config() {
+        assert!(matches!(
+            super::Config::load("rules: {artipacked: {config: false}}"),
+            Err(super::ConfigErrorInner::Syntax(_))
+        ));
+    }
 
     #[test]
     fn forbidden_uses_requires_exactly_one_policy() {
