@@ -396,7 +396,7 @@ impl UnpinnedUsesPolicies {
                 // Policies are ordered by specificity, so we can
                 // iterate and return eagerly.
                 for (uses_pattern, policy) in policies {
-                    if uses_pattern.matches(&uses) {
+                    if uses_pattern.matches(uses) {
                         return (Some(uses_pattern), *policy);
                     }
                 }

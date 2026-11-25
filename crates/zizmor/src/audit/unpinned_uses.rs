@@ -35,9 +35,7 @@ impl UnpinnedUses {
         let client = self.client.as_ref()?;
 
         // There's nothing to fix if we don't have a GitHub slug.
-        let Some(slug) = uses.slug() else {
-            return None;
-        };
+        let slug = uses.slug()?;
 
         // There's nothing to fix if the ref is already a commit SHA.
         if uses.ref_is_commit() {
