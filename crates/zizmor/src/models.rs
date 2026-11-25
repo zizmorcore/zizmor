@@ -101,21 +101,25 @@ pub(crate) trait Validatable<'de> {
                 // Something a little wonky happens here: we want
                 // to distinguish between syntax and semantic errors,
                 // but astral-yaml-serde doesn't give us an API to do that.
-                // To approximate it, we deserialize the input as a
+                // To approximate it, we re-parse the input as a
                 // `Self::Skeleton`, then convert that `Self::Skeleton`
                 // into a `serde_json::Value` and use it as an oracle -- a successful
-                // deserialization indicates that the input is valid YAML and
-                // that our error is semantic, while a failed deserialization
-                // is reported as a syntax error.
+                // re-parse indicates that the input is valid YAML and
+                // that our error is semantic, while a failed re-parse
+                // indicates a syntax error.
                 //
-                // The skeleton expects a mapping or sequence at the root.
-                // Deserializing it also checks YAML-specific rules,
+                // We needed to round-trip through a `Self::Skeleton` to ensure that
+                // all of YAML's validity rules were preserved -- directly deserializing
+                // into a `serde_json::Value` would miss some YAML-specific checks,
                 // like duplicate keys within mappings. See #1395 for an example of this.
                 //
-                // We do this in a nested fashion to avoid deserializing the input twice if we
-                // can help it. Going through a generic YAML value first can change how
-                // scalars deserialize. For example, a string field can read `true` directly,
-                // but a generic YAML value stores it as a boolean.
+                // We do this in a nested fashion to avoid re-parsing the input twice if we
+                // can help it, and because the more obvious trick (`Self::Target::deserialize(&value)`)
+                // doesn't work due to a lack of referential transparency.
+                //
+                // See: https://github.com/dtolnay/serde-yaml/issues/170
+                // See: https://github.com/dtolnay/serde-yaml/issues/395
+
                 let skeleton = if contents.lines().all(|line| {
                     let line = line.trim();
                     line.is_empty() || line.starts_with('#')
