@@ -316,6 +316,9 @@ impl Audit for UnpinnedUses {
                         .primary(),
                 );
 
+            // TODO: This is always `None` at the moment because we don't
+            // pass in a parent location above. Figure out a good auto-fix
+            // strategy here.
             if let Some(fix) = fix {
                 builder = builder.fix(fix);
             }
