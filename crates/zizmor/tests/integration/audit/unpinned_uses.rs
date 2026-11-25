@@ -1,5 +1,5 @@
 use anyhow::Result;
-use zizmor_dev::{Zizmor, input_under_test};
+use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_unpinned_uses_pedantic() -> Result<()> {
@@ -661,6 +661,86 @@ fn test_honors_lockfile() -> anyhow::Result<()> {
 
     1 finding: 0 informational, 0 low, 0 medium, 1 high
     "
+    );
+
+    Ok(())
+}
+
+/// The `unpinned-uses` audit should handle pre-commit config inputs.
+#[test]
+fn test_pre_commit() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+
+    workspace.add_file(
+        ".pre-commit-config.yaml",
+        indoc::indoc! {r#"
+        repos:
+          - repo: https://github.com/pre-commit/pre-commit-hooks
+            rev: v2.3.0
+            hooks:
+              - id: check-yaml
+
+          - repo: https://github.com/pre-commit/pre-commit-hooks
+            # hash-pinned, so no finding
+            rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # v6.0.0
+            hooks:
+              - id: check-yaml
+        "#},
+    );
+
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin().input(workspace.path()).run()?,
+        @"
+    error[unpinned-uses]: unpinned action reference
+     --> @@INPUT@@/.pre-commit-config.yaml:3:10
+      |
+    2 |   - repo: https://github.com/pre-commit/pre-commit-hooks
+      |           ---------------------------------------------- this pre-commit hook
+    3 |     rev: v2.3.0
+      |          ^^^^^^ is not pinned to a hash (required by blanket policy)
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
+/// When flagging unpinned hooks in pre-commit configs,
+/// unpinned-uses honors zizmor's config i.e. does not flag
+/// hooks that match a ref-pin policy.
+#[test]
+fn test_pre_commit_honors_config() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+
+    workspace.add_file(
+        ".pre-commit-config.yaml",
+        indoc::indoc! {r#"
+        repos:
+          - repo: https://github.com/pre-commit/pre-commit-hooks
+            rev: v2.3.0
+            hooks:
+              - id: check-yaml
+        "#},
+    );
+
+    workspace.add_file(
+        "zizmor.yml",
+        indoc::indoc! {r#"
+        rules:
+          unpinned-uses:
+            config:
+              policies:
+                pre-commit/pre-commit-hooks: ref-pin
+        "#},
+    );
+
+    // No findings because we allow ref-pin for the offending hook.
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin().input(workspace.path()).run()?,
+        @"No findings to report. Good job!"
     );
 
     Ok(())
