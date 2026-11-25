@@ -98,8 +98,24 @@ pub(crate) trait Validatable<'de> {
         match astral_yaml_serde::from_str::<Self::Target>(contents) {
             Ok(value) => Ok(value),
             Err(e) => {
-                // Parse just the expected root shape to distinguish invalid YAML from
-                // a document whose fields violate the model or its JSON schema.
+                // Something a little wonky happens here: we want
+                // to distinguish between syntax and semantic errors,
+                // but astral-yaml-serde doesn't give us an API to do that.
+                // To approximate it, we deserialize the input as a
+                // `Self::Skeleton`, then convert that `Self::Skeleton`
+                // into a `serde_json::Value` and use it as an oracle -- a successful
+                // deserialization indicates that the input is valid YAML and
+                // that our error is semantic, while a failed deserialization
+                // is reported as a syntax error.
+                //
+                // The skeleton expects a mapping or sequence at the root.
+                // Deserializing it also checks YAML-specific rules,
+                // like duplicate keys within mappings. See #1395 for an example of this.
+                //
+                // We do this in a nested fashion to avoid deserializing the input twice if we
+                // can help it. Going through a generic YAML value first can change how
+                // scalars deserialize. For example, a string field can read `true` directly,
+                // but a generic YAML value stores it as a boolean.
                 let skeleton = if contents.lines().all(|line| {
                     let line = line.trim();
                     line.is_empty() || line.starts_with('#')
