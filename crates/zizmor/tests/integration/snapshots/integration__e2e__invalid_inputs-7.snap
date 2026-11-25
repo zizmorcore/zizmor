@@ -1,6 +1,6 @@
 ---
 source: crates/zizmor/tests/integration/e2e.rs
-expression: "zizmor().expects_failure(1).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).args([\"--strict-collection\"]).run()?"
+expression: "Zizmor::cargo_bin().expects_failure(1).input(input_under_test(&format!(\"invalid/{workflow_tc}.yml\"))).args([\"--strict-collection\"]).run()?"
 ---
  INFO zizmor: 🌈 zizmor v@@VERSION@@
 fatal: no audit was performed
@@ -8,5 +8,4 @@ failed to load file://@@INPUT@@ as workflow
 
 Caused by:
     0: input does not match expected validation schema
-    1: "on" is a required property
-       "jobs" is a required property
+    1: null is not of type "object"

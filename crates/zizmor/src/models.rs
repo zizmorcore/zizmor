@@ -90,7 +90,7 @@ fn parse_validation_errors(errors: Vec<jsonschema::ErrorEntry<'_>>) -> anyhow::E
 /// as provide more useful errors for the latter case.
 pub(crate) trait Validatable<'de> {
     type Target: serde::Deserialize<'de>;
-    type Skeleton: serde::Deserialize<'de> + serde::Serialize + Default;
+    type Skeleton: serde::Deserialize<'de> + serde::Serialize;
 
     fn validator() -> &'static jsonschema::Validator;
 
@@ -123,16 +123,7 @@ pub(crate) trait Validatable<'de> {
                 // The above links show the problem for serde-yaml, but are true
                 // for all serde implementations more generally.
 
-                let skeleton = if contents.lines().all(|line| {
-                    let line = line.trim();
-                    line.is_empty() || line.starts_with('#')
-                }) {
-                    // An empty stream has no fields to validate against the input schema.
-                    Ok(Self::Skeleton::default())
-                } else {
-                    astral_yaml_serde::from_str::<Self::Skeleton>(contents)
-                };
-                match skeleton {
+                match astral_yaml_serde::from_str::<Option<Self::Skeleton>>(contents) {
                     // We know we have valid YAML, so one of two things happened here:
                     // 1. The input is semantically valid, but we have a bug in
                     //    `github-actions-models`.
