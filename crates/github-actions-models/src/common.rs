@@ -1129,41 +1129,36 @@ mod tests {
         );
 
         // Invalid: remote reusable workflow without ref
-        assert_eq!(
+        insta::assert_snapshot!(
             astral_yaml_serde::from_str::<Dummy>(
                 "octo-org/this-repo/.github/workflows/workflow-1.yml"
             )
-            .unwrap_err()
-            .message,
-            "malformed `uses` ref: missing `@<ref>` in octo-org/this-repo/.github/workflows/workflow-1.yml"
+            .unwrap_err(),
+            @"$: malformed `uses` ref: missing `@<ref>` in octo-org/this-repo/.github/workflows/workflow-1.yml at bytes 0..51"
         );
 
         // Invalid: local reusable workflow with ref
-        assert_eq!(
+        insta::assert_snapshot!(
             astral_yaml_serde::from_str::<Dummy>(
                 "./.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
             )
-            .unwrap_err()
-            .message,
-            "local reusable workflow reference can't specify `@<ref>`"
+            .unwrap_err(),
+            @"$: local reusable workflow reference can't specify `@<ref>` at bytes 0..75"
         );
 
         // Invalid: no ref at all
-        assert_eq!(
-            astral_yaml_serde::from_str::<Dummy>(".github/workflows/workflow-1.yml")
-                .unwrap_err()
-                .message,
-            "malformed `uses` ref: missing `@<ref>` in .github/workflows/workflow-1.yml"
+        insta::assert_snapshot!(
+            astral_yaml_serde::from_str::<Dummy>(".github/workflows/workflow-1.yml").unwrap_err(),
+            @"$: malformed `uses` ref: missing `@<ref>` in .github/workflows/workflow-1.yml at bytes 0..32"
         );
 
         // Invalid: missing user/repo
-        assert_eq!(
+        insta::assert_snapshot!(
             astral_yaml_serde::from_str::<Dummy>(
                 "workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
             )
-            .unwrap_err()
-            .message,
-            "malformed `uses` ref: owner/repo slug is too short: workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
+            .unwrap_err(),
+            @"$: malformed `uses` ref: owner/repo slug is too short: workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89 at bytes 0..55"
         );
     }
 
