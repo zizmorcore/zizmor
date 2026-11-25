@@ -10,12 +10,13 @@ use crate::config::{Config, UsesPolicy};
 use crate::finding::location::{Locatable, Routable as _};
 use crate::finding::{Confidence, Finding, Fix, Persona, Severity};
 use crate::github;
-use crate::models::uses::{RepositoryUsesExt as _, RepositoryUsesPattern};
+use crate::models::pre_commit::{PreCommitConfig, Repo};
+use crate::models::repo_ref::RepoRef;
+use crate::models::uses::RepositoryUsesPattern;
 use crate::models::version::Version;
 use crate::models::workflow::ReusableWorkflowCallJob;
-use crate::models::{
-    AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step,
-};
+use crate::models::{AsDocument, StepCommon, action::CompositeStep, workflow::Step};
+use crate::registry::input::InputGroup;
 use crate::utils::once::debug_once;
 
 pub(crate) struct UnpinnedUses {
@@ -28,13 +29,13 @@ impl UnpinnedUses {
     async fn attempt_fix<'a, 'doc>(
         &self,
         parent: &impl Locatable<'doc>,
-        uses: &Uses,
+        uses: &RepoRef<'doc>,
     ) -> Option<Fix<'doc>> {
         // We need to be online to attempt fixes for this audit.
         let client = self.client.as_ref()?;
 
-        // We can only fix repository uses for now.
-        let Uses::Repository(uses) = uses else {
+        // There's nothing to fix if we don't have a GitHub slug.
+        let Some(slug) = uses.slug() else {
             return None;
         };
 
@@ -50,22 +51,19 @@ impl UnpinnedUses {
         // and pinact don't handle those gracefully.
         // The user can always pin manually if they so desire.
         if Version::parse(uses.git_ref()).is_err() {
-            tracing::debug!("not proposing an auto-fix for a non-version ref: {uses}");
+            tracing::debug!("not proposing an auto-fix for a non-version ref: {uses:?}");
             return None;
         }
 
-        let git_ref = match client.lookup_ref(&uses.into(), uses.git_ref()).await {
+        let git_ref = match client.lookup_ref(&slug, uses.git_ref()).await {
             Ok(Some(git_ref)) => git_ref,
             Ok(None) => {
-                tracing::warn!("no commit matching {uses}");
+                tracing::warn!("no commit matching {uses:?}");
                 return None;
             }
             Err(e) => {
                 // TODO: hard-fail here instead?
-                tracing::warn!(
-                    "failed to look up commit for {uses}: {e}",
-                    uses = uses.raw()
-                );
+                tracing::warn!("failed to look up commit for {slug}: {e}");
                 return None;
             }
         };
@@ -74,7 +72,7 @@ impl UnpinnedUses {
         // version avoids any later `ref-version-mismatch` findings when the
         // major tag is mutated by the upstream.
         let longest_tag = match client
-            .longest_tag_for_commit(&uses.into(), uses.subpath(), git_ref.commit())
+            .longest_tag_for_commit(&slug, uses.subpath(), git_ref.commit())
             .await
         {
             Ok(Some(tag)) => Cow::Owned(tag.name),
@@ -84,9 +82,9 @@ impl UnpinnedUses {
         };
 
         let action = if let Some(subpath) = uses.subpath() {
-            format!("{}/{}", uses.slug(), subpath)
+            format!("{}/{}", slug, subpath)
         } else {
-            uses.slug().to_string()
+            slug.to_string()
         };
 
         // For the fix itself, we need to situate two patches:
@@ -113,60 +111,50 @@ impl UnpinnedUses {
         })
     }
 
+    /// Evaluate a [`RepoRef`]'s pinning against the configured policies.
     async fn evaluate_pinning<'doc>(
         &self,
-        parent: &impl Locatable<'doc>,
-        uses: &'doc Uses,
+        parent: Option<&impl Locatable<'doc>>,
+        uses: impl Into<RepoRef<'doc>>,
         config: &Config,
     ) -> Option<(String, Severity, Persona, Option<Fix<'doc>>)> {
-        match uses {
-            // Don't evaluate pinning for local `uses:`, since unpinned references
-            // are fully controlled by the repository anyways.
-            // TODO: auditor-level findings instead, perhaps?
-            Uses::Local(_) => None,
-            // This is handled by the `unpinned-images` audit.
-            Uses::Docker(_) => None,
-            Uses::Repository(repo_uses) => {
-                let (pattern, policy) = config.unpinned_uses_policies.get_policy(repo_uses);
+        let uses = uses.into();
 
-                let pat_desc = match pattern {
-                    Some(RepositoryUsesPattern::Any) | None => "blanket".into(),
-                    Some(RepositoryUsesPattern::InOwner(owner)) => format!("{owner}/*"),
-                    Some(RepositoryUsesPattern::InRepo { owner, repo }) => {
-                        format!("{owner}/{repo}/*")
-                    }
-                    Some(RepositoryUsesPattern::ExactRepo { owner, repo }) => {
-                        format!("{owner}/{repo}")
-                    }
-                    Some(RepositoryUsesPattern::ExactPath {
-                        owner,
-                        repo,
-                        subpath,
-                    }) => {
-                        format!("{owner}/{repo}/{subpath}")
-                    }
-                    // Not allowed in this audit.
-                    Some(RepositoryUsesPattern::ExactWithRef { .. }) => unreachable!(),
-                };
+        let (pattern, policy) = config.unpinned_uses_policies.get_policy(&uses);
 
-                match policy {
-                    UsesPolicy::Any => None,
-                    UsesPolicy::RefPin => uses.unpinned().then_some((
-                        format!(
-                            "action is not pinned to a ref or hash (required by {pat_desc} policy)"
-                        ),
-                        Severity::High,
-                        Persona::default(),
-                        self.attempt_fix(parent, uses).await,
-                    )),
-                    UsesPolicy::HashPin => uses.unhashed().then_some((
-                        format!("action is not pinned to a hash (required by {pat_desc} policy)"),
-                        Severity::High,
-                        Persona::default(),
-                        self.attempt_fix(parent, uses).await,
-                    )),
-                }
+        let pat_desc = match pattern {
+            Some(RepositoryUsesPattern::Any) | None => "blanket".into(),
+            Some(RepositoryUsesPattern::InOwner(owner)) => format!("{owner}/*"),
+            Some(RepositoryUsesPattern::InRepo { owner, repo }) => {
+                format!("{owner}/{repo}/*")
             }
+            Some(RepositoryUsesPattern::ExactRepo { owner, repo }) => {
+                format!("{owner}/{repo}")
+            }
+            Some(RepositoryUsesPattern::ExactPath {
+                owner,
+                repo,
+                subpath,
+            }) => {
+                format!("{owner}/{repo}/{subpath}")
+            }
+            // Not allowed in this audit.
+            Some(RepositoryUsesPattern::ExactWithRef { .. }) => unreachable!(),
+        };
+
+        match policy {
+            UsesPolicy::Any => None,
+            // [`RepoRef`] instances are at least ref-pinned, by construction.
+            UsesPolicy::RefPin => None,
+            UsesPolicy::HashPin => (!uses.ref_is_commit()).then_some((
+                format!("is not pinned to a hash (required by {pat_desc} policy)"),
+                Severity::High,
+                Persona::default(),
+                match parent.map(async |parent| self.attempt_fix(parent, &uses).await) {
+                    Some(fut) => fut.await,
+                    None => None,
+                },
+            )),
         }
     }
 
@@ -179,8 +167,14 @@ impl UnpinnedUses {
     where
         S: Locatable<'doc> + AsDocument<'a, 'doc>,
     {
+        // Local `uses:` are not meaningfully pinnable, and Docker-based
+        // `uses:` are checked by the `unpinned-images` audit.
+        let Uses::Repository(uses) = uses else {
+            return Ok(None);
+        };
+
         let Some((annotation, severity, persona, fix)) =
-            self.evaluate_pinning(parent, uses, config).await
+            self.evaluate_pinning(Some(parent), uses, config).await
         else {
             return Ok(None);
         };
@@ -280,5 +274,55 @@ impl Audit for UnpinnedUses {
             .await?
             .into_iter()
             .collect())
+    }
+
+    async fn audit_pre_commit_config<'doc>(
+        &self,
+        pre_commit: &'doc PreCommitConfig,
+        group: &InputGroup,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let mut findings = vec![];
+
+        let config = group.config();
+        for repo in pre_commit.repos() {
+            let Some(remote) = repo.repo() else {
+                continue;
+            };
+
+            let repo_ref = RepoRef::from(remote);
+
+            let Some((annotation, severity, persona, fix)) =
+                self.evaluate_pinning(None::<&Repo>, repo_ref, config).await
+            else {
+                continue;
+            };
+
+            let mut builder = Self::finding()
+                .confidence(Confidence::High)
+                .severity(severity)
+                .persona(persona)
+                .add_location(repo.location().hidden())
+                .add_location(
+                    repo.location()
+                        .with_keys(["repo".into()])
+                        .subfeature(Subfeature::new(0, remote.repo.as_str()))
+                        .annotated("this pre-commit hook"),
+                )
+                .add_location(
+                    repo.location()
+                        .with_keys(["rev".into()])
+                        .subfeature(Subfeature::new(0, remote.rev.as_str()))
+                        .annotated(annotation)
+                        .primary(),
+                );
+
+            if let Some(fix) = fix {
+                builder = builder.fix(fix);
+            }
+
+            findings.push(builder.build(pre_commit)?);
+        }
+
+        Ok(findings)
     }
 }

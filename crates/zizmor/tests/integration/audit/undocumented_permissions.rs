@@ -83,7 +83,7 @@ fn test_documented_permissions_pedantic() -> Result<()> {
       --> @@INPUT@@:23:15
        |
     23 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -91,7 +91,7 @@ fn test_documented_permissions_pedantic() -> Result<()> {
       --> @@INPUT@@:37:15
        |
     37 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -99,7 +99,7 @@ fn test_documented_permissions_pedantic() -> Result<()> {
       --> @@INPUT@@:50:15
        |
     50 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -125,7 +125,7 @@ fn test_contents_read_only_pedantic() -> Result<()> {
       --> @@INPUT@@:21:15
        |
     21 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -151,7 +151,7 @@ fn test_empty_permissions_pedantic() -> Result<()> {
       --> @@INPUT@@:19:15
        |
     19 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -185,7 +185,7 @@ fn test_contents_read_with_other_pedantic() -> Result<()> {
       --> @@INPUT@@:19:15
        |
     19 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -219,7 +219,7 @@ fn test_partially_documented_pedantic() -> Result<()> {
       --> @@INPUT@@:25:15
        |
     25 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -227,7 +227,7 @@ fn test_partially_documented_pedantic() -> Result<()> {
       --> @@INPUT@@:38:15
        |
     38 |       - uses: actions/checkout@v4
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 

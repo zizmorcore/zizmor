@@ -92,7 +92,7 @@ fn test_pre_commit_config() -> anyhow::Result<()> {
       |
       = note: audit confidence → High
 
-    2 findings: 0 informational, 0 low, 2 medium, 0 high
+    4 findings (2 ignored): 0 informational, 0 low, 2 medium, 0 high
     "
     );
 

@@ -149,7 +149,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:35:15
    |
 35 |         uses: actions/checkout@v4
-   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -158,7 +158,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:39:15
    |
 39 |         uses: actions/upload-artifact@v4
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -167,7 +167,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:52:15
    |
 52 |       - uses: actions/checkout@v3
-   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -176,7 +176,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:64:15
    |
 64 |         uses: actions/upload-artifact@v3
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -185,7 +185,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:78:15
    |
 78 |         uses: actions/checkout@v4
-   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -194,7 +194,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/artipacked.yml:81:15
    |
 81 |       - uses: actions/upload-artifact@v4
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -539,7 +539,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/known-vulnerable-actions.yml:19:15
    |
 19 |       - uses: atlassian/gajira-create@v1.0.1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -548,7 +548,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/known-vulnerable-actions.yml:25:15
    |
 25 |       - uses: rlespinasse/github-slug-action@v4
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -557,7 +557,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/known-vulnerable-actions.yml:28:15
    |
 28 |       - uses: rlespinasse/github-slug-action@4.0.1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -607,7 +607,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pull-request-target.yml:29:15
    |
 29 |       - uses: actions/checkout@v4
-   |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -616,7 +616,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pull-request-target.yml:35:15
    |
 35 |       - uses: actions/setup-node@v4
-   |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
    = note: this finding has an auto-fix
@@ -680,7 +680,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:23:15
    |
 23 |         uses: pypa/gh-action-pypi-publish@release/v1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -688,7 +688,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:27:15
    |
 27 |         uses: pypa/gh-action-pypi-publish@release/v1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -696,7 +696,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:33:15
    |
 33 |         uses: pypa/gh-action-pypi-publish@release/v1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -704,7 +704,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:39:15
    |
 39 |         uses: pypa/gh-action-pypi-publish@release/v1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -712,7 +712,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:45:15
    |
 45 |         uses: pypa/gh-action-pypi-publish@release/v1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -720,7 +720,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:51:15
    |
 51 |         uses: pypa/gh-action-pypi-publish@release/v1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -728,7 +728,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:58:15
    |
 58 |         uses: pypa/gh-action-pypi-publish@release/v1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -736,7 +736,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:66:15
    |
 66 |         uses: pypa/gh-action-pypi-publish@release/v1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -744,7 +744,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:73:15
    |
 73 |         uses: pypa/gh-action-pypi-publish@release/v1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -752,7 +752,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/pypi-manual-credential.yml:81:15
    |
 81 |         uses: pypa/gh-action-pypi-publish@release/v1
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -760,7 +760,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/ref-confusion.yml:26:15
    |
 26 |       - uses: woodruffw/gha-hazmat/ref-confusion@confusable
-   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -838,7 +838,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/secrets-inherit.yml:16:11
    |
 16 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -846,7 +846,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/secrets-inherit.yml:21:11
    |
 21 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -854,7 +854,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/secrets-inherit.yml:27:11
    |
 27 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -862,7 +862,7 @@ error[unpinned-uses]: unpinned action reference
   --> .github/workflows/secrets-inherit.yml:31:11
    |
 31 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
    |
    = note: audit confidence → High
 
@@ -949,7 +949,7 @@ error[unpinned-uses]: unpinned action reference
    --> .github/workflows/template-injection.yml:116:15
     |
 116 |         uses: actions/github-script@v7
-    |               ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
     |
     = note: audit confidence → High
     = note: this finding has an auto-fix

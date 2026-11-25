@@ -17,7 +17,7 @@ fn test_ref_version_mismatch() -> Result<()> {
       --> @@INPUT@@:22:15
        |
     22 |       - uses: actions/setup-node@v3.8.2 # v3.8.2
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -66,7 +66,7 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
       --> @@INPUT@@:22:15
        |
     22 |       - uses: actions/setup-node@v3.8.2 # v3.8.2
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix

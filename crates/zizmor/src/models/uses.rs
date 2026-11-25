@@ -6,7 +6,7 @@
 
 use std::{str::FromStr, sync::LazyLock};
 
-use github_actions_models::common::{RepositoryUses, Uses};
+use github_actions_models::common::RepositoryUses;
 use regex::Regex;
 use serde::Deserialize;
 
@@ -270,38 +270,6 @@ impl RepositoryUsesExt for RepositoryUses {
 
     fn symbolic_ref(&self) -> Option<&str> {
         RepoRef::from(self).symbolic_ref()
-    }
-}
-
-/// Useful APIs for interacting with all kinds of `uses:` clauses.
-pub(crate) trait UsesExt {
-    fn unpinned(&self) -> bool;
-    fn unhashed(&self) -> bool;
-}
-
-impl UsesExt for Uses {
-    /// Whether the `uses:` is unpinned.
-    fn unpinned(&self) -> bool {
-        match self {
-            Self::Docker(docker) => docker.hash().is_none() && docker.tag().is_none(),
-            Self::Repository(_) => false,
-            // Local `uses:` are always unpinned; any `@ref` component
-            // is actually part of the path.
-            Self::Local(_) => true,
-        }
-    }
-
-    /// Whether the `uses:` is unhashed (but potentially pinned with a non-hash),
-    fn unhashed(&self) -> bool {
-        match self {
-            // TODO: Handle this case. Right now it's not very important,
-            // since we don't really analyze local action uses at all,
-            // and the "hashedness" of a local action is mostly moot anyways
-            // (since it's fully contained within the calling repo),
-            Self::Local(_) => false,
-            Self::Repository(repo) => !RepoRef::from(repo).ref_is_commit(),
-            Self::Docker(docker) => docker.hash().is_none(),
-        }
     }
 }
 

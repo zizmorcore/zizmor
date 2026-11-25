@@ -1,49 +1,49 @@
 repos:
   # Omission.
   - repo: https://github.com/pre-comit/pre-commit-hooks
-    rev: v6.0.0
+    rev: v6.0.0 # zizmor: ignore[unpinned-uses]
     hooks:
       - id: check-yaml
 
   # Transposition.
   - repo: https://github.com/astarl-sh/ruff-pre-commit
-    rev: v0.14.0
+    rev: v0.14.0 # zizmor: ignore[unpinned-uses]
     hooks:
       - id: ruff-check
 
   # Homoglyph.
   - repo: https://github.com/a5ottile/pyupgrade
-    rev: v3.20.0
+    rev: v3.20.0 # zizmor: ignore[unpinned-uses]
     hooks:
       - id: pyupgrade
 
   # Repetition, case normalization, SSH, and a .git suffix.
   - repo: ssh://git@github.com/PSFF/BLACK.git
-    rev: 25.9.0
+    rev: 25.9.0 # zizmor: ignore[unpinned-uses]
     hooks:
       - id: black
 
   # Exact match.
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: v6.0.0 # zizmor: ignore[unpinned-uses]
     hooks:
       - id: check-yaml
 
   # Same owner, ignoring case.
   - repo: https://github.com/PRE-COMMIT/pre-comit-hooks
-    rev: v6.0.0
+    rev: v6.0.0 # zizmor: ignore[unpinned-uses]
     hooks:
       - id: check-yaml
 
   # Unrelated repository.
   - repo: https://github.com/example/totally-different-thing
-    rev: v1.0.0
+    rev: v1.0.0 # zizmor: ignore[unpinned-uses]
     hooks:
       - id: example
 
   # Non-GitHub hosts are not checked against the GitHub corpus.
   - repo: https://gitlab.com/pre-comit/pre-commit-hooks
-    rev: v6.0.0
+    rev: v6.0.0 # zizmor: ignore[unpinned-uses]
     hooks:
       - id: check-yaml
 

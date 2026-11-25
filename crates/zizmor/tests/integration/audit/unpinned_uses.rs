@@ -13,7 +13,7 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
       --> @@INPUT@@:16:15
        |
     16 |       - uses: actions/checkout@v3
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -35,7 +35,7 @@ fn test_unpinned_uses_default() -> Result<()> {
       --> @@INPUT@@:16:15
        |
     16 |       - uses: actions/checkout@v3
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -58,7 +58,7 @@ fn test_action_pedantic() -> Result<()> {
       --> @@INPUT@@:12:13
        |
     12 |       uses: asdf-vm/actions/setup@v3
-       |             ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |             ^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -66,7 +66,7 @@ fn test_action_pedantic() -> Result<()> {
       --> @@INPUT@@:15:13
        |
     15 |       uses: asdf-vm/actions/setup@main
-       |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -103,7 +103,7 @@ fn test_issue_659_repro() -> Result<()> {
       --> @@INPUT@@:24:15
        |
     24 |         uses: actions/setup-node@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -128,7 +128,7 @@ fn test_issue_1543_repro() -> Result<()> {
       --> @@INPUT@@:18:11
        |
     18 |           actions/checkout@v4
-       |           ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -151,7 +151,7 @@ fn test_default_config() -> Result<()> {
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -159,7 +159,7 @@ fn test_default_config() -> Result<()> {
       --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -167,7 +167,7 @@ fn test_default_config() -> Result<()> {
       --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -175,7 +175,7 @@ fn test_default_config() -> Result<()> {
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -183,7 +183,7 @@ fn test_default_config() -> Result<()> {
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -209,7 +209,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -217,7 +217,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
       --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -225,7 +225,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
       --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -233,7 +233,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -241,7 +241,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -280,7 +280,7 @@ fn test_composite_config() -> Result<()> {
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by actions/setup-python policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by actions/setup-python policy)
        |
        = note: audit confidence → High
 
@@ -288,7 +288,7 @@ fn test_composite_config() -> Result<()> {
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -296,7 +296,7 @@ fn test_composite_config() -> Result<()> {
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -319,7 +319,7 @@ fn test_composite_config_2() -> Result<()> {
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by github/codeql-action/init policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by github/codeql-action/init policy)
        |
        = note: audit confidence → High
 
@@ -327,7 +327,7 @@ fn test_composite_config_2() -> Result<()> {
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by github/codeql-action/upload-sarif policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by github/codeql-action/upload-sarif policy)
        |
        = note: audit confidence → High
 
@@ -350,7 +350,7 @@ fn test_empty_config() -> Result<()> {
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -358,7 +358,7 @@ fn test_empty_config() -> Result<()> {
       --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -366,7 +366,7 @@ fn test_empty_config() -> Result<()> {
       --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -374,7 +374,7 @@ fn test_empty_config() -> Result<()> {
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -382,7 +382,7 @@ fn test_empty_config() -> Result<()> {
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -597,7 +597,7 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
       --> @@INPUT@@:17:11
        |
     17 |     uses: owner/repo/.github/workflows/reusable.yml@main
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -605,7 +605,7 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
       --> @@INPUT@@:21:11
        |
     21 |     uses: owner/repo/.github/workflows/reusable.yml@v1
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -654,7 +654,7 @@ fn test_honors_lockfile() -> anyhow::Result<()> {
       --> .github/workflows/neutral.yml:18:15
        |
     18 |       - uses: actions/checkout@v7.0.1
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix

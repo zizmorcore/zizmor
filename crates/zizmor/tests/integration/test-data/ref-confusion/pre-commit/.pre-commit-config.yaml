@@ -1,5 +1,5 @@
 repos:
   - repo: https://github.com/woodruffw/gha-hazmat
-    rev: confusable
+    rev: confusable # zizmor: ignore[unpinned-uses]
     hooks:
       - id: some-hook

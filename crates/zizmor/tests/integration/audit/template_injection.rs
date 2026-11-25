@@ -240,7 +240,7 @@ fn test_pr_425_backstop_action() -> Result<()> {
       --> @@INPUT@@:29:13
        |
     29 |       uses: azure/powershell@whatever
-       |             ^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |             ^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 

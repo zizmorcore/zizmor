@@ -290,7 +290,7 @@ expression: output
               "verbatim_path": "@@INPUT@@"
             }
           },
-          "annotation": "action is not pinned to a hash (required by blanket policy)",
+          "annotation": "is not pinned to a hash (required by blanket policy)",
           "route": {
             "route": [
               {

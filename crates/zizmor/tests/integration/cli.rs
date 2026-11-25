@@ -44,7 +44,7 @@ jobs:
      --> <stdin>:6:15
       |
     6 |       - uses: actions/checkout@v3
-      |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+      |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
       |
       = note: audit confidence → High
 
@@ -82,7 +82,7 @@ runs:
      --> <stdin>:6:13
       |
     6 |     - uses: actions/checkout@v3
-      |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+      |             ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
       |
       = note: audit confidence → High
 
@@ -580,7 +580,7 @@ jobs:
                               {
                                 "properties": {
                                   "symbolic": {
-                                    "annotation": "action is not pinned to a hash (required by blanket policy)",
+                                    "annotation": "is not pinned to a hash (required by blanket policy)",
                                     "feature_kind": {
                                       "Subfeature": {
                                         "after": 0,
@@ -617,7 +617,7 @@ jobs:
                               }
                             ],
                             "message": {
-                              "text": "action is not pinned to a hash (required by blanket policy)"
+                              "text": "is not pinned to a hash (required by blanket policy)"
                             },
                             "physicalLocation": {
                               "artifactLocation": {
@@ -649,7 +649,7 @@ jobs:
                     {
                       "properties": {
                         "symbolic": {
-                          "annotation": "action is not pinned to a hash (required by blanket policy)",
+                          "annotation": "is not pinned to a hash (required by blanket policy)",
                           "feature_kind": {
                             "Subfeature": {
                               "after": 0,
@@ -686,7 +686,7 @@ jobs:
                     }
                   ],
                   "message": {
-                    "text": "action is not pinned to a hash (required by blanket policy)"
+                    "text": "is not pinned to a hash (required by blanket policy)"
                   },
                   "physicalLocation": {
                     "artifactLocation": {
@@ -706,7 +706,7 @@ jobs:
                 }
               ],
               "message": {
-                "text": "unpinned action reference: action is not pinned to a hash (required by blanket policy)"
+                "text": "unpinned action reference: is not pinned to a hash (required by blanket policy)"
               },
               "properties": {
                 "zizmor/confidence": "High",

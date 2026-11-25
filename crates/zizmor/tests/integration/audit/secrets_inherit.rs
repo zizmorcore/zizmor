@@ -11,7 +11,7 @@ fn secrets_inherit() -> anyhow::Result<()> {
       --> @@INPUT@@:10:11
        |
     10 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -19,7 +19,7 @@ fn secrets_inherit() -> anyhow::Result<()> {
       --> @@INPUT@@:16:11
        |
     16 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -27,7 +27,7 @@ fn secrets_inherit() -> anyhow::Result<()> {
       --> @@INPUT@@:23:11
        |
     23 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -35,7 +35,7 @@ fn secrets_inherit() -> anyhow::Result<()> {
       --> @@INPUT@@:28:11
        |
     28 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 

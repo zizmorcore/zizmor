@@ -428,7 +428,7 @@ fn test_flow_mapping_step() -> Result<()> {
      --> @@INPUT@@:8:28
       |
     8 |       - &checkout { uses: "actions/checkout@v4" }
-      |                            ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+      |                            ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
       |
       = note: audit confidence → High
 
@@ -436,7 +436,7 @@ fn test_flow_mapping_step() -> Result<()> {
      --> @@INPUT@@:8:28
       |
     8 |       - &checkout { uses: "actions/checkout@v4" }
-      |                            ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+      |                            ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
       |
       = note: audit confidence → High
 
