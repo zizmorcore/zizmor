@@ -108,8 +108,8 @@ pub(crate) trait Validatable<'de> {
                 // that our error is semantic, while a failed re-parse
                 // indicates a syntax error.
                 //
-                // We needed to round-trip through a `Self::Skeleton` to ensure that
-                // all of YAML's validity rules were preserved -- directly deserializing
+                // We need to round-trip through a `Self::Skeleton` to ensure that
+                // all of YAML's validity rules are preserved -- directly deserializing
                 // into a `serde_json::Value` would miss some YAML-specific checks,
                 // like duplicate keys within mappings. See #1395 for an example of this.
                 //
@@ -119,6 +119,9 @@ pub(crate) trait Validatable<'de> {
                 //
                 // See: https://github.com/dtolnay/serde-yaml/issues/170
                 // See: https://github.com/dtolnay/serde-yaml/issues/395
+                //
+                // The above links show the problem for serde-yaml, but are true
+                // for all serde implementations more generally.
 
                 let skeleton = if contents.lines().all(|line| {
                     let line = line.trim();
