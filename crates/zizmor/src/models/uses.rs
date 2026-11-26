@@ -85,6 +85,11 @@ impl RepositoryUsesPattern {
                 slug: Some(slug),
                 git_ref,
             } => self.matches_slug(slug, git_ref),
+            RepoRef::Scp {
+                _scp,
+                slug: Some(slug),
+                git_ref,
+            } => self.matches_slug(slug, git_ref),
             // Our URL doesn't have a slug, so we can't meaningfully match it (yet).
             _ => false,
         }

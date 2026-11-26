@@ -723,6 +723,12 @@ fn test_pre_commit_honors_config() -> anyhow::Result<()> {
             rev: v2.3.0
             hooks:
               - id: check-yaml
+
+          # SCP-style references should also be matched and ignored
+          - repo: git@github.com:pre-commit/pre-commit-hooks
+            rev: v2.3.0
+            hooks:
+              - id: check-yaml
         "#},
     );
 
