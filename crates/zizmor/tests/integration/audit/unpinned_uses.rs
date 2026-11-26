@@ -748,7 +748,7 @@ fn test_pre_commit_honors_config() -> anyhow::Result<()> {
 
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix() -> anyhow::Result<()> {
+fn test_uses_fix() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -794,7 +794,7 @@ jobs:
 
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix_crlf() -> anyhow::Result<()> {
+fn test_uses_fix_crlf() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -841,7 +841,7 @@ jobs:
 
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix_overwrites_comment() -> anyhow::Result<()> {
+fn test_uses_fix_overwrites_comment() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -887,7 +887,7 @@ jobs:
 
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix_bizarre_formatting() -> anyhow::Result<()> {
+fn test_uses_fix_bizarre_formatting() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -933,7 +933,7 @@ jobs:
 
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix_preserves_subpath() -> anyhow::Result<()> {
+fn test_uses_fix_preserves_subpath() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -976,7 +976,7 @@ jobs:
 /// in the fix's inserted comment.
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix_major_version_pins_to_full_version() -> anyhow::Result<()> {
+fn test_uses_fix_major_version_pins_to_full_version() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -1014,6 +1014,47 @@ jobs:
     +        uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
              with:
                persist-credentials: false
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_pre_commit_fix() -> anyhow::Result<()> {
+    use zizmor_dev::{NetworkMode, WorkspaceBuilder};
+
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+
+    workspace.add_file(
+        ".pre-commit-config.yaml",
+        indoc::indoc! {r#"
+        repos:
+          - repo: https://github.com/pre-commit/pre-commit-hooks
+            rev: v2.3.0
+            hooks:
+              - id: check-yaml
+        "#},
+    );
+
+    insta::assert_snapshot!(
+        &workspace.diff(".pre-commit-config.yaml", |workspace| {
+            Zizmor::cargo_bin()
+                .offline(NetworkMode::AssertOnline)
+                .output(zizmor_dev::OutputMode::Both)
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -1,5 +1,5 @@
+     repos:
+       - repo: https://github.com/pre-commit/pre-commit-hooks
+    -    rev: v2.3.0
+    +    rev: d6d3bd94604578adbd918c5a00d531d98350d86f # v2.3.0
+         hooks:
+           - id: check-yaml
     "
     );
 
