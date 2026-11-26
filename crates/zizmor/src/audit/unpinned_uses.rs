@@ -117,7 +117,9 @@ impl UnpinnedUses {
         let (pattern, UsesPolicy::HashPin) = config.unpinned_uses_policies.get_policy(repo) else {
             return None;
         };
+
         let policy = pattern.map_or_else(|| "blanket".to_owned(), ToString::to_string);
+
         Some(format!(
             "is not pinned to a hash (required by {policy} policy)"
         ))
