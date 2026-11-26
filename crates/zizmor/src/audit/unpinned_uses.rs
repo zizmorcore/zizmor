@@ -26,7 +26,7 @@ pub(crate) struct UnpinnedUses {
 audit_meta!(UnpinnedUses, "unpinned-uses", "unpinned action reference");
 
 impl UnpinnedUses {
-    async fn attempt_fix<'a, 'doc>(
+    async fn attempt_fix<'doc>(
         &self,
         parent: &impl Locatable<'doc>,
         uses: &RepoRef<'doc>,
