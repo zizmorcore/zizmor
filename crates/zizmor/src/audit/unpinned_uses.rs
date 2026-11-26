@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use github_actions_models::common::Uses;
+use github_actions_models::common::{RepositoryUses, Uses};
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
 
@@ -10,8 +10,8 @@ use crate::config::{Config, UsesPolicy};
 use crate::finding::location::{Locatable, Routable as _};
 use crate::finding::{Confidence, Finding, Fix, Persona, Severity};
 use crate::github;
-use crate::models::pre_commit::{PreCommitConfig, Repo};
-use crate::models::repo_ref::RepoRef;
+use crate::models::pre_commit::PreCommitConfig;
+use crate::models::repo_ref::{RepoRef, Slug};
 use crate::models::uses::RepositoryUsesPattern;
 use crate::models::version::Version;
 use crate::models::workflow::ReusableWorkflowCallJob;
@@ -26,19 +26,90 @@ pub(crate) struct UnpinnedUses {
 audit_meta!(UnpinnedUses, "unpinned-uses", "unpinned action reference");
 
 impl UnpinnedUses {
-    async fn attempt_fix<'doc>(
+    /// Build an unpinned-uses fix for a pre-commit input.
+    ///
+    /// `commit` is the Git object ID to update the `rev` to,
+    /// and `longest_tag` is the Git tag to use in the new comment.
+    fn pre_commit_fix<'doc>(
         &self,
         parent: &impl Locatable<'doc>,
-        uses: &RepoRef<'doc>,
-    ) -> Option<Fix<'doc>> {
-        // We need to be online to attempt fixes for this audit.
+        slug: Slug<'doc>,
+        commit: github::Ref,
+        longest_tag: &str,
+    ) -> Fix<'doc> {
+        Fix {
+            title: format!("pin {slug} to {commit}", commit = commit.commit()),
+            key: parent.location().key,
+            disposition: Default::default(),
+            patches: vec![
+                Patch {
+                    route: parent.route().with_key("rev"),
+                    operation: Op::Replace(commit.commit().into()),
+                },
+                Patch {
+                    route: parent.route().with_key("rev"),
+                    operation: Op::EmplaceComment {
+                        new: format!("# {longest_tag}").into(),
+                    },
+                },
+            ],
+        }
+    }
+
+    /// Build an unpinned-uses fix for a `uses:` clause (i.e. from a workflow
+    /// or composite action).
+    fn uses_fix<'doc>(
+        &self,
+        parent: &impl Locatable<'doc>,
+        uses: &RepositoryUses,
+        commit: github::Ref,
+        longest_tag: Cow<'doc, str>,
+    ) -> Fix<'doc> {
+        let action = if let Some(subpath) = uses.subpath() {
+            format!("{}/{}", uses.slug(), subpath)
+        } else {
+            uses.slug().to_string()
+        };
+
+        Fix {
+            title: format!("pin {action}@{ref} to {commit}", ref = uses.git_ref(), commit = commit.commit()),
+            key: parent.location().key,
+            disposition: Default::default(),
+            patches: vec![
+                Patch {
+                    route: parent.route().with_key("uses"),
+                    operation: Op::Replace(
+                        format!("{action}@{commit}", commit = commit.commit()).into(),
+                    ),
+                },
+                Patch {
+                    route: parent.route().with_key("uses"),
+                    operation: Op::EmplaceComment {
+                        new: format!("# {longest_tag}").into(),
+                    },
+                },
+            ],
+        }
+    }
+
+    /// Given a repository reference, look up the commit and "best"
+    /// tag for an unpinned-uses fix.
+    ///
+    /// Returns `None` if a lookup fails, or the reference does
+    /// not point to GitHub, or on any other failures.
+    async fn commit_and_best_tag_for_fix<'doc>(
+        &self,
+        repo: &RepoRef<'doc>,
+    ) -> Option<(Slug<'doc>, github::Ref, Cow<'doc, str>)> {
+        // We need to be online.
         let client = self.client.as_ref()?;
 
-        // There's nothing to fix if we don't have a GitHub slug.
-        let slug = uses.slug()?;
+        // We can't currently fix repository references that
+        // don't have a GitHub slug.
+        let slug = repo.slug()?;
 
         // There's nothing to fix if the ref is already a commit SHA.
-        if uses.ref_is_commit() {
+        if repo.ref_is_commit() {
             return None;
         }
 
@@ -48,15 +119,15 @@ impl UnpinnedUses {
         // like `@main`, `@stable`, etc. because other tools like Dependabot
         // and pinact don't handle those gracefully.
         // The user can always pin manually if they so desire.
-        if Version::parse(uses.git_ref()).is_err() {
-            tracing::debug!("not proposing an auto-fix for a non-version ref: {uses:?}");
+        if Version::parse(repo.git_ref()).is_err() {
+            tracing::debug!("not proposing an auto-fix for a non-version ref: {repo:?}");
             return None;
         }
 
-        let git_ref = match client.lookup_ref(&slug, uses.git_ref()).await {
+        let git_ref = match client.lookup_ref(&slug, repo.git_ref()).await {
             Ok(Some(git_ref)) => git_ref,
             Ok(None) => {
-                tracing::warn!("no commit matching {uses:?}");
+                tracing::warn!("no commit matching {repo:?}");
                 return None;
             }
             Err(e) => {
@@ -70,52 +141,24 @@ impl UnpinnedUses {
         // version avoids any later `ref-version-mismatch` findings when the
         // major tag is mutated by the upstream.
         let longest_tag = match client
-            .longest_tag_for_commit(&slug, uses.subpath(), git_ref.commit())
+            .longest_tag_for_commit(&slug, repo.subpath(), git_ref.commit())
             .await
         {
             Ok(Some(tag)) => Cow::Owned(tag.name),
             // Our original tag -> commit lookup succeeded, but this reverse lookup
             // failed, which makes no sense. Just fall back to what we know.
-            _ => Cow::Borrowed(uses.git_ref()),
+            _ => Cow::Borrowed(repo.git_ref()),
         };
 
-        let action = if let Some(subpath) = uses.subpath() {
-            format!("{}/{}", slug, subpath)
-        } else {
-            slug.to_string()
-        };
-
-        // For the fix itself, we need to situate two patches:
-        // 1. `uses: foo/bar@ref` -> `uses: foo/bar@hashhashhash`
-        // 2. A `# <ref>` comment following the `uses:` clause.
-        Some(Fix {
-            title: format!("pin {action}@{ref} to {commit}", ref = uses.git_ref(), commit = git_ref.commit()),
-            key: parent.location().key,
-            disposition: Default::default(),
-            patches: vec![
-                Patch {
-                    route: parent.route().with_key("uses"),
-                    operation: Op::Replace(
-                        format!("{action}@{commit}", commit = git_ref.commit()).into(),
-                    ),
-                },
-                Patch {
-                    route: parent.route().with_key("uses"),
-                    operation: Op::EmplaceComment {
-                        new: format!("# {longest_tag}").into(),
-                    },
-                },
-            ],
-        })
+        Some((slug, git_ref, longest_tag))
     }
 
     /// Evaluate a [`RepoRef`]'s pinning against the configured policies.
     async fn evaluate_pinning<'doc>(
         &self,
-        parent: Option<&impl Locatable<'doc>>,
         uses: impl Into<RepoRef<'doc>>,
         config: &Config,
-    ) -> Option<(String, Severity, Persona, Option<Fix<'doc>>)> {
+    ) -> Option<(String, Severity, Persona)> {
         let uses = uses.into();
 
         let (pattern, policy) = config.unpinned_uses_policies.get_policy(&uses);
@@ -148,10 +191,6 @@ impl UnpinnedUses {
                 format!("is not pinned to a hash (required by {pat_desc} policy)"),
                 Severity::High,
                 Persona::default(),
-                match parent.map(async |parent| self.attempt_fix(parent, &uses).await) {
-                    Some(fut) => fut.await,
-                    None => None,
-                },
             )),
         }
     }
@@ -171,8 +210,7 @@ impl UnpinnedUses {
             return Ok(None);
         };
 
-        let Some((annotation, severity, persona, fix)) =
-            self.evaluate_pinning(Some(parent), uses, config).await
+        let Some((annotation, severity, persona)) = self.evaluate_pinning(uses, config).await
         else {
             return Ok(None);
         };
@@ -191,7 +229,13 @@ impl UnpinnedUses {
                     .annotated(annotation),
             );
 
-        if let Some(fix) = fix {
+        let repo = uses.into();
+
+        if let Some(fix) = self
+            .commit_and_best_tag_for_fix(&repo)
+            .await
+            .map(|(_, commit, longest_tag)| self.uses_fix(parent, uses, commit, longest_tag))
+        {
             builder = builder.fix(fix);
         }
 
@@ -287,10 +331,7 @@ impl Audit for UnpinnedUses {
                 continue;
             };
 
-            let repo_ref = RepoRef::from(remote);
-
-            let Some((annotation, severity, persona, fix)) =
-                self.evaluate_pinning(None::<&Repo>, repo_ref, config).await
+            let Some((annotation, severity, persona)) = self.evaluate_pinning(remote, config).await
             else {
                 continue;
             };
@@ -314,10 +355,12 @@ impl Audit for UnpinnedUses {
                         .primary(),
                 );
 
-            // TODO: This is always `None` at the moment because we don't
-            // pass in a parent location above. Figure out a good auto-fix
-            // strategy here.
-            if let Some(fix) = fix {
+            let repo_ref = RepoRef::from(remote);
+            if let Some(fix) = self.commit_and_best_tag_for_fix(&repo_ref).await.map(
+                |(slug, commit, longest_tag)| {
+                    self.pre_commit_fix(&repo, slug, commit, &longest_tag)
+                },
+            ) {
                 builder = builder.fix(fix);
             }
 
