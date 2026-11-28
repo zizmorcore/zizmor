@@ -9,6 +9,12 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+* `zizmor` now uses `astral-yaml-serde` for YAML parsing, finding locations,
+  and fixes. YAML errors can include a field path and byte range. Applying a
+  fix can reformat surrounding YAML and normalize line endings.
+
 ## 1.33.1
 
 ### Bug Fixes 🐛

@@ -16,6 +16,7 @@ license.workspace = true
 annotate-snippets.workspace = true
 anstream.workspace = true
 anyhow.workspace = true
+astral-yaml.workspace = true
 astral-yaml-serde.workspace = true
 async-trait.workspace = true
 camino = { workspace = true, features = ["serde1"] }
@@ -60,7 +61,6 @@ tree-sitter-bash.workspace = true
 tree-sitter-powershell.workspace = true
 typomania.workspace = true
 url.workspace = true
-yaml_serde.workspace = true
 yamlpatch.workspace = true
 yamlpath.workspace = true
 zizmor-sarif.workspace = true

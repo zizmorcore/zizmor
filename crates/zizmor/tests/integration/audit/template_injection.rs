@@ -878,7 +878,7 @@ jobs:
     +        run: echo "Event name is ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
              env:
                EXISTING_VAR: "existing_value"
-    +          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+    +          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: "${{ github.event.head_commit.message }}"
     "#
     );
 
@@ -924,7 +924,7 @@ jobs:
     +          echo "Ref: ${GITHUB_REF_NAME}"
     +          echo "Commit: ${GITHUB_EVENT_HEAD_COMMIT_MESSAGE}"
     +        env:
-    +          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+    +          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: "${{ github.event.head_commit.message }}"
     "#
     );
 
@@ -1275,7 +1275,7 @@ jobs:
                 .input(workspace.path())
                 .run()
         })?,
-        @"
+        @r#"
     @@ -7,4 +7,6 @@
          steps:
            - name: Vulnerable step with custom context
@@ -1283,8 +1283,8 @@ jobs:
     -        run: echo PR title is ${{ github.event.pull_request.title }}
     +        run: echo PR title is %GITHUB_EVENT_PULL_REQUEST_TITLE%
     +        env:
-    +          GITHUB_EVENT_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
-    "
+    +          GITHUB_EVENT_PULL_REQUEST_TITLE: "${{ github.event.pull_request.title }}"
+    "#
     );
 
     Ok(())
@@ -1324,15 +1324,15 @@ jobs:
                 .run()
         })?,
         @r#"
-    @@ -9,7 +9,9 @@
+    @@ -9,7 +9,8 @@
          steps:
            - shell: bash
              run: |
     -          echo "✓ ${{ github.event.comment.body }}"
+    -⏎
     +          echo "✓ ${GITHUB_EVENT_COMMENT_BODY}"
     +        env:
-    +          GITHUB_EVENT_COMMENT_BODY: ${{ github.event.comment.body }}
-     ⏎
+    +          GITHUB_EVENT_COMMENT_BODY: "${{ github.event.comment.body }}"
            - shell: bash
              run: echo ok
     "#

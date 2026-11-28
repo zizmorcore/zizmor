@@ -78,6 +78,14 @@ impl Document {
             .any(|node| node.anchor.is_some())
     }
 
+    /// Whether an alias in this stream uses the given anchor name.
+    pub fn references_anchor(&self, name: &str) -> bool {
+        self.stream()
+            .nodes()
+            .iter()
+            .any(|node| matches!(node.kind, NodeKind::Alias { name: alias, .. } if alias == name))
+    }
+
     fn node(&self, id: NodeId) -> &Node<'_> {
         &self.stream().nodes()[id.index()]
     }

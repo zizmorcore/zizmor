@@ -6,7 +6,7 @@ use crate::{
     Confidence, Severity,
     audit::AuditError,
     finding::{
-        Finding, Fix, FixDisposition, Persona,
+        Finding, Fix, FixDisposition, FixEdit, Persona,
         location::{Feature, Location, Routable as _},
     },
     models::{StepCommon, action::CompositeStep, workflow::Step},
@@ -111,10 +111,10 @@ impl Obfuscation {
             title: "normalize uses path".into(),
             key: step.location().key,
             disposition: FixDisposition::Safe,
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: step.route().with_key("uses"),
-                operation: Op::Replace(normalized_uses.into()),
-            }],
+                operation: Op::Replace(astral_yaml_serde::Value::String(normalized_uses)),
+            }]),
         })
     }
 
@@ -149,13 +149,10 @@ impl Obfuscation {
             title: "replace with evaluated constant".into(),
             key: input.location().key,
             disposition: FixDisposition::Safe,
-            patches: vec![Patch {
-                route: input.location().route,
-                operation: Op::RewriteFragment {
-                    from: Subfeature::new(after, raw),
-                    to: replacement.into(),
-                },
-            }],
+            edit: FixEdit::RewriteSource {
+                from: Subfeature::new(after, raw),
+                to: replacement,
+            },
         }
     }
 

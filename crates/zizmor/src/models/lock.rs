@@ -53,7 +53,7 @@ impl Lock {
     // TODO(ww): `CollectionError` is a slightly weird error type here, but
     // we'd need to first refactor `Validatable` to not use `CollectionError`.
     fn from_string(contents: String) -> Result<Self, CollectionError> {
-        Self::validate(&contents).map(|lock| Self { inner: lock })
+        Self::validate(&astral_yaml::parse(&contents)?).map(|lock| Self { inner: lock })
     }
 
     /// Discover an Actions lockfile, relative to the given Git repo root.

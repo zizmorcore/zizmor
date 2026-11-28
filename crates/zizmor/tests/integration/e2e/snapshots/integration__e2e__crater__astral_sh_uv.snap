@@ -40,7 +40,7 @@ help[anonymous-definition]: workflow or action definition without a name
 ...   |
 135 | |           mode: simulation
 136 | |           token: ${{ secrets.CODSPEED_TOKEN }}
-    | |_______________________________________________^ this workflow
+    | |______________________________________________^ this workflow
     |
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
@@ -161,7 +161,7 @@ help[anonymous-definition]: workflow or action definition without a name
 ...  |
 30 | |       - name: "Build docs"
 31 | |         run: uv run --only-group docs mkdocs build --strict -f mkdocs.yml
-   | |__________________________________________________________________________^ this workflow
+   | |_________________________________________________________________________^ this workflow
    |
    = note: audit confidence → High
    = tip: use 'name: ...' to give this workflow a name
@@ -176,7 +176,7 @@ help[anonymous-definition]: workflow or action definition without a name
 ...  |
 37 | |           version: "0.10.7"
 38 | |       - run: uvx ruff format --diff .
-   | |______________________________________^ this workflow
+   | |_____________________________________^ this workflow
    |
    = note: audit confidence → High
    = tip: use 'name: ...' to give this workflow a name
@@ -218,7 +218,7 @@ help[anonymous-definition]: workflow or action definition without a name
 ...  |
 37 | |         if: ${{ inputs.schema-changed == 'true' }}
 38 | |         run: cargo dev generate-json-schema --mode check
-   | |_________________________________________________________^ this workflow
+   | |________________________________________________________^ this workflow
    |
    = note: audit confidence → High
    = tip: use 'name: ...' to give this workflow a name
@@ -253,7 +253,7 @@ help[anonymous-definition]: workflow or action definition without a name
 ...   |
 164 | |           persist-credentials: false
 165 | |       - uses: crate-ci/typos@57b11c6b7e54c402ccd9cda953f1072ec4f78e33 # v1.43.5
-    | |________________________________________________________________________________^ this workflow
+    | |_____________________________________________________________________^ this workflow
     |
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
@@ -322,7 +322,7 @@ help[anonymous-definition]: workflow or action definition without a name
 ...  |
 24 | |       - name: "cargo publish dry-run"
 25 | |         run: cargo publish --workspace --dry-run
-   | |_________________________________________________^ this workflow
+   | |________________________________________________^ this workflow
    |
    = note: audit confidence → High
    = tip: use 'name: ...' to give this workflow a name
@@ -390,7 +390,7 @@ help[anonymous-definition]: workflow or action definition without a name
  4 | | permissions: {}
 ...  |
 16 | |       - uses: zizmorcore/zizmor-action@0dce2577a4760a2749d8cfb7a84b7d5585ebcb7d # v0.5.0
-   | |_________________________________________________________________________________________^ this workflow
+   | |_______________________________________________________________________________^ this workflow
    |
    = note: audit confidence → High
    = tip: use 'name: ...' to give this workflow a name
@@ -722,7 +722,7 @@ warning[excessive-permissions]: overly broad permissions
 ...  |
 32 | |         env:
 33 | |           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
-   | |____________________________________________________________^ default permissions used due to no permissions: block
+   | |___________________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
@@ -791,7 +791,7 @@ warning[excessive-permissions]: overly broad permissions
 ...  |
 48 | |       - name: Publish to PyPI
 49 | |         run: uv publish -v wheels_uv_build/*
-   | |_____________________________________________^ default permissions used due to no permissions: block
+   | |____________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
@@ -1378,7 +1378,7 @@ help[anonymous-definition]: workflow or action definition without a name
 ...    |
 1005 | |       - name: "Check cache compatibility"
 1006 | |         run: python scripts/check_cache_compat.py --uv-current ./uv --uv-previous ./uv-aarch64-apple-darwin/uv
-     | |_______________________________________________________________________________________________________________^ this workflow
+     | |______________________________________________________________________________________________________________^ this workflow
      |
      = note: audit confidence → High
      = tip: use 'name: ...' to give this workflow a name
@@ -1468,7 +1468,7 @@ help[anonymous-definition]: workflow or action definition without a name
 ...   |
 746 | |       - name: "Validate embedded Python install"
 747 | |         run: python ./scripts/check_embedded_python.py --uv ./uv.exe
-    | |_____________________________________________________________________^ this workflow
+    | |____________________________________________________________________^ this workflow
     |
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name

@@ -10,12 +10,9 @@ homepage.workspace = true
 license.workspace = true
 
 [dependencies]
-indexmap.workspace = true
-line-index.workspace = true
-serde_json.workspace = true
+astral-yaml-serde = { workspace = true, features = ["editable"] }
 subfeature.workspace = true
 thiserror.workspace = true
-yaml_serde.workspace = true
 yamlpath.workspace = true
 
 [dev-dependencies]

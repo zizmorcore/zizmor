@@ -745,14 +745,31 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -7,6 +7,6 @@
-         runs-on: ubuntu-latest
-         steps:
-           - name: Checkout with ref-pin
+    @@ -1,12 +1,12 @@
+    -⏎
+    -name: Test
+    -on: push
+    -permissions: {}
+    -jobs:
+    -  test:
+    -    runs-on: ubuntu-latest
+    -    steps:
+    -      - name: Checkout with ref-pin
     -        uses: actions/checkout@v6.0.1
+    -        with:
+    -          persist-credentials: false
+    +⏎
+    +name: Test
+    +on: push
+    +permissions: {}
+    +jobs:
+    +  test:
+    +    runs-on: ubuntu-latest
+    +    steps:
+    +      - name: Checkout with ref-pin
     +        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-             with:
-               persist-credentials: false
+    +        with:
+    +          persist-credentials: false
     "
     );
 

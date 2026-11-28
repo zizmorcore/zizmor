@@ -12,7 +12,7 @@ use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     audit::AuditError,
     config::Config,
-    finding::{Confidence, Finding, Fix, Severity, location::Routable as _},
+    finding::{Confidence, Finding, Fix, FixEdit, Severity, location::Routable as _},
     github,
     models::{
         StepCommon, action::CompositeStep, repo_ref::RepoRef, uses::RepositoryUsesExt as _,
@@ -212,10 +212,12 @@ impl KnownVulnerableActions {
                     ),
                     key: step.location().key,
                     disposition: Default::default(),
-                    patches: vec![
+                    edit: FixEdit::Yaml(vec![
                         Patch {
                             route: step.route().with_key("uses"),
-                            operation: Op::Replace(new_uses_value.into()),
+                            operation: Op::Replace(astral_yaml_serde::Value::String(
+                                new_uses_value,
+                            )),
                         },
                         Patch {
                             route: step.route().with_key("uses"),
@@ -224,7 +226,7 @@ impl KnownVulnerableActions {
                                     .into(),
                             },
                         },
-                    ],
+                    ]),
                 })
             }
             // If `uses` is pinned to a symbolic ref, we only need to perform
@@ -245,10 +247,10 @@ impl KnownVulnerableActions {
                     title: format!("upgrade {uses_slug} to {target_version_tag}"),
                     key: step.location().key,
                     disposition: Default::default(),
-                    patches: vec![Patch {
+                    edit: FixEdit::Yaml(vec![Patch {
                         route: step.route().with_key("uses"),
-                        operation: Op::Replace(new_uses_value.into()),
-                    }],
+                        operation: Op::Replace(astral_yaml_serde::Value::String(new_uses_value)),
+                    }]),
                 })
             }
         }

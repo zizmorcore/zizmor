@@ -13,7 +13,8 @@ fn test_action() -> Result<()> {
        |
     10 | /       run: |
     11 | |         echo "foo=$(bar)" >> $GITHUB_ENV
-       | |________________________________________^ write to GITHUB_ENV may allow code execution
+    12 | |       shell: bash
+       | |_^ write to GITHUB_ENV may allow code execution
        |
        = note: audit confidence → Low
 
@@ -22,7 +23,8 @@ fn test_action() -> Result<()> {
        |
     15 | /       run: |
     16 | |         echo "foo=$env:BAR" >> $env:GITHUB_ENV
-       | |______________________________________________^ write to $env:GITHUB_ENV may allow code execution
+    17 | |       shell: pwsh
+       | |_^ write to $env:GITHUB_ENV may allow code execution
        |
        = note: audit confidence → Low
 
@@ -31,7 +33,8 @@ fn test_action() -> Result<()> {
        |
     20 | /       run: |
     21 | |         echo LIBRARY=%LIBRARY% >> %GITHUB_ENV%
-       | |______________________________________________^ write to GITHUB_ENV may allow code execution
+    22 | |       shell: cmd # zizmor: ignore[misfeature]
+       | |_^ write to GITHUB_ENV may allow code execution
        |
        = note: audit confidence → Low
 
@@ -79,7 +82,8 @@ fn test_issue_397_repro() -> Result<()> {
     17 | /         run: |
     18 | |           message=$(echo "$TITLE" | grep -oP '[{\[][^}\]]+[}\]]' | sed 's/{\|}\|\[\|\]//g')
     19 | |           echo "$message" >> $GITHUB_PATH
-       | |_________________________________________^ write to GITHUB_PATH may allow code execution
+    20 | |         # should be handled as bash
+       | |_^ write to GITHUB_PATH may allow code execution
        |
        = note: audit confidence → Low
 

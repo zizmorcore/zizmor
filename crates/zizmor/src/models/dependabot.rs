@@ -61,9 +61,8 @@ impl std::fmt::Debug for Dependabot {
 
 impl Dependabot {
     pub(crate) fn from_string(contents: String, key: InputKey) -> Result<Self, CollectionError> {
-        let inner = Self::validate(&contents)?;
-
-        let document = yamlpath::Document::new(&contents)?;
+        let document = yamlpath::Document::new(contents)?;
+        let inner = Self::validate(document.stream())?;
 
         let link = match key {
             InputKey::Local(_) | InputKey::Stdin(_) => None,

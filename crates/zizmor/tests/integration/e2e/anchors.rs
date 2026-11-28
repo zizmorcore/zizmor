@@ -119,7 +119,7 @@ fn test_with_mapping_alias() -> Result<()> {
     11 |         - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
        |  _________^
     12 | |         with: *checkout-opts
-       | |_____________________________^ does not set persist-credentials: false
+       | |____________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -226,7 +226,7 @@ fn test_steps_list_comment() -> Result<()> {
      9 |         - name: Checkout
        |  _________^
     10 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-       | |________________________________________________________________________________^ does not set persist-credentials: false
+       | |_______________________________________________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -237,7 +237,7 @@ fn test_steps_list_comment() -> Result<()> {
      9 |         - name: Checkout
        |  _________^
     10 | |         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-       | |________________________________________________________________________________^ does not set persist-credentials: false
+       | |_______________________________________________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -366,7 +366,7 @@ fn test_dummy_job_anchors() -> Result<()> {
      9 |         - &checkout
        |  _________^
     10 | |         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-       | |________________________________________________________________________________^ does not set persist-credentials: false
+       | |_______________________________________________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix

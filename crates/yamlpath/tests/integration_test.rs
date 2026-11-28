@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use serde::Deserialize;
-use yamlpath::{Component, Route, document::Document};
+use yamlpath::{Component, Document, Route};
 
 #[test]
 fn test_integration() {

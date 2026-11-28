@@ -12,7 +12,8 @@ fn test_normal_persona() -> anyhow::Result<()> {
        |
     27 | /         if: |
     28 | |           ${{ some.context }}
-       | |_____________________________^ condition always evaluates to true
+    29 | |         run: echo not ok
+       | |_^ condition always evaluates to true
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -22,7 +23,8 @@ fn test_normal_persona() -> anyhow::Result<()> {
        |
     33 | /         if: >
     34 | |           ${{ some.context }}
-       | |_____________________________^ condition always evaluates to true
+    35 | |         run: echo not ok
+       | |_^ condition always evaluates to true
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -34,7 +36,8 @@ fn test_normal_persona() -> anyhow::Result<()> {
     61 | |           ${{ some.context
     62 | |             && other.context
     63 | |           }}
-       | |____________^ condition always evaluates to true
+    64 | |         run: echo not ok
+       | |_^ condition always evaluates to true
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix

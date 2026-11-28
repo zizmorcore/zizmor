@@ -9,7 +9,7 @@ fn test_regular_persona() -> anyhow::Result<()> {
       --> @@INPUT@@:22:9
        |
     22 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -33,7 +33,7 @@ fn test_pedantic_persona() -> anyhow::Result<()> {
       --> @@INPUT@@:22:9
        |
     22 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -57,7 +57,7 @@ fn test_auditor_persona() -> anyhow::Result<()> {
       --> @@INPUT@@:22:9
        |
     22 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -69,7 +69,7 @@ fn test_auditor_persona() -> anyhow::Result<()> {
        |  _________^
     29 | |         with:
     30 | |           persist-credentials: true
-       | |____________________________________^ does not set persist-credentials: false
+       | |___________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -102,7 +102,7 @@ fn test_issue_447() -> anyhow::Result<()> {
     26 | |         with:
     27 | |           # finding in auditor mode only
     28 | |           persist-credentials: "true"
-       | |______________________________________^ does not set persist-credentials: false
+       | |_____________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -133,7 +133,7 @@ fn test_issue_1709() -> anyhow::Result<()> {
        |  _________^
     19 | |         with:
     20 | |           persist-credentials: ${{ github.event_name == 'pull_request' }}
-       | |__________________________________________________________________________^ does not set persist-credentials: false
+       | |_________________________________________________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -160,7 +160,7 @@ fn test_composite_action() -> anyhow::Result<()> {
      9 |       - name: true-positive-1
        |  _______^
     10 | |       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-       | |__________________________________________________________________________________^ does not set persist-credentials: false
+       | |_____________________________________________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -173,7 +173,7 @@ fn test_composite_action() -> anyhow::Result<()> {
     13 | |       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
     14 | |       with:
     15 | |         persist-credentials: true
-       | |__________________________________^ does not set persist-credentials: false
+       | |_________________________________^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix

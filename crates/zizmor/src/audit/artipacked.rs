@@ -9,7 +9,7 @@ use itertools::Itertools as _;
 use super::{Audit, AuditLoadError, audit_meta};
 use crate::{
     audit::AuditError,
-    finding::{Confidence, Finding, Fix, Persona, Severity, location::Routable as _},
+    finding::{Confidence, Finding, Fix, FixEdit, Persona, Severity, location::Routable as _},
     github::{Client, ClientError},
     models::{StepBodyCommon, StepCommon, uses::RepositoryUsesExt as _, version::Version},
     state::AuditState,
@@ -243,16 +243,14 @@ impl Artipacked {
             title: "set persist-credentials: false".to_string(),
             key: step.location().key,
             disposition: Default::default(),
-            patches: vec![Patch {
+            edit: FixEdit::Yaml(vec![Patch {
                 route: step.route(),
-                operation: Op::MergeInto {
-                    key: "with".to_string(),
-                    updates: indexmap::IndexMap::from_iter([(
-                        "persist-credentials".to_string(),
-                        yaml_serde::Value::Bool(false),
-                    )]),
+                operation: Op::SetField {
+                    mapping: "with",
+                    key: "persist-credentials".to_string(),
+                    value: astral_yaml_serde::Value::Bool(false),
                 },
-            }],
+            }]),
         }
     }
 }

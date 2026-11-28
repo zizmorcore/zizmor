@@ -94,8 +94,8 @@ pub(crate) trait Validatable<'de> {
 
     fn validator() -> &'static jsonschema::Validator;
 
-    fn validate(contents: &'de str) -> Result<Self::Target, CollectionError> {
-        match astral_yaml_serde::from_str::<Self::Target>(contents) {
+    fn validate(stream: &astral_yaml::Stream<'de>) -> Result<Self::Target, CollectionError> {
+        match astral_yaml_serde::from_stream::<Self::Target>(stream) {
             Ok(value) => Ok(value),
             Err(e) => {
                 // Something a little wonky happens here: we want
@@ -123,7 +123,7 @@ pub(crate) trait Validatable<'de> {
                 // The above links show the problem for serde-yaml, but are true
                 // for all serde implementations more generally.
 
-                match astral_yaml_serde::from_str::<Option<Self::Skeleton>>(contents) {
+                match astral_yaml_serde::from_stream::<Option<Self::Skeleton>>(stream) {
                     // We know we have valid YAML, so one of two things happened here:
                     // 1. The input is semantically valid, but we have a bug in
                     //    `github-actions-models`.

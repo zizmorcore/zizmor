@@ -7,52 +7,32 @@
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/woodruffw?style=flat&logo=githubsponsors&labelColor=white&color=white)](https://github.com/sponsors/woodruffw)
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.com/invite/PGU3zGZuGG)
 
-Comment and format-preserving YAML patch operations.
+A fix is an ordered list of operations on YAML mapping keys and sequence
+indices. Astral applies the list in one transaction. The caller receives the
+rendered YAML when every operation succeeds.
 
-`yamlpatch` builds on [`yamlpath`] to provide surgical modification capabilities
-while preserving comments, formatting, and structure.
+```rust
+use astral_yaml_serde::Value;
+use yamlpatch::{Op, Patch, apply_yaml_patches};
+use yamlpath::{Document, route};
 
-[`yamlpath`]: https://github.com/zizmorcore/zizmor/tree/main/crates/yamlpath
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let input = Document::new("permissions: write-all  # CI\n")?;
+    let fixed = apply_yaml_patches(&input, &[Patch {
+        route: route!("permissions"),
+        operation: Op::Replace(Value::String("read-all".into())),
+    }])?;
+    let permissions: std::collections::HashMap<String, String> =
+        astral_yaml_serde::from_str(&fixed)?;
+    assert_eq!(permissions["permissions"], "read-all");
+    Ok(())
+}
+```
 
-> [!IMPORTANT]
->
-> This is not a substitute for comprehensive YAML processing libraries.
-> It's designed for targeted modifications that preserve the original
-> document's formatting and comments.
-
-## Why?
-
-When working with YAML configuration files, it's often necessary to make
-programmatic changes while preserving the human-readable aspects of the
-file: comments, formatting, indentation, and style choices.
-
-Traditional YAML processing involves parsing to a document model, making
-changes, and re-serializing. This approach *destroys* the original formatting
-and comments, making the result less suitable for version control and
-human review.
-
-`yamlpatch` solves this by providing targeted patch operations that:
-
-- Preserve comments and their positioning
-- Maintain original indentation and formatting
-- Respect different YAML styles (block vs. flow, single vs. multi-line)
-- Support precise fragment rewriting within string values
-- Handle complex nested structures gracefully
-
-## Operations
-
-`yamlpatch` supports the following patch operations:
-
-- **Replace**: Replace a value at a specific path
-- **Add**: Add new key-value pairs to mappings
-- **Remove**: Remove keys or elements
-- **MergeInto**: Merge values into existing mappings
-- **Append**: Append items to block sequences
-- **ReplaceComment**: Replace comments associated with features
-- **EmplaceComment**: Insert or update comments associated with features
-- **RewriteFragment**: Rewrite portions of string values (useful for templating)
-
-Each operation preserves the document's formatting and structure (as best-effort).
+The editor preserves YAML values and attached comments across edits. Rendering
+can change indentation, quoting, collection style, and line endings. An edit
+through an alias applies to that use. Editing a shared anchor definition returns
+an error because it could change other uses.
 
 ## License
 

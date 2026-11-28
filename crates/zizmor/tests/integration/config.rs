@@ -402,7 +402,7 @@ fn test_severity_remap() -> anyhow::Result<()> {
       --> @@INPUT@@/.github/workflows/hackme.yml:12:9
        |
     12 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix
@@ -431,7 +431,7 @@ fn test_severity_remap_affects_min_severity() -> anyhow::Result<()> {
       --> @@INPUT@@/.github/workflows/hackme.yml:12:9
        |
     12 |       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ does not set persist-credentials: false
        |
        = note: audit confidence → Low
        = note: this finding has an auto-fix

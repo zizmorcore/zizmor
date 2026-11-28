@@ -140,7 +140,7 @@ warning[excessive-permissions]: overly broad permissions
 ...  |
 85 | |       with:
 86 | |         category: "/language:${{matrix.language}}"
-   | |___________________________________________________^ default permissions used due to no permissions: block
+   | |__________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
@@ -182,7 +182,7 @@ warning[excessive-permissions]: overly broad permissions
 ...  |
 40 | |           github_token: ${{ steps.generate_token.outputs.BOT_TOKEN }}
 41 | |           ignore_label: ${{ github.event.inputs.ignoreLabel || 'blocked' }}
-   | |____________________________________________________________________________^ default permissions used due to no permissions: block
+   | |___________________________________________________________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
@@ -216,9 +216,10 @@ help[concurrency-limits]: insufficient job-level concurrency limits
  7 | |   workflow_dispatch:
  8 | |     inputs:
  9 | |       ignoreLabel:
-...  |
-14 | | # A workflow run is made up of one or more jobs that can run sequentially or in parallel
-   | |________________________________________________________________________________________^ workflow is missing concurrency setting
+10 | |         description: 'Exclude PRs with this label'
+11 | |         required: true
+12 | |         default: 'blocked'
+   | |__________________________^ workflow is missing concurrency setting
 ...
 17 |     combine-prs:
    |     ----------- job affected by missing workflow concurrency
@@ -235,7 +236,7 @@ warning[excessive-permissions]: overly broad permissions
 ...  |
 21 | |       - run: make initdb
 22 | |       - run: make tests
-   | |________________________^ default permissions used due to no permissions: block
+   | |_______________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 
@@ -326,7 +327,7 @@ warning[excessive-permissions]: overly broad permissions
 ...  |
 36 | |           # Used to differentiate multiple results for one commit
 37 | |           category: zizmor
-   | |___________________________^ default permissions used due to no permissions: block
+   | |__________________________^ default permissions used due to no permissions: block
    |
    = note: audit confidence → Medium
 

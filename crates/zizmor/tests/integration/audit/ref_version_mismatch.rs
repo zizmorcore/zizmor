@@ -504,14 +504,31 @@ jobs:
                 .run()
         })?,
         @"
-    @@ -7,6 +7,6 @@
-         runs-on: ubuntu-latest
-         steps:
-           - name: Checkout with mismatched version comment
+    @@ -1,12 +1,12 @@
+    -⏎
+    -name: Test Version Comment Mismatch
+    -on: push
+    -permissions: {}
+    -jobs:
+    -  test:
+    -    runs-on: ubuntu-latest
+    -    steps:
+    -      - name: Checkout with mismatched version comment
     -        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v3.0.0
+    -        with:
+    -          persist-credentials: false
+    +⏎
+    +name: Test Version Comment Mismatch
+    +on: push
+    +permissions: {}
+    +jobs:
+    +  test:
+    +    runs-on: ubuntu-latest
+    +    steps:
+    +      - name: Checkout with mismatched version comment
     +        uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598 # v2.0.0
-             with:
-               persist-credentials: false
+    +        with:
+    +          persist-credentials: false
     "
     );
 

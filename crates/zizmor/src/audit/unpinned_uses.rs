@@ -8,7 +8,7 @@ use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
 use crate::config::{Config, UsesPolicy};
 use crate::finding::location::{Locatable, Routable as _};
-use crate::finding::{Confidence, Finding, Fix, Persona, Severity};
+use crate::finding::{Confidence, Finding, Fix, FixEdit, Persona, Severity};
 use crate::github;
 use crate::models::uses::{RepositoryUsesExt as _, RepositoryUsesPattern};
 use crate::models::version::Version;
@@ -96,12 +96,13 @@ impl UnpinnedUses {
             title: format!("pin {action}@{ref} to {commit}", ref = uses.git_ref(), commit = git_ref.commit()),
             key: parent.location().key,
             disposition: Default::default(),
-            patches: vec![
+            edit: FixEdit::Yaml(vec![
                 Patch {
                     route: parent.route().with_key("uses"),
-                    operation: Op::Replace(
-                        format!("{action}@{commit}", commit = git_ref.commit()).into(),
-                    ),
+                    operation: Op::Replace(astral_yaml_serde::Value::String(format!(
+                        "{action}@{commit}",
+                        commit = git_ref.commit()
+                    ))),
                 },
                 Patch {
                     route: parent.route().with_key("uses"),
@@ -109,7 +110,7 @@ impl UnpinnedUses {
                         new: format!("# {longest_tag}").into(),
                     },
                 },
-            ],
+            ]),
         })
     }
 

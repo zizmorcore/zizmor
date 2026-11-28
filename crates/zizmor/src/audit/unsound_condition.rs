@@ -3,7 +3,7 @@ use github_actions_models::common;
 use crate::{
     audit::{Audit, AuditError, audit_meta},
     finding::{
-        Confidence, Fix, FixDisposition, Severity,
+        Confidence, Fix, FixDisposition, FixEdit, Severity,
         location::{Locatable as _, SymbolicLocation},
     },
     models::AsDocument,
@@ -40,10 +40,10 @@ impl UnsoundCondition {
     ///
     /// Gets expanded to `false\n`, which in turn becomes truthy since
     /// all strings are truthy in GitHub Actions.
-    fn is_unsound_fenced_expansion(&self, cond: &common::If) -> bool {
+    fn unsound_fenced_expansion(cond: &common::If) -> Option<(&str, &str)> {
         let common::If::Expr(raw_expr) = cond else {
             // `if: true` and `if: false` are always sound.
-            return false;
+            return None;
         };
 
         // The way we check for this is pretty simple: we attempt
@@ -52,60 +52,8 @@ impl UnsoundCondition {
         // greater than the length of the fenced expression. This indicates
         // leading or trailing content (like whitespace) that makes the
         // evaluation always true.
-        let Some((expr, _)) = utils::extract_fenced_expression(raw_expr, 0) else {
-            return false;
-        };
-
-        raw_expr.len() > expr.as_raw().len()
-    }
-
-    /// Attempts to create a fix for an unsound condition by replacing
-    /// the block scalar style with a stripped version (| -> |-, > -> >-).
-    fn attempt_fix<'a, 'doc>(
-        &self,
-        cond: &common::If,
-        loc: &SymbolicLocation<'doc>,
-        doc: &'a impl AsDocument<'a, 'doc>,
-    ) -> Option<Fix<'doc>> {
-        let common::If::Expr(raw_expr) = cond else {
-            return None;
-        };
-
-        // The fix we apply below only works for trailing newlines.
-        if !raw_expr.ends_with('\n') {
-            return None;
-        }
-
-        // Get the document and feature for this condition
-        let yaml_doc = doc.as_document();
-        let feature =
-            yamlpatch::route_to_feature_exact(&loc.route.with_key("if"), yaml_doc).ok()??;
-
-        // Determine the current scalar style
-        let style = yamlpatch::Style::from_feature(&feature, yaml_doc);
-
-        // Only fix literal (|) and folded (>) scalar styles
-        let (old_indicator, new_indicator) = match style {
-            yamlpatch::Style::MultilineLiteralScalar => ("|", "|-"),
-            yamlpatch::Style::MultilineFoldedScalar => (">", ">-"),
-            _ => return None, // Not a style we can fix this way
-        };
-
-        // Create a patch that replaces the scalar indicator
-        Some(Fix {
-            title: format!(
-                "replace unsound block scalar style '{old_indicator}' with sound style '{new_indicator}'"
-            ),
-            key: loc.key,
-            disposition: FixDisposition::Safe,
-            patches: vec![Patch {
-                route: loc.route.with_key("if"),
-                operation: Op::RewriteFragment {
-                    from: subfeature::Subfeature::new(0, old_indicator),
-                    to: new_indicator.into(),
-                },
-            }],
-        })
+        let (expr, _) = utils::extract_fenced_expression(raw_expr, 0)?;
+        (raw_expr.len() > expr.as_raw().len()).then_some((raw_expr, expr.as_raw()))
     }
 
     fn process_conditions<'a, 'doc>(
@@ -115,7 +63,7 @@ impl UnsoundCondition {
     ) -> Result<Vec<super::Finding<'doc>>, AuditError> {
         let mut findings = vec![];
         for (cond, loc) in conditions {
-            if self.is_unsound_fenced_expansion(cond) {
+            if let Some((raw, expression)) = Self::unsound_fenced_expansion(cond) {
                 let mut finding_builder = Self::finding()
                     .severity(Severity::High)
                     .confidence(Confidence::High)
@@ -126,9 +74,18 @@ impl UnsoundCondition {
                             .annotated("condition always evaluates to true"),
                     );
 
-                // Attempt to add a fix
-                if let Some(fix) = self.attempt_fix(cond, &loc, doc) {
-                    finding_builder = finding_builder.fix(fix);
+                if raw.trim_end_matches('\n') == expression {
+                    finding_builder = finding_builder.fix(Fix {
+                        title: "strip trailing newlines from the condition".into(),
+                        key: loc.key,
+                        disposition: FixDisposition::Safe,
+                        edit: FixEdit::Yaml(vec![Patch {
+                            route: loc.route.with_key("if"),
+                            operation: Op::Replace(astral_yaml_serde::Value::String(
+                                expression.into(),
+                            )),
+                        }]),
+                    });
                 }
 
                 findings.push(finding_builder.build(doc)?);

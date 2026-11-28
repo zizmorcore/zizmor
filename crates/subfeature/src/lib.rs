@@ -163,9 +163,8 @@ impl<'a> Subfeature<'a> {
         // This happens because we have a rough sense of where the subfeature
         // is *after* YAML parsing, but we don't know exactly where it is
         // in the original YAML feature due to significant whitespace.
-        let feature = feature.as_bytes();
         let bias = self.after;
-        let focus = &feature[bias..];
+        let focus = feature.as_bytes().get(bias..)?;
 
         match &self.fragment {
             Fragment::Raw(fragment) => {
@@ -178,12 +177,26 @@ impl<'a> Subfeature<'a> {
                 .find(focus)
                 .map(|m| Span::from(m.range()).adjust(bias)),
         }
+        .filter(|span| feature.get(span.as_range()).is_some())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::Fragment;
+    use crate::{Fragment, Subfeature};
+
+    #[test]
+    fn fragment_offsets_must_identify_an_original_substring() {
+        assert!(Subfeature::new(5, "x").locate_within("éx").is_none());
+        assert!(Subfeature::new(1, "").locate_within("éx").is_none());
+        assert_eq!(
+            Subfeature::new(1, "x")
+                .locate_within("éx")
+                .unwrap()
+                .as_range(),
+            2..3
+        );
+    }
 
     #[test]
     fn test_fragment_from_context() {
