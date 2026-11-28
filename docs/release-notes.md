@@ -9,6 +9,10 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Enhancements 🌱
+
+- The [unpinned-uses] audit now supports pre-commit config inputs (#2585)
+
 ## 1.33.1
 
 ### Bug Fixes 🐛

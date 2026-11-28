@@ -8,7 +8,6 @@ use std::{
 
 use anyhow::{Context as _, anyhow};
 use camino::Utf8Path;
-use github_actions_models::common::RepositoryUses;
 use serde::{
     Deserialize,
     de::{self, DeserializeOwned},
@@ -27,7 +26,7 @@ use crate::{
     },
     finding::{Finding, Severity},
     github::{Client, ClientError},
-    models::uses::RepositoryUsesPattern,
+    models::{repo_ref::RepoRef, uses::RepositoryUsesPattern},
     registry::input::InputSlug,
 };
 use crate::{audit::self_hosted_runner::SelfHostedRunner, registry::input::root::Root};
@@ -384,14 +383,20 @@ impl UnpinnedUsesPolicies {
     /// or the default policy if none match.
     pub(crate) fn get_policy(
         &self,
-        uses: &RepositoryUses,
+        uses: &RepoRef<'_>,
     ) -> (Option<&RepositoryUsesPattern>, UsesPolicy) {
-        match self.policy_tree.get(uses.owner()) {
+        // Repository refs that don't have a discernable GitHub slug
+        // can't match anything.
+        let Some(slug) = uses.slug() else {
+            return (None, self.default_policy);
+        };
+
+        match self.policy_tree.get(slug.owner()) {
             Some(policies) => {
                 // Policies are ordered by specificity, so we can
                 // iterate and return eagerly.
                 for (uses_pattern, policy) in policies {
-                    if uses_pattern.matches(&uses.into()) {
+                    if uses_pattern.matches(uses) {
                         return (Some(uses_pattern), *policy);
                     }
                 }

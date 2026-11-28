@@ -1,10 +1,10 @@
 repos:
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
+    rev: v4.0.0-alpha.8 # zizmor: ignore[unpinned-uses]
     hooks:
       - id: prettier
 
   - repo: git@github.com:pre-commit/mirrors-prettier.git
-    rev: v4.0.0-alpha.8
+    rev: v4.0.0-alpha.8 # zizmor: ignore[unpinned-uses]
     hooks:
       - id: prettier

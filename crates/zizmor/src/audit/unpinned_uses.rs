@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use github_actions_models::common::Uses;
 use subfeature::Subfeature;
 use yamlpatch::{Op, Patch};
@@ -7,41 +5,37 @@ use yamlpatch::{Op, Patch};
 use super::{Audit, AuditLoadError, AuditState, audit_meta};
 use crate::audit::AuditError;
 use crate::config::{Config, UsesPolicy};
-use crate::finding::location::{Locatable, Routable as _};
-use crate::finding::{Confidence, Finding, Fix, Persona, Severity};
+use crate::finding::location::Locatable;
+use crate::finding::{Confidence, Finding, Fix, Severity};
 use crate::github;
-use crate::models::uses::{RepositoryUsesExt as _, RepositoryUsesPattern};
+use crate::models::pre_commit;
+use crate::models::repo_ref::RepoRef;
 use crate::models::version::Version;
 use crate::models::workflow::ReusableWorkflowCallJob;
-use crate::models::{
-    AsDocument, StepCommon, action::CompositeStep, uses::UsesExt as _, workflow::Step,
-};
+use crate::models::{AsDocument, StepCommon, action::CompositeStep, workflow::Step};
+use crate::registry::input::InputGroup;
 use crate::utils::once::debug_once;
 
 pub(crate) struct UnpinnedUses {
     client: Option<github::Client>,
 }
 
-audit_meta!(UnpinnedUses, "unpinned-uses", "unpinned action reference");
+audit_meta!(
+    UnpinnedUses,
+    "unpinned-uses",
+    "unpinned repository reference"
+);
 
 impl UnpinnedUses {
-    async fn attempt_fix<'a, 'doc>(
+    /// Pin a version-like GitHub ref to its commit and record the tag in a comment.
+    async fn attempt_fix<'doc>(
         &self,
         parent: &impl Locatable<'doc>,
-        uses: &Uses,
+        repo: &RepoRef<'doc>,
     ) -> Option<Fix<'doc>> {
-        // We need to be online to attempt fixes for this audit.
         let client = self.client.as_ref()?;
-
-        // We can only fix repository uses for now.
-        let Uses::Repository(uses) = uses else {
-            return None;
-        };
-
-        // There's nothing to fix if the ref is already a commit SHA.
-        if uses.ref_is_commit() {
-            return None;
-        }
+        let slug = repo.slug()?;
+        let git_ref = repo.git_ref();
 
         // Only attempt a fix if the git ref _looks_ like it might be a
         // version, e.g. `@v1`, `@1.2.3`, etc. Technically we can hash-pin
@@ -49,125 +43,94 @@ impl UnpinnedUses {
         // like `@main`, `@stable`, etc. because other tools like Dependabot
         // and pinact don't handle those gracefully.
         // The user can always pin manually if they so desire.
-        if Version::parse(uses.git_ref()).is_err() {
-            tracing::debug!("not proposing an auto-fix for a non-version ref: {uses}");
+        if Version::parse(git_ref).is_err() {
+            tracing::debug!("not proposing an auto-fix for a non-version ref: {repo:?}");
             return None;
         }
 
-        let git_ref = match client.lookup_ref(&uses.into(), uses.git_ref()).await {
-            Ok(Some(git_ref)) => git_ref,
+        let resolved = match client.lookup_ref(&slug, git_ref).await {
+            Ok(Some(resolved)) => resolved,
             Ok(None) => {
-                tracing::warn!("no commit matching {uses}");
+                tracing::warn!("no commit matching {repo:?}");
                 return None;
             }
             Err(e) => {
                 // TODO: hard-fail here instead?
-                tracing::warn!(
-                    "failed to look up commit for {uses}: {e}",
-                    uses = uses.raw()
-                );
+                tracing::warn!("failed to look up commit for {slug}: {e}");
                 return None;
             }
         };
+        let commit = resolved.commit();
 
         // Resolve the commit back to its longest tag; pinning to the full
         // version avoids any later `ref-version-mismatch` findings when the
         // major tag is mutated by the upstream.
         let longest_tag = match client
-            .longest_tag_for_commit(&uses.into(), uses.subpath(), git_ref.commit())
+            .longest_tag_for_commit(&slug, repo.subpath(), commit)
             .await
         {
-            Ok(Some(tag)) => Cow::Owned(tag.name),
+            Ok(Some(tag)) => tag.name,
             // Our original tag -> commit lookup succeeded, but this reverse lookup
             // failed, which makes no sense. Just fall back to what we know.
-            _ => Cow::Borrowed(uses.git_ref()),
+            _ => git_ref.to_owned(),
         };
 
-        let action = if let Some(subpath) = uses.subpath() {
-            format!("{}/{}", uses.slug(), subpath)
-        } else {
-            uses.slug().to_string()
+        let (field, title, replacement, comment) = match repo {
+            RepoRef::Uses(uses) => {
+                let action = match uses.subpath() {
+                    Some(subpath) => format!("{slug}/{subpath}"),
+                    None => slug.to_string(),
+                };
+                (
+                    "uses",
+                    format!("pin {action}@{git_ref} to {commit}"),
+                    format!("{action}@{commit}"),
+                    format!("# {longest_tag}"),
+                )
+            }
+            RepoRef::Url { .. } | RepoRef::Scp { .. } => (
+                "rev",
+                format!("pin {slug} to {commit}"),
+                commit.to_owned(),
+                format!("# frozen: {longest_tag}"),
+            ),
         };
+        let location = parent.location().with_keys([field.into()]);
 
-        // For the fix itself, we need to situate two patches:
-        // 1. `uses: foo/bar@ref` -> `uses: foo/bar@hashhashhash`
-        // 2. A `# <ref>` comment following the `uses:` clause.
         Some(Fix {
-            title: format!("pin {action}@{ref} to {commit}", ref = uses.git_ref(), commit = git_ref.commit()),
-            key: parent.location().key,
+            title,
+            key: location.key,
             disposition: Default::default(),
             patches: vec![
                 Patch {
-                    route: parent.route().with_key("uses"),
-                    operation: Op::Replace(
-                        format!("{action}@{commit}", commit = git_ref.commit()).into(),
-                    ),
+                    route: location.route.clone(),
+                    operation: Op::Replace(replacement.into()),
                 },
                 Patch {
-                    route: parent.route().with_key("uses"),
+                    route: location.route,
                     operation: Op::EmplaceComment {
-                        new: format!("# {longest_tag}").into(),
+                        new: comment.into(),
                     },
                 },
             ],
         })
     }
 
-    async fn evaluate_pinning<'doc>(
-        &self,
-        parent: &impl Locatable<'doc>,
-        uses: &'doc Uses,
-        config: &Config,
-    ) -> Option<(String, Severity, Persona, Option<Fix<'doc>>)> {
-        match uses {
-            // Don't evaluate pinning for local `uses:`, since unpinned references
-            // are fully controlled by the repository anyways.
-            // TODO: auditor-level findings instead, perhaps?
-            Uses::Local(_) => None,
-            // This is handled by the `unpinned-images` audit.
-            Uses::Docker(_) => None,
-            Uses::Repository(repo_uses) => {
-                let (pattern, policy) = config.unpinned_uses_policies.get_policy(repo_uses);
-
-                let pat_desc = match pattern {
-                    Some(RepositoryUsesPattern::Any) | None => "blanket".into(),
-                    Some(RepositoryUsesPattern::InOwner(owner)) => format!("{owner}/*"),
-                    Some(RepositoryUsesPattern::InRepo { owner, repo }) => {
-                        format!("{owner}/{repo}/*")
-                    }
-                    Some(RepositoryUsesPattern::ExactRepo { owner, repo }) => {
-                        format!("{owner}/{repo}")
-                    }
-                    Some(RepositoryUsesPattern::ExactPath {
-                        owner,
-                        repo,
-                        subpath,
-                    }) => {
-                        format!("{owner}/{repo}/{subpath}")
-                    }
-                    // Not allowed in this audit.
-                    Some(RepositoryUsesPattern::ExactWithRef { .. }) => unreachable!(),
-                };
-
-                match policy {
-                    UsesPolicy::Any => None,
-                    UsesPolicy::RefPin => uses.unpinned().then_some((
-                        format!(
-                            "action is not pinned to a ref or hash (required by {pat_desc} policy)"
-                        ),
-                        Severity::High,
-                        Persona::default(),
-                        self.attempt_fix(parent, uses).await,
-                    )),
-                    UsesPolicy::HashPin => uses.unhashed().then_some((
-                        format!("action is not pinned to a hash (required by {pat_desc} policy)"),
-                        Severity::High,
-                        Persona::default(),
-                        self.attempt_fix(parent, uses).await,
-                    )),
-                }
-            }
+    fn pinning_annotation(repo: &RepoRef<'_>, config: &Config) -> Option<String> {
+        if repo.ref_is_commit() {
+            return None;
         }
+
+        // Every repository reference already satisfies a ref-pin policy.
+        let (pattern, UsesPolicy::HashPin) = config.unpinned_uses_policies.get_policy(repo) else {
+            return None;
+        };
+
+        let policy = pattern.map_or_else(|| "blanket".to_owned(), ToString::to_string);
+
+        Some(format!(
+            "is not pinned to a hash (required by {policy} policy)"
+        ))
     }
 
     async fn process_uses<'a, 'doc, S>(
@@ -179,16 +142,20 @@ impl UnpinnedUses {
     where
         S: Locatable<'doc> + AsDocument<'a, 'doc>,
     {
-        let Some((annotation, severity, persona, fix)) =
-            self.evaluate_pinning(parent, uses, config).await
-        else {
+        // Local `uses:` are not meaningfully pinnable, and Docker-based
+        // `uses:` are checked by the `unpinned-images` audit.
+        let Uses::Repository(uses) = uses else {
+            return Ok(None);
+        };
+
+        let repo = RepoRef::from(uses);
+        let Some(annotation) = Self::pinning_annotation(&repo, config) else {
             return Ok(None);
         };
 
         let mut builder = Self::finding()
             .confidence(Confidence::High)
-            .severity(severity)
-            .persona(persona)
+            .severity(Severity::High)
             .add_location(parent.location().hidden())
             .add_location(
                 parent
@@ -199,7 +166,7 @@ impl UnpinnedUses {
                     .annotated(annotation),
             );
 
-        if let Some(fix) = fix {
+        if let Some(fix) = self.attempt_fix(parent, &repo).await {
             builder = builder.fix(fix);
         }
 
@@ -280,5 +247,43 @@ impl Audit for UnpinnedUses {
             .await?
             .into_iter()
             .collect())
+    }
+
+    async fn audit_pre_commit_config_repo<'doc>(
+        &self,
+        repo: &pre_commit::Repo<'doc>,
+        group: &InputGroup,
+    ) -> Result<Vec<Finding<'doc>>, AuditError> {
+        let Some(remote) = repo.repo() else {
+            return Ok(vec![]);
+        };
+        let repo_ref = RepoRef::from(remote);
+        let Some(annotation) = Self::pinning_annotation(&repo_ref, group.config()) else {
+            return Ok(vec![]);
+        };
+
+        let mut builder = Self::finding()
+            .confidence(Confidence::High)
+            .severity(Severity::High)
+            .add_location(repo.location().hidden())
+            .add_location(
+                repo.location()
+                    .with_keys(["repo".into()])
+                    .subfeature(Subfeature::new(0, remote.repo.as_str()))
+                    .annotated("this pre-commit hook"),
+            )
+            .add_location(
+                repo.location()
+                    .with_keys(["rev".into()])
+                    .subfeature(Subfeature::new(0, remote.rev.as_str()))
+                    .annotated(annotation)
+                    .primary(),
+            );
+
+        if let Some(fix) = self.attempt_fix(repo, &repo_ref).await {
+            builder = builder.fix(fix);
+        }
+
+        Ok(vec![builder.build(repo)?])
     }
 }

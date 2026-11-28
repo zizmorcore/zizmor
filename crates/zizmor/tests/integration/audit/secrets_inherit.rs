@@ -7,35 +7,35 @@ fn secrets_inherit() -> anyhow::Result<()> {
             .input(input_under_test("secrets-inherit.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:10:11
        |
     10 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:16:11
        |
     16 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:23:11
        |
     23 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:28:11
        |
     28 |     uses: octo-org/example-repo/.github/workflows/called-workflow.yml@main
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 

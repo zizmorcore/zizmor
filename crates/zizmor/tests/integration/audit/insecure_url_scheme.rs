@@ -23,7 +23,7 @@ fn test_insecure_origin_pre_commit_config() -> anyhow::Result<()> {
       |
       = note: audit confidence → High
 
-    2 findings: 0 informational, 0 low, 0 medium, 2 high
+    4 findings (2 ignored): 0 informational, 0 low, 0 medium, 2 high
     "#
     );
 

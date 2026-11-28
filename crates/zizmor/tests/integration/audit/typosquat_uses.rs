@@ -124,7 +124,7 @@ fn test_pre_commit_config() -> anyhow::Result<()> {
        = note: audit confidence → Low
        = tip: run with a GitHub token to check whether this repository actually exists
 
-    4 findings: 0 informational, 0 low, 0 medium, 4 high
+    12 findings (8 ignored): 0 informational, 0 low, 0 medium, 4 high
     "
     );
 

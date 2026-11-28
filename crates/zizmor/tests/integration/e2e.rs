@@ -479,11 +479,11 @@ fn issue_1065() -> Result<()> {
        |
        = note: audit confidence → Medium
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:17:15
        |
     17 |         uses: thollander/actions-comment-pull-request@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -705,7 +705,7 @@ fn issue_1745() -> Result<()> {
             .run()?,
         @"
     ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned repository reference: is not pinned to a hash (required by blanket policy)
     "
     );
 
@@ -720,7 +720,7 @@ fn issue_1745() -> Result<()> {
             .run()?,
         @"
     ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned repository reference: is not pinned to a hash (required by blanket policy)
     "
     );
 
@@ -734,7 +734,7 @@ fn issue_1745() -> Result<()> {
             .run()?,
         @"
     ::warning file=.github/workflows/test.yml,line=10,title=artipacked::test.yml:10: credential persistence through GitHub Actions artifacts: does not set persist-credentials: false
-    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned action reference: action is not pinned to a hash (required by blanket policy)
+    ::error file=.github/workflows/test.yml,line=10,title=unpinned-uses::test.yml:10: unpinned repository reference: is not pinned to a hash (required by blanket policy)
     "
     );
 

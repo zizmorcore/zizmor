@@ -40,11 +40,11 @@ jobs:
       |
       = note: audit confidence → Medium
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
      --> <stdin>:6:15
       |
     6 |       - uses: actions/checkout@v3
-      |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+      |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
       |
       = note: audit confidence → High
 
@@ -78,11 +78,11 @@ runs:
       = note: audit confidence → Low
       = note: this finding has an auto-fix
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
      --> <stdin>:6:13
       |
     6 |     - uses: actions/checkout@v3
-      |             ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+      |             ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
       |
       = note: audit confidence → High
 
@@ -580,7 +580,7 @@ jobs:
                               {
                                 "properties": {
                                   "symbolic": {
-                                    "annotation": "action is not pinned to a hash (required by blanket policy)",
+                                    "annotation": "is not pinned to a hash (required by blanket policy)",
                                     "feature_kind": {
                                       "Subfeature": {
                                         "after": 0,
@@ -617,7 +617,7 @@ jobs:
                               }
                             ],
                             "message": {
-                              "text": "action is not pinned to a hash (required by blanket policy)"
+                              "text": "is not pinned to a hash (required by blanket policy)"
                             },
                             "physicalLocation": {
                               "artifactLocation": {
@@ -649,7 +649,7 @@ jobs:
                     {
                       "properties": {
                         "symbolic": {
-                          "annotation": "action is not pinned to a hash (required by blanket policy)",
+                          "annotation": "is not pinned to a hash (required by blanket policy)",
                           "feature_kind": {
                             "Subfeature": {
                               "after": 0,
@@ -686,7 +686,7 @@ jobs:
                     }
                   ],
                   "message": {
-                    "text": "action is not pinned to a hash (required by blanket policy)"
+                    "text": "is not pinned to a hash (required by blanket policy)"
                   },
                   "physicalLocation": {
                     "artifactLocation": {
@@ -706,7 +706,7 @@ jobs:
                 }
               ],
               "message": {
-                "text": "unpinned action reference: action is not pinned to a hash (required by blanket policy)"
+                "text": "unpinned repository reference: is not pinned to a hash (required by blanket policy)"
               },
               "properties": {
                 "zizmor/confidence": "High",
@@ -752,8 +752,8 @@ jobs:
                 },
                 {
                   "help": {
-                    "markdown": "`unpinned-uses`: unpinned action reference\n\nDocs: <https://docs.zizmor.sh/audits/#unpinned-uses>",
-                    "text": "unpinned action reference"
+                    "markdown": "`unpinned-uses`: unpinned repository reference\n\nDocs: <https://docs.zizmor.sh/audits/#unpinned-uses>",
+                    "text": "unpinned repository reference"
                   },
                   "helpUri": "https://docs.zizmor.sh/audits/#unpinned-uses",
                   "id": "zizmor/unpinned-uses",

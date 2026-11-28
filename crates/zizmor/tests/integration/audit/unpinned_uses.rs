@@ -1,5 +1,5 @@
 use anyhow::Result;
-use zizmor_dev::{Zizmor, input_under_test};
+use zizmor_dev::{WorkspaceBuilder, Zizmor, input_under_test};
 
 #[test]
 fn test_unpinned_uses_pedantic() -> Result<()> {
@@ -9,11 +9,11 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
             .args(["--pedantic"])
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:16:15
        |
     16 |       - uses: actions/checkout@v3
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -31,11 +31,11 @@ fn test_unpinned_uses_default() -> Result<()> {
             .input(input_under_test("unpinned-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:16:15
        |
     16 |       - uses: actions/checkout@v3
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -54,19 +54,19 @@ fn test_action_pedantic() -> Result<()> {
             .args(["--pedantic"])
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:12:13
        |
     12 |       uses: asdf-vm/actions/setup@v3
-       |             ^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |             ^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:15:13
        |
     15 |       uses: asdf-vm/actions/setup@main
-       |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -99,11 +99,11 @@ fn test_issue_659_repro() -> Result<()> {
             .args(["--pedantic"])
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |         uses: actions/setup-node@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -124,11 +124,11 @@ fn test_issue_1543_repro() -> Result<()> {
             .input(input_under_test("unpinned-uses/issue-1543-repro.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:18:11
        |
     18 |           actions/checkout@v4
-       |           ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -147,43 +147,43 @@ fn test_default_config() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -205,43 +205,43 @@ fn test_hash_pin_everything_config() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -276,27 +276,27 @@ fn test_composite_config() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by actions/setup-python policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by actions/setup-python policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -315,19 +315,19 @@ fn test_composite_config_2() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by github/codeql-action/init policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by github/codeql-action/init policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by github/codeql-action/upload-sarif policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by github/codeql-action/upload-sarif policy)
        |
        = note: audit confidence → High
 
@@ -346,43 +346,43 @@ fn test_empty_config() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
-       |               ^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
-       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -593,19 +593,19 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
             .input(input_under_test("unpinned-uses/reusable-workflow-unpinned.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:17:11
        |
     17 |     uses: owner/repo/.github/workflows/reusable.yml@main
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:21:11
        |
     21 |     uses: owner/repo/.github/workflows/reusable.yml@v1
-       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
 
@@ -650,11 +650,11 @@ fn test_honors_lockfile() -> anyhow::Result<()> {
         .args(["--ignore-lockfile"])
         .run()?,
     @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> .github/workflows/neutral.yml:18:15
        |
     18 |       - uses: actions/checkout@v7.0.1
-       |               ^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+       |               ^^^^^^^^^^^^^^^^^^^^^^^ is not pinned to a hash (required by blanket policy)
        |
        = note: audit confidence → High
        = note: this finding has an auto-fix
@@ -666,9 +666,95 @@ fn test_honors_lockfile() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// The `unpinned-uses` audit should handle pre-commit config inputs.
+#[test]
+fn test_pre_commit() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+
+    workspace.add_file(
+        ".pre-commit-config.yaml",
+        indoc::indoc! {r#"
+        repos:
+          - repo: https://github.com/pre-commit/pre-commit-hooks
+            rev: v2.3.0
+            hooks:
+              - id: check-yaml
+
+          - repo: https://github.com/pre-commit/pre-commit-hooks
+            # hash-pinned, so no finding
+            rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # v6.0.0
+            hooks:
+              - id: check-yaml
+        "#},
+    );
+
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin().input(workspace.path()).run()?,
+        @"
+    error[unpinned-uses]: unpinned repository reference
+     --> @@INPUT@@/.pre-commit-config.yaml:3:10
+      |
+    2 |   - repo: https://github.com/pre-commit/pre-commit-hooks
+      |           ---------------------------------------------- this pre-commit hook
+    3 |     rev: v2.3.0
+      |          ^^^^^^ is not pinned to a hash (required by blanket policy)
+      |
+      = note: audit confidence → High
+
+    1 finding: 0 informational, 0 low, 0 medium, 1 high
+    "
+    );
+
+    Ok(())
+}
+
+/// When flagging unpinned hooks in pre-commit configs,
+/// unpinned-uses honors zizmor's config i.e. does not flag
+/// hooks that match a ref-pin policy.
+#[test]
+fn test_pre_commit_honors_config() -> anyhow::Result<()> {
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+
+    workspace.add_file(
+        ".pre-commit-config.yaml",
+        indoc::indoc! {r#"
+        repos:
+          - repo: https://github.com/pre-commit/pre-commit-hooks
+            rev: v2.3.0
+            hooks:
+              - id: check-yaml
+
+          # SCP-style references should also be matched and ignored
+          - repo: git@github.com:pre-commit/pre-commit-hooks
+            rev: v2.3.0
+            hooks:
+              - id: check-yaml
+        "#},
+    );
+
+    workspace.add_file(
+        "zizmor.yml",
+        indoc::indoc! {r#"
+        rules:
+          unpinned-uses:
+            config:
+              policies:
+                pre-commit/pre-commit-hooks: ref-pin
+        "#},
+    );
+
+    // No findings because we allow ref-pin for the offending hook.
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin().input(workspace.path()).run()?,
+        @"No findings to report. Good job!"
+    );
+
+    Ok(())
+}
+
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix() -> anyhow::Result<()> {
+fn test_uses_fix() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -714,7 +800,7 @@ jobs:
 
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix_crlf() -> anyhow::Result<()> {
+fn test_uses_fix_crlf() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -761,7 +847,7 @@ jobs:
 
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix_overwrites_comment() -> anyhow::Result<()> {
+fn test_uses_fix_overwrites_comment() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -807,7 +893,7 @@ jobs:
 
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix_bizarre_formatting() -> anyhow::Result<()> {
+fn test_uses_fix_bizarre_formatting() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -853,7 +939,7 @@ jobs:
 
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix_preserves_subpath() -> anyhow::Result<()> {
+fn test_uses_fix_preserves_subpath() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -896,7 +982,7 @@ jobs:
 /// in the fix's inserted comment.
 #[cfg(feature = "gh-token-tests")]
 #[test]
-fn test_fix_major_version_pins_to_full_version() -> anyhow::Result<()> {
+fn test_uses_fix_major_version_pins_to_full_version() -> anyhow::Result<()> {
     use zizmor_dev::{NetworkMode, WorkspaceBuilder};
 
     let workflow_content = r#"
@@ -934,6 +1020,47 @@ jobs:
     +        uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
              with:
                persist-credentials: false
+    "
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "gh-token-tests")]
+#[test]
+fn test_pre_commit_fix() -> anyhow::Result<()> {
+    use zizmor_dev::{NetworkMode, WorkspaceBuilder};
+
+    let workspace = WorkspaceBuilder::default().is_git_repo(true).build()?;
+
+    workspace.add_file(
+        ".pre-commit-config.yaml",
+        indoc::indoc! {r#"
+        repos:
+          - repo: https://github.com/pre-commit/pre-commit-hooks
+            rev: v2.3.0
+            hooks:
+              - id: check-yaml
+        "#},
+    );
+
+    insta::assert_snapshot!(
+        &workspace.diff(".pre-commit-config.yaml", |workspace| {
+            Zizmor::cargo_bin()
+                .offline(NetworkMode::AssertOnline)
+                .output(zizmor_dev::OutputMode::Both)
+                .args(["--fix=all"])
+                .input(workspace.path())
+                .run()
+        })?,
+        @"
+    @@ -1,5 +1,5 @@
+     repos:
+       - repo: https://github.com/pre-commit/pre-commit-hooks
+    -    rev: v2.3.0
+    +    rev: d6d3bd94604578adbd918c5a00d531d98350d86f # frozen: v2.3.0
+         hooks:
+           - id: check-yaml
     "
     );
 

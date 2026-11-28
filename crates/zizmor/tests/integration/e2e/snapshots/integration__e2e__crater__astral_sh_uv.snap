@@ -1702,4 +1702,37 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-155 findings (2 suppressed): 24 informational, 105 low, 16 medium, 8 high
+error[unpinned-uses]: unpinned repository reference
+  --> .pre-commit-config.yaml:10:10
+   |
+ 9 |   - repo: https://github.com/abravalheri/validate-pyproject
+   |           ------------------------------------------------- this pre-commit hook
+10 |     rev: v0.24.1
+   |          ^^^^^^^ is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[unpinned-uses]: unpinned repository reference
+  --> .pre-commit-config.yaml:15:10
+   |
+14 |   - repo: https://github.com/crate-ci/typos
+   |           --------------------------------- this pre-commit hook
+15 |     rev: v1.42.3
+   |          ^^^^^^^ is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[unpinned-uses]: unpinned repository reference
+  --> .pre-commit-config.yaml:48:10
+   |
+47 |   - repo: https://github.com/astral-sh/ruff-pre-commit
+   |           -------------------------------------------- this pre-commit hook
+48 |     rev: v0.14.14
+   |          ^^^^^^^^ is not pinned to a hash (required by blanket policy)
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+158 findings (2 suppressed): 24 informational, 105 low, 16 medium, 11 high

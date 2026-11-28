@@ -39,12 +39,12 @@ fn test_ref_confusion_pre_commit() -> Result<()> {
       |
     2 |   - repo: https://github.com/woodruffw/gha-hazmat
       |           --------------------------------------- this repo
-    3 |     rev: confusable
+    3 |     rev: confusable # zizmor: ignore[unpinned-uses]
       |          ^^^^^^^^^^ uses a ref that's provided by both the branch and tag namespaces
       |
       = note: audit confidence → High
 
-    1 finding: 0 informational, 0 low, 1 medium, 0 high
+    2 findings (1 ignored): 0 informational, 0 low, 1 medium, 0 high
     "
     );
 
