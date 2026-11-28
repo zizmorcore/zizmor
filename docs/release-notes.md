@@ -9,6 +9,11 @@ of `zizmor`.
 
 ## Next (UNRELEASED)
 
+### Changes ⚠️
+
+- zizmor's file-based HTTP cache has been removed, and the `--cache-dir` flag is now a no-op.
+  A future version of zizmor may remove the `--cache-dir` flag entirely (#2589)
+
 ### Enhancements 🌱
 
 - The [unpinned-uses] audit now supports pre-commit config inputs (#2585)
