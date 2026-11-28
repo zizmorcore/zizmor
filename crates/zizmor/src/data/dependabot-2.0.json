@@ -672,6 +672,7 @@
     },
     "package-ecosystem-values": {
       "enum": [
+        "apm",
         "bazel",
         "bun",
         "bundler",
@@ -746,6 +747,7 @@
           "description": "A custom branch name format using placeholders.",
           "type": "string",
           "minLength": 1,
+          "maxLength": 200,
           "allOf": [
             {
               "description": "Must not contain spaces, ~, ^, :, ?, *, [ or \\.",
@@ -896,19 +898,19 @@
             "default-days": {
               "description": "Default cooldown period for dependencies without specific rules (optional).",
               "type": "integer",
-              "minimum": 1,
+              "minimum": 0,
               "maximum": 90
             },
             "semver-major-days": {
               "description": "Cooldown period for major version updates (optional, applies only to package managers supporting SemVer).",
               "type": "integer",
-              "minimum": 1,
+              "minimum": 0,
               "maximum": 90
             },
             "semver-minor-days": {
               "description": "Cooldown period for minor version updates (optional, applies only to package managers supporting SemVer).",
               "type": "integer",
-              "minimum": 1,
+              "minimum": 0,
               "maximum": 90
             },
             "semver-patch-days": {
@@ -923,7 +925,7 @@
               "items": {
                 "type": "string"
               },
-              "maxItems": 100
+              "maxItems": 150
             },
             "exclude": {
               "description": "List of dependencies excluded from cooldown. Supports wildcards (`*`).",
@@ -931,7 +933,7 @@
               "items": {
                 "type": "string"
               },
-              "maxItems": 100
+              "maxItems": 150
             }
           },
           "additionalProperties": false
