@@ -174,11 +174,6 @@ pub(crate) enum ClientError {
 }
 
 #[derive(Clone, Copy, Debug)]
-enum CacheType {
-    Memory,
-}
-
-#[derive(Clone, Copy, Debug)]
 enum CacheResult {
     Miss,
     Hit,
@@ -198,19 +193,16 @@ impl reqwest_middleware::Middleware for CacheLoggingMiddleware {
 
         let res = next.run(req, extensions).await?;
 
-        let cache_type = extensions
-            .get::<CacheType>()
-            .expect("internal error: expected CacheType");
         let cache_result = extensions
             .get::<CacheResult>()
             .expect("internal error: expected CacheResult");
-        tracing::debug!("{:?} cache was {:?}", cache_type, cache_result);
+        tracing::debug!("cache was {:?}", cache_result);
 
         Ok(res)
     }
 }
 
-struct ChainedCache<T: CacheManager>(Cache<T>, CacheType);
+struct ChainedCache<T: CacheManager>(Cache<T>);
 
 #[async_trait::async_trait]
 impl<T: CacheManager> reqwest_middleware::Middleware for ChainedCache<T> {
@@ -220,8 +212,6 @@ impl<T: CacheManager> reqwest_middleware::Middleware for ChainedCache<T> {
         extensions: &mut http::Extensions,
         next: reqwest_middleware::Next<'_>,
     ) -> reqwest_middleware::Result<Response> {
-        extensions.insert(self.1);
-
         let res = self.0.handle(req, extensions, next).await;
 
         if let Ok(ref resp) = res
@@ -363,14 +353,11 @@ impl Client {
 
         ClientBuilder::new(client)
             .with(CacheLoggingMiddleware)
-            .with(ChainedCache(
-                Cache(HttpCache {
-                    mode: CacheMode::ForceCache,
-                    manager: MokaManager::new(MokaCache::new(1000)),
-                    options: http_cache_options,
-                }),
-                CacheType::Memory,
-            ))
+            .with(ChainedCache(Cache(HttpCache {
+                mode: CacheMode::ForceCache,
+                manager: MokaManager::new(MokaCache::new(1000)),
+                options: http_cache_options,
+            })))
             .build()
     }
 
