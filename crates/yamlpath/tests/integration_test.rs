@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use serde::Deserialize;
-use yamlpath::{Component, Document, Route};
+use yamlpath::{Component, Route, document::Document};
 
 #[test]
 fn test_integration() {
@@ -32,7 +32,7 @@ struct TestcaseQuery {
 #[derive(Deserialize)]
 struct Testcase {
     #[serde(rename = "testcase")]
-    _testcase: yaml_serde::Value,
+    _testcase: astral_yaml_serde::Value,
     queries: Vec<TestcaseQuery>,
 }
 
@@ -53,30 +53,21 @@ impl<'a> From<&'a TestcaseQuery> for Route<'a> {
 
 fn run_testcase(path: &Path) {
     let raw_testcase = std::fs::read_to_string(path).unwrap();
-    let testcase = yaml_serde::from_str::<Testcase>(&raw_testcase).unwrap();
+    let testcase = astral_yaml_serde::from_str::<Testcase>(&raw_testcase).unwrap();
 
+    let document = Document::new(raw_testcase).unwrap();
     for q in &testcase.queries {
-        let document = Document::new(raw_testcase.clone()).unwrap();
-        let query: Route = q.into();
-
-        let feature = match q.mode.as_deref() {
-            Some("pretty") | None => Some(document.query_pretty(&query).unwrap()),
-            Some("exact") => document.query_exact(&query).unwrap(),
-            Some("key-only") => Some(document.query_key_only(&query).unwrap()),
-            Some(o) => panic!("invalid testcase mode: {o}"),
+        let route = q.into();
+        let range = match q.mode.as_deref() {
+            Some("exact") => document.value_range(&route).unwrap(),
+            Some("key-only") => Some(document.key_range(&route).unwrap()),
+            Some("pretty") | None => Some(document.entry_range(&route).unwrap()),
+            Some(other) => panic!("unknown query mode: {other}"),
         };
-
-        let expected = q.expected.as_str();
-
-        match feature {
-            Some(feature) => {
-                assert_eq!(
-                    document.extract_with_leading_whitespace(&feature),
-                    expected,
-                    "testcase: {path:?}, query: {query:?}"
-                );
-            }
-            None => assert_eq!(expected, "<<empty>>"),
-        }
+        assert_eq!(
+            range.map(|r| &document.source()[r]).unwrap_or("<<empty>>"),
+            q.expected,
+            "testcase: {path:?}, route: {route:?}",
+        );
     }
 }

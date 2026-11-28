@@ -13,11 +13,11 @@ testcase:
 queries:
   - query: [foo]
     mode: key-only
-    expected: "  foo"
+    expected: "foo"
 
   - query: [a, b]
     mode: key-only
-    expected: "    b"
+    expected: "b"
 
   - query: [flow, foo]
     mode: key-only

@@ -20,4 +20,4 @@ queries:
 
   - query: [query, me, baz]
     mode: exact
-    expected: "    value: 42"
+    expected: "&qux\n    value: 42"

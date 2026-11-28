@@ -9,4 +9,4 @@ testcase:
 queries:
   - query: [foo, bar, baz]
     expected: |2-
-            baz: hello!
+      baz: hello!
