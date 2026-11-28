@@ -1506,6 +1506,12 @@ Switch to hash-pinned actions.
 
 [ref-version-mismatch.yml]: https://github.com/zizmorcore/zizmor/blob/main/crates/zizmor/tests/integration/test-data/ref-version-mismatch.yml
 
+!!! note
+
+    This audit has no effect on workflows that are covered by a workflow
+    lockfile. See [GitHub Actions workflow lockfiles](./usage.md#workflow-lockfiles)
+    for more information.
+
 Detects `#!yaml uses:` clauses where a hash-pinned action's version comment
 (used by tools like Dependabot) is mismatched with the pinned commit, or
 missing entirely.
