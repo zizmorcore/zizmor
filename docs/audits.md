@@ -1084,6 +1084,12 @@ Use [encrypted secrets] instead of hardcoded credentials.
 
 [impostor-commit.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/impostor-commit.yml
 
+!!! note
+
+    This audit has no effect on workflows that are covered by a workflow
+    lockfile. See [GitHub Actions workflow lockfiles](./usage.md#workflow-lockfiles)
+    for more information.
+
 Detects commits within a repository Git's network that are not present on
 the repository itself, also known as "impostor" commits.
 
@@ -1468,6 +1474,12 @@ Secrets should be accessed individually by name.
 
 
 [ref-confusion.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/ref-confusion.yml
+
+!!! note
+
+    This audit has no effect on workflows that are covered by a workflow
+    lockfile. See [GitHub Actions workflow lockfiles](./usage.md#workflow-lockfiles)
+    for more information.
 
 Detects actions that are pinned to confusable symbolic refs (i.e. branches
 or tags).
@@ -2241,6 +2253,12 @@ default versions or `latest`.
 | Workflow, Action, pre-commit | [unpinned.yml]   | v0.4.0        | ✅             | ⚠️                | ✅           |
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
+
+!!! note
+
+    This audit has no effect on workflows that are covered by a workflow
+    lockfile. See [GitHub Actions workflow lockfiles](./usage.md#workflow-lockfiles)
+    for more information.
 
 Detects "unpinned" Git repository references, including GitHub Actions
 `#!yaml uses:` clauses and pre-commit `#!yaml rev:` clauses.
