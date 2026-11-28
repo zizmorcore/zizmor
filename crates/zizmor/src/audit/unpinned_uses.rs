@@ -20,7 +20,11 @@ pub(crate) struct UnpinnedUses {
     client: Option<github::Client>,
 }
 
-audit_meta!(UnpinnedUses, "unpinned-uses", "unpinned action reference");
+audit_meta!(
+    UnpinnedUses,
+    "unpinned-uses",
+    "unpinned repository reference"
+);
 
 impl UnpinnedUses {
     /// Pin a version-like GitHub ref to its commit and record the tag in a comment.
