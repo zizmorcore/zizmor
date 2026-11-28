@@ -270,6 +270,10 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
 
     let collection_mode_set = CollectionModeSet::from(app.input.collect.as_slice());
 
+    if app.output.summary && !matches!(app.output.format, OutputFormat::Plain) {
+        tracing::warn!("--summary only applies to --format=plain; ignoring");
+    }
+
     let min_severity = match app.audit.min_severity {
         Some(CliSeverity::Unknown) => {
             tracing::warn!("`unknown` is a deprecated minimum severity that has no effect");
@@ -399,6 +403,7 @@ async fn run(app: &mut App) -> Result<ExitCode, Error> {
             &app.output.show_audit_urls.into(),
             &app.output.render_links.into(),
             app.output.naches,
+            app.output.summary,
         ),
         OutputFormat::Json | OutputFormat::JsonV1 => {
             output::json::v1::output(stdout(), results.findings()).map_err(Error::Output)?
