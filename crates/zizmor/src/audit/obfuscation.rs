@@ -174,7 +174,7 @@ impl Obfuscation {
         // Expressions that can be constant reduced should be simplified to
         // their evaluated form.
         if let Some(replacement) = expr
-            .consteval()
+            .reducible_constant()
             .and_then(|evaluation| Self::expression_replacement(&evaluation, false))
         {
             annotations.push((

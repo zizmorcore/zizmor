@@ -8,7 +8,10 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::LazyLock;
 
-use github_actions_expressions::{Evaluation, Expr};
+use github_actions_expressions::{
+    Evaluation, Expr,
+    evaluation::{Evaluator, TrackedValue},
+};
 use serde::Deserialize;
 
 /// Top level: HashMap<GroupName, Vec<TestCase>>
@@ -18,26 +21,13 @@ type TestSuite = HashMap<String, Vec<TestCase>>;
 struct TestCase {
     expr: String,
     result: Option<TestResult>,
-    contexts: Option<serde_json::Value>,
+    contexts: Option<Evaluation>,
     err: Option<TestError>,
-    #[allow(dead_code)]
-    options: Option<TestOptions>,
-}
-
-#[derive(Copy, Clone, Debug, Deserialize)]
-enum ValueKind {
-    Boolean,
-    Number,
-    String,
-    Null,
-    Array,
-    Object,
 }
 
 #[derive(Deserialize)]
 struct TestResult {
-    kind: ValueKind,
-    value: serde_json::Value,
+    value: Evaluation,
 }
 
 #[derive(Copy, Clone, Debug, Deserialize)]
@@ -52,25 +42,6 @@ enum ErrorKind {
 struct TestError {
     kind: ErrorKind,
     value: String,
-}
-
-#[derive(Deserialize)]
-struct TestOptions {
-    #[allow(dead_code)]
-    skip: Option<Vec<String>>,
-}
-
-fn to_evaluation(result: &TestResult) -> Result<Evaluation, String> {
-    match result.kind {
-        ValueKind::Boolean => Ok(Evaluation::Boolean(result.value.as_bool().unwrap())),
-        ValueKind::Number => Ok(Evaluation::Number(result.value.as_f64().unwrap())),
-        ValueKind::String => Ok(Evaluation::String(
-            result.value.as_str().unwrap().to_string(),
-        )),
-        ValueKind::Null => Ok(Evaluation::Null),
-        ValueKind::Array | ValueKind::Object => Evaluation::try_from(result.value.clone())
-            .map_err(|()| format!("failed to convert {:?} value to Evaluation", result.kind)),
-    }
 }
 
 /// Entire test suite groups to skip.
@@ -93,14 +64,6 @@ const SKIPPED_CASES: LazyLock<HashSet<(&str, &str, usize)>> = LazyLock::new(|| {
         ("basic.json", "unknown context", 0),
         // We don't parse '' (an empty expression) as valid.
         ("basic.json", "empty_expression", 0),
-        // We don't currently support context evaluation on `fromJSON` in consteval.
-        // TODO: We should support this.
-        ("op_dot.json", "property-basics", 7),
-        ("op_dot.json", "property-basics", 8),
-        // We don't currently support index evaluation on `fromJSON` in consteval.
-        // TODO: We should support this.
-        ("op_idx.json", "index-following-group", 0),
-        ("op_idx.json", "index-following-function", 0),
     ])
 });
 
@@ -123,12 +86,17 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
 
             let label = format!("{suite_name}::{group}[{i}] `{}`", case.expr);
 
-            // Skip cases that require context variables.
-            // TODO: We should probably test these too, and broaden
-            // `consteval` to include support for known contexts.
-            if case.contexts.is_some() {
-                continue;
-            }
+            let evaluate = |expr: &Expr<'_>| match &case.contexts {
+                None => expr.consteval(),
+                Some(contexts) => {
+                    let mut bindings = TrackedValue::known(contexts.clone());
+                    let outcomes = Evaluator::default().evaluate(expr, &mut bindings);
+                    let [outcome] = outcomes.as_slice() else {
+                        return None;
+                    };
+                    outcome.value.concrete()
+                }
+            };
 
             if let Some(err) = &case.err {
                 match err.kind {
@@ -144,7 +112,7 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
                     // Evaluation errors
                     ErrorKind::Evaluation => {
                         if let Ok(parsed) = Expr::parse(&case.expr)
-                            && parsed.consteval().is_some()
+                            && evaluate(&parsed).is_some()
                         {
                             failures.push(format!(
                                 "{label}: expected eval error {:?} but got a result",
@@ -161,24 +129,12 @@ fn run_test_file(suite_name: &str, failures: &mut Vec<String>) {
                         continue;
                     }
                 };
-                match to_evaluation(expected) {
-                    Ok(expected_eval) => match parsed.consteval() {
-                        Some(actual) => {
-                            if expected_eval != actual {
-                                failures.push(format!(
-                                    "{label}: expected {expected_eval:?}, got {actual:?}"
-                                ));
-                            }
-                        }
-                        None => {
-                            failures.push(format!(
-                                "{label}: expected {expected_eval:?}, but consteval returned None"
-                            ));
-                        }
-                    },
-                    Err(e) => {
-                        failures.push(format!("{label}: {e}"));
-                    }
+                let actual = evaluate(&parsed);
+                if actual.as_ref() != Some(&expected.value) {
+                    failures.push(format!(
+                        "{label}: expected {:?}, got {actual:?}",
+                        expected.value
+                    ));
                 }
             }
         }
