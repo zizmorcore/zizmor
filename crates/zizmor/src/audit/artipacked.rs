@@ -376,7 +376,6 @@ mod tests {
                 Client::new(
                     &github::GitHubHost::default(),
                     &github::GitHubToken::new(&std::env::var("GH_TOKEN").unwrap()).unwrap(),
-                    "/tmp".into(),
                 )
                 .unwrap(),
             ),

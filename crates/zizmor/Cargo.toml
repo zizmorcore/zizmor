@@ -12,6 +12,20 @@ readme.workspace = true
 homepage.workspace = true
 license.workspace = true
 
+[features]
+default = ["lsp"]
+# Test-only: enable 'crater' tests.
+crater-tests = ["online-tests"]
+# Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
+gh-token-tests = []
+lsp = ["dep:tower-lsp-server"]
+# Test-only: enable all online audits.
+online-tests = ["gh-token-tests"]
+# Enable JSON Schema generation for zizmor.yml
+schema = ["dep:schemars"]
+# Test-only: enable tests that require `unbuffer` for TTY behavior.
+tty-tests = []
+
 [dependencies]
 annotate-snippets.workspace = true
 anstream.workspace = true
@@ -22,7 +36,6 @@ clap = { workspace = true, features = ["derive", "env"] }
 clap_complete.workspace = true
 clap_complete_nushell.workspace = true
 clap-verbosity-flag = { workspace = true, features = ["tracing"] }
-etcetera.workspace = true
 flate2.workspace = true
 fst.workspace = true
 futures.workspace = true
@@ -76,20 +89,6 @@ fst.workspace = true
 
 [target.'cfg(not(any(target_family = "windows", target_os = "openbsd")))'.dependencies]
 tikv-jemallocator.workspace = true
-
-[features]
-default = ["lsp"]
-# Test-only: enable 'crater' tests.
-crater-tests = ["online-tests"]
-# Test-only: enable online audits that make use of a GitHub token via GH_TOKEN.
-gh-token-tests = []
-lsp = ["dep:tower-lsp-server"]
-# Test-only: enable all online audits.
-online-tests = ["gh-token-tests"]
-# Enable JSON Schema generation for zizmor.yml
-schema = ["dep:schemars"]
-# Test-only: enable tests that require `unbuffer` for TTY behavior.
-tty-tests = []
 
 [lints]
 workspace = true

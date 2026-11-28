@@ -976,30 +976,12 @@ zizmor --no-ignores example/example
 
 ## Caching between runs
 
-!!! tip
+!!! note
 
-    Persistent caching (between runs of `zizmor`) is available in `v0.10.0` and later.
+    As of `v1.34.0`, zizmor no longer supports persistent caching across runs,
+    and the `--cache-dir` flag has no effect.
 
-!!! warning
-
-    Caches can contain sensitive metadata, especially when auditing private
-    repositories! Think twice before sharing your cache or reusing
-    it across machine/visibility boundaries.
-
-`zizmor` caches HTTP responses from GitHub's REST APIs to speed up individual
-audits. This HTTP cache is persisted and re-used between runs as well.
-
-By default `zizmor` will cache to an appropriate user-level caching directory:
-
-* Linux and macOS: `$XDG_CACHE_DIR` (`~/.cache/zizmor` by default)
-* Windows: `~\AppData\Roaming\woodruffw\zizmor`.
-
-To override the default caching directory, pass `--cache-dir`:
-
-```bash
-# cache in /tmp instead
-zizmor --cache-dir /tmp/zizmor ...
-```
+    A future version of zizmor may remove `--cache-dir` entirely.
 
 ## Other GitHub hosts
 
