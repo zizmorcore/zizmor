@@ -2,13 +2,14 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     num::NonZeroUsize,
-    ops::Deref,
     str::FromStr,
 };
 
 use anyhow::{Context as _, anyhow};
+use astral_yaml_serde::Value;
 use camino::Utf8Path;
 use github_actions_models::common::RepositoryUses;
+use indexmap::IndexMap;
 use serde::{
     Deserialize,
     de::{self, DeserializeOwned},
@@ -16,7 +17,7 @@ use serde::{
 use thiserror::Error;
 
 #[cfg(feature = "schema")]
-pub mod schema;
+pub(crate) mod schema;
 
 use crate::{
     App, CollectionOptions,
@@ -56,11 +57,11 @@ pub(crate) enum ConfigErrorInner {
 
     /// The overall configuration file is syntactically invalid.
     #[error("invalid configuration syntax")]
-    Syntax(#[source] yaml_serde::Error),
+    Syntax(#[source] astral_yaml_serde::Error),
 
     /// A specific audit's configuration is syntactically invalid.
     #[error("invalid syntax for audit `{1}`")]
-    AuditSyntax(#[source] yaml_serde::Error, &'static str),
+    AuditSyntax(#[source] astral_yaml_serde::Error, &'static str),
 
     /// The `unpinned-uses` config is semantically invalid.
     #[error("invalid `unpinned-uses` config")]
@@ -182,7 +183,7 @@ pub(crate) struct AuditRuleConfig {
     ignore: Vec<WorkflowRule>,
     /// Rule-specific configuration.
     #[serde(default)]
-    config: Option<yaml_serde::Mapping>,
+    config: Option<IndexMap<String, Value>>,
     /// Remapping configuration.
     #[serde(default)]
     remap: Option<RemapConfig>,
@@ -200,18 +201,23 @@ struct RawConfig {
 
 impl RawConfig {
     fn load(contents: &str) -> Result<Self, ConfigErrorInner> {
-        yaml_serde::from_str(contents).map_err(ConfigErrorInner::Syntax)
+        astral_yaml_serde::from_str(contents).map_err(ConfigErrorInner::Syntax)
     }
 
     fn rule_config<T>(&self, ident: &'static str) -> Result<Option<T>, ConfigErrorInner>
     where
         T: DeserializeOwned,
     {
-        self.rules
-            .get(ident)
-            .and_then(|rule_config| rule_config.config.as_ref())
-            .map(|policy| yaml_serde::from_value::<T>(yaml_serde::Value::Mapping(policy.clone())))
-            .transpose()
+        let Some(options) = self.rules.get(ident).and_then(|rule| rule.config.as_ref()) else {
+            return Ok(None);
+        };
+
+        let entries = options
+            .iter()
+            .map(|(key, value)| (Value::String(key.clone()), value.clone()))
+            .collect();
+        T::deserialize(&Value::Mapping(entries))
+            .map(Some)
             .map_err(|e| ConfigErrorInner::AuditSyntax(e, ident))
     }
 }
@@ -236,34 +242,6 @@ impl Default for DependabotCooldownConfig {
     }
 }
 
-/// An `allow` or `deny` list of `uses:` patterns for the `forbidden-uses` audit.
-#[derive(Clone, Debug, Deserialize)]
-#[cfg_attr(
-    feature = "schema",
-    derive(schemars::JsonSchema),
-    schemars(with = "ForbiddenUsesConfigInner")
-)]
-#[serde(transparent)]
-pub(crate) struct ForbiddenUsesConfig(
-    // Slightly annoying wrapper for [`ForbiddenUsesConfigInner`], which is our
-    // real configuration type for the `forbidden-uses` rule.
-    //
-    // We need this wrapper type so that we can apply the `singleton_map`
-    // deserializer to the inner type, ensuring that we deserialize from a
-    // mapping with an explicit key discriminant (i.e. `allow:` or `deny:`)
-    // rather than a YAML tag. We could work around this by using serde's
-    // `untagged` instead, but this produces suboptimal user-facing error messages.
-    #[serde(with = "yaml_serde::with::singleton_map")] pub(crate) ForbiddenUsesConfigInner,
-);
-
-impl Deref for ForbiddenUsesConfig {
-    type Target = ForbiddenUsesConfigInner;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 /// Configuration for the `self-hosted-runner` audit.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
@@ -277,10 +255,11 @@ pub(crate) struct SelfHostedRunnerConfig {
     pub(crate) allow_groups: HashSet<String>,
 }
 
+/// An `allow` or `deny` list of `uses:` patterns for the `forbidden-uses` audit.
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
-pub(crate) enum ForbiddenUsesConfigInner {
+pub(crate) enum ForbiddenUsesConfig {
     Allow(Vec<RepositoryUsesPattern>),
     Deny(Vec<RepositoryUsesPattern>),
 }
@@ -856,6 +835,24 @@ mod tests {
     use std::str::FromStr as _;
 
     use super::WorkflowRule;
+
+    #[test]
+    fn audit_without_options_rejects_scalar_config() {
+        assert!(matches!(
+            super::Config::load("rules: {artipacked: {config: false}}"),
+            Err(super::ConfigErrorInner::Syntax(_))
+        ));
+    }
+
+    #[test]
+    fn forbidden_uses_requires_exactly_one_policy() {
+        let result =
+            super::Config::load("rules:\n  forbidden-uses:\n    config: {allow: [], deny: []}");
+        assert!(matches!(
+            result,
+            Err(super::ConfigErrorInner::AuditSyntax(_, "forbidden-uses"))
+        ));
+    }
 
     #[test]
     fn test_parse_workflow_rule() -> anyhow::Result<()> {

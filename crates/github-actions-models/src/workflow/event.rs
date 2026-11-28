@@ -341,7 +341,7 @@ pull_request:
 workflow_dispatch:
 issue_comment:";
 
-        let events = yaml_serde::from_str::<super::Events>(events).unwrap();
+        let events = astral_yaml_serde::from_str::<super::Events>(events).unwrap();
         assert_eq!(events.count(), 4);
     }
 
@@ -357,7 +357,7 @@ image_version:
   - 2.*
         "#;
 
-        let trigger = yaml_serde::from_str::<Trigger>(trigger).unwrap();
+        let trigger = astral_yaml_serde::from_str::<Trigger>(trigger).unwrap();
 
         insta::assert_debug_snapshot!(trigger, @r#"
         Trigger {

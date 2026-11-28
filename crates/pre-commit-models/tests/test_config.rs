@@ -9,6 +9,6 @@ fn test_load_all() {
     for sample_config in std::fs::read_dir(sample_configs).unwrap() {
         let sample_config = sample_config.unwrap().path();
         let config_contents = std::fs::read_to_string(sample_config).unwrap();
-        yaml_serde::from_str::<Config>(&config_contents).unwrap();
+        astral_yaml_serde::from_str::<Config>(&config_contents).unwrap();
     }
 }

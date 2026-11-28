@@ -10,7 +10,7 @@ fn test_load_all() {
         let sample_lock = sample_lock.unwrap().path();
         let lock_contents = std::fs::read_to_string(&sample_lock).unwrap();
 
-        match yaml_serde::from_str::<Lock>(&lock_contents) {
+        match astral_yaml_serde::from_str::<Lock>(&lock_contents) {
             Ok(_) => (),
             Err(e) => panic!("{sample_lock:?}: {e}"),
         }

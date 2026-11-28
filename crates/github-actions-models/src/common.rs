@@ -635,13 +635,13 @@ mod tests {
     #[test]
     fn test_permissions() {
         assert_eq!(
-            yaml_serde::from_str::<Permissions>("read-all").unwrap(),
+            astral_yaml_serde::from_str::<Permissions>("read-all").unwrap(),
             Permissions::Base(BasePermission::ReadAll)
         );
 
         let perm = "security-events: write";
         assert_eq!(
-            yaml_serde::from_str::<Permissions>(perm).unwrap(),
+            astral_yaml_serde::from_str::<Permissions>(perm).unwrap(),
             Permissions::Explicit(IndexMap::from([(
                 "security-events".into(),
                 Permission::Write
@@ -653,7 +653,7 @@ mod tests {
     fn test_env_empty_value() {
         let env = "foo:";
         assert_eq!(
-            yaml_serde::from_str::<Env>(env).unwrap()["foo"],
+            astral_yaml_serde::from_str::<Env>(env).unwrap()["foo"],
             EnvValue::String("".into())
         );
     }
@@ -1056,12 +1056,12 @@ mod tests {
     #[test]
     fn test_uses_deser_reusable() {
         // Dummy type for testing deser of `Uses`.
-        #[derive(Deserialize)]
+        #[derive(Debug, Deserialize)]
         #[serde(transparent)]
         struct Dummy(#[serde(deserialize_with = "reusable_step_uses")] Uses);
 
         insta::assert_debug_snapshot!(
-            yaml_serde::from_str::<Dummy>(
+            astral_yaml_serde::from_str::<Dummy>(
                 "octo-org/this-repo/.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
             )
             .map(|d| d.0)
@@ -1085,7 +1085,7 @@ mod tests {
         );
 
         insta::assert_debug_snapshot!(
-            yaml_serde::from_str::<Dummy>(
+            astral_yaml_serde::from_str::<Dummy>(
                 "octo-org/this-repo/.github/workflows/workflow-1.yml@notahash"
             ).map(|d| d.0).unwrap(),
             @r#"
@@ -1107,7 +1107,7 @@ mod tests {
         );
 
         insta::assert_debug_snapshot!(
-            yaml_serde::from_str::<Dummy>(
+            astral_yaml_serde::from_str::<Dummy>(
                 "octo-org/this-repo/.github/workflows/workflow-1.yml@abcd"
             ).map(|d| d.0).unwrap(),
             @r#"
@@ -1129,35 +1129,36 @@ mod tests {
         );
 
         // Invalid: remote reusable workflow without ref
-        insta::assert_debug_snapshot!(
-            yaml_serde::from_str::<Dummy>(
+        insta::assert_snapshot!(
+            astral_yaml_serde::from_str::<Dummy>(
                 "octo-org/this-repo/.github/workflows/workflow-1.yml"
-            ).map(|d| d.0).unwrap_err(),
-            @r#"Error("malformed `uses` ref: missing `@<ref>` in octo-org/this-repo/.github/workflows/workflow-1.yml")"#
+            )
+            .unwrap_err(),
+            @"$: malformed `uses` ref: missing `@<ref>` in octo-org/this-repo/.github/workflows/workflow-1.yml at bytes 0..51"
         );
 
         // Invalid: local reusable workflow with ref
-        insta::assert_debug_snapshot!(
-            yaml_serde::from_str::<Dummy>(
+        insta::assert_snapshot!(
+            astral_yaml_serde::from_str::<Dummy>(
                 "./.github/workflows/workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
-            ).map(|d| d.0).unwrap_err(),
-            @r#"Error("local reusable workflow reference can't specify `@<ref>`")"#
+            )
+            .unwrap_err(),
+            @"$: local reusable workflow reference can't specify `@<ref>` at bytes 0..75"
         );
 
         // Invalid: no ref at all
-        insta::assert_debug_snapshot!(
-            yaml_serde::from_str::<Dummy>(
-                ".github/workflows/workflow-1.yml"
-            ).map(|d| d.0).unwrap_err(),
-            @r#"Error("malformed `uses` ref: missing `@<ref>` in .github/workflows/workflow-1.yml")"#
+        insta::assert_snapshot!(
+            astral_yaml_serde::from_str::<Dummy>(".github/workflows/workflow-1.yml").unwrap_err(),
+            @"$: malformed `uses` ref: missing `@<ref>` in .github/workflows/workflow-1.yml at bytes 0..32"
         );
 
         // Invalid: missing user/repo
-        insta::assert_debug_snapshot!(
-            yaml_serde::from_str::<Dummy>(
+        insta::assert_snapshot!(
+            astral_yaml_serde::from_str::<Dummy>(
                 "workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89"
-            ).map(|d| d.0).unwrap_err(),
-            @r#"Error("malformed `uses` ref: owner/repo slug is too short: workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89")"#
+            )
+            .unwrap_err(),
+            @"$: malformed `uses` ref: owner/repo slug is too short: workflow-1.yml@172239021f7ba04fe7327647b213799853a9eb89 at bytes 0..55"
         );
     }
 
@@ -1169,10 +1170,10 @@ mod tests {
             x: bool,
         }
 
-        assert!(yaml_serde::from_str::<Dummy>("x:").unwrap().x);
+        assert!(astral_yaml_serde::from_str::<Dummy>("x:").unwrap().x);
         // TODO: Not sure if this is an overcorrection.
-        assert!(yaml_serde::from_str::<Dummy>("x: null").unwrap().x);
-        assert!(yaml_serde::from_str::<Dummy>("x: true").unwrap().x);
-        assert!(!yaml_serde::from_str::<Dummy>("x: false").unwrap().x)
+        assert!(astral_yaml_serde::from_str::<Dummy>("x: null").unwrap().x);
+        assert!(astral_yaml_serde::from_str::<Dummy>("x: true").unwrap().x);
+        assert!(!astral_yaml_serde::from_str::<Dummy>("x: false").unwrap().x)
     }
 }

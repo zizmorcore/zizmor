@@ -32,7 +32,7 @@ pub(crate) struct Dependabot {
 impl<'de> Validatable<'de> for Dependabot {
     type Target = dependabot::v2::Dependabot;
 
-    type Skeleton = yaml_serde::Mapping;
+    type Skeleton = indexmap::IndexMap<String, astral_yaml_serde::Value>;
 
     fn validator() -> &'static jsonschema::Validator {
         &DEPENDABOT_VALIDATOR

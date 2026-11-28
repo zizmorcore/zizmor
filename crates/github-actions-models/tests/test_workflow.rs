@@ -13,7 +13,7 @@ fn load_workflow(name: &str) -> Workflow {
         .join("tests/sample-workflows")
         .join(name);
     let workflow_contents = std::fs::read_to_string(workflow_path).unwrap();
-    yaml_serde::from_str(&workflow_contents).unwrap()
+    astral_yaml_serde::from_str(&workflow_contents).unwrap()
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn test_load_all() {
         let sample_workflow = sample_workflow.unwrap().path();
         let workflow_contents = std::fs::read_to_string(&sample_workflow).unwrap();
 
-        match yaml_serde::from_str::<Workflow>(&workflow_contents) {
+        match astral_yaml_serde::from_str::<Workflow>(&workflow_contents) {
             Ok(_) => (),
             Err(e) => panic!("{sample_workflow:?}: {e}"),
         }

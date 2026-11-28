@@ -135,6 +135,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "astral-yaml"
+version = "0.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ceecf101d3d1683acc194dda360a4093088f8e4470d2a32d3ebe13111887bff"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "astral-yaml-serde"
+version = "0.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "373a2148cbc078e90d38edd4064a83cd59bc9a3a5daa7c98cfcfae8f48bda704"
+dependencies = [
+ "astral-yaml",
+ "memchr",
+ "serde",
+]
+
+[[package]]
 name = "async-lock"
 version = "3.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1028,12 +1048,12 @@ dependencies = [
 name = "github-actions-models"
 version = "1.33.1"
 dependencies = [
+ "astral-yaml-serde",
  "indexmap",
  "insta",
  "self_cell",
  "serde",
  "tracing",
- "yaml_serde",
 ]
 
 [[package]]
@@ -2058,12 +2078,12 @@ checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
 name = "pre-commit-models"
 version = "1.33.1"
 dependencies = [
+ "astral-yaml-serde",
  "indexmap",
  "insta",
  "self_cell",
  "serde",
  "url",
- "yaml_serde",
 ]
 
 [[package]]
@@ -4351,6 +4371,7 @@ dependencies = [
  "annotate-snippets",
  "anstream",
  "anyhow",
+ "astral-yaml-serde",
  "async-trait",
  "camino",
  "clap",

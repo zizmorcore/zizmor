@@ -32,7 +32,7 @@ fn gha_hazmat() -> Result<()> {
 fn issue_569() -> Result<()> {
     // Regression test for #569.
     // Ensures that we don't produce spurious warnings for unreachable
-    // expressions (i.e. inside comments).
+    // expressions (i.e. inside comments) in build.yml.
     insta::assert_snapshot!(
         Zizmor::cargo_bin()
             .offline(NetworkMode::AssertOnline)
@@ -40,14 +40,14 @@ fn issue_569() -> Result<()> {
             .args(["--no-online-audits", "--collect=workflows"])
             .input("python/cpython@f963239ff1f986742d4c6bab2ab7b73f5a4047f6")
             .run()?,
-        @"
+        @r#"
     INFO zizmor: 🌈 zizmor v@@VERSION@@
+    WARN collect_inputs:fetch_workflows{slug=InputSlug { owner: "python", repo: "cpython", git_ref: Some("f963239ff1f986742d4c6bab2ab7b73f5a4047f6") }}: zizmor::registry::input: failed to parse input: flow continuation must be indented at bytes 1208..1209
     INFO audit: zizmor: 🌈 completed .github/workflows/add-issue-header.yml
     INFO audit: zizmor: 🌈 completed .github/workflows/build.yml
     INFO audit: zizmor: 🌈 completed .github/workflows/documentation-links.yml
     INFO audit: zizmor: 🌈 completed .github/workflows/jit.yml
     INFO audit: zizmor: 🌈 completed .github/workflows/lint.yml
-    INFO audit: zizmor: 🌈 completed .github/workflows/mypy.yml
     INFO audit: zizmor: 🌈 completed .github/workflows/new-bugs-announce-notifier.yml
     INFO audit: zizmor: 🌈 completed .github/workflows/project-updater.yml
     INFO audit: zizmor: 🌈 completed .github/workflows/require-pr-label.yml
@@ -62,7 +62,7 @@ fn issue_569() -> Result<()> {
     INFO audit: zizmor: 🌈 completed .github/workflows/stale.yml
     INFO audit: zizmor: 🌈 completed .github/workflows/tail-call.yml
     INFO audit: zizmor: 🌈 completed .github/workflows/verify-ensurepip-wheels.yml
-    "
+    "#
     );
     Ok(())
 }
@@ -290,7 +290,7 @@ fn invalid_config_file() -> Result<()> {
     Caused by:
         0: configuration error in @@CONFIG@@
         1: invalid configuration syntax
-        2: missing field `rules`
+        2: expected a mapping at bytes 0..0
     "
     );
 
@@ -362,8 +362,8 @@ fn test_issue_1394() -> Result<()> {
     failed to load file://@@INPUT@@ as workflow
 
     Caused by:
-        0: invalid YAML syntax: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
-        1: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+        0: invalid YAML syntax: $["jobs"]["demo"]["steps"][0].key_at(3): duplicate mapping key at bytes 292..295
+        1: $["jobs"]["demo"]["steps"][0].key_at(3): duplicate mapping key at bytes 292..295
     "#
     );
 
@@ -377,7 +377,7 @@ fn test_issue_1394() -> Result<()> {
             .run()?,
         @r#"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
-     WARN collect_inputs: zizmor::registry::input: failed to parse input: jobs.demo.steps[0]: duplicate entry with key "env" at line 10 column 9
+     WARN collect_inputs: zizmor::registry::input: failed to parse input: $["jobs"]["demo"]["steps"][0].key_at(3): duplicate mapping key at bytes 292..295
     fatal: no audit was performed
     error: no inputs collected
      |

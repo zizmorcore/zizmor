@@ -1,8 +1,8 @@
 //! Workflow jobs.
 
+use astral_yaml_serde::Value;
 use indexmap::IndexMap;
 use serde::Deserialize;
-use yaml_serde::Value;
 
 use crate::common::expr::{BoE, LoE};
 use crate::common::{CacheMode, DockerUses, Env, If, Permissions, Uses, custom_error};
@@ -282,12 +282,12 @@ mod tests {
     #[test]
     fn test_secrets() {
         assert_eq!(
-            yaml_serde::from_str::<Secrets>("inherit").unwrap(),
+            astral_yaml_serde::from_str::<Secrets>("inherit").unwrap(),
             Secrets::Inherit
         );
 
         let secrets = "foo-secret: bar";
-        let Secrets::Env(secrets) = yaml_serde::from_str::<Secrets>(secrets).unwrap() else {
+        let Secrets::Env(secrets) = astral_yaml_serde::from_str::<Secrets>(secrets).unwrap() else {
             panic!("unexpected secrets variant");
         };
         assert_eq!(secrets["foo-secret"], EnvValue::String("bar".into()));
@@ -299,7 +299,7 @@ mod tests {
         let Strategy {
             matrix: Some(LoE::Expr(expr)),
             ..
-        } = yaml_serde::from_str::<Strategy>(strategy).unwrap()
+        } = astral_yaml_serde::from_str::<Strategy>(strategy).unwrap()
         else {
             panic!("unexpected matrix variant");
         };
@@ -319,7 +319,7 @@ matrix:
                     dimensions: LoE::Literal(dims),
                 })),
             ..
-        } = yaml_serde::from_str::<Strategy>(strategy).unwrap()
+        } = astral_yaml_serde::from_str::<Strategy>(strategy).unwrap()
         else {
             panic!("unexpected matrix variant");
         };
@@ -332,9 +332,9 @@ matrix:
         let runson = "group: \nlabels: []";
 
         assert_eq!(
-            yaml_serde::from_str::<RunsOn>(runson)
+            astral_yaml_serde::from_str::<RunsOn>(runson)
                 .unwrap_err()
-                .to_string(),
+                .message,
             "runs-on must provide either `group` or one or more `labels`"
         );
     }
@@ -349,7 +349,7 @@ working-directory: /tmp
 background: true
 "#;
 
-        insta::assert_debug_snapshot!(&yaml_serde::from_str::<Step>(step).unwrap(), @r#"
+        insta::assert_debug_snapshot!(&astral_yaml_serde::from_str::<Step>(step).unwrap(), @r#"
         Run(
             RunStep {
                 run: "foo",

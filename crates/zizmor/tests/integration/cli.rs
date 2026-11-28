@@ -189,8 +189,8 @@ fn test_stdin_invalid_yaml() -> anyhow::Result<()> {
     failed to load <stdin> as workflow
 
     Caused by:
-        0: invalid YAML syntax: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
-        1: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
+        0: invalid YAML syntax: expected ',' or ']' at bytes 9..9
+        1: expected ',' or ']' at bytes 9..9
     "
     );
 
@@ -213,8 +213,8 @@ fn test_stdin_invalid_yaml_strict() -> anyhow::Result<()> {
     failed to load <stdin> as workflow
 
     Caused by:
-        0: invalid YAML syntax: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
-        1: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 2
+        0: invalid YAML syntax: expected ',' or ']' at bytes 9..9
+        1: expected ',' or ']' at bytes 9..9
     "
     );
 

@@ -57,7 +57,7 @@ pub(crate) struct Workflow {
 impl<'de> Validatable<'de> for Workflow {
     type Target = workflow::Workflow;
 
-    type Skeleton = yaml_serde::Mapping;
+    type Skeleton = indexmap::IndexMap<String, astral_yaml_serde::Value>;
 
     fn validator() -> &'static jsonschema::Validator {
         &WORKFLOW_VALIDATOR

@@ -47,7 +47,7 @@ pub(crate) struct Action {
 impl<'de> Validatable<'de> for Action {
     type Target = action::Action;
 
-    type Skeleton = yaml_serde::Mapping;
+    type Skeleton = indexmap::IndexMap<String, astral_yaml_serde::Value>;
 
     fn validator() -> &'static jsonschema::Validator {
         &ACTION_VALIDATOR

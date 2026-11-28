@@ -95,12 +95,12 @@ pub(crate) trait Validatable<'de> {
     fn validator() -> &'static jsonschema::Validator;
 
     fn validate(contents: &'de str) -> Result<Self::Target, CollectionError> {
-        match yaml_serde::from_str::<Self::Target>(contents) {
+        match astral_yaml_serde::from_str::<Self::Target>(contents) {
             Ok(value) => Ok(value),
             Err(e) => {
                 // Something a little wonky happens here: we want
                 // to distinguish between syntax and semantic errors,
-                // but serde-yaml doesn't give us an API to do that.
+                // but astral-yaml-serde doesn't give us an API to do that.
                 // To approximate it, we re-parse the input as a
                 // `Self::Skeleton`, then convert that `Self::Skeleton`
                 // into a `serde_json::Value` and use it as an oracle -- a successful
@@ -114,13 +114,16 @@ pub(crate) trait Validatable<'de> {
                 // like duplicate keys within mappings. See #1395 for an example of this.
                 //
                 // We do this in a nested fashion to avoid re-parsing the input twice if we
-                // can help it, and because the more obvious trick (`yaml_serde::from_value`)
+                // can help it, and because the more obvious trick (`Self::Target::deserialize(&value)`)
                 // doesn't work due to a lack of referential transparency.
                 //
                 // See: https://github.com/dtolnay/serde-yaml/issues/170
                 // See: https://github.com/dtolnay/serde-yaml/issues/395
+                //
+                // The above links show the problem for serde-yaml, but are true
+                // for all serde implementations more generally.
 
-                match yaml_serde::from_str::<Self::Skeleton>(contents) {
+                match astral_yaml_serde::from_str::<Option<Self::Skeleton>>(contents) {
                     // We know we have valid YAML, so one of two things happened here:
                     // 1. The input is semantically valid, but we have a bug in
                     //    `github-actions-models`.

@@ -379,7 +379,7 @@ fn test_invalid_configs() -> anyhow::Result<()> {
     Caused by:
         0: configuration error in @@CONFIG@@
         1: invalid configuration syntax
-        2: unknown field `rule`, expected `rules` at line 4 column 1
+        2: $.key_at(0): unknown field `rule`, expected `rules` at bytes 69..73
     "
     );
 
