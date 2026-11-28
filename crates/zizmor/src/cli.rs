@@ -213,7 +213,7 @@ pub(crate) struct NetworkArgs {
     /// directory for on-disk HTTP caching. Newer versions of zizmor
     /// perform in-memory caching only.
     ///
-    /// This is an unused flag, and will be removed in a future version
+    /// This is an unused flag, and may be removed in a future version
     /// of zizmor.
     #[arg(long, hide = true)]
     pub(crate) cache_dir: Option<String>,
