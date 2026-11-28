@@ -1058,7 +1058,7 @@ fn test_pre_commit_fix() -> anyhow::Result<()> {
      repos:
        - repo: https://github.com/pre-commit/pre-commit-hooks
     -    rev: v2.3.0
-    +    rev: d6d3bd94604578adbd918c5a00d531d98350d86f # v2.3.0
+    +    rev: d6d3bd94604578adbd918c5a00d531d98350d86f # frozen: v2.3.0
          hooks:
            - id: check-yaml
     "

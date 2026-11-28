@@ -75,7 +75,7 @@ impl UnpinnedUses {
             _ => git_ref.to_owned(),
         };
 
-        let (field, title, replacement) = match repo {
+        let (field, title, replacement, comment) = match repo {
             RepoRef::Uses(uses) => {
                 let action = match uses.subpath() {
                     Some(subpath) => format!("{slug}/{subpath}"),
@@ -85,11 +85,15 @@ impl UnpinnedUses {
                     "uses",
                     format!("pin {action}@{git_ref} to {commit}"),
                     format!("{action}@{commit}"),
+                    format!("# {longest_tag}"),
                 )
             }
-            RepoRef::Url { .. } | RepoRef::Scp { .. } => {
-                ("rev", format!("pin {slug} to {commit}"), commit.to_owned())
-            }
+            RepoRef::Url { .. } | RepoRef::Scp { .. } => (
+                "rev",
+                format!("pin {slug} to {commit}"),
+                commit.to_owned(),
+                format!("# frozen: {longest_tag}"),
+            ),
         };
         let location = parent.location().with_keys([field.into()]);
 
@@ -105,7 +109,7 @@ impl UnpinnedUses {
                 Patch {
                     route: location.route,
                     operation: Op::EmplaceComment {
-                        new: format!("# {longest_tag}").into(),
+                        new: comment.into(),
                     },
                 },
             ],
