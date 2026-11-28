@@ -974,11 +974,13 @@ To do this, you can pass `--no-ignores` during audits:
 zizmor --no-ignores example/example
 ```
 
-## Caching between runs
+## Caching
+
+zizmor maintains an in-memory HTTP cache during each run.
 
 !!! note
 
-    As of `v1.34.0`, zizmor no longer supports persistent caching across runs,
+    As of `v1.34.0`, zizmor no longer supports persistent caching _across_ runs,
     and the `--cache-dir` flag has no effect.
 
     A future version of zizmor may remove `--cache-dir` entirely.
