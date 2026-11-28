@@ -424,7 +424,7 @@ fn test_flow_mapping_step() -> Result<()> {
       = note: audit confidence → Low
       = note: this finding has an auto-fix
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
      --> @@INPUT@@:8:28
       |
     8 |       - &checkout { uses: "actions/checkout@v4" }
@@ -432,7 +432,7 @@ fn test_flow_mapping_step() -> Result<()> {
       |
       = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
      --> @@INPUT@@:8:28
       |
     8 |       - &checkout { uses: "actions/checkout@v4" }

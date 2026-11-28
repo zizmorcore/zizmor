@@ -2238,35 +2238,28 @@ default versions or `latest`.
 
 | Type             | Examples         | Introduced in | Works offline  | Auto-fixes available | Configurable |
 |------------------|------------------|---------------|----------------|--------------------|--------------|
-| Workflow, Action | [unpinned.yml]   | v0.4.0        | ✅             | ⚠️                | ✅           |
+| Workflow, Action, pre-commit | [unpinned.yml]   | v0.4.0        | ✅             | ⚠️                | ✅           |
 
 [unpinned.yml]: https://github.com/woodruffw/gha-hazmat/blob/main/.github/workflows/unpinned.yml
 
-Detects "unpinned" `#!yaml uses:` clauses.
+Detects "unpinned" Git repository references, including GitHub Actions
+`#!yaml uses:` clauses and pre-commit `#!yaml rev:` clauses.
 
-When a `#!yaml uses:` clause is not pinned by branch, tag, or SHA reference,
-GitHub Actions will use the latest commit on the referenced repository's
-default branch (or, in the case of Docker actions, the `:latest` tag).
-
-Similarly, if a `#!yaml uses:` clause is pinned via branch or tag (i.e. a "symbolic
+If a repository reference is pinned via branch or tag (i.e. a "symbolic
 reference") instead of a SHA reference, GitHub Actions will use whatever
 commit is at the tip of that branch or tag. GitHub does not have immutable
 branches or tags, meaning that the action can change without the symbolic
 reference changing.
 
-This can be a security risk:
-
-1. Completely unpinned actions can be changed at any time by the upstream
-   repository.
-2. Tag- or branch-pinned actions can be changed by the upstream repository,
-   either by force-pushing over the tag or updating the branch.
+This can be a security risk, as tag- or branch-pinned actions can be changed by
+the upstream repository, either by force-pushing over the tag or updating the branch.
 
 If the upstream repository is trusted, then symbolic references are
 often suitable. However, if the upstream repository is not trusted, then
 actions should be pinned by SHA reference.
 
 By default, this audit applies a blanket hash-pinning policy:
-all actions must be pinned by SHA reference.
+all repositories must be pinned by SHA reference.
 
 !!! note "Behavior change"
 
@@ -2316,16 +2309,14 @@ The valid policies are:
   fully pinned by SHA reference.
 * `ref-pin`: any `#!yaml uses:` clauses that match the associated pattern must be
   pinned either symbolic or SHA reference.
-* `any`: no pinning is required for any `#!yaml uses:` clauses that match the associated
+* `any`: no particular pinning is required for any `#!yaml uses:` clauses that match the associated
   pattern.
 
     !!! tip
 
-        For repository `#!yaml uses` clauses like `#!yaml uses: actions/checkout@v4`
-        this is equivalent to `ref-pin`, as GitHub Actions does not permit
-        completely unpinned repository actions.
+        `any` is equivalent to `ref-pin`.
 
-If a `#!yaml uses:` clauses matches multiple rules, the most specific one is used
+If a repository matches multiple rules, the most specific one is used
 regardless of definition order.
 
 !!! example
@@ -2362,7 +2353,7 @@ regardless of definition order.
 
 !!! important
 
-    If a `#!yaml uses:` clause does not match any rules, then an implicit
+    If a repository does not match any rules, then an implicit
     `#!yaml "*": hash-pin` rule is applied. Users can override this implicit rule
     by adding their own `*` rule or a more precise rule, e.g.
     `#!yaml "github/*": ref-pin` for actions under the @github organization.
@@ -2372,7 +2363,7 @@ regardless of definition order.
 !!! tip
 
     You can use `zizmor`'s [fix mode](./usage.md#auto-fixing-results) to
-    automatically hash-pin your workflows and actions.
+    automatically hash-pin repository references.
 
     Alternatively, there are several third-party tools that can automatically
     hash-pin your workflows and actions for you:

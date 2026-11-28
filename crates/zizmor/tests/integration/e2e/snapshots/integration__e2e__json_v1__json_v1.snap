@@ -229,7 +229,7 @@ expression: output
   },
   {
     "ident": "unpinned-uses",
-    "desc": "unpinned action reference",
+    "desc": "unpinned repository reference",
     "url": "https://docs.zizmor.sh/audits/#unpinned-uses",
     "determinations": {
       "confidence": "High",

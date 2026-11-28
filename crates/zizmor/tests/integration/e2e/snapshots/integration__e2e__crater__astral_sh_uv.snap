@@ -1702,7 +1702,7 @@ help[anonymous-definition]: workflow or action definition without a name
     = note: audit confidence → High
     = tip: use 'name: ...' to give this workflow a name
 
-error[unpinned-uses]: unpinned action reference
+error[unpinned-uses]: unpinned repository reference
   --> .pre-commit-config.yaml:10:10
    |
  9 |   - repo: https://github.com/abravalheri/validate-pyproject
@@ -1713,7 +1713,7 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
-error[unpinned-uses]: unpinned action reference
+error[unpinned-uses]: unpinned repository reference
   --> .pre-commit-config.yaml:15:10
    |
 14 |   - repo: https://github.com/crate-ci/typos
@@ -1724,7 +1724,7 @@ error[unpinned-uses]: unpinned action reference
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
-error[unpinned-uses]: unpinned action reference
+error[unpinned-uses]: unpinned repository reference
   --> .pre-commit-config.yaml:48:10
    |
 47 |   - repo: https://github.com/astral-sh/ruff-pre-commit

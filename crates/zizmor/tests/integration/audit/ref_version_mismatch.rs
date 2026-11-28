@@ -13,7 +13,7 @@ fn test_ref_version_mismatch() -> Result<()> {
         @"
      INFO zizmor: 🌈 zizmor v@@VERSION@@
      INFO audit: zizmor: 🌈 completed @@INPUT@@
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:22:15
        |
     22 |       - uses: actions/setup-node@v3.8.2 # v3.8.2
@@ -62,7 +62,7 @@ fn test_missing_version_comment_pedantic() -> Result<()> {
             .input(input_under_test("ref-version-mismatch.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:22:15
        |
     22 |       - uses: actions/setup-node@v3.8.2 # v3.8.2

@@ -236,7 +236,7 @@ fn test_pr_425_backstop_action() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:29:13
        |
     29 |       uses: azure/powershell@whatever

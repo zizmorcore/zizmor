@@ -9,7 +9,7 @@ fn test_unpinned_uses_pedantic() -> Result<()> {
             .args(["--pedantic"])
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:16:15
        |
     16 |       - uses: actions/checkout@v3
@@ -31,7 +31,7 @@ fn test_unpinned_uses_default() -> Result<()> {
             .input(input_under_test("unpinned-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:16:15
        |
     16 |       - uses: actions/checkout@v3
@@ -54,7 +54,7 @@ fn test_action_pedantic() -> Result<()> {
             .args(["--pedantic"])
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:12:13
        |
     12 |       uses: asdf-vm/actions/setup@v3
@@ -62,7 +62,7 @@ fn test_action_pedantic() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:15:13
        |
     15 |       uses: asdf-vm/actions/setup@main
@@ -99,7 +99,7 @@ fn test_issue_659_repro() -> Result<()> {
             .args(["--pedantic"])
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |         uses: actions/setup-node@v4
@@ -124,7 +124,7 @@ fn test_issue_1543_repro() -> Result<()> {
             .input(input_under_test("unpinned-uses/issue-1543-repro.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:18:11
        |
     18 |           actions/checkout@v4
@@ -147,7 +147,7 @@ fn test_default_config() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
@@ -155,7 +155,7 @@ fn test_default_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
@@ -163,7 +163,7 @@ fn test_default_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
@@ -171,7 +171,7 @@ fn test_default_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
@@ -179,7 +179,7 @@ fn test_default_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
@@ -205,7 +205,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
@@ -213,7 +213,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
@@ -221,7 +221,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
@@ -229,7 +229,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
@@ -237,7 +237,7 @@ fn test_hash_pin_everything_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
@@ -276,7 +276,7 @@ fn test_composite_config() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
@@ -284,7 +284,7 @@ fn test_composite_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
@@ -292,7 +292,7 @@ fn test_composite_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
@@ -315,7 +315,7 @@ fn test_composite_config_2() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
@@ -323,7 +323,7 @@ fn test_composite_config_2() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
@@ -346,7 +346,7 @@ fn test_empty_config() -> Result<()> {
             .input(input_under_test("unpinned-uses/menagerie-of-uses.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:12:15
        |
     12 |       - uses: actions/setup-python@v4
@@ -354,7 +354,7 @@ fn test_empty_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:14:15
        |
     14 |       - uses: actions/checkout@v3
@@ -362,7 +362,7 @@ fn test_empty_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:22:15
        |
     22 |       - uses: pypa/gh-action-pypi-publish@release/v1
@@ -370,7 +370,7 @@ fn test_empty_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:24:15
        |
     24 |       - uses: github/codeql-action/init@v3
@@ -378,7 +378,7 @@ fn test_empty_config() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:26:15
        |
     26 |       - uses: github/codeql-action/upload-sarif@v3
@@ -593,7 +593,7 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
             .input(input_under_test("unpinned-uses/reusable-workflow-unpinned.yml"))
             .run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:17:11
        |
     17 |     uses: owner/repo/.github/workflows/reusable.yml@main
@@ -601,7 +601,7 @@ fn test_reusable_workflow_unpinned() -> Result<()> {
        |
        = note: audit confidence → High
 
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> @@INPUT@@:21:11
        |
     21 |     uses: owner/repo/.github/workflows/reusable.yml@v1
@@ -650,7 +650,7 @@ fn test_honors_lockfile() -> anyhow::Result<()> {
         .args(["--ignore-lockfile"])
         .run()?,
     @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
       --> .github/workflows/neutral.yml:18:15
        |
     18 |       - uses: actions/checkout@v7.0.1
@@ -691,7 +691,7 @@ fn test_pre_commit() -> anyhow::Result<()> {
     insta::assert_snapshot!(
         Zizmor::cargo_bin().input(workspace.path()).run()?,
         @"
-    error[unpinned-uses]: unpinned action reference
+    error[unpinned-uses]: unpinned repository reference
      --> @@INPUT@@/.pre-commit-config.yaml:3:10
       |
     2 |   - repo: https://github.com/pre-commit/pre-commit-hooks
