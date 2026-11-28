@@ -1,5 +1,38 @@
 use zizmor_dev::Zizmor;
 
+#[test]
+fn cyclic_job_dependencies() -> anyhow::Result<()> {
+    let workflow = "\
+on: push
+jobs:
+  a:
+    needs: b
+    runs-on: ubuntu-latest
+    steps:
+      - run: ':'
+  b:
+    needs: a
+    uses: ./.github/workflows/reused.yml
+";
+    insta::assert_snapshot!(
+        Zizmor::cargo_bin()
+            .stdin(workflow)
+            .expects_failure(1)
+            .args(["-"])
+            .run()?,
+        @"
+     INFO zizmor: 🌈 zizmor v@@VERSION@@
+    fatal: no audit was performed
+    failed to load <stdin> as workflow
+
+    Caused by:
+        invalid input: cyclic job dependencies
+    "
+    );
+
+    Ok(())
+}
+
 /// Test that `-` reads a workflow from stdin.
 #[test]
 fn test_stdin_workflow() -> anyhow::Result<()> {

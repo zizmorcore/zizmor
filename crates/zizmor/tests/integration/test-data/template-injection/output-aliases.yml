@@ -1,0 +1,50 @@
+on: issues
+permissions: {}
+
+jobs:
+  producer:
+    runs-on: ubuntu-latest
+    outputs:
+      title: ${{ github.event.issue.title }}
+    steps:
+      - run: echo producer
+
+  middle:
+    needs: producer
+    runs-on: ubuntu-latest
+    outputs:
+      title: ${{ needs.producer.outputs.title }}
+    steps:
+      - run: echo middle
+
+  consumer:
+    needs: middle
+    runs-on: ubuntu-latest
+    env:
+      TITLE: ${{ needs.middle.outputs.title }}
+    steps:
+      - run: echo "${{ env.TITLE }}"
+
+  builds:
+    strategy:
+      matrix:
+        os: [linux, mac]
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ matrix.os == 'other' }}
+      os: ${{ matrix.os }}
+      linux: ${{ matrix.os == 'linux' && 'built' || '' }}
+      mac: ${{ matrix.os == 'mac' && 'built' || '' }}
+    steps:
+      - run: echo building
+
+  summary:
+    needs: builds
+    env:
+      ENABLED: ${{ needs.builds.outputs.enabled == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "${{ needs.builds.outputs.linux && needs.builds.outputs.mac && github.event.issue.title }}"
+          echo "${{ needs.builds.outputs.os == 'linux' && needs.builds.outputs.os == 'mac' && github.event.issue.title }}"
+          echo "${{ env.ENABLED && needs.builds.outputs.enabled && github.event.issue.title }}"

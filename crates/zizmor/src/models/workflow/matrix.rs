@@ -1,11 +1,12 @@
 //! Strategy matrix modeling and APIs.
 
+mod rows;
+
 use crate::{
     finding::location::{Locatable, SymbolicLocation},
     models::workflow::NormalJob,
     utils::extract_fenced_expressions,
 };
-use github_actions_expressions::context::Context;
 use github_actions_models::{common::expr::LoE, workflow::job};
 use indexmap::IndexMap;
 
@@ -287,7 +288,7 @@ impl<'doc> Expansions<'doc> {
 pub(crate) struct Matrix<'doc> {
     inner: &'doc LoE<job::Matrix>,
     parent: NormalJob<'doc>,
-    expansions: Expansions<'doc>,
+    expansions: std::sync::OnceLock<Expansions<'doc>>,
 }
 
 impl<'doc> Matrix<'doc> {
@@ -298,29 +299,14 @@ impl<'doc> Matrix<'doc> {
         Some(Self {
             inner: matrix,
             parent: parent.clone(),
-            expansions: Expansions::new(matrix, parent),
+            expansions: Default::default(),
         })
     }
 
     /// The expansions for this matrix
     pub(crate) fn expansions(&self) -> &Expansions<'doc> {
-        &self.expansions
-    }
-
-    /// Checks whether some expanded path leads to an expression
-    pub(crate) fn expands_to_static_values(&self, context: &Context) -> bool {
-        // If any part of the matrix is indirect, we can't determine whether it expands to
-        // static values or not.
-        if self.expansions().indirectly_expanded.is_some() {
-            return false;
-        }
-
-        let expands_to_expression = self
-            .expansions()
-            .iter()
-            .any(|expansion| context.matches(expansion.path.as_str()) && !expansion.is_static());
-
-        !expands_to_expression
+        self.expansions
+            .get_or_init(|| Expansions::new(self.inner, &self.parent))
     }
 }
 
@@ -344,7 +330,6 @@ impl<'doc> Locatable<'doc> for Matrix<'doc> {
 
 #[cfg(test)]
 mod tests {
-    use github_actions_expressions::context::Context;
 
     use crate::{
         models::{
@@ -1038,65 +1023,6 @@ jobs:
         for expansion in matrix.expansions().all_expansions.clone() {
             expansion.location.concretize(workflow.as_document())?;
         }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_direct_matrix_expands_to_static_values() -> anyhow::Result<()> {
-        let workflow_yaml = r#"
-name: test
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        trivially-static: [a, b, c, d]
-        trivially-dynamic: [a, '${{ github.ref }}', c, d]
-        nested-static:
-          - { a: 1, b: 2 }
-          - { a: 3, b: 4 }
-        nested-dynamic:
-          - { a: 1, b: '${{ github.ref }}' }
-          - { a: 3, b: 4 }
-    steps:
-      - run: true
-        "#;
-
-        let workflow = Workflow::from_string(
-            workflow_yaml.into(),
-            InputKey::local("fakegroup".into(), "test.yml", None, None),
-        )?;
-
-        let job = {
-            let github_actions_models::workflow::Job::NormalJob(job) =
-                workflow.jobs.get("test").unwrap()
-            else {
-                panic!("Expected a normal job");
-            };
-
-            NormalJob::new("test", job, &workflow)
-        };
-
-        let matrix = Matrix::new(&job).unwrap();
-
-        assert!(
-            matrix.expands_to_static_values(&Context::parse("matrix.trivially-static").unwrap())
-        );
-        assert!(
-            !matrix.expands_to_static_values(&Context::parse("matrix.trivially-dynamic").unwrap())
-        );
-        assert!(
-            matrix.expands_to_static_values(&Context::parse("matrix.nested-static.a").unwrap())
-        );
-        assert!(
-            !matrix.expands_to_static_values(&Context::parse("matrix.nested-dynamic.b").unwrap())
-        );
-
-        // We can assert that a nonexistent path expands to static values because
-        // we have a 'direct' matrix here, not a dynamic expression.
-        assert!(matrix.expands_to_static_values(&Context::parse("matrix.nonexistent").unwrap()));
 
         Ok(())
     }

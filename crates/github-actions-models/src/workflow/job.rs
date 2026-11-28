@@ -1,7 +1,7 @@
 //! Workflow jobs.
 
 use indexmap::IndexMap;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use yaml_serde::Value;
 
 use crate::common::expr::{BoE, LoE};
@@ -212,7 +212,7 @@ pub struct Strategy {
     pub max_parallel: Option<LoE<u64>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct Matrix {
     #[serde(default)]

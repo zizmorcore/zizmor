@@ -891,6 +891,9 @@ error[template-injection]: code injection via template expansion
 error[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:55:36
    |
+25 |       hackme:
+   |       ------ input hackme declared here
+...
 54 |         run: |
    |         --- this run block
 55 |           echo "doing a thing: ${{ inputs.hackme }}"
@@ -902,6 +905,9 @@ error[template-injection]: code injection via template expansion
 error[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:65:36
    |
+29 |       hackme-call:
+   |       ----------- input hackme-call declared here
+...
 64 |         run: |
    |         --- this run block
 65 |           echo "doing a thing: ${{ inputs.hackme-call }}"
@@ -910,26 +916,49 @@ error[template-injection]: code injection via template expansion
    = note: audit confidence → High
    = note: this finding has an auto-fix
 
-warning[template-injection]: code injection via template expansion
+help[template-injection]: code injection via template expansion
+  --> .github/workflows/template-injection.yml:77:36
+   |
+35 |   HACKME_ENV: hello
+   |   -----------------
+   |   |
+   |   an earlier step may overwrite HACKME_ENV
+   |   HACKME_ENV is defined here
+...
+76 |         run: |
+   |         --- this run block
+77 |           echo "doing a thing: ${{ env.HACKME_ENV }}"
+   |                                    ^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+
+error[template-injection]: code injection via template expansion
   --> .github/workflows/template-injection.yml:87:36
    |
+44 |         dynamic: ${{ github.event.client_payload.mystery_meat }}
+   |         -------------------------------------------------------- matrix value defined here
+...
 86 |         run: |
    |         --- this run block
 87 |           echo "doing a thing: ${{ matrix.dynamic }}"
    |                                    ^^^^^^^^^^^^^^ may expand into attacker-controllable code
    |
-   = note: audit confidence → Medium
+   = note: audit confidence → High
    = note: this finding has an auto-fix
 
-warning[template-injection]: code injection via template expansion
+error[template-injection]: code injection via template expansion
    --> .github/workflows/template-injection.yml:109:36
     |
+103 |       matrix: ${{ github.event.client_payload.mystery_meat }}
+    |       ------------------------------------------------------- matrix value defined here
+...
 108 |         run: |
     |         --- this run block
 109 |           echo "doing a thing: ${{ matrix.unknown-key }}"
     |                                    ^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
     |
-    = note: audit confidence → Medium
+    = note: audit confidence → High
     = note: this finding has an auto-fix
 
 error[template-injection]: code injection via template expansion
@@ -1100,4 +1129,4 @@ error[dangerous-triggers]: use of fundamentally insecure workflow trigger
    |
    = note: audit confidence → Medium
 
-202 findings (103 suppressed): 7 informational, 0 low, 27 medium, 65 high
+202 findings (102 suppressed): 7 informational, 1 low, 25 medium, 67 high

@@ -1,10 +1,16 @@
 name: example
-on: push
+on:
+  workflow_dispatch:
+    inputs:
+      free-threading:
+        description: Enable free-threading
+        type: choice
+        options: ['false', 'true']
 
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -15,9 +21,9 @@ jobs:
     steps:
       - run: |
           echo ${{
-            some.ctx
-            && foo.bar
-            || baz.qux
+            github.ref_type == 'branch'
+            && github.ref_name
+            || github.sha
           }}
 
       - name: TSAN option setup
